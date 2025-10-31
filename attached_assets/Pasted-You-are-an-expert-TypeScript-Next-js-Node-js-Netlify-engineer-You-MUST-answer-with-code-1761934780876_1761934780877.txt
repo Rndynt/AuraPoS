@@ -1,0 +1,370 @@
+You are an expert **TypeScript / Next.js / Node.js / Netlify** engineer. You MUST answer with **code/files/folder structure only** (no long theory). Target runtime: **Replit (dev)** + **Netlify (deploy)**. This is a **1-SHOT setup prompt**.
+
+====================================================
+1. PROJECT GOAL
+====================================================
+Build the **first version** of a web-based **POS (Point of Sale)** for **UMKM (restaurant/cafe/mini-market)** that:
+
+- has **3-column POS layout** (left: sidebar with icons, middle: products+categories+search, right: cart) on **tablet & desktop**;
+- is **mobile responsive** (cart = bottom sheet/sheet);
+- uses **Next.js (App Router) + Tailwind + shadcn/ui + lucide-react**;
+- supports **product variations** (multi variant, price delta, optional color) and **optional stock tracking**;
+- has a **simple feature / entitlement engine** so we can sell:
+  - **one-time**: compact receipt, remove watermark, kitchen ticket, partial payment/DP, queue number;
+  - **subscription**: long report history, unlimited products, multi device;
+- exposes backend via **Netlify Functions** at path **`/.netlify/functions/pos-api/...`**;
+- has **NO auth for now** → tenant is hardcoded to **"demo-tenant"**;
+- but must leave comments to later plug **AuthCore**;
+- must create **`replit-agent-tasks.md`** so every new Replit Agent continues from the same checklist.
+
+====================================================
+2. REPO / FOLDER STRUCTURE (CREATE)
+====================================================
+- /apps
+  - /apps/web        → Next.js + shadcn POS UI
+  - /apps/api        → domain logic (products, features, tenant-features, orders)
+- /packages
+  - /packages/core   → shared types (Tenant, Product, Variant, Feature, Order)
+  - /packages/features → entitlement helpers (isFeatureActive, mergeFeatures)
+- /netlify
+  - /netlify/functions/pos-api.ts → Netlify function wrapper
+- /replit-agent-tasks.md
+- /netlify.toml
+- /package.json (root) with scripts:
+  - "dev:web": "cd apps/web && next dev"
+  - "dev:api": "cd apps/api && ts-node src/server.ts"
+  - "dev:netlify": "netlify dev"
+  - "build": "npm run build:web"
+  - "build:web": "cd apps/web && next build"
+
+====================================================
+3. TECH / IMPLEMENTATION RULES
+====================================================
+- **Next.js App Router** only.
+- **shadcn/ui** for all UI primitives (button, card, input, sheet, scroll-area, separator, tabs, dropdown).
+- **Responsive**:
+  - desktop / tablet → fixed 3 columns (sidebar 80px, content flex, cart 320-360px)
+  - mobile → 1 column + cart in sheet/bottom drawer
+- **All API calls** must go to `/.netlify/functions/pos-api/...`
+- **All data** must be scoped to **tenant = "demo-tenant"**
+- **Do NOT** add login/logout flow now.
+- Add comment wherever tenant is read:
+  - `// TODO: integrate AuthCore later (read tenant_id from JWT)`
+
+====================================================
+4. DOMAIN TO IMPLEMENT
+====================================================
+
+----------------------------------------------------
+4.1 TENANT (minimal)
+----------------------------------------------------
+Create a single source of truth for tenant, e.g. `/packages/core/tenant.ts`:
+
+    export const CURRENT_TENANT_ID = "demo-tenant";
+    // TODO: integrate AuthCore later (read tenant_id from JWT)
+
+**Every module (products, features, tenant-features, orders) MUST use this `CURRENT_TENANT_ID`.**
+
+----------------------------------------------------
+4.2 PRODUCT MODULE
+----------------------------------------------------
+Create in **`/apps/api/src/modules/products`**:
+
+- product.entity.ts
+- product.repository.ts
+- product.service.ts
+- (optional) product.routes.ts (to register HTTP routes)
+
+Define types:
+
+    export type ProductVariant = {
+      id: string;
+      name: string;              // e.g. "Large", "Medium", "Iced"
+      price_delta?: number;      // e.g. +1000
+      color?: string | null;     // for UI pill
+      stock_override?: number | null;
+    };
+
+    export type Product = {
+      id: string;
+      tenant_id: string;
+      name: string;
+      base_price: number;
+      category: string;
+      image_url?: string;
+      has_variants: boolean;
+      variants?: ProductVariant[];
+      stock_tracking_enabled: boolean;
+      stock_qty?: number;        // only used when stock_tracking_enabled = true
+      sku?: string;
+      is_active: boolean;
+    };
+
+Rules for product:
+- if `stock_tracking_enabled === true` and `stock_qty` is `undefined` → set to `0`
+- if `has_variants === true` → order lines **must** accept variant and **final price** = `base_price + (variant.price_delta || 0)`
+- **all queries** must filter by `tenant_id === CURRENT_TENANT_ID`
+- products must support **category** (Popular, Burger, Pizza, Snack, Coffee, Dessert, etc.)
+- products may have **image_url** for card thumbnails
+- later: if feature `products_unlimited` is **not** active → block create when limit exceeded
+
+Expose endpoints (later mounted under Netlify):
+
+- GET `/products?category=...`         → list products for current tenant
+- GET `/products/:id`                  → product detail
+- POST `/products`                     → create product
+- POST `/products/seed`                → seed 8–10 sample items (burger, rice bowl, coffee, dessert)
+
+When behind Netlify these become:
+
+- `/.netlify/functions/pos-api/products`
+- `/.netlify/functions/pos-api/products/:id`
+
+----------------------------------------------------
+4.3 FEATURE / ENTITLEMENT MODULE
+----------------------------------------------------
+Create in **`/apps/api/src/modules/features`**:
+
+- feature.entity.ts
+- feature.repository.ts
+- feature.service.ts
+
+Define catalog type:
+
+    export type Feature = {
+      code: string;
+      name: string;
+      description?: string;
+      type: "one_time" | "subscription";
+      group: "printing" | "kitchen" | "pos" | "reporting" | "ui";
+      metadata?: Record<string, any>;
+    };
+
+Seed this exact catalog:
+
+1. receipt_compact      → one_time, printing
+2. remove_watermark     → one_time, printing
+3. kitchen_ticket       → one_time, kitchen
+4. partial_payment      → one_time, pos
+5. queue_number         → one_time, pos
+6. report_history_12m   → subscription, reporting
+7. products_unlimited   → subscription, pos
+8. product_variants     → one_time, pos
+9. multi_device_pos     → subscription, ui
+
+Create **tenant-features** module in **`/apps/api/src/modules/tenant-features`**:
+
+- tenant-feature.entity.ts
+- tenant-feature.repository.ts
+- tenant-feature.service.ts
+
+Type:
+
+    export type TenantFeature = {
+      tenant_id: string;
+      feature_code: string;
+      activated_at: Date;
+      expires_at?: Date | null;
+      source: "plan_default" | "purchase" | "manual_grant";
+    };
+
+Endpoints to expose (Netlify):
+
+- GET `/.netlify/functions/pos-api/me/features`
+  - load all tenant-features for `"demo-tenant"`
+  - drop expired (`expires_at < now`)
+  - join with catalog
+  - return array of active features
+
+- POST `/.netlify/functions/pos-api/tenants/demo-tenant/features/purchase`
+  - body: `{ "feature_code": "kitchen_ticket" }`
+  - if feature.type = "one_time" → create with `expires_at = null`
+  - if feature.type = "subscription" → create with `expires_at = now + 30d`
+
+Create helper in **`/packages/features/index.ts`**:
+
+    export function isFeatureActive(features: { code: string }[], code: string): boolean {
+      return features.some((f) => f.code === code);
+    }
+
+This helper will drive the UI (show/hide “Pay DP”, “Send to kitchen”, “Unlimited products”, etc.).
+
+----------------------------------------------------
+4.4 ORDER MODULE (with DP / kitchen ticket)
+----------------------------------------------------
+Create in **`/apps/api/src/modules/orders`**:
+
+- order.entity.ts
+- order.repository.ts
+- order.service.ts
+
+Types:
+
+    export type OrderItem = {
+      product_id: string;
+      product_name: string;
+      base_price: number;
+      variant_id?: string;
+      variant_name?: string;
+      variant_price_delta?: number;
+      qty: number;
+      note?: string;
+    };
+
+    export type Order = {
+      id: string;
+      tenant_id: string;
+      items: OrderItem[];
+      subtotal: number;
+      tax: number;
+      service_charge: number;
+      total_amount: number;
+      paid_amount: number;
+      status: "paid" | "partial" | "unpaid";
+      created_at: Date;
+    };
+
+Rules:
+- if tenant **has** `partial_payment` → allow `paid_amount < total_amount` and set status = `"partial"`
+- else → enforce `paid_amount === total_amount` and status = `"paid"`
+- if tenant **has** `kitchen_ticket` → expose endpoint to “print/send to kitchen”
+- else → return `{ error: "FEATURE_REQUIRED", feature: "kitchen_ticket" }`
+
+Endpoints (Netlify):
+- GET  `/.netlify/functions/pos-api/orders?range=today`
+- POST `/.netlify/functions/pos-api/orders`
+- POST `/.netlify/functions/pos-api/orders/:id/print-kitchen`
+
+====================================================
+5. NETLIFY SETUP
+====================================================
+Create **netlify.toml** at repo root:
+
+    [build]
+      command = "npm run build"
+      publish = "apps/web/.next"
+
+    [functions]
+      directory = "netlify/functions"
+      node_bundler = "esbuild"
+
+Create **`/netlify/functions/pos-api.ts`**:
+
+    import type { Handler } from "@netlify/functions";
+    import { createApiApp } from "../../apps/api/src/server"; // you create this
+
+    const app = createApiApp(); // express/fastify instance with all routes
+
+    export const handler: Handler = async (event, context) => {
+      // adapt Netlify event -> app
+      // mount all routes under /.netlify/functions/pos-api
+      // enable CORS
+    };
+
+====================================================
+6. FRONTEND (NEXT.JS + SHADCN) POS LAYOUT
+====================================================
+Create page: **`/apps/web/app/(pos)/pos/page.tsx`**
+
+Layout:
+- root: `flex h-screen bg-muted/40`
+- **Sidebar** (`/apps/web/components/pos/Sidebar.tsx`):
+  - width 80px, white, border-r, vertical icons (Home, Dashboard, Orders, Bills, Settings, Logout) using lucide-react
+- **Product area** (`/apps/web/components/pos/ProductArea.tsx`):
+  - top bar: search (shadcn Input), user/tenant placeholder
+  - category tabs: horizontal scroll (shadcn ScrollArea)
+  - product grid: cards, image, name, price, “Add” button, variant badge if has_variants=true
+- **Cart panel** (`/apps/web/components/pos/CartPanel.tsx`):
+  - list of items
+  - show variant name (if selected)
+  - subtotal, tax, service
+  - big button “Charge”
+  - if feature `partial_payment` → show button “Pay DP”
+  - if feature `kitchen_ticket` → show button “Send to Kitchen”
+
+Mobile behaviour:
+- hide right cart
+- add sticky button “View Cart (X)” at bottom
+- on click open `<Sheet>` with cart
+
+Hooks:
+
+    // /apps/web/hooks/use-features.ts
+    // fetch /.netlify/functions/pos-api/me/features
+    // return { features, has(code) }
+
+    // /apps/web/hooks/use-products.ts
+    // fetch products by category
+
+    // /apps/web/hooks/use-cart.ts
+    // local cart state (add, remove, change qty)
+
+====================================================
+7. replit-agent-tasks.md (MUST EXIST)
+====================================================
+Create file `/replit-agent-tasks.md` with EXACT structure:
+
+    # replit-agent POS Kasir Roadmap
+
+    ## Phase 0 – Repo Setup
+    - [ ] Create folders: /apps/web, /apps/api, /packages, /netlify/functions
+    - [ ] Install Next.js, Tailwind, shadcn/ui, lucide-react
+    - [ ] Create netlify.toml
+    - [ ] Create /netlify/functions/pos-api.ts
+
+    ## Phase 1 – Core Domain
+    - [ ] Build product module (+variants, +optional stock)
+    - [ ] Seed sample products (burger, rice bowl, coffee, dessert)
+    - [ ] Expose GET /products via Netlify
+
+    ## Phase 2 – Entitlement
+    - [ ] Build features module
+    - [ ] Build tenant-features module
+    - [ ] Seed features: receipt_compact, remove_watermark, kitchen_ticket, partial_payment, queue_number, report_history_12m, products_unlimited, product_variants, multi_device_pos
+    - [ ] Expose GET /me/features (hardcoded tenant "demo-tenant")
+    - [ ] Expose POST /tenants/demo-tenant/features/purchase
+
+    ## Phase 3 – POS UI
+    - [ ] Build 3-column layout (sidebar, products, cart) for desktop/tablet
+    - [ ] Build mobile layout (cart bottom sheet)
+    - [ ] Connect products to API
+    - [ ] Show/hide UI using features (partial_payment, kitchen_ticket)
+    - [ ] Show “locked feature” state
+
+    ## Phase 4 – Orders
+    - [ ] Create orders module
+    - [ ] Support partial payment if feature active
+    - [ ] Expose /orders and /orders/:id/print-kitchen
+
+    ## Phase 5 – Netlify Deploy
+    - [ ] Test `netlify dev`
+    - [ ] Ensure all API under /.netlify/functions/pos-api
+    - [ ] Document NEXT_PUBLIC_API_BASE_URL
+
+    ## Phase 6 – Future (AuthCore)
+    - [ ] Replace hardcoded tenant with AuthCore JWT
+    - [ ] Map tenant → entitlement
+    - [ ] Protect POST routes
+
+====================================================
+8. FINAL OUTPUT (WHAT YOU RETURN)
+====================================================
+When you finish, return:
+
+1. **Folder structure** (apps, packages, netlify, important files).
+2. **File contents** for:
+   - netlify.toml
+   - /netlify/functions/pos-api.ts
+   - /apps/web/app/(pos)/pos/page.tsx
+   - /apps/web/components/pos/Sidebar.tsx
+   - /apps/web/components/pos/ProductArea.tsx or ProductGrid.tsx
+   - /apps/web/components/pos/CartPanel.tsx
+   - /apps/api/src/modules/products/*
+   - /apps/api/src/modules/features/*
+   - /apps/api/src/modules/tenant-features/*
+   - /apps/api/src/modules/orders/*
+   - /replit-agent-tasks.md
+3. **Root package.json scripts** to run web + netlify.
+4. Comments `// TODO: integrate AuthCore later` in appropriate places.
+
+---END OF PROMPT---
