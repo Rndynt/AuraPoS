@@ -1,0 +1,11 @@
+{
+  "name": "@pos/domain",
+  "version": "1.0.0",
+  "description": "Domain models for multi-variant POS system",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {},
+  "keywords": ["domain", "ddd", "pos"],
+  "author": "",
+  "license": "ISC"
+}

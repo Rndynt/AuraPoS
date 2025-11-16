@@ -1,0 +1,9 @@
+/**
+ * Domain Layer - Main Export
+ * Aggregates all domain models from bounded contexts
+ */
+
+export * from './catalog';
+export * from './orders';
+export * from './tenants';
+export * from './pricing';

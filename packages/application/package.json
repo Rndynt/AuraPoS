@@ -1,0 +1,14 @@
+{
+  "name": "@pos/application",
+  "version": "1.0.0",
+  "description": "Application layer use cases for multi-variant POS system",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {},
+  "keywords": ["application", "use-cases", "pos"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pos/domain": "*"
+  }
+}
