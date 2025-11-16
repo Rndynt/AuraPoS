@@ -3,5 +3,8 @@
  * Repository implementations and external adapters
  */
 
-// Export repositories when implemented
-// export * from './repositories';
+// Export database connection
+export { db, type Database } from './database';
+
+// Export all repositories
+export * from './repositories';
