@@ -9,12 +9,35 @@ import {
   products,
   productOptionGroups,
   productOptions,
-  type Product,
+  type Product as DBProduct,
   type InsertProduct,
   type ProductOptionGroup as DBProductOptionGroup,
   type ProductOption as DBProductOption,
 } from '../../../../shared/schema';
+import type { Product } from '../../../domain/catalog/types';
 import { eq, and, inArray } from 'drizzle-orm';
+
+/**
+ * Map database product to domain product (camelCase -> snake_case)
+ */
+function mapProductToDomain(dbProduct: DBProduct): Product {
+  return {
+    id: dbProduct.id,
+    tenant_id: dbProduct.tenantId,
+    name: dbProduct.name,
+    description: dbProduct.description || undefined,
+    base_price: parseFloat(dbProduct.basePrice),
+    category: dbProduct.category,
+    image_url: dbProduct.imageUrl || undefined,
+    has_variants: dbProduct.hasVariants,
+    stock_tracking_enabled: dbProduct.stockTrackingEnabled,
+    stock_qty: dbProduct.stockQty || undefined,
+    sku: dbProduct.sku || undefined,
+    is_active: dbProduct.isActive,
+    created_at: dbProduct.createdAt,
+    updated_at: dbProduct.updatedAt,
+  };
+}
 
 export interface ProductFilters {
   category?: string;
@@ -59,10 +82,12 @@ export class ProductRepository
         conditions.push(eq(products.isActive, filters.isActive));
       }
 
-      return await this.db
+      const dbProducts = await this.db
         .select()
         .from(products)
         .where(and(...conditions));
+
+      return dbProducts.map(mapProductToDomain);
     } catch (error) {
       this.handleError('find products by tenant', error);
     }
@@ -79,7 +104,7 @@ export class ProductRepository
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
         .limit(1);
 
-      return result[0] || null;
+      return result[0] ? mapProductToDomain(result[0]) : null;
     } catch (error) {
       this.handleError('find product by id', error);
     }
@@ -90,7 +115,7 @@ export class ProductRepository
    */
   async findByIdWithOptions(id: string, tenantId: string): Promise<any | null> {
     try {
-      // Get the product first
+      // Get the product first (already mapped to domain)
       const product = await this.findById(id, tenantId);
       if (!product) return null;
 
@@ -166,7 +191,7 @@ export class ProductRepository
     try {
       const data = this.injectTenantId(product, tenantId);
       const result = await this.db.insert(products).values(data).returning();
-      return result[0];
+      return mapProductToDomain(result[0]);
     } catch (error) {
       this.handleError('create product', error);
     }
@@ -193,7 +218,7 @@ export class ProductRepository
         throw new RepositoryError('Product not found', 'NOT_FOUND', null);
       }
 
-      return result[0];
+      return mapProductToDomain(result[0]);
     } catch (error) {
       if (error instanceof RepositoryError) throw error;
       this.handleError('update product', error);

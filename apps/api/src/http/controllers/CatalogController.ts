@@ -19,7 +19,7 @@ export const listProducts = asyncHandler(async (req: Request, res: Response) => 
   // Validate query params
   const querySchema = z.object({
     category: z.string().optional(),
-    isActive: z.enum(['true', 'false']).optional().transform(val => val === 'true'),
+    isActive: z.enum(['true', 'false']).optional().transform(val => val ? val === 'true' : undefined),
   });
 
   const parsed = querySchema.safeParse(req.query);

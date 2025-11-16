@@ -1,4 +1,4 @@
-import { CartItem as CartItemType } from "@/lib/mockData";
+import type { CartItem as CartItemType } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,17 +20,19 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
   };
 
   const itemPrice = getItemPrice(item);
-  const totalPrice = itemPrice * item.qty;
+  const totalPrice = itemPrice * item.quantity;
 
   return (
     <div className="py-3 border-b last:border-b-0" data-testid={`cart-item-${item.id}`}>
       <div className="flex gap-3">
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-          <img
-            src={item.product.image_url}
-            alt={item.product.name}
-            className="w-full h-full object-cover"
-          />
+          {item.product.image_url && (
+            <img
+              src={item.product.image_url}
+              alt={item.product.name}
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start justify-between gap-2">
@@ -60,19 +62,19 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
                 size="icon"
                 variant="outline"
                 className="w-6 h-6"
-                onClick={() => onUpdateQty(item.id, item.qty - 1)}
+                onClick={() => onUpdateQty(item.id, item.quantity - 1)}
                 data-testid={`button-qty-minus-${item.id}`}
               >
                 <Minus className="w-3 h-3" />
               </Button>
               <div className="w-8 text-center text-sm font-medium tabular-nums" data-testid={`text-qty-${item.id}`}>
-                {item.qty}
+                {item.quantity}
               </div>
               <Button
                 size="icon"
                 variant="outline"
                 className="w-6 h-6"
-                onClick={() => onUpdateQty(item.id, item.qty + 1)}
+                onClick={() => onUpdateQty(item.id, item.quantity + 1)}
                 data-testid={`button-qty-plus-${item.id}`}
               >
                 <Plus className="w-3 h-3" />

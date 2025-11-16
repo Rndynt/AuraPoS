@@ -1,23 +1,54 @@
-import { useState } from "react";
-import { Product, categories, getProductsByCategory } from "@/lib/mockData";
+import { useState, useMemo } from "react";
+import type { Product } from "@/../../packages/domain/catalog/types";
 import { ProductCard } from "./ProductCard";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 type ProductAreaProps = {
+  products: Product[];
+  isLoading?: boolean;
+  error?: Error | null;
   onAddToCart: (product: Product) => void;
 };
 
-export function ProductArea({ onAddToCart }: ProductAreaProps) {
+// Extract unique categories from products
+const getCategories = (products: Product[]): string[] => {
+  if (!products || products.length === 0) {
+    return ["Popular"];
+  }
+  const categorySet = new Set(products.map(p => p.category));
+  return ["Popular", ...Array.from(categorySet).sort()];
+};
+
+// Filter products by category
+const filterByCategory = (products: Product[], category: string): Product[] => {
+  if (!products || products.length === 0) {
+    return [];
+  }
+  if (category === "Popular") {
+    return products.slice(0, 4);
+  }
+  return products.filter(p => p.category === category);
+};
+
+export function ProductArea({ products, isLoading, error, onAddToCart }: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState("Popular");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const products = getProductsByCategory(selectedCategory);
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const categories = useMemo(() => getCategories(products), [products]);
+
+  const filteredProducts = useMemo(() => {
+    const categoryFiltered = filterByCategory(products, selectedCategory);
+    if (!searchQuery) return categoryFiltered;
+    
+    return categoryFiltered.filter((p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, selectedCategory, searchQuery]);
 
   return (
     <div className="flex-1 flex flex-col bg-muted/40">
@@ -31,6 +62,7 @@ export function ProductArea({ onAddToCart }: ProductAreaProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             data-testid="input-search-products"
+            disabled={isLoading}
           />
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -43,17 +75,26 @@ export function ProductArea({ onAddToCart }: ProductAreaProps) {
       <div className="px-4 py-3 bg-background border-b">
         <ScrollArea className="w-full">
           <div className="flex gap-2">
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "ghost"}
-                className="flex-shrink-0 rounded-full"
-                onClick={() => setSelectedCategory(category)}
-                data-testid={`button-category-${category.toLowerCase()}`}
-              >
-                {category}
-              </Button>
-            ))}
+            {isLoading ? (
+              <>
+                <Skeleton className="h-9 w-24 rounded-full flex-shrink-0" />
+                <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-9 w-24 rounded-full flex-shrink-0" />
+              </>
+            ) : (
+              categories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "ghost"}
+                  className="flex-shrink-0 rounded-full"
+                  onClick={() => setSelectedCategory(category)}
+                  data-testid={`button-category-${category.toLowerCase()}`}
+                >
+                  {category}
+                </Button>
+              ))
+            )}
           </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
@@ -62,7 +103,22 @@ export function ProductArea({ onAddToCart }: ProductAreaProps) {
       {/* Product Grid */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-          {filteredProducts.length === 0 ? (
+          {error ? (
+            <div className="py-16 text-center">
+              <p className="text-destructive mb-2" data-testid="text-error">
+                Failed to load products
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {error.message}
+              </p>
+            </div>
+          ) : isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="py-16 text-center">
               <p className="text-muted-foreground" data-testid="text-no-products">
                 No products found
@@ -82,5 +138,25 @@ export function ProductArea({ onAddToCart }: ProductAreaProps) {
         </div>
       </ScrollArea>
     </div>
+  );
+}
+
+function ProductCardSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        <Skeleton className="aspect-[4/3] w-full" />
+        <div className="p-3 space-y-2">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-6 w-1/2" />
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="p-3 pt-0">
+        <Skeleton className="h-9 w-full" />
+      </CardFooter>
+    </Card>
   );
 }

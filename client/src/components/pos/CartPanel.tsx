@@ -1,4 +1,4 @@
-import { CartItem as CartItemType } from "@/lib/mockData";
+import type { CartItem as CartItemType } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -55,7 +55,7 @@ export function CartPanel({
           <h2 className="font-semibold text-lg">Order</h2>
           {items.length > 0 && (
             <Badge variant="secondary" data-testid="badge-item-count">
-              {items.reduce((sum, item) => sum + item.qty, 0)}
+              {items.reduce((sum, item) => sum + item.quantity, 0)}
             </Badge>
           )}
         </div>

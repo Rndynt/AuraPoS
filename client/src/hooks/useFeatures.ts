@@ -1,31 +1,22 @@
-import { useState, useEffect } from "react";
-import { Feature, getActiveFeatures, hasFeature as checkFeature } from "@/lib/mockData";
+import { useTenantFeatures } from "@/lib/api/hooks";
 
+/**
+ * Wrapper around useTenantFeatures for backward compatibility
+ * Provides the same interface as the old mock-based hook
+ */
 export function useFeatures() {
-  const [features, setFeatures] = useState<Feature[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, error } = useTenantFeatures();
 
-  useEffect(() => {
-    // Simulate API call //todo: remove mock functionality
-    setTimeout(() => {
-      setFeatures(getActiveFeatures());
-      setLoading(false);
-    }, 100);
-  }, []);
+  const features = data?.features || [];
 
   const hasFeature = (code: string) => {
-    return checkFeature(features, code);
-  };
-
-  const activateFeature = (feature: Feature) => {
-    console.log("Activating feature:", feature.code);
-    setFeatures([...features, feature]);
+    return features.some(f => f.feature_code === code && f.is_active);
   };
 
   return {
     features,
-    loading,
+    loading: isLoading,
+    error,
     hasFeature,
-    activateFeature,
   };
 }

@@ -1,4 +1,4 @@
-import { Product } from "@/lib/mockData";
+import type { Product } from "@/../../packages/domain/catalog/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,11 +22,13 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     <Card className="overflow-hidden hover-elevate" data-testid={`card-product-${product.id}`}>
       <CardContent className="p-0">
         <div className="aspect-[4/3] overflow-hidden bg-muted">
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
+          {product.image_url && (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
         <div className="p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">

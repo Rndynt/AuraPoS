@@ -7,10 +7,26 @@ import { Database } from '../../database';
 import { BaseRepository, RepositoryError } from '../BaseRepository';
 import {
   tenantFeatures,
-  type TenantFeature,
+  type TenantFeature as DBTenantFeature,
   type InsertTenantFeature,
 } from '../../../../shared/schema';
+import type { TenantFeature } from '../../../domain/tenants/types';
 import { eq, and } from 'drizzle-orm';
+
+/**
+ * Map database tenant feature to domain tenant feature (camelCase -> snake_case)
+ */
+function mapTenantFeatureToDomain(dbFeature: DBTenantFeature): TenantFeature {
+  return {
+    id: dbFeature.id,
+    tenant_id: dbFeature.tenantId,
+    feature_code: dbFeature.featureCode,
+    activated_at: dbFeature.activatedAt,
+    expires_at: dbFeature.expiresAt || undefined,
+    source: dbFeature.source as 'plan_default' | 'purchase' | 'manual_grant' | 'trial',
+    is_active: dbFeature.isActive,
+  };
+}
 
 export interface ITenantFeatureRepository {
   findActiveByTenant(tenantId: string): Promise<TenantFeature[]>;
@@ -49,10 +65,12 @@ export class TenantFeatureRepository
         );
 
       // Filter out expired features in code (since expiresAt can be null)
-      return result.filter((feature) => {
+      const activeFeatures = result.filter((feature) => {
         if (!feature.expiresAt) return true; // No expiry
         return new Date(feature.expiresAt) > now; // Not expired
       });
+
+      return activeFeatures.map(mapTenantFeatureToDomain);
     } catch (error) {
       this.handleError('find active features by tenant', error);
     }
@@ -77,7 +95,7 @@ export class TenantFeatureRepository
         )
         .limit(1);
 
-      return result[0] || null;
+      return result[0] ? mapTenantFeatureToDomain(result[0]) : null;
     } catch (error) {
       this.handleError('find feature by tenant and code', error);
     }
@@ -92,7 +110,7 @@ export class TenantFeatureRepository
         .insert(tenantFeatures)
         .values(tenantFeature)
         .returning();
-      return result[0];
+      return mapTenantFeatureToDomain(result[0]);
     } catch (error) {
       this.handleError('create tenant feature', error);
     }
@@ -116,7 +134,7 @@ export class TenantFeatureRepository
         throw new RepositoryError('Tenant feature not found', 'NOT_FOUND', null);
       }
 
-      return result[0];
+      return mapTenantFeatureToDomain(result[0]);
     } catch (error) {
       if (error instanceof RepositoryError) throw error;
       this.handleError('update tenant feature', error);
