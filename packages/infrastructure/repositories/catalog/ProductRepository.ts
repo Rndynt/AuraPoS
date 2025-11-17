@@ -14,7 +14,11 @@ import {
   type ProductOptionGroup as DBProductOptionGroup,
   type ProductOption as DBProductOption,
 } from '../../../../shared/schema';
-import type { Product } from '../../../domain/catalog/types';
+import type { 
+  Product, 
+  ProductOptionGroup, 
+  ProductOption 
+} from '../../../domain/catalog/types';
 import { eq, and, inArray } from 'drizzle-orm';
 
 /**
@@ -39,6 +43,35 @@ function mapProductToDomain(dbProduct: DBProduct): Product {
   };
 }
 
+/**
+ * Map database option group to domain option group (camelCase -> snake_case)
+ */
+function mapOptionGroupToDomain(dbGroup: DBProductOptionGroup, options: ProductOption[] = []): ProductOptionGroup {
+  return {
+    id: dbGroup.id,
+    name: dbGroup.name,
+    selection_type: dbGroup.selectionType as 'single' | 'multiple',
+    min_selections: dbGroup.minSelections,
+    max_selections: dbGroup.maxSelections,
+    is_required: dbGroup.isRequired,
+    display_order: dbGroup.displayOrder,
+    options: options,
+  };
+}
+
+/**
+ * Map database option to domain option (camelCase -> snake_case)
+ */
+function mapOptionToDomain(dbOption: DBProductOption): ProductOption {
+  return {
+    id: dbOption.id,
+    name: dbOption.name,
+    price_delta: Number(dbOption.priceDelta || 0),
+    inventory_sku: dbOption.inventorySku || undefined,
+    is_available: dbOption.isAvailable ?? true,
+  };
+}
+
 export interface ProductFilters {
   category?: string;
   isActive?: boolean;
@@ -47,7 +80,7 @@ export interface ProductFilters {
 export interface IProductRepository {
   findByTenant(tenantId: string, filters?: ProductFilters): Promise<Product[]>;
   findById(id: string, tenantId: string): Promise<Product | null>;
-  findByIdWithOptions(id: string, tenantId: string): Promise<any | null>;
+  findByIdWithOptions(id: string, tenantId: string): Promise<Product | null>;
   create(product: InsertProduct, tenantId: string): Promise<Product>;
   update(id: string, product: Partial<InsertProduct>, tenantId: string): Promise<Product>;
   delete(id: string, tenantId: string): Promise<void>;
@@ -113,71 +146,32 @@ export class ProductRepository
   /**
    * Find product by ID with all option groups and options
    */
-  async findByIdWithOptions(id: string, tenantId: string): Promise<any | null> {
+  async findByIdWithOptions(id: string, tenantId: string): Promise<Product | null> {
     try {
       // Get the product first (already mapped to domain)
       const product = await this.findById(id, tenantId);
       if (!product) return null;
 
-      // Get all option groups for this product
-      const groups = await this.db
-        .select()
-        .from(productOptionGroups)
-        .where(
-          and(
-            eq(productOptionGroups.productId, id),
-            eq(productOptionGroups.tenantId, tenantId)
-          )
-        )
-        .orderBy(productOptionGroups.displayOrder);
-
-      if (groups.length === 0) {
+      // Get all option groups for this product (already mapped to domain)
+      const optionGroups = await this.findOptionGroupsByProductId(id);
+      
+      if (optionGroups.length === 0) {
         return { ...product, option_groups: [] };
       }
 
-      // Get all options for these groups
-      const groupIds = groups.map((g) => g.id);
-      const options = await this.db
-        .select()
-        .from(productOptions)
-        .where(
-          and(
-            inArray(productOptions.optionGroupId, groupIds),
-            eq(productOptions.tenantId, tenantId)
-          )
-        )
-        .orderBy(productOptions.displayOrder);
-
-      // Map options to their groups
-      const optionsByGroup = options.reduce((acc, option) => {
-        if (!acc[option.optionGroupId]) {
-          acc[option.optionGroupId] = [];
-        }
-        acc[option.optionGroupId].push({
-          id: option.id,
-          name: option.name,
-          price_delta: parseFloat(option.priceDelta || '0'),
-          inventory_sku: option.inventorySku || undefined,
-          is_available: option.isAvailable,
-        });
-        return acc;
-      }, {} as Record<string, any[]>);
-
-      // Build the complete product with option groups
-      const optionGroups = groups.map((group) => ({
-        id: group.id,
-        name: group.name,
-        selection_type: group.selectionType as 'single' | 'multiple',
-        min_selections: group.minSelections,
-        max_selections: group.maxSelections,
-        is_required: group.isRequired,
-        display_order: group.displayOrder,
-        options: optionsByGroup[group.id] || [],
+      // Get all options for these groups (already mapped to domain)
+      const groupIds = optionGroups.map(g => g.id);
+      const optionsMap = await this.findOptionsByGroupIds(groupIds);
+      
+      // Combine groups with their options
+      const groupsWithOptions = optionGroups.map(group => ({
+        ...group,
+        options: optionsMap.get(group.id) || [],
       }));
-
+      
       return {
         ...product,
-        option_groups: optionGroups,
+        option_groups: groupsWithOptions,
       };
     } catch (error) {
       this.handleError('find product with options', error);
@@ -252,9 +246,9 @@ export class ProductRepository
 
   /**
    * Find option groups for multiple products
-   * Returns a map of productId -> option groups
+   * Returns a map of productId -> option groups (mapped to domain types)
    */
-  async findOptionGroupsByProductIds(productIds: string[]): Promise<Map<string, DBProductOptionGroup[]>> {
+  async findOptionGroupsByProductIds(productIds: string[]): Promise<Map<string, ProductOptionGroup[]>> {
     try {
       if (productIds.length === 0) {
         return new Map();
@@ -266,12 +260,13 @@ export class ProductRepository
         .where(inArray(productOptionGroups.productId, productIds))
         .orderBy(productOptionGroups.displayOrder);
 
-      const groupMap = new Map<string, DBProductOptionGroup[]>();
+      const groupMap = new Map<string, ProductOptionGroup[]>();
       for (const group of groups) {
         if (!groupMap.has(group.productId)) {
           groupMap.set(group.productId, []);
         }
-        groupMap.get(group.productId)!.push(group);
+        // Map to domain type with snake_case fields
+        groupMap.get(group.productId)!.push(mapOptionGroupToDomain(group));
       }
 
       return groupMap;
@@ -282,9 +277,9 @@ export class ProductRepository
 
   /**
    * Find options for multiple option groups
-   * Returns a map of groupId -> options
+   * Returns a map of groupId -> options (mapped to domain types)
    */
-  async findOptionsByGroupIds(groupIds: string[]): Promise<Map<string, DBProductOption[]>> {
+  async findOptionsByGroupIds(groupIds: string[]): Promise<Map<string, ProductOption[]>> {
     try {
       if (groupIds.length === 0) {
         return new Map();
@@ -296,12 +291,13 @@ export class ProductRepository
         .where(inArray(productOptions.optionGroupId, groupIds))
         .orderBy(productOptions.displayOrder);
 
-      const optionMap = new Map<string, DBProductOption[]>();
+      const optionMap = new Map<string, ProductOption[]>();
       for (const option of options) {
         if (!optionMap.has(option.optionGroupId)) {
           optionMap.set(option.optionGroupId, []);
         }
-        optionMap.get(option.optionGroupId)!.push(option);
+        // Map to domain type with snake_case fields
+        optionMap.get(option.optionGroupId)!.push(mapOptionToDomain(option));
       }
 
       return optionMap;
@@ -312,14 +308,18 @@ export class ProductRepository
 
   /**
    * Find option groups by product ID (for GetProductById use case)
+   * Returns option groups mapped to domain types
    */
-  async findOptionGroupsByProductId(productId: string): Promise<DBProductOptionGroup[]> {
+  async findOptionGroupsByProductId(productId: string): Promise<ProductOptionGroup[]> {
     try {
-      return await this.db
+      const groups = await this.db
         .select()
         .from(productOptionGroups)
         .where(eq(productOptionGroups.productId, productId))
         .orderBy(productOptionGroups.displayOrder);
+      
+      // Map to domain types with snake_case fields
+      return groups.map(group => mapOptionGroupToDomain(group));
     } catch (error) {
       this.handleError('find option groups by product id', error);
     }
