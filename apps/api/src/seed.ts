@@ -27,6 +27,7 @@ import type {
   InsertTenantFeature,
 } from '../../../shared/schema';
 import { sql } from 'drizzle-orm';
+import { neon } from '@neondatabase/serverless';
 
 // Product images paths
 const PRODUCT_IMAGES = {
@@ -63,18 +64,9 @@ async function clearDatabase() {
   console.log('🧹 Clearing existing data...');
   
   try {
-    // Delete in reverse FK dependency order
-    await db.delete(orderItemModifiers);
-    await db.delete(orderPayments);
-    await db.delete(kitchenTickets);
-    await db.delete(orderItems);
-    await db.delete(orders);
-    await db.delete(productOptions);
-    await db.delete(productOptionGroups);
-    await db.delete(products);
-    await db.delete(tenantFeatures);
-    await db.delete(tenants);
-    await db.delete(users);
+    // Use neon SQL client directly to avoid Drizzle ORM driver issues
+    const sqlClient = neon(process.env.DATABASE_URL!);
+    await sqlClient`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, product_options, product_option_groups, products, tenant_features, tenants, users CASCADE`;
     
     console.log('✅ Database cleared successfully');
   } catch (error) {
