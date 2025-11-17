@@ -251,9 +251,12 @@ export function ProductOptionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" data-testid="dialog-product-options">
-        <DialogHeader>
-          <DialogTitle>{product.name}</DialogTitle>
+      <DialogContent 
+        className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6" 
+        data-testid="dialog-product-options"
+      >
+        <DialogHeader className="pb-3">
+          <DialogTitle className="text-lg sm:text-xl">{product.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -271,9 +274,9 @@ export function ProductOptionsDialog({
           {/* Legacy Variants Section */}
           {product.has_variants && product.variants && product.variants.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Variant</Label>
-                <Badge variant="outline" className="text-xs">Required • Select 1</Badge>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <Label className="text-sm sm:text-base font-semibold">Variant</Label>
+                <Badge variant="outline" className="text-[10px] sm:text-xs">Required • Select 1</Badge>
               </div>
               <RadioGroup
                 value={selectedVariant?.id}
@@ -284,13 +287,13 @@ export function ProductOptionsDialog({
                 {product.variants.map((variant) => (
                   <div
                     key={variant.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border hover-elevate"
+                    className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover-elevate"
                     data-testid={`option-variant-${variant.id}`}
                   >
                     <RadioGroupItem value={variant.id} id={variant.id} />
                     <Label
                       htmlFor={variant.id}
-                      className="flex-1 flex items-center justify-between cursor-pointer"
+                      className="flex-1 flex items-center justify-between cursor-pointer text-sm"
                     >
                       <span className="flex items-center gap-2">
                         {variant.name}
@@ -302,7 +305,7 @@ export function ProductOptionsDialog({
                         )}
                       </span>
                       {variant.price_delta !== 0 && (
-                        <span className="text-sm font-medium">
+                        <span className="text-xs sm:text-sm font-medium">
                           {variant.price_delta && variant.price_delta > 0 ? "+" : ""}
                           {formatPrice(variant.price_delta || 0)}
                         </span>
@@ -327,17 +330,17 @@ export function ProductOptionsDialog({
                 )}
                 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-base font-semibold">{group.name}</Label>
-                    <Badge variant="outline" className="text-xs whitespace-nowrap">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Label className="text-sm sm:text-base font-semibold">{group.name}</Label>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs whitespace-nowrap">
                       {getGroupRequirementLabel(group)}
                     </Badge>
                   </div>
 
                   {/* Validation Error */}
                   {error && (
-                    <div className="flex items-center gap-2 text-sm text-destructive" data-testid={`error-${group.id}`}>
-                      <AlertCircle className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-destructive" data-testid={`error-${group.id}`}>
+                      <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>{error}</span>
                     </div>
                   )}
@@ -356,17 +359,17 @@ export function ProductOptionsDialog({
                       {availableOptions.map((option) => (
                         <div
                           key={option.id}
-                          className="flex items-center gap-3 p-3 rounded-lg border hover-elevate"
+                          className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover-elevate"
                           data-testid={`option-${group.id}-${option.id}`}
                         >
                           <RadioGroupItem value={option.id} id={`${group.id}-${option.id}`} />
                           <Label
                             htmlFor={`${group.id}-${option.id}`}
-                            className="flex-1 flex items-center justify-between cursor-pointer"
+                            className="flex-1 flex items-center justify-between cursor-pointer text-sm"
                           >
                             <span>{option.name}</span>
                             {option.price_delta !== 0 && (
-                              <span className="text-sm font-medium">
+                              <span className="text-xs sm:text-sm font-medium">
                                 {option.price_delta > 0 ? "+" : ""}
                                 {formatPrice(option.price_delta)}
                               </span>
@@ -387,7 +390,7 @@ export function ProductOptionsDialog({
                         return (
                           <div
                             key={option.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg border hover-elevate ${
+                            className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover-elevate ${
                               isSelected ? "bg-accent/50" : ""
                             }`}
                             data-testid={`option-${group.id}-${option.id}`}
@@ -402,11 +405,11 @@ export function ProductOptionsDialog({
                             />
                             <Label
                               htmlFor={`${group.id}-${option.id}`}
-                              className="flex-1 flex items-center justify-between cursor-pointer"
+                              className="flex-1 flex items-center justify-between cursor-pointer text-sm"
                             >
                               <span>{option.name}</span>
                               {option.price_delta !== 0 && (
-                                <span className="text-sm font-medium">
+                                <span className="text-xs sm:text-sm font-medium">
                                   {option.price_delta > 0 ? "+" : ""}
                                   {formatPrice(option.price_delta)}
                                 </span>
@@ -426,13 +429,14 @@ export function ProductOptionsDialog({
           <div>
             <Separator className="mb-4" />
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Quantity</Label>
-              <div className="flex items-center gap-3">
+              <Label className="text-sm sm:text-base font-semibold">Quantity</Label>
+              <div className="flex items-center gap-3 justify-center sm:justify-start">
                 <Button
                   size="icon"
                   variant="outline"
                   onClick={() => setQty(Math.max(1, qty - 1))}
                   data-testid="button-qty-minus"
+                  className="h-10 w-10"
                 >
                   <Minus className="w-4 h-4" />
                 </Button>
@@ -444,6 +448,7 @@ export function ProductOptionsDialog({
                   variant="outline"
                   onClick={() => setQty(qty + 1)}
                   data-testid="button-qty-plus"
+                  className="h-10 w-10"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -452,14 +457,14 @@ export function ProductOptionsDialog({
           </div>
 
           {/* Price Breakdown */}
-          <div className="p-4 bg-muted rounded-lg space-y-2">
-            <div className="flex justify-between text-sm">
+          <div className="p-3 sm:p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span>Base Price</span>
               <span className="tabular-nums">{formatPrice(basePrice)}</span>
             </div>
             
             {variantDelta !== 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span>Variant</span>
                 <span className="tabular-nums">
                   {variantDelta > 0 ? "+" : ""}
@@ -469,7 +474,7 @@ export function ProductOptionsDialog({
             )}
             
             {optionsDelta !== 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span>Options</span>
                 <span className="tabular-nums">
                   {optionsDelta > 0 ? "+" : ""}
@@ -478,14 +483,14 @@ export function ProductOptionsDialog({
               </div>
             )}
             
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span>Quantity</span>
               <span className="tabular-nums">×{qty}</span>
             </div>
             
             <Separator className="my-2" />
             
-            <div className="flex justify-between font-semibold">
+            <div className="flex justify-between font-semibold text-sm sm:text-base">
               <span>Total</span>
               <span className="tabular-nums" data-testid="text-options-total">
                 {formatPrice(total)}
@@ -494,14 +499,20 @@ export function ProductOptionsDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} data-testid="button-cancel-options">
+        <DialogFooter className="gap-2 flex-col sm:flex-row">
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            data-testid="button-cancel-options"
+            className="w-full sm:w-auto"
+          >
             Cancel
           </Button>
           <Button 
             onClick={handleAdd} 
             disabled={isAddDisabled()}
             data-testid="button-add-to-cart"
+            className="w-full sm:w-auto"
           >
             Add to Cart
           </Button>
