@@ -233,17 +233,20 @@ export function ProductOptionsDialog({
       parts.push("Optional");
     }
 
+    const min = group.min_selections ?? 0;
+    const max = group.max_selections ?? 999;
+
     if (group.selection_type === "single") {
       parts.push("Select 1");
     } else {
-      if (group.min_selections === group.max_selections) {
-        parts.push(`Select ${group.min_selections}`);
-      } else if (group.min_selections > 0 && group.max_selections < 999) {
-        parts.push(`Select ${group.min_selections}-${group.max_selections}`);
-      } else if (group.min_selections > 0) {
-        parts.push(`Select at least ${group.min_selections}`);
-      } else if (group.max_selections < 999) {
-        parts.push(`Select up to ${group.max_selections}`);
+      if (min === max) {
+        parts.push(`Select ${min}`);
+      } else if (min > 0 && max < 999) {
+        parts.push(`Select ${min}-${max}`);
+      } else if (min > 0) {
+        parts.push(`Select at least ${min}`);
+      } else if (max < 999) {
+        parts.push(`Select up to ${max}`);
       }
     }
 
@@ -278,7 +281,7 @@ export function ProductOptionsDialog({
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
           {/* Product Image */}
           {product.image_url && (
-            <div className="aspect-video overflow-hidden rounded-md bg-muted">
+            <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
               <img
                 src={product.image_url}
                 alt={product.name}
@@ -527,7 +530,7 @@ export function ProductOptionsDialog({
           </div>
         </div>
 
-        <DialogFooter className="sticky bottom-0 bg-background border-t p-4 gap-2 flex-col sm:flex-row z-10">
+        <DialogFooter className="sticky bottom-0 bg-background border-t p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between z-10">
           <Button 
             variant="outline" 
             onClick={onClose} 

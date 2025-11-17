@@ -153,9 +153,23 @@ export default function POSPage() {
       
       cart.clearCart();
     } catch (error) {
+      let errorMessage = "Failed to process order";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      // Try to extract more details from API error response
+      const apiError = error as any;
+      if (apiError?.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError?.body?.message) {
+        errorMessage = apiError.body.message;
+      }
+      
+      console.error("Payment error details:", error);
+      
       toast({
         title: "Payment failed",
-        description: error instanceof Error ? error.message : "Failed to process order",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -220,9 +234,23 @@ export default function POSPage() {
       setPartialPaymentDialogOpen(false);
       setMobileCartOpen(false);
     } catch (error) {
+      let errorMessage = "Failed to process partial payment";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      // Try to extract more details from API error response
+      const apiError = error as any;
+      if (apiError?.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError?.body?.message) {
+        errorMessage = apiError.body.message;
+      }
+      
+      console.error("Partial payment error details:", error);
+      
       toast({
         title: "Payment failed",
-        description: error instanceof Error ? error.message : "Failed to process partial payment",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
