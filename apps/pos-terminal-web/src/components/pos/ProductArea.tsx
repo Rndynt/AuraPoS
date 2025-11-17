@@ -102,7 +102,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
 
       {/* Product Grid */}
       <ScrollArea className="flex-1">
-        <div className="p-3 md:p-4 pb-20 md:pb-4">
+        <div className="p-2 md:p-3 lg:p-4 pb-20 md:pb-4">
           {error ? (
             <div className="py-16 text-center">
               <p className="text-destructive mb-2" data-testid="text-error">
@@ -113,7 +113,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
               </p>
             </div>
           ) : isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
@@ -125,7 +125,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
