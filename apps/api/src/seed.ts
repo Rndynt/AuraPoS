@@ -5,7 +5,7 @@
  * Usage: npm run db:seed
  */
 
-import { db } from '../packages/infrastructure/database';
+import { db } from '../../../packages/infrastructure/database';
 import { 
   tenants, 
   products, 
@@ -18,14 +18,14 @@ import {
   orderPayments,
   kitchenTickets,
   users,
-} from '../shared/schema';
+} from '../../../shared/schema';
 import type { 
   InsertTenant, 
   InsertProduct, 
   InsertProductOptionGroup, 
   InsertProductOption,
   InsertTenantFeature,
-} from '../shared/schema';
+} from '../../../shared/schema';
 import { sql } from 'drizzle-orm';
 
 // Product images paths

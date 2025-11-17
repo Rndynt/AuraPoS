@@ -1,3 +1,8 @@
+/**
+ * @deprecated This file will be removed in future iterations.
+ * Use repository pattern from @pos/infrastructure instead.
+ */
+
 import { type User, type InsertUser } from "@shared/schema";
 import { randomUUID } from "crypto";
 

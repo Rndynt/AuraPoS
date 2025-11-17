@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { tenantMiddleware } from "../apps/api/src/http/middleware/tenant";
-import { errorHandler } from "../apps/api/src/http/middleware/errorHandler";
-import routes from "../apps/api/src/http/routes";
+import { tenantMiddleware } from "./http/middleware/tenant";
+import { errorHandler } from "./http/middleware/errorHandler";
+import routes from "./http/routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply tenant middleware to all /api routes
