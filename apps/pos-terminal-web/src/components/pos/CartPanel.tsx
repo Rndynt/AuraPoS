@@ -13,7 +13,9 @@ type CartPanelProps = {
   onClear: () => void;
   getItemPrice: (item: CartItemType) => number;
   subtotal: number;
+  taxRate: number;
   tax: number;
+  serviceChargeRate: number;
   serviceCharge: number;
   total: number;
   onCharge: () => void;
@@ -30,7 +32,9 @@ export function CartPanel({
   onClear,
   getItemPrice,
   subtotal,
+  taxRate,
   tax,
+  serviceChargeRate,
   serviceCharge,
   total,
   onCharge,
@@ -45,6 +49,12 @@ export function CartPanel({
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const formatRateLabel = (rate: number) => {
+    const percentage = rate * 100;
+    const decimals = Number.isInteger(percentage) ? 0 : 1;
+    return `${percentage.toFixed(decimals)}%`;
   };
 
   return (
@@ -106,13 +116,15 @@ export function CartPanel({
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax (10%)</span>
+              <span className="text-muted-foreground">Tax ({formatRateLabel(taxRate)})</span>
               <span className="tabular-nums" data-testid="text-tax">
                 {formatPrice(tax)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Service (5%)</span>
+              <span className="text-muted-foreground">
+                Service ({formatRateLabel(serviceChargeRate)})
+              </span>
               <span className="tabular-nums" data-testid="text-service">
                 {formatPrice(serviceCharge)}
               </span>

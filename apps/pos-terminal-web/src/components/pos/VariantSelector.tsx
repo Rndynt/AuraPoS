@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Product, ProductVariant } from "@/lib/mockData";
+import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
 import {
   Dialog,
   DialogContent,

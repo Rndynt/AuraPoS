@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Product } from "@/../../packages/domain/catalog/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -10,6 +11,7 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -24,12 +26,19 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     >
       {/* Product Image - full width at top */}
       <div className="aspect-[4/3] bg-muted rounded-t-md overflow-hidden">
-        {product.image_url && (
+        {product.image_url && !imageFailed ? (
           <img
             src={product.image_url}
             alt={product.name}
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            onError={() => setImageFailed(true)}
           />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
+            No image
+          </div>
         )}
       </div>
 

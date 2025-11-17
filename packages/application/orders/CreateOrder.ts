@@ -5,6 +5,7 @@
 
 import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
+import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
 
 export interface CreateOrderItemInput {
   product_id: string;
@@ -96,8 +97,8 @@ export class CreateOrder {
         subtotal += itemSubtotal;
       }
 
-      const taxRate = input.tax_rate ?? 0;
-      const serviceChargeRate = input.service_charge_rate ?? 0;
+      const taxRate = input.tax_rate ?? DEFAULT_TAX_RATE;
+      const serviceChargeRate = input.service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE;
 
       const taxAmount = subtotal * taxRate;
       const serviceChargeAmount = subtotal * serviceChargeRate;

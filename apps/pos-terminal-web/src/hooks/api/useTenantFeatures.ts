@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { TenantFeature, FeatureCheck } from "@/../../packages/domain/tenants/types";
-
-const TENANT_ID = "demo-tenant";
+import { getActiveTenantId } from "@/lib/tenant";
 
 async function fetchWithTenantHeader(url: string) {
   const res = await fetch(url, {
     headers: {
-      "x-tenant-id": TENANT_ID,
+      "x-tenant-id": getActiveTenantId(),
     },
     credentials: "include",
   });
@@ -24,7 +23,7 @@ async function postWithTenantHeader(url: string, data: unknown) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-tenant-id": TENANT_ID,
+      "x-tenant-id": getActiveTenantId(),
     },
     body: JSON.stringify(data),
     credentials: "include",

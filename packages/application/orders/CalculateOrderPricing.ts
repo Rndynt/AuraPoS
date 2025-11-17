@@ -5,6 +5,7 @@
 
 import type { SelectedOption } from '@pos/domain/orders/types';
 import type { PriceCalculation, AppliedDiscount } from '@pos/domain/pricing/types';
+import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
 
 export interface OrderItemForPricing {
   base_price: number;
@@ -50,8 +51,8 @@ export class CalculateOrderPricing {
 
       const subtotalAfterDiscount = Math.max(0, orderSubtotal - totalDiscount);
 
-      const taxRate = input.tax_rate ?? 0;
-      const serviceChargeRate = input.service_charge_rate ?? 0;
+      const taxRate = input.tax_rate ?? DEFAULT_TAX_RATE;
+      const serviceChargeRate = input.service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE;
 
       const taxAmount = subtotalAfterDiscount * taxRate;
       const serviceChargeAmount = subtotalAfterDiscount * serviceChargeRate;

@@ -14,12 +14,12 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { getActiveTenantId } from "@/lib/tenant";
 
 export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
-  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const cart = useCart();
   const { hasFeature } = useFeatures();
@@ -31,6 +31,28 @@ export default function POSPage() {
 
   // Mutations
   const createOrderMutation = useCreateOrder();
+  const createKitchenTicketMutation = useCreateKitchenTicket();
+
+  const hasPartialPayment = hasFeature("partial_payment");
+  const hasKitchenTicket = hasFeature("kitchen_ticket");
+
+  const ensureCartHasItems = () => {
+    if (cart.items.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add items to the cart before continuing",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const buildOrderPayload = () => ({
+    items: cart.toBackendOrderItems(),
+    tax_rate: cart.taxRate,
+    service_charge_rate: cart.serviceChargeRate,
+  });
 
   const handleAddToCart = (product: Product) => {
     // Check if product has variants or option_groups that require selection
@@ -76,20 +98,10 @@ export default function POSPage() {
   };
 
   const handleCharge = async () => {
-    if (cart.items.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Please add items to the cart before charging",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!ensureCartHasItems()) return;
 
     try {
-      const orderItems = cart.toBackendOrderItems();
-      const result = await createOrderMutation.mutateAsync({
-        items: orderItems,
-      });
+      const result = await createOrderMutation.mutateAsync(buildOrderPayload());
 
       toast({
         title: "Payment successful",
@@ -106,33 +118,11 @@ export default function POSPage() {
     }
   };
 
-  const handlePartialPayment = async () => {
-    if (cart.items.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Please add items to the cart before making a payment",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Create the order first
-      const orderItems = cart.toBackendOrderItems();
-      const orderResult = await createOrderMutation.mutateAsync({
-        items: orderItems,
-      });
-
-      // Set the order ID and open the dialog
-      setCurrentOrderId(orderResult.order.id);
-      setPartialPaymentDialogOpen(true);
-    } catch (error) {
-      toast({
-        title: "Failed to create order",
-        description: error instanceof Error ? error.message : "Failed to create order for partial payment",
-        variant: "destructive",
-      });
-    }
+  const handlePartialPayment = () => {
+    if (!hasPartialPayment) return;
+    if (!ensureCartHasItems()) return;
+    setPartialPaymentDialogOpen(true);
+    setMobileCartOpen(false);
   };
 
   const handlePartialPaymentSubmit = async (
@@ -141,24 +131,22 @@ export default function POSPage() {
     transactionRef?: string,
     notes?: string
   ) => {
-    if (!currentOrderId) {
-      toast({
-        title: "No order found",
-        description: "Please try again",
-        variant: "destructive",
-      });
+    if (!hasPartialPayment) return;
+    if (!ensureCartHasItems()) {
+      setPartialPaymentDialogOpen(false);
       return;
     }
 
     try {
       setIsSubmittingPartialPayment(true);
 
-      // Record the partial payment for the already-created order
-      const paymentResult = await fetch(`/api/orders/${currentOrderId}/payments`, {
+      const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+
+      const paymentResult = await fetch(`/api/orders/${orderResult.order.id}/payments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-id": "demo-tenant",
+          "x-tenant-id": getActiveTenantId(),
         },
         credentials: "include",
         body: JSON.stringify({
@@ -170,14 +158,14 @@ export default function POSPage() {
       });
 
       if (!paymentResult.ok) {
-        throw new Error("Failed to record payment");
+        throw new Error((await paymentResult.text()) || "Failed to record payment");
       }
 
       const paymentData = await paymentResult.json();
 
       // Show success toast with remaining balance
       const remainingAmount = paymentData.data.remainingAmount;
-      const orderNumber = paymentData.data.order?.order_number || currentOrderId.slice(0, 8);
+      const orderNumber = paymentData.data.order?.order_number || orderResult.order.order_number;
       toast({
         title: "Partial payment recorded",
         description: `Order #${orderNumber} - Paid: Rp ${amount.toLocaleString("id-ID")} - Remaining: Rp ${remainingAmount.toLocaleString("id-ID")}`,
@@ -186,7 +174,7 @@ export default function POSPage() {
       // Clear cart and close dialog
       cart.clearCart();
       setPartialPaymentDialogOpen(false);
-      setCurrentOrderId(null);
+      setMobileCartOpen(false);
     } catch (error) {
       toast({
         title: "Payment failed",
@@ -199,44 +187,22 @@ export default function POSPage() {
   };
 
   const handleKitchenTicket = async () => {
-    if (cart.items.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Please add items to the cart before sending to kitchen",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!ensureCartHasItems()) return;
 
     try {
-      // First create an order
-      const orderItems = cart.toBackendOrderItems();
-      const orderResult = await createOrderMutation.mutateAsync({
-        items: orderItems,
+      const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+
+      await createKitchenTicketMutation.mutateAsync({
+        orderId: orderResult.order.id,
       });
-
-      // Then create kitchen ticket for the order
-      const ticketResult = await fetch(`/api/orders/${orderResult.order.id}/kitchen-ticket`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": "demo-tenant",
-        },
-        credentials: "include",
-      });
-
-      if (!ticketResult.ok) {
-        throw new Error("Failed to create kitchen ticket");
-      }
-
-      const ticketData = await ticketResult.json();
 
       toast({
         title: "Kitchen ticket sent",
         description: `Order #${orderResult.order.order_number} sent to kitchen`,
       });
-      
+
       cart.clearCart();
+      setMobileCartOpen(false);
     } catch (error) {
       toast({
         title: "Failed to send kitchen ticket",
@@ -247,7 +213,7 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex h-screen bg-muted/40">
+    <div className="flex min-h-dvh bg-muted/40">
       {/* Sidebar - Hidden on mobile */}
       <div className="hidden md:block">
         <Sidebar />
@@ -270,20 +236,25 @@ export default function POSPage() {
           onClear={cart.clearCart}
           getItemPrice={cart.getItemPrice}
           subtotal={cart.subtotal}
+          taxRate={cart.taxRate}
           tax={cart.tax}
+          serviceChargeRate={cart.serviceChargeRate}
           serviceCharge={cart.serviceCharge}
           total={cart.total}
           onCharge={handleCharge}
           onPartialPayment={handlePartialPayment}
           onKitchenTicket={handleKitchenTicket}
-          hasPartialPayment={hasFeature("partial_payment")}
-          hasKitchenTicket={hasFeature("kitchen_ticket")}
+          hasPartialPayment={hasPartialPayment}
+          hasKitchenTicket={hasKitchenTicket}
         />
       </div>
 
       {/* Mobile Cart Button - Shows on mobile/tablet when cart panel is hidden */}
       {cart.itemCount > 0 && (
-        <div className="lg:hidden fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 w-full max-w-md">
+        <div
+          className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+        >
           <Button
             size="lg"
             className="h-12 md:h-14 px-4 md:px-6 gap-2 md:gap-3 shadow-lg w-full text-sm md:text-base"
@@ -312,7 +283,9 @@ export default function POSPage() {
         onClear={cart.clearCart}
         getItemPrice={cart.getItemPrice}
         subtotal={cart.subtotal}
+        taxRate={cart.taxRate}
         tax={cart.tax}
+        serviceChargeRate={cart.serviceChargeRate}
         serviceCharge={cart.serviceCharge}
         total={cart.total}
         onCharge={() => {
@@ -321,8 +294,8 @@ export default function POSPage() {
         }}
         onPartialPayment={handlePartialPayment}
         onKitchenTicket={handleKitchenTicket}
-        hasPartialPayment={hasFeature("partial_payment")}
-        hasKitchenTicket={hasFeature("kitchen_ticket")}
+        hasPartialPayment={hasPartialPayment}
+        hasKitchenTicket={hasKitchenTicket}
       />
 
       {/* Product Options Dialog */}
@@ -334,13 +307,15 @@ export default function POSPage() {
       />
 
       {/* Partial Payment Dialog */}
-      <PartialPaymentDialog
-        open={partialPaymentDialogOpen}
-        onClose={() => setPartialPaymentDialogOpen(false)}
-        onSubmit={handlePartialPaymentSubmit}
-        cartTotal={cart.total}
-        isSubmitting={isSubmittingPartialPayment}
-      />
+      {hasPartialPayment && (
+        <PartialPaymentDialog
+          open={partialPaymentDialogOpen}
+          onClose={() => setPartialPaymentDialogOpen(false)}
+          onSubmit={handlePartialPaymentSubmit}
+          cartTotal={cart.total}
+          isSubmitting={isSubmittingPartialPayment}
+        />
+      )}
     </div>
   );
 }

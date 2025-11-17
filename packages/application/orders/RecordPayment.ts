@@ -58,7 +58,7 @@ export class RecordPayment {
 
       if (input.amount > remainingAmount) {
         throw new Error(
-          `Payment amount ($${input.amount}) exceeds remaining balance ($${remainingAmount})`
+          `Payment amount (Rp ${input.amount}) exceeds remaining balance (Rp ${remainingAmount})`
         );
       }
 
