@@ -52,42 +52,42 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
 
   return (
     <div className="flex-1 flex flex-col bg-muted/40">
-      {/* Top Bar */}
-      <div className="p-4 bg-background border-b flex items-center gap-4">
+      {/* Top Bar - with padding for mobile hamburger button */}
+      <div className="p-3 md:p-4 pl-16 md:pl-4 bg-background border-b flex items-center gap-3 md:gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search products..."
-            className="pl-10"
+            className="pl-10 h-9 md:h-10 text-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             data-testid="input-search-products"
             disabled={isLoading}
           />
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
           <User className="w-4 h-4" />
           <span data-testid="text-tenant">demo-tenant</span>
         </div>
       </div>
 
       {/* Category Tabs */}
-      <div className="px-4 py-3 bg-background border-b">
+      <div className="px-3 md:px-4 py-2 md:py-3 bg-background border-b">
         <ScrollArea className="w-full">
           <div className="flex gap-2">
             {isLoading ? (
               <>
-                <Skeleton className="h-9 w-24 rounded-full flex-shrink-0" />
-                <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
-                <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
-                <Skeleton className="h-9 w-24 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 md:h-9 w-20 md:w-24 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 md:h-9 w-16 md:w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 md:h-9 w-16 md:w-20 rounded-full flex-shrink-0" />
+                <Skeleton className="h-8 md:h-9 w-20 md:w-24 rounded-full flex-shrink-0" />
               </>
             ) : (
               categories.map((category) => (
                 <Button
                   key={category}
                   variant={selectedCategory === category ? "default" : "ghost"}
-                  className="flex-shrink-0 rounded-full"
+                  className="flex-shrink-0 rounded-full h-8 md:h-9 px-3 md:px-4 text-sm"
                   onClick={() => setSelectedCategory(category)}
                   data-testid={`button-category-${category.toLowerCase()}`}
                 >
@@ -102,7 +102,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
 
       {/* Product Grid */}
       <ScrollArea className="flex-1">
-        <div className="p-4">
+        <div className="p-3 md:p-4 pb-20 md:pb-4">
           {error ? (
             <div className="py-16 text-center">
               <p className="text-destructive mb-2" data-testid="text-error">
@@ -113,7 +113,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
               </p>
             </div>
           ) : isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
@@ -125,7 +125,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -147,10 +147,10 @@ function ProductCardSkeleton() {
       <CardContent className="p-0">
         <Skeleton className="aspect-[4/3] w-full" />
         <div className="p-3 space-y-2">
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-6 w-1/2" />
+          <Skeleton className="h-4 md:h-5 w-3/4" />
+          <Skeleton className="h-5 md:h-6 w-1/2" />
           <div className="flex gap-2">
-            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-4 md:h-5 w-16" />
           </div>
         </div>
       </CardContent>

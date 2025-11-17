@@ -283,19 +283,19 @@ export default function POSPage() {
 
       {/* Mobile Cart Button - Shows on mobile/tablet when cart panel is hidden */}
       {cart.itemCount > 0 && (
-        <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+        <div className="lg:hidden fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 px-4 w-full max-w-md">
           <Button
             size="lg"
-            className="h-14 px-6 gap-3 shadow-lg"
+            className="h-12 md:h-14 px-4 md:px-6 gap-2 md:gap-3 shadow-lg w-full text-sm md:text-base"
             onClick={() => setMobileCartOpen(true)}
             data-testid="button-view-cart-mobile"
           >
-            <ShoppingCart className="w-5 h-5" />
-            <span>View Cart</span>
+            <ShoppingCart className="w-4 md:w-5 h-4 md:h-5" />
+            <span className="hidden sm:inline">View Cart</span>
             <Badge variant="secondary" className="ml-1">
               {cart.itemCount}
             </Badge>
-            <span className="ml-2 font-semibold">
+            <span className="ml-auto font-semibold">
               Rp {cart.total.toLocaleString("id-ID")}
             </span>
           </Button>
