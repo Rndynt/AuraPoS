@@ -3,20 +3,19 @@
  * Centralized hooks for all backend API interactions
  */
 
-import { useQuery, useMutation, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Product } from "@/../../packages/domain/catalog/types";
 import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption } from "@/../../packages/domain/orders/types";
 import type { TenantFeature, FeatureCheck } from "@/../../packages/domain/tenants/types";
-
-// Tenant ID for multi-tenant isolation
-const TENANT_ID = "demo-tenant";
+import { getActiveTenantId } from "@/lib/tenant";
 
 // Helper to add tenant header to fetch requests
 async function fetchWithTenantHeader(url: string) {
+  const tenantId = getActiveTenantId();
   const res = await fetch(url, {
     headers: {
-      "x-tenant-id": TENANT_ID,
+      "x-tenant-id": tenantId,
     },
     credentials: "include",
   });
@@ -32,11 +31,12 @@ async function fetchWithTenantHeader(url: string) {
 
 // Helper to add tenant header to mutations
 async function mutateWithTenantHeader(method: string, url: string, data?: unknown) {
+  const tenantId = getActiveTenantId();
   const res = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
-      "x-tenant-id": TENANT_ID,
+      "x-tenant-id": tenantId,
     },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
@@ -204,12 +204,15 @@ export type RecordPaymentResponse = {
   remainingAmount: number;
 };
 
-export function useRecordPayment(orderId: string) {
-  return useMutation<RecordPaymentResponse, Error, RecordPaymentInput>({
-    mutationFn: (data) => mutateWithTenantHeader("POST", `/api/orders/${orderId}/payments`, data),
-    onSuccess: () => {
+export type RecordPaymentVariables = RecordPaymentInput & { orderId: string };
+
+export function useRecordPayment() {
+  return useMutation<RecordPaymentResponse, Error, RecordPaymentVariables>({
+    mutationFn: ({ orderId, ...payload }) =>
+      mutateWithTenantHeader("POST", `/api/orders/${orderId}/payments`, payload),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/orders", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
     },
   });
 }
@@ -225,11 +228,14 @@ export type CreateKitchenTicketResponse = {
   ticket: KitchenTicket;
 };
 
-export function useCreateKitchenTicket(orderId: string) {
-  return useMutation<CreateKitchenTicketResponse, Error, CreateKitchenTicketInput>({
-    mutationFn: (data) => mutateWithTenantHeader("POST", `/api/orders/${orderId}/kitchen-ticket`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders", orderId] });
+export type CreateKitchenTicketVariables = CreateKitchenTicketInput & { orderId: string };
+
+export function useCreateKitchenTicket() {
+  return useMutation<CreateKitchenTicketResponse, Error, CreateKitchenTicketVariables>({
+    mutationFn: ({ orderId, ...payload }) =>
+      mutateWithTenantHeader("POST", `/api/orders/${orderId}/kitchen-ticket`, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
     },
   });
 }

@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Product } from "@/../../packages/domain/catalog/types";
-
-const TENANT_ID = "demo-tenant";
+import { getActiveTenantId } from "@/lib/tenant";
 
 async function fetchWithTenantHeader(url: string) {
   const res = await fetch(url, {
     headers: {
-      "x-tenant-id": TENANT_ID,
+      "x-tenant-id": getActiveTenantId(),
     },
     credentials: "include",
   });

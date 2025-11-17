@@ -16,7 +16,9 @@ type MobileCartDrawerProps = {
   onClear: () => void;
   getItemPrice: (item: CartItemType) => number;
   subtotal: number;
+  taxRate: number;
   tax: number;
+  serviceChargeRate: number;
   serviceCharge: number;
   total: number;
   onCharge: () => void;
@@ -35,7 +37,9 @@ export function MobileCartDrawer({
   onClear,
   getItemPrice,
   subtotal,
+  taxRate,
   tax,
+  serviceChargeRate,
   serviceCharge,
   total,
   onCharge,
@@ -50,6 +54,12 @@ export function MobileCartDrawer({
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const formatRateLabel = (rate: number) => {
+    const percentage = rate * 100;
+    const decimals = Number.isInteger(percentage) ? 0 : 1;
+    return `${percentage.toFixed(decimals)}%`;
   };
 
   return (
@@ -114,18 +124,23 @@ export function MobileCartDrawer({
           </ScrollArea>
 
           {items.length > 0 && (
-            <div className="p-4 border-t border-card-border space-y-4 bg-card">
+            <div
+              className="p-4 border-t border-card-border space-y-4 bg-card"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+            >
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (10%)</span>
+                  <span className="text-muted-foreground">Tax ({formatRateLabel(taxRate)})</span>
                   <span className="tabular-nums">{formatPrice(tax)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Service (5%)</span>
+                  <span className="text-muted-foreground">
+                    Service ({formatRateLabel(serviceChargeRate)})
+                  </span>
                   <span className="tabular-nums">{formatPrice(serviceCharge)}</span>
                 </div>
                 <Separator />

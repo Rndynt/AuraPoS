@@ -1,29 +1,39 @@
-import { CartItem } from "../pos/CartItem";
+import { nanoid } from "nanoid";
+import { CartItem as CartItemComponent } from "../pos/CartItem";
 import { mockProducts } from "@/lib/mockData";
+import type { CartItem } from "@/hooks/useCart";
 
 export default function CartItemExample() {
-  const mockCartItems = [
-    {
-      id: "1",
-      product: mockProducts[0],
-      variant: mockProducts[0].variants?.[1],
-      qty: 2,
-    },
-    {
-      id: "2",
-      product: mockProducts[2],
-      qty: 1,
-    },
+  type ProductVariant = NonNullable<(typeof mockProducts)[number]["variants"]>[number];
+
+  const createCartItem = (product: (typeof mockProducts)[number], variant?: ProductVariant, quantity: number = 1): CartItem => {
+    const variantDelta = variant?.price_delta || 0;
+    const unitPrice = product.base_price + variantDelta;
+    return {
+      id: nanoid(),
+      product,
+      variant,
+      selectedOptions: [],
+      quantity,
+      itemTotal: unitPrice * quantity,
+      note: "",
+    };
+  };
+
+  const mockCartItems: CartItem[] = [
+    createCartItem(mockProducts[0], mockProducts[0].variants?.[1], 2),
+    createCartItem(mockProducts[2], undefined, 1),
   ];
 
-  const getItemPrice = (item: typeof mockCartItems[0]) => {
-    return item.product.base_price + (item.variant?.price_delta || 0);
+  const getItemPrice = (item: CartItem) => {
+    const optionsDelta = item.selectedOptions.reduce((sum, opt) => sum + opt.price_delta, 0);
+    return item.product.base_price + (item.variant?.price_delta || 0) + optionsDelta;
   };
 
   return (
     <div className="p-6 max-w-md space-y-2 bg-background">
       {mockCartItems.map((item) => (
-        <CartItem
+        <CartItemComponent
           key={item.id}
           item={item}
           onUpdateQty={(id, qty) => console.log("Update qty:", id, qty)}

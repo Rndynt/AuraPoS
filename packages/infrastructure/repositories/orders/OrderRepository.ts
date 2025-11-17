@@ -16,10 +16,10 @@ import {
   type OrderItemModifier,
   type OrderPayment,
 } from '../../../../shared/schema';
-import { eq, and, gte, lte, inArray, desc } from 'drizzle-orm';
+import { eq, and, gte, lte, inArray, desc, sql } from 'drizzle-orm';
 
 export interface OrderFilters {
-  status?: string | string[];
+  status?: string[];
   paymentStatus?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -29,6 +29,10 @@ export interface OrderFilters {
 
 export interface IOrderRepository {
   findByTenant(tenantId: string, filters?: OrderFilters): Promise<Order[]>;
+  countByTenant(
+    tenantId: string,
+    filters?: Omit<OrderFilters, 'limit' | 'offset'>
+  ): Promise<number>;
   findById(id: string, tenantId: string): Promise<any | null>;
   create(order: InsertOrder, tenantId: string): Promise<Order>;
   update(id: string, order: Partial<InsertOrder>, tenantId: string): Promise<Order>;
@@ -51,6 +55,31 @@ export class OrderRepository
     super(db);
   }
 
+  private buildFilterConditions(
+    tenantId: string,
+    filters?: Omit<OrderFilters, 'limit' | 'offset'>
+  ) {
+    const conditions = [eq(orders.tenantId, tenantId)];
+
+    if (filters?.status && filters.status.length > 0) {
+      conditions.push(inArray(orders.status, filters.status as any[]));
+    }
+
+    if (filters?.paymentStatus) {
+      conditions.push(eq(orders.paymentStatus, filters.paymentStatus as any));
+    }
+
+    if (filters?.dateFrom) {
+      conditions.push(gte(orders.orderDate, filters.dateFrom));
+    }
+
+    if (filters?.dateTo) {
+      conditions.push(lte(orders.orderDate, filters.dateTo));
+    }
+
+    return conditions;
+  }
+
   /**
    * Find orders by tenant with filters and pagination
    */
@@ -59,29 +88,7 @@ export class OrderRepository
     filters?: OrderFilters
   ): Promise<Order[]> {
     try {
-      const conditions = [eq(orders.tenantId, tenantId)];
-
-      // Status filter - support single or multiple statuses
-      if (filters?.status) {
-        if (Array.isArray(filters.status)) {
-          conditions.push(inArray(orders.status, filters.status as any[]));
-        } else {
-          conditions.push(eq(orders.status, filters.status as any));
-        }
-      }
-
-      // Payment status filter
-      if (filters?.paymentStatus) {
-        conditions.push(eq(orders.paymentStatus, filters.paymentStatus as any));
-      }
-
-      // Date range filters
-      if (filters?.dateFrom) {
-        conditions.push(gte(orders.orderDate, filters.dateFrom));
-      }
-      if (filters?.dateTo) {
-        conditions.push(lte(orders.orderDate, filters.dateTo));
-      }
+      const conditions = this.buildFilterConditions(tenantId, filters);
 
       let query = this.db
         .select()
@@ -100,6 +107,23 @@ export class OrderRepository
       return await query;
     } catch (error) {
       this.handleError('find orders by tenant', error);
+    }
+  }
+
+  async countByTenant(
+    tenantId: string,
+    filters?: Omit<OrderFilters, 'limit' | 'offset'>
+  ): Promise<number> {
+    try {
+      const conditions = this.buildFilterConditions(tenantId, filters);
+      const result = await this.db
+        .select({ value: sql<number>`count(*)::int` })
+        .from(orders)
+        .where(and(...conditions));
+
+      return result[0]?.value ?? 0;
+    } catch (error) {
+      this.handleError('count orders by tenant', error);
     }
   }
 

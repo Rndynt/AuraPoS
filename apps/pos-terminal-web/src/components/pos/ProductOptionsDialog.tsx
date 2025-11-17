@@ -40,6 +40,7 @@ export function ProductOptionsDialog({
   
   // Validation errors - Map<group_id, error_message>
   const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
+  const [selectionWarnings, setSelectionWarnings] = useState<Map<string, string>>(new Map());
 
   // Reset state when dialog opens or product changes
   useEffect(() => {
@@ -48,6 +49,7 @@ export function ProductOptionsDialog({
       setSelectedOptionsByGroup(new Map());
       setQty(1);
       setValidationErrors(new Map());
+      setSelectionWarnings(new Map());
     }
   }, [open, product]);
 
@@ -60,6 +62,18 @@ export function ProductOptionsDialog({
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const updateGroupWarning = (groupId: string, message?: string) => {
+    setSelectionWarnings((prev) => {
+      const next = new Map(prev);
+      if (message) {
+        next.set(groupId, message);
+      } else {
+        next.delete(groupId);
+      }
+      return next;
+    });
   };
 
   /**
@@ -86,8 +100,8 @@ export function ProductOptionsDialog({
         newSelections = currentSelections.filter(opt => opt.option_id !== optionId);
       } else {
         // Check max_selections
-        if (currentSelections.length >= group.max_selections) {
-          // Don't add if at max
+        if (group.max_selections > 0 && currentSelections.length >= group.max_selections) {
+          updateGroupWarning(group.id, `You can select up to ${group.max_selections} options`);
           return;
         }
         newSelections = [
@@ -110,6 +124,7 @@ export function ProductOptionsDialog({
       newMap.set(group.id, newSelections);
     }
     setSelectedOptionsByGroup(newMap);
+    updateGroupWarning(group.id);
   };
 
   /**
@@ -184,6 +199,7 @@ export function ProductOptionsDialog({
     setSelectedOptionsByGroup(new Map());
     setQty(1);
     setValidationErrors(new Map());
+    setSelectionWarnings(new Map());
   };
 
   /**
@@ -321,6 +337,7 @@ export function ProductOptionsDialog({
           {sortedOptionGroups.map((group, index) => {
             const selections = selectedOptionsByGroup.get(group.id) || [];
             const error = validationErrors.get(group.id);
+            const warning = selectionWarnings.get(group.id);
             const availableOptions = group.options.filter(opt => opt.is_available !== false);
 
             return (
@@ -342,6 +359,13 @@ export function ProductOptionsDialog({
                     <div className="flex items-center gap-2 text-xs sm:text-sm text-destructive" data-testid={`error-${group.id}`}>
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>{error}</span>
+                    </div>
+                  )}
+
+                  {warning && !error && (
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-600" data-testid={`warning-${group.id}`}>
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{warning}</span>
                     </div>
                   )}
 

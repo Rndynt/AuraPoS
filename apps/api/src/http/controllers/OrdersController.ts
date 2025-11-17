@@ -151,12 +151,21 @@ export const createKitchenTicket = asyncHandler(async (req: Request, res: Respon
 export const listOrders = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
 
+  const orderStatusSchema = z.enum(['draft', 'confirmed', 'completed', 'cancelled']);
+
   // Validate query params
   const querySchema = z.object({
-    status: z.union([
-      z.enum(['draft', 'confirmed', 'completed', 'cancelled']),
-      z.string().transform(val => val.split(',')),
-    ]).optional(),
+    status: z
+      .preprocess((value) => {
+        if (typeof value === 'string') {
+          return value
+            .split(',')
+            .map((status) => status.trim())
+            .filter(Boolean);
+        }
+        return value;
+      }, z.array(orderStatusSchema).optional())
+      .transform((value) => (value && value.length > 0 ? value : undefined)),
     payment_status: z.enum(['paid', 'partial', 'unpaid']).optional(),
     startDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
     endDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
@@ -174,15 +183,22 @@ export const listOrders = asyncHandler(async (req: Request, res: Response) => {
   // Calculate pagination
   const offset = (page! - 1) * limit!;
 
-  // Query orders using repository
-  const orders = await container.orderRepository.findByTenant(tenantId, {
-    status: status as any,
+  const filterOptions = {
+    status,
     paymentStatus: payment_status,
     dateFrom: startDate,
     dateTo: endDate,
-    limit: limit!,
-    offset,
-  });
+  };
+
+  // Query orders using repository
+  const [orders, total] = await Promise.all([
+    container.orderRepository.findByTenant(tenantId, {
+      ...filterOptions,
+      limit: limit!,
+      offset,
+    }),
+    container.orderRepository.countByTenant(tenantId, filterOptions),
+  ]);
 
   res.status(200).json({
     success: true,
@@ -191,7 +207,7 @@ export const listOrders = asyncHandler(async (req: Request, res: Response) => {
       pagination: {
         page: page!,
         limit: limit!,
-        total: orders.length,
+        total,
       },
     },
   });

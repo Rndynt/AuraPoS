@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
 
 // Product images - import from generated assets
 import burgerImg from "@assets/generated_images/Gourmet_beef_burger_product_photo_df61270b.png";
@@ -10,26 +11,6 @@ import friesImg from "@assets/generated_images/French_fries_product_photo_dc986f
 import icedLatteImg from "@assets/generated_images/Iced_caramel_latte_product_photo_1bc0e828.png";
 import wingsImg from "@assets/generated_images/Fried_chicken_wings_product_photo_fce05207.png";
 
-export type ProductVariant = {
-  id: string;
-  name: string;
-  price_delta?: number;
-  color?: string | null;
-};
-
-export type Product = {
-  id: string;
-  name: string;
-  base_price: number;
-  category: string;
-  image_url: string;
-  has_variants: boolean;
-  variants?: ProductVariant[];
-  stock_tracking_enabled: boolean;
-  stock_qty?: number;
-  is_active: boolean;
-};
-
 export type Feature = {
   code: string;
   name: string;
@@ -39,18 +20,11 @@ export type Feature = {
   price?: number;
 };
 
-export type CartItem = {
-  id: string;
-  product: Product;
-  variant?: ProductVariant;
-  qty: number;
-  note?: string;
-};
-
 // Mock products //todo: remove mock functionality
 export const mockProducts: Product[] = [
   {
     id: "1",
+    tenant_id: "demo-tenant",
     name: "Classic Beef Burger",
     base_price: 45000,
     category: "Burger",
@@ -66,6 +40,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "2",
+    tenant_id: "demo-tenant",
     name: "Chicken Rice Bowl",
     base_price: 35000,
     category: "Rice Bowl",
@@ -77,6 +52,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "3",
+    tenant_id: "demo-tenant",
     name: "Cappuccino",
     base_price: 25000,
     category: "Coffee",
@@ -91,6 +67,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "4",
+    tenant_id: "demo-tenant",
     name: "Chocolate Lava Cake",
     base_price: 38000,
     category: "Dessert",
@@ -102,6 +79,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "5",
+    tenant_id: "demo-tenant",
     name: "Supreme Pizza",
     base_price: 85000,
     category: "Pizza",
@@ -117,6 +95,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "6",
+    tenant_id: "demo-tenant",
     name: "French Fries",
     base_price: 18000,
     category: "Snack",
@@ -131,6 +110,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "7",
+    tenant_id: "demo-tenant",
     name: "Iced Caramel Latte",
     base_price: 32000,
     category: "Coffee",
@@ -141,6 +121,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: "8",
+    tenant_id: "demo-tenant",
     name: "Chicken Wings",
     base_price: 42000,
     category: "Snack",

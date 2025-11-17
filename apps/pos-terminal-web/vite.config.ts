@@ -22,8 +22,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      "@shared": path.resolve(import.meta.dirname, "..", "..", "shared"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "@shared": path.resolve(import.meta.dirname, "..", "..", "shared"),
+      "@pos/core": path.resolve(import.meta.dirname, "..", "..", "packages", "core"),
+      "@pos/domain": path.resolve(import.meta.dirname, "..", "..", "packages", "domain"),
+      "@pos/application": path.resolve(import.meta.dirname, "..", "..", "packages", "application"),
+      "@pos/infrastructure": path.resolve(import.meta.dirname, "..", "..", "packages", "infrastructure"),
+      "@pos/features": path.resolve(import.meta.dirname, "..", "..", "packages", "features"),
+      "@pos/ui": path.resolve(import.meta.dirname, "..", "..", "packages", "ui", "src"),
     },
   },
   root: path.resolve(import.meta.dirname),

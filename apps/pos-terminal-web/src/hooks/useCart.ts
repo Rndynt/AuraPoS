@@ -2,6 +2,7 @@ import { useState } from "react";
 import { nanoid } from "nanoid";
 import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
 import type { SelectedOption } from "@/../../packages/domain/orders/types";
+import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
 
 /**
  * Cart item representation on the frontend
@@ -279,8 +280,10 @@ export function useCart() {
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-  const tax = subtotal * 0.1; // 10% tax
-  const serviceCharge = subtotal * 0.05; // 5% service
+  const taxRate = DEFAULT_TAX_RATE;
+  const serviceChargeRate = DEFAULT_SERVICE_CHARGE_RATE;
+  const tax = subtotal * taxRate;
+  const serviceCharge = subtotal * serviceChargeRate;
   const total = subtotal + tax + serviceCharge;
 
   return {
@@ -293,6 +296,8 @@ export function useCart() {
     getItemPrice,
     toBackendOrderItems,
     subtotal,
+    taxRate,
+    serviceChargeRate,
     tax,
     serviceCharge,
     total,

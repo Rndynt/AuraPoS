@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,7 @@ export function PartialPaymentDialog({
   cartTotal,
   isSubmitting = false,
 }: PartialPaymentDialogProps) {
-  const [amount, setAmount] = useState("");
+  const [amountDigits, setAmountDigits] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<
     "cash" | "card" | "ewallet" | "other"
   >("cash");
@@ -59,12 +59,27 @@ export function PartialPaymentDialog({
   };
 
   // Calculate remaining balance
-  const numericAmount = parseFloat(amount) || 0;
-  const remainingBalance = cartTotal - numericAmount;
+  const numericAmount = amountDigits ? parseInt(amountDigits, 10) : 0;
+  const remainingBalance = Math.max(cartTotal - numericAmount, 0);
+
+  const formattedAmount = amountDigits ? formatCurrency(numericAmount) : "";
+
+  const presetAmounts = useMemo(() => {
+    const ratios = [0.25, 0.5, 0.75];
+    const raw = ratios
+      .map((ratio) => Math.round(cartTotal * ratio))
+      .filter((value) => value > 0 && value < cartTotal);
+    return Array.from(new Set(raw)).sort((a, b) => a - b);
+  }, [cartTotal]);
+
+  const handleAmountChange = (value: string) => {
+    const digitsOnly = value.replace(/[^0-9]/g, "");
+    setAmountDigits(digitsOnly);
+  };
 
   // Validation
   useEffect(() => {
-    if (!amount) {
+    if (!amountDigits) {
       setError("");
       return;
     }
@@ -76,7 +91,7 @@ export function PartialPaymentDialog({
     } else {
       setError("");
     }
-  }, [amount, numericAmount, cartTotal]);
+  }, [amountDigits, numericAmount, cartTotal]);
 
   const isValid = !error && numericAmount > 0 && numericAmount <= cartTotal;
 
@@ -95,7 +110,7 @@ export function PartialPaymentDialog({
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
-      setAmount("");
+      setAmountDigits("");
       setPaymentMethod("cash");
       setTransactionRef("");
       setNotes("");
@@ -117,7 +132,14 @@ export function PartialPaymentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-partial-payment">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -151,13 +173,12 @@ export function PartialPaymentDialog({
               </Label>
               <Input
                 id="amount"
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="0"
-                max={cartTotal}
-                step="1000"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Rp 0"
+                value={formattedAmount}
+                onChange={(e) => handleAmountChange(e.target.value)}
                 data-testid="input-payment-amount"
                 className={error ? "border-destructive" : ""}
               />
@@ -168,6 +189,25 @@ export function PartialPaymentDialog({
                 >
                   {error}
                 </p>
+              )}
+
+              {presetAmounts.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {presetAmounts.map((preset) => (
+                    <Button
+                      key={preset}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={`flex-1 min-w-[120px] ${
+                        numericAmount === preset ? "border-primary bg-primary/5" : ""
+                      }`}
+                      onClick={() => setAmountDigits(String(preset))}
+                    >
+                      {formatCurrency(preset)}
+                    </Button>
+                  ))}
+                </div>
               )}
             </div>
 
