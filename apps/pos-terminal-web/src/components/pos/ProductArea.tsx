@@ -56,7 +56,7 @@ export function ProductArea({
 
   // Defensive filter - only show active order types
   const activeOrderTypes = useMemo(() => {
-    return orderTypes.filter(ot => ot.is_active === true);
+    return orderTypes.filter(ot => ot.isActive === true);
   }, [orderTypes]);
 
   const filteredProducts = useMemo(() => {

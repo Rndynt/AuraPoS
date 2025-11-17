@@ -35,7 +35,7 @@ export default function POSPage() {
 
   // Filter only active order types - defensive check even though API already filters
   const activeOrderTypes = useMemo(() => {
-    return orderTypes?.filter(ot => ot.is_active === true) || [];
+    return orderTypes?.filter(ot => ot.isActive === true) || [];
   }, [orderTypes]);
 
   // Auto-select first ACTIVE order type when loaded
