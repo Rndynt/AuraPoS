@@ -14,6 +14,7 @@ import { OrderItemRepository } from '../../../packages/infrastructure/repositori
 import { OrderItemModifierRepository } from '../../../packages/infrastructure/repositories/orders/OrderItemModifierRepository';
 import { OrderPaymentRepository } from '../../../packages/infrastructure/repositories/orders/OrderPaymentRepository';
 import { KitchenTicketRepository } from '../../../packages/infrastructure/repositories/orders/KitchenTicketRepository';
+import { OrderTypeRepository } from '../../../packages/infrastructure/repositories/orders/OrderTypeRepository';
 import { TenantRepository } from '../../../packages/infrastructure/repositories/tenants/TenantRepository';
 import { TenantFeatureRepository } from '../../../packages/infrastructure/repositories/tenants/TenantFeatureRepository';
 
@@ -49,6 +50,7 @@ class Container {
   public readonly orderItemModifierRepository: OrderItemModifierRepository;
   public readonly orderPaymentRepository: OrderPaymentRepository;
   public readonly kitchenTicketRepository: KitchenTicketRepository;
+  public readonly orderTypeRepository: OrderTypeRepository;
 
   // Tenant Repositories
   public readonly tenantRepository: TenantRepository;
@@ -78,6 +80,7 @@ class Container {
     this.orderItemModifierRepository = new OrderItemModifierRepository(db);
     this.orderPaymentRepository = new OrderPaymentRepository(db);
     this.kitchenTicketRepository = new KitchenTicketRepository(db);
+    this.orderTypeRepository = new OrderTypeRepository(db);
     this.tenantRepository = new TenantRepository(db);
     this.tenantFeatureRepository = new TenantFeatureRepository(db);
 
