@@ -18,6 +18,8 @@ import {
   orderPayments,
   kitchenTickets,
   users,
+  orderTypes,
+  tenantOrderTypes,
 } from '../../../shared/schema';
 import type { 
   InsertTenant, 
@@ -25,6 +27,8 @@ import type {
   InsertProductOptionGroup, 
   InsertProductOption,
   InsertTenantFeature,
+  InsertOrderType,
+  InsertTenantOrderType,
 } from '../../../shared/schema';
 import { sql } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
@@ -66,7 +70,7 @@ async function clearDatabase() {
   try {
     // Use neon SQL client directly to avoid Drizzle ORM driver issues
     const sqlClient = neon(process.env.DATABASE_URL!);
-    await sqlClient`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, product_options, product_option_groups, products, tenant_features, tenants, users CASCADE`;
+    await sqlClient`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, tenant_order_types, order_types, product_options, product_option_groups, products, tenant_features, tenants, users CASCADE`;
     
     console.log('✅ Database cleared successfully');
   } catch (error) {
@@ -490,6 +494,230 @@ async function seedProducts(tenantId: string) {
 }
 
 /**
+ * Seed order types master data
+ */
+async function seedOrderTypes() {
+  console.log('📋 Seeding order types...');
+  
+  const orderTypesData: InsertOrderType[] = [
+    // Cafe / Restaurant oriented
+    {
+      code: 'DINE_IN',
+      name: 'Dine In',
+      description: 'Customer dining in at the restaurant',
+      isOnPremise: true,
+      needTableNumber: true,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: false,
+      affectsServiceCharge: true,
+      isActive: true,
+    },
+    {
+      code: 'TAKE_AWAY',
+      name: 'Take Away',
+      description: 'Customer picks up order to take away',
+      isOnPremise: true,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'DELIVERY',
+      name: 'Delivery',
+      description: 'Order delivered to customer address',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: true,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'DRIVE_THRU',
+      name: 'Drive Thru',
+      description: 'Customer orders from vehicle',
+      isOnPremise: true,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    // Retail / Minimarket / Swalayan
+    {
+      code: 'WALK_IN',
+      name: 'Walk In',
+      description: 'Customer walks in and purchases directly',
+      isOnPremise: true,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'SELF_CHECKOUT',
+      name: 'Self Checkout',
+      description: 'Customer uses self-service kiosk',
+      isOnPremise: true,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'PICKUP_STORE',
+      name: 'Pickup at Store',
+      description: 'Customer orders online and picks up at store',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'PPOB',
+      name: 'PPOB',
+      description: 'Bill payment, pulsa, token, etc.',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: true,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'DIGITAL_PRODUCT',
+      name: 'Digital Product',
+      description: 'Digital goods purchase',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: true,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'PREORDER',
+      name: 'Pre-order',
+      description: 'Advance order for future fulfillment',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    // Laundry
+    {
+      code: 'DROPOFF',
+      name: 'Drop Off',
+      description: 'Customer drops off laundry',
+      isOnPremise: true,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: false,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'PICKUP_DELIVERY',
+      name: 'Pickup & Delivery',
+      description: 'Pickup laundry from customer and deliver back',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: true,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'EXPRESS',
+      name: 'Express',
+      description: 'Express service with faster turnaround',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: true,
+      isActive: true,
+    },
+    // Services / Appointment-based
+    {
+      code: 'APPOINTMENT',
+      name: 'Appointment',
+      description: 'Scheduled appointment for service',
+      isOnPremise: true,
+      needTableNumber: false,
+      needAddress: false,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+    {
+      code: 'SUBSCRIPTION',
+      name: 'Subscription',
+      description: 'Recurring service subscription',
+      isOnPremise: false,
+      needTableNumber: false,
+      needAddress: true,
+      allowScheduled: true,
+      isDigitalProduct: false,
+      affectsServiceCharge: false,
+      isActive: true,
+    },
+  ];
+  
+  const createdOrderTypes = await db.insert(orderTypes).values(orderTypesData).returning();
+  
+  console.log(`✅ Created ${createdOrderTypes.length} order types:`);
+  createdOrderTypes.forEach(ot => console.log(`   - ${ot.code}: ${ot.name}`));
+  
+  return createdOrderTypes;
+}
+
+/**
+ * Seed tenant order types for demo tenant (restaurant use case)
+ */
+async function seedTenantOrderTypes(tenantId: string, createdOrderTypes: any[]) {
+  console.log('🏪 Enabling order types for demo tenant...');
+  
+  // For a cafe/restaurant type tenant, enable these order types
+  const restaurantOrderTypes = ['DINE_IN', 'TAKE_AWAY', 'DELIVERY'];
+  
+  const tenantOrderTypesData: InsertTenantOrderType[] = createdOrderTypes
+    .filter(ot => restaurantOrderTypes.includes(ot.code))
+    .map(ot => ({
+      tenantId,
+      orderTypeId: ot.id,
+      isEnabled: true,
+    }));
+  
+  await db.insert(tenantOrderTypes).values(tenantOrderTypesData);
+  
+  console.log(`✅ Enabled ${tenantOrderTypesData.length} order types for demo tenant:`);
+  restaurantOrderTypes.forEach(code => console.log(`   - ${code}`));
+}
+
+/**
  * Seed tenant features for demo tenant
  */
 async function seedTenantFeatures(tenantId: string) {
@@ -519,8 +747,16 @@ async function seed() {
     await clearDatabase();
     console.log('');
     
+    // Seed order types (master data)
+    const createdOrderTypes = await seedOrderTypes();
+    console.log('');
+    
     // Seed tenant
     const tenantId = await seedTenant();
+    console.log('');
+    
+    // Enable order types for demo tenant
+    await seedTenantOrderTypes(tenantId, createdOrderTypes);
     console.log('');
     
     // Seed products with option groups
@@ -535,6 +771,8 @@ async function seed() {
     console.log('');
     console.log('Summary:');
     console.log('- 1 tenant created (demo-tenant)');
+    console.log(`- ${createdOrderTypes.length} order types created`);
+    console.log('- 3 order types enabled for demo tenant (DINE_IN, TAKE_AWAY, DELIVERY)');
     console.log('- 8 products created with option groups');
     console.log(`- ${DEMO_TENANT_FEATURES.length} features enabled`);
     console.log('');

@@ -64,6 +64,10 @@ export type Order = {
   id: string;
   tenant_id: string;
   
+  // Order type and sales channel
+  order_type_id?: string;
+  sales_channel?: "POS" | "WHATSAPP" | "WEBSITE" | "MARKETPLACE" | "GOFOOD" | "GRABFOOD" | "PHONE" | "OTHER";
+  
   // Order items
   items: OrderItem[];
   
@@ -107,4 +111,38 @@ export type KitchenTicket = {
   created_at: Date;
   started_at?: Date;
   completed_at?: Date;
+};
+
+/**
+ * Order Type defines the mode of service across different business verticals
+ * Examples: Dine In, Take Away, Delivery, Walk-In, PPOB, etc.
+ */
+export type OrderType = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  is_on_premise: boolean;
+  need_table_number: boolean;
+  need_address: boolean;
+  allow_scheduled: boolean;
+  is_digital_product: boolean;
+  affects_service_charge: boolean;
+  is_active: boolean;
+  created_at: Date;
+  updated_at?: Date;
+};
+
+/**
+ * Tenant-specific order type configuration
+ * Allows enabling/disabling specific order types per tenant
+ */
+export type TenantOrderType = {
+  id: string;
+  tenant_id: string;
+  order_type_id: string;
+  is_enabled: boolean;
+  config?: Record<string, any>;
+  created_at: Date;
+  updated_at?: Date;
 };
