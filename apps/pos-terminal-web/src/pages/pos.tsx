@@ -213,11 +213,9 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex min-h-dvh bg-muted/40">
-      {/* Sidebar - Hidden on mobile */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
+    <div className="flex min-h-dvh bg-muted/40 overflow-x-hidden w-full max-w-[100vw]">
+      {/* Sidebar - Responsive (hamburger on mobile, fixed sidebar on desktop) */}
+      <Sidebar />
 
       {/* Main Product Area */}
       <ProductArea 

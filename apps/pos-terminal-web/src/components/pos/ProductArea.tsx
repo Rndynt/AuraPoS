@@ -1,13 +1,12 @@
 import { useState, useMemo } from "react";
 import type { Product } from "@/../../packages/domain/catalog/types";
 import { ProductCard } from "./ProductCardV2";
-import { Input } from "@/components/ui/input";
+import { POSHeader } from "./POSHeader";
+import { SidebarContent } from "./Sidebar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { useTenant } from "@/context/TenantContext";
 
 const DEFAULT_CATEGORY = "All";
 
@@ -38,7 +37,6 @@ const filterByCategory = (products: Product[], category: string): Product[] => {
 export function ProductArea({ products, isLoading, error, onAddToCart }: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState("");
-  const { tenantId } = useTenant();
 
   const categories = useMemo(() => getCategories(products), [products]);
 
@@ -54,31 +52,18 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
   }, [products, selectedCategory, searchQuery]);
 
   return (
-    <div className="flex-1 flex flex-col bg-muted/40 min-h-0">
-      {/* Top Bar & Category Tabs */}
-      <div className="sticky top-0 z-20 border-b bg-background shadow-sm">
-        <div className="p-3 md:p-4">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="md:hidden w-10" aria-hidden="true" />
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                className="pl-10 h-9 md:h-10 text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="input-search-products"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-              <User className="w-4 h-4" />
-              <span data-testid="text-tenant">{tenantId}</span>
-            </div>
-          </div>
-        </div>
+    <div className="flex-1 flex flex-col bg-muted/40 min-h-0 overflow-x-hidden w-full max-w-full">
+      {/* Unified Header */}
+      <POSHeader 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchDisabled={isLoading}
+        sidebarContent={<SidebarContent />}
+      />
 
-        <div className="px-3 md:px-4 py-2 md:py-3 border-t">
+      {/* Category Tabs */}
+      <div className="sticky top-[86px] sm:top-[62px] md:top-[74px] z-10 bg-background border-b">
+        <div className="px-3 md:px-4 py-2 md:py-3">
           <ScrollArea className="w-full">
             <div className="flex gap-2">
               {isLoading ? (
@@ -108,8 +93,8 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
       </div>
 
       {/* Product Grid */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-2 md:p-3 lg:p-4 pb-28 md:pb-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full">
+        <div className="p-2 md:p-3 lg:p-4 pb-28 md:pb-6 w-full max-w-full">
           {error ? (
             <div className="py-16 text-center">
               <p className="text-destructive mb-2" data-testid="text-error">
@@ -120,7 +105,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
               </p>
             </div>
           ) : isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full max-w-full">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
@@ -132,7 +117,7 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full max-w-full">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}

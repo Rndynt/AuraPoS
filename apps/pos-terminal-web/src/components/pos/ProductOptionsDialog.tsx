@@ -268,17 +268,17 @@ export function ProductOptionsDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent 
-        className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6" 
+        className="w-[96vw] max-w-lg max-h-[92vh] flex flex-col gap-0 p-0" 
         data-testid="dialog-product-options"
       >
-        <DialogHeader className="pb-3">
-          <DialogTitle className="text-lg sm:text-xl">{product.name}</DialogTitle>
+        <DialogHeader className="p-4 pb-3 border-b sticky top-0 bg-background z-10">
+          <DialogTitle className="text-base sm:text-lg">{product.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
           {/* Product Image */}
           {product.image_url && (
-            <div className="aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+            <div className="aspect-video overflow-hidden rounded-md bg-muted">
               <img
                 src={product.image_url}
                 alt={product.name}
@@ -289,10 +289,10 @@ export function ProductOptionsDialog({
 
           {/* Legacy Variants Section */}
           {product.has_variants && product.variants && product.variants.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <Label className="text-sm sm:text-base font-semibold">Variant</Label>
-                <Badge variant="outline" className="text-[10px] sm:text-xs">Required • Select 1</Badge>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <Label className="text-sm font-semibold">Variant</Label>
+                <Badge variant="outline" className="text-[10px]">Required • Select 1</Badge>
               </div>
               <RadioGroup
                 value={selectedVariant?.id}
@@ -300,35 +300,37 @@ export function ProductOptionsDialog({
                   setSelectedVariant(product.variants?.find((v) => v.id === id))
                 }
               >
-                {product.variants.map((variant) => (
-                  <div
-                    key={variant.id}
-                    className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover-elevate"
-                    data-testid={`option-variant-${variant.id}`}
-                  >
-                    <RadioGroupItem value={variant.id} id={variant.id} />
-                    <Label
-                      htmlFor={variant.id}
-                      className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                <div className="space-y-1.5">
+                  {product.variants.map((variant) => (
+                    <div
+                      key={variant.id}
+                      className="flex items-center gap-2 p-2.5 rounded-md border hover-elevate"
+                      data-testid={`option-variant-${variant.id}`}
                     >
-                      <span className="flex items-center gap-2">
-                        {variant.name}
-                        {variant.color && (
-                          <Badge
-                            style={{ backgroundColor: variant.color }}
-                            className="w-4 h-4 p-0 rounded-full"
-                          />
-                        )}
-                      </span>
-                      {variant.price_delta !== 0 && (
-                        <span className="text-xs sm:text-sm font-medium">
-                          {variant.price_delta && variant.price_delta > 0 ? "+" : ""}
-                          {formatPrice(variant.price_delta || 0)}
+                      <RadioGroupItem value={variant.id} id={variant.id} />
+                      <Label
+                        htmlFor={variant.id}
+                        className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                      >
+                        <span className="flex items-center gap-2">
+                          {variant.name}
+                          {variant.color && (
+                            <Badge
+                              style={{ backgroundColor: variant.color }}
+                              className="w-3 h-3 p-0 rounded-full"
+                            />
+                          )}
                         </span>
-                      )}
-                    </Label>
-                  </div>
-                ))}
+                        {variant.price_delta !== 0 && (
+                          <span className="text-xs font-medium">
+                            {variant.price_delta && variant.price_delta > 0 ? "+" : ""}
+                            {formatPrice(variant.price_delta || 0)}
+                          </span>
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
               </RadioGroup>
             </div>
           )}
@@ -343,28 +345,28 @@ export function ProductOptionsDialog({
             return (
               <div key={group.id}>
                 {(index > 0 || (product.has_variants && product.variants && product.variants.length > 0)) && (
-                  <Separator className="mb-4" />
+                  <Separator className="mb-3" />
                 )}
                 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <Label className="text-sm sm:text-base font-semibold">{group.name}</Label>
-                    <Badge variant="outline" className="text-[10px] sm:text-xs whitespace-nowrap">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <Label className="text-sm font-semibold">{group.name}</Label>
+                    <Badge variant="outline" className="text-[10px] whitespace-nowrap">
                       {getGroupRequirementLabel(group)}
                     </Badge>
                   </div>
 
                   {/* Validation Error */}
                   {error && (
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-destructive" data-testid={`error-${group.id}`}>
-                      <AlertCircle className="w-4 h-4 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs text-destructive" data-testid={`error-${group.id}`}>
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{error}</span>
                     </div>
                   )}
 
                   {warning && !error && (
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-600" data-testid={`warning-${group.id}`}>
-                      <AlertCircle className="w-4 h-4 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs text-amber-600" data-testid={`warning-${group.id}`}>
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{warning}</span>
                     </div>
                   )}
@@ -380,33 +382,35 @@ export function ProductOptionsDialog({
                         }
                       }}
                     >
-                      {availableOptions.map((option) => (
-                        <div
-                          key={option.id}
-                          className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover-elevate"
-                          data-testid={`option-${group.id}-${option.id}`}
-                        >
-                          <RadioGroupItem value={option.id} id={`${group.id}-${option.id}`} />
-                          <Label
-                            htmlFor={`${group.id}-${option.id}`}
-                            className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                      <div className="space-y-1.5">
+                        {availableOptions.map((option) => (
+                          <div
+                            key={option.id}
+                            className="flex items-center gap-2 p-2.5 rounded-md border hover-elevate"
+                            data-testid={`option-${group.id}-${option.id}`}
                           >
-                            <span>{option.name}</span>
-                            {option.price_delta !== 0 && (
-                              <span className="text-xs sm:text-sm font-medium">
-                                {option.price_delta > 0 ? "+" : ""}
-                                {formatPrice(option.price_delta)}
-                              </span>
-                            )}
-                          </Label>
-                        </div>
-                      ))}
+                            <RadioGroupItem value={option.id} id={`${group.id}-${option.id}`} />
+                            <Label
+                              htmlFor={`${group.id}-${option.id}`}
+                              className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                            >
+                              <span>{option.name}</span>
+                              {option.price_delta !== 0 && (
+                                <span className="text-xs font-medium">
+                                  {option.price_delta > 0 ? "+" : ""}
+                                  {formatPrice(option.price_delta)}
+                                </span>
+                              )}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                     </RadioGroup>
                   )}
 
                   {/* Multiple Selection (Checkbox) */}
                   {group.selection_type === "multiple" && (
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {availableOptions.map((option) => {
                         const isSelected = selections.some(sel => sel.option_id === option.id);
                         const isMaxReached = selections.length >= group.max_selections && !isSelected;
@@ -414,7 +418,7 @@ export function ProductOptionsDialog({
                         return (
                           <div
                             key={option.id}
-                            className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border hover-elevate ${
+                            className={`flex items-center gap-2 p-2.5 rounded-md border hover-elevate ${
                               isSelected ? "bg-accent/50" : ""
                             }`}
                             data-testid={`option-${group.id}-${option.id}`}
@@ -433,7 +437,7 @@ export function ProductOptionsDialog({
                             >
                               <span>{option.name}</span>
                               {option.price_delta !== 0 && (
-                                <span className="text-xs sm:text-sm font-medium">
+                                <span className="text-xs font-medium">
                                   {option.price_delta > 0 ? "+" : ""}
                                   {formatPrice(option.price_delta)}
                                 </span>
@@ -451,20 +455,20 @@ export function ProductOptionsDialog({
 
           {/* Quantity Selector */}
           <div>
-            <Separator className="mb-4" />
-            <div className="space-y-3">
-              <Label className="text-sm sm:text-base font-semibold">Quantity</Label>
+            <Separator className="mb-3" />
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Quantity</Label>
               <div className="flex items-center gap-3 justify-center sm:justify-start">
                 <Button
                   size="icon"
                   variant="outline"
                   onClick={() => setQty(Math.max(1, qty - 1))}
                   data-testid="button-qty-minus"
-                  className="h-10 w-10"
+                  className="h-9 w-9"
                 >
                   <Minus className="w-4 h-4" />
                 </Button>
-                <div className="w-16 text-center text-lg font-semibold tabular-nums" data-testid="text-qty">
+                <div className="w-14 text-center text-base font-semibold tabular-nums" data-testid="text-qty">
                   {qty}
                 </div>
                 <Button
@@ -472,7 +476,7 @@ export function ProductOptionsDialog({
                   variant="outline"
                   onClick={() => setQty(qty + 1)}
                   data-testid="button-qty-plus"
-                  className="h-10 w-10"
+                  className="h-9 w-9"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -481,14 +485,14 @@ export function ProductOptionsDialog({
           </div>
 
           {/* Price Breakdown */}
-          <div className="p-3 sm:p-4 bg-muted rounded-lg space-y-2">
-            <div className="flex justify-between text-xs sm:text-sm">
+          <div className="p-3 bg-muted rounded-md space-y-1.5">
+            <div className="flex justify-between text-xs">
               <span>Base Price</span>
               <span className="tabular-nums">{formatPrice(basePrice)}</span>
             </div>
             
             {variantDelta !== 0 && (
-              <div className="flex justify-between text-xs sm:text-sm">
+              <div className="flex justify-between text-xs">
                 <span>Variant</span>
                 <span className="tabular-nums">
                   {variantDelta > 0 ? "+" : ""}
@@ -498,7 +502,7 @@ export function ProductOptionsDialog({
             )}
             
             {optionsDelta !== 0 && (
-              <div className="flex justify-between text-xs sm:text-sm">
+              <div className="flex justify-between text-xs">
                 <span>Options</span>
                 <span className="tabular-nums">
                   {optionsDelta > 0 ? "+" : ""}
@@ -507,14 +511,14 @@ export function ProductOptionsDialog({
               </div>
             )}
             
-            <div className="flex justify-between text-xs sm:text-sm">
+            <div className="flex justify-between text-xs">
               <span>Quantity</span>
               <span className="tabular-nums">×{qty}</span>
             </div>
             
-            <Separator className="my-2" />
+            <Separator className="my-1.5" />
             
-            <div className="flex justify-between font-semibold text-sm sm:text-base">
+            <div className="flex justify-between font-semibold text-sm">
               <span>Total</span>
               <span className="tabular-nums" data-testid="text-options-total">
                 {formatPrice(total)}
@@ -523,12 +527,12 @@ export function ProductOptionsDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 flex-col sm:flex-row">
+        <DialogFooter className="sticky bottom-0 bg-background border-t p-4 gap-2 flex-col sm:flex-row z-10">
           <Button 
             variant="outline" 
             onClick={onClose} 
             data-testid="button-cancel-options"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto order-2 sm:order-1"
           >
             Cancel
           </Button>
@@ -536,7 +540,7 @@ export function ProductOptionsDialog({
             onClick={handleAdd} 
             disabled={isAddDisabled()}
             data-testid="button-add-to-cart"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto order-1 sm:order-2"
           >
             Add to Cart
           </Button>
