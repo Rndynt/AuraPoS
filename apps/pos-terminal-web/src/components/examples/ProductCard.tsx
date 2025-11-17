@@ -1,4 +1,4 @@
-import { ProductCard } from "../pos/ProductCard";
+import { ProductCard } from "../pos/ProductCardV2";
 import { mockProducts } from "@/lib/mockData";
 
 export default function ProductCardExample() {
