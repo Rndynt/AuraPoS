@@ -18,9 +18,11 @@
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"],
+      "@pos/core/*": ["./packages/core/*"],
       "@pos/domain/*": ["./packages/domain/*"],
       "@pos/application/*": ["./packages/application/*"],
-      "@pos/infrastructure/*": ["./packages/infrastructure/*"]
+      "@pos/infrastructure/*": ["./packages/infrastructure/*"],
+      "@pos/features/*": ["./packages/features/*"]
     }
   }
 }
