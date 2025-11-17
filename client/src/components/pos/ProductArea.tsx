@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Product } from "@/../../packages/domain/catalog/types";
-import { ProductCard } from "./ProductCard";
+import { ProductCard } from "./ProductCardV2";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Search, User } from "lucide-react";
