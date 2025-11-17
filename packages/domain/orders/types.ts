@@ -122,15 +122,15 @@ export type OrderType = {
   code: string;
   name: string;
   description?: string;
-  is_on_premise: boolean;
-  need_table_number: boolean;
-  need_address: boolean;
-  allow_scheduled: boolean;
-  is_digital_product: boolean;
-  affects_service_charge: boolean;
-  is_active: boolean;
-  created_at: Date;
-  updated_at?: Date;
+  isOnPremise: boolean;
+  needTableNumber: boolean;
+  needAddress: boolean;
+  allowScheduled: boolean;
+  isDigitalProduct: boolean;
+  affectsServiceCharge: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
 };
 
 /**

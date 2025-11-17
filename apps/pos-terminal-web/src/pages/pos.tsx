@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "@/components/pos/Sidebar";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
@@ -33,6 +33,18 @@ export default function POSPage() {
   // Fetch order types for tenant
   const { data: orderTypes, isLoading: orderTypesLoading } = useOrderTypes();
 
+  // Filter only active order types - defensive check even though API already filters
+  const activeOrderTypes = useMemo(() => {
+    return orderTypes?.filter(ot => ot.is_active === true) || [];
+  }, [orderTypes]);
+
+  // Auto-select first ACTIVE order type when loaded
+  useEffect(() => {
+    if (!orderTypesLoading && activeOrderTypes.length > 0 && !selectedOrderTypeId) {
+      setSelectedOrderTypeId(activeOrderTypes[0].id);
+    }
+  }, [activeOrderTypes, orderTypesLoading, selectedOrderTypeId]);
+
   // Mutations
   const createOrderMutation = useCreateOrder();
   const createKitchenTicketMutation = useCreateKitchenTicket();
@@ -52,10 +64,36 @@ export default function POSPage() {
     return true;
   };
 
+  const validateOrderType = () => {
+    if (!selectedOrderTypeId) {
+      toast({
+        title: "Order type required",
+        description: "Please select an order type before continuing",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Validate that selected order type is active
+    const isValidOrderType = activeOrderTypes.some(ot => ot.id === selectedOrderTypeId);
+    if (!isValidOrderType) {
+      toast({
+        title: "Invalid order type",
+        description: "The selected order type is no longer available. Please select a valid order type.",
+        variant: "destructive",
+      });
+      setSelectedOrderTypeId(null);
+      return false;
+    }
+
+    return true;
+  };
+
   const buildOrderPayload = () => ({
     items: cart.toBackendOrderItems(),
     tax_rate: cart.taxRate,
     service_charge_rate: cart.serviceChargeRate,
+    order_type_id: selectedOrderTypeId || undefined,
   });
 
   const handleAddToCart = (product: Product) => {
@@ -103,6 +141,7 @@ export default function POSPage() {
 
   const handleCharge = async () => {
     if (!ensureCartHasItems()) return;
+    if (!validateOrderType()) return;
 
     try {
       const result = await createOrderMutation.mutateAsync(buildOrderPayload());
@@ -125,6 +164,7 @@ export default function POSPage() {
   const handlePartialPayment = () => {
     if (!hasPartialPayment) return;
     if (!ensureCartHasItems()) return;
+    if (!validateOrderType()) return;
     setPartialPaymentDialogOpen(true);
     setMobileCartOpen(false);
   };
@@ -192,6 +232,7 @@ export default function POSPage() {
 
   const handleKitchenTicket = async () => {
     if (!ensureCartHasItems()) return;
+    if (!validateOrderType()) return;
 
     try {
       const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
@@ -227,7 +268,7 @@ export default function POSPage() {
         isLoading={productsLoading}
         error={productsError}
         onAddToCart={handleAddToCart}
-        orderTypes={orderTypes || []}
+        orderTypes={activeOrderTypes}
         orderTypesLoading={orderTypesLoading}
         selectedOrderTypeId={selectedOrderTypeId}
         onSelectOrderType={setSelectedOrderTypeId}

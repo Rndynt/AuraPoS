@@ -162,6 +162,7 @@ export type CreateOrderInput = {
     selected_options?: SelectedOption[];
     notes?: string;
   }>;
+  order_type_id?: string;
   customer_name?: string;
   table_number?: string;
   notes?: string;

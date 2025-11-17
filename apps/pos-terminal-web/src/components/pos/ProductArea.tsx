@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Product } from "@/../../packages/domain/catalog/types";
+import type { OrderType } from "@/../../packages/domain/orders/types";
 import { ProductCard } from "./ProductCardV2";
 import { POSHeader } from "./POSHeader";
 import { SidebarContent } from "./Sidebar";
@@ -15,6 +16,10 @@ type ProductAreaProps = {
   isLoading?: boolean;
   error?: Error | null;
   onAddToCart: (product: Product) => void;
+  orderTypes: OrderType[];
+  orderTypesLoading: boolean;
+  selectedOrderTypeId: string | null;
+  onSelectOrderType: (orderTypeId: string | null) => void;
 };
 
 // Extract unique categories from products
@@ -34,11 +39,25 @@ const filterByCategory = (products: Product[], category: string): Product[] => {
   return products.filter(p => p.category === category);
 };
 
-export function ProductArea({ products, isLoading, error, onAddToCart }: ProductAreaProps) {
+export function ProductArea({ 
+  products, 
+  isLoading, 
+  error, 
+  onAddToCart,
+  orderTypes,
+  orderTypesLoading,
+  selectedOrderTypeId,
+  onSelectOrderType
+}: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState("");
 
   const categories = useMemo(() => getCategories(products), [products]);
+
+  // Defensive filter - only show active order types
+  const activeOrderTypes = useMemo(() => {
+    return orderTypes.filter(ot => ot.is_active === true);
+  }, [orderTypes]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -61,8 +80,38 @@ export function ProductArea({ products, isLoading, error, onAddToCart }: Product
         sidebarContent={<SidebarContent />}
       />
 
+      {/* Order Type Tabs */}
+      <div className="sticky top-[86px] sm:top-[62px] md:top-[74px] z-20 bg-background border-b">
+        <div className="px-3 md:px-4 py-2 md:py-3">
+          <ScrollArea className="w-full">
+            <div className="flex gap-2">
+              {orderTypesLoading ? (
+                <>
+                  <Skeleton className="h-8 md:h-9 w-24 md:w-28 rounded-full flex-shrink-0" />
+                  <Skeleton className="h-8 md:h-9 w-24 md:w-28 rounded-full flex-shrink-0" />
+                  <Skeleton className="h-8 md:h-9 w-20 md:w-24 rounded-full flex-shrink-0" />
+                </>
+              ) : activeOrderTypes.length > 0 ? (
+                activeOrderTypes.map((orderType) => (
+                  <Button
+                    key={orderType.id}
+                    variant={selectedOrderTypeId === orderType.id ? "default" : "ghost"}
+                    className="flex-shrink-0 rounded-full h-8 md:h-9 px-3 md:px-4 text-sm"
+                    onClick={() => onSelectOrderType(orderType.id)}
+                    data-testid={`button-order-type-${orderType.code.toLowerCase()}`}
+                  >
+                    {orderType.name}
+                  </Button>
+                ))
+              ) : null}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      </div>
+
       {/* Category Tabs */}
-      <div className="sticky top-[86px] sm:top-[62px] md:top-[74px] z-10 bg-background border-b">
+      <div className="sticky top-[134px] sm:top-[110px] md:top-[122px] z-10 bg-background border-b">
         <div className="px-3 md:px-4 py-2 md:py-3">
           <ScrollArea className="w-full">
             <div className="flex gap-2">
