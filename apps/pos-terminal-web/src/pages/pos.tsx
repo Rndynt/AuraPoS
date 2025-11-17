@@ -7,7 +7,7 @@ import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
 import { useCart } from "@/hooks/useCart";
 import { useFeatures } from "@/hooks/useFeatures";
-import { useProducts, useCreateOrder, useCreateKitchenTicket } from "@/lib/api/hooks";
+import { useProducts, useCreateOrder, useCreateKitchenTicket, useOrderTypes } from "@/lib/api/hooks";
 import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
 import type { SelectedOption } from "@/../../packages/domain/orders/types";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export default function POSPage() {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
+  const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
@@ -28,6 +29,9 @@ export default function POSPage() {
   // Fetch products from backend
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts({ isActive: true });
   const products = productsData?.products || [];
+
+  // Fetch order types for tenant
+  const { data: orderTypes, isLoading: orderTypesLoading } = useOrderTypes();
 
   // Mutations
   const createOrderMutation = useCreateOrder();
@@ -222,7 +226,11 @@ export default function POSPage() {
         products={products}
         isLoading={productsLoading}
         error={productsError}
-        onAddToCart={handleAddToCart} 
+        onAddToCart={handleAddToCart}
+        orderTypes={orderTypes || []}
+        orderTypesLoading={orderTypesLoading}
+        selectedOrderTypeId={selectedOrderTypeId}
+        onSelectOrderType={setSelectedOrderTypeId}
       />
 
       {/* Cart Panel - Hidden on mobile */}

@@ -6,7 +6,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Product } from "@/../../packages/domain/catalog/types";
-import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption } from "@/../../packages/domain/orders/types";
+import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption, OrderType, TenantOrderType } from "@/../../packages/domain/orders/types";
 import type { TenantFeature, FeatureCheck } from "@/../../packages/domain/tenants/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
@@ -236,6 +236,61 @@ export function useCreateKitchenTicket() {
       mutateWithTenantHeader("POST", `/api/orders/${orderId}/kitchen-ticket`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
+    },
+  });
+}
+
+/**
+ * Fetch order types for tenant
+ */
+export function useOrderTypes() {
+  return useQuery<OrderType[]>({
+    queryKey: ["/api/orders/order-types"],
+    queryFn: () => fetchWithTenantHeader("/api/orders/order-types"),
+  });
+}
+
+/**
+ * Fetch all order types (master data)
+ */
+export function useAllOrderTypes() {
+  return useQuery<OrderType[]>({
+    queryKey: ["/api/orders/order-types/all"],
+    queryFn: () => fetchWithTenantHeader("/api/orders/order-types/all"),
+  });
+}
+
+/**
+ * Enable order type for tenant
+ */
+export type EnableOrderTypeInput = {
+  orderTypeId: string;
+  config?: Record<string, any>;
+};
+
+export function useEnableOrderType() {
+  return useMutation<TenantOrderType, Error, EnableOrderTypeInput>({
+    mutationFn: ({ orderTypeId, config }) =>
+      mutateWithTenantHeader("POST", `/api/orders/order-types/${orderTypeId}/enable`, { config }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/order-types"] });
+    },
+  });
+}
+
+/**
+ * Disable order type for tenant
+ */
+export type DisableOrderTypeInput = {
+  orderTypeId: string;
+};
+
+export function useDisableOrderType() {
+  return useMutation<void, Error, DisableOrderTypeInput>({
+    mutationFn: ({ orderTypeId }) =>
+      mutateWithTenantHeader("POST", `/api/orders/order-types/${orderTypeId}/disable`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/order-types"] });
     },
   });
 }
