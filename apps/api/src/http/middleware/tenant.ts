@@ -5,8 +5,8 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { db } from '../../../../../packages/infrastructure/database';
-import { tenants } from '../../../../../shared/schema';
+import { db } from '@pos/infrastructure/database';
+import { tenants } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 declare global {

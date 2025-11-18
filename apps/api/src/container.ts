@@ -3,34 +3,34 @@
  * Initializes and wires up all repositories and use cases
  */
 
-import { db } from '../../../packages/infrastructure/database';
+import { db } from '@pos/infrastructure/database';
 
 // Repositories
-import { ProductRepository } from '../../../packages/infrastructure/repositories/catalog/ProductRepository';
-import { ProductOptionGroupRepository } from '../../../packages/infrastructure/repositories/catalog/ProductOptionGroupRepository';
-import { ProductOptionRepository } from '../../../packages/infrastructure/repositories/catalog/ProductOptionRepository';
-import { OrderRepository } from '../../../packages/infrastructure/repositories/orders/OrderRepository';
-import { OrderItemRepository } from '../../../packages/infrastructure/repositories/orders/OrderItemRepository';
-import { OrderItemModifierRepository } from '../../../packages/infrastructure/repositories/orders/OrderItemModifierRepository';
-import { OrderPaymentRepository } from '../../../packages/infrastructure/repositories/orders/OrderPaymentRepository';
-import { KitchenTicketRepository } from '../../../packages/infrastructure/repositories/orders/KitchenTicketRepository';
-import { OrderTypeRepository } from '../../../packages/infrastructure/repositories/orders/OrderTypeRepository';
-import { TenantRepository } from '../../../packages/infrastructure/repositories/tenants/TenantRepository';
-import { TenantFeatureRepository } from '../../../packages/infrastructure/repositories/tenants/TenantFeatureRepository';
+import { ProductRepository } from '@pos/infrastructure/repositories/catalog/ProductRepository';
+import { ProductOptionGroupRepository } from '@pos/infrastructure/repositories/catalog/ProductOptionGroupRepository';
+import { ProductOptionRepository } from '@pos/infrastructure/repositories/catalog/ProductOptionRepository';
+import { OrderRepository } from '@pos/infrastructure/repositories/orders/OrderRepository';
+import { OrderItemRepository } from '@pos/infrastructure/repositories/orders/OrderItemRepository';
+import { OrderItemModifierRepository } from '@pos/infrastructure/repositories/orders/OrderItemModifierRepository';
+import { OrderPaymentRepository } from '@pos/infrastructure/repositories/orders/OrderPaymentRepository';
+import { KitchenTicketRepository } from '@pos/infrastructure/repositories/orders/KitchenTicketRepository';
+import { OrderTypeRepository } from '@pos/infrastructure/repositories/orders/OrderTypeRepository';
+import { TenantRepository } from '@pos/infrastructure/repositories/tenants/TenantRepository';
+import { TenantFeatureRepository } from '@pos/infrastructure/repositories/tenants/TenantFeatureRepository';
 
 // Use Cases - Catalog
-import { GetProducts } from '../../../packages/application/catalog/GetProducts';
-import { GetProductById } from '../../../packages/application/catalog/GetProductById';
-import { CheckProductAvailability } from '../../../packages/application/catalog/CheckProductAvailability';
+import { GetProducts } from '@pos/application/catalog/GetProducts';
+import { GetProductById } from '@pos/application/catalog/GetProductById';
+import { CheckProductAvailability } from '@pos/application/catalog/CheckProductAvailability';
 
 // Use Cases - Orders
-import { CreateOrder } from '../../../packages/application/orders/CreateOrder';
-import { RecordPayment } from '../../../packages/application/orders/RecordPayment';
-import { CreateKitchenTicket } from '../../../packages/application/orders/CreateKitchenTicket';
+import { CreateOrder } from '@pos/application/orders/CreateOrder';
+import { RecordPayment } from '@pos/application/orders/RecordPayment';
+import { CreateKitchenTicket } from '@pos/application/orders/CreateKitchenTicket';
 
 // Use Cases - Tenants
-import { GetActiveFeaturesForTenant } from '../../../packages/application/tenants/GetActiveFeaturesForTenant';
-import { CheckFeatureAccess } from '../../../packages/application/tenants/CheckFeatureAccess';
+import { GetActiveFeaturesForTenant } from '@pos/application/tenants/GetActiveFeaturesForTenant';
+import { CheckFeatureAccess } from '@pos/application/tenants/CheckFeatureAccess';
 
 /**
  * Container class that holds all dependencies

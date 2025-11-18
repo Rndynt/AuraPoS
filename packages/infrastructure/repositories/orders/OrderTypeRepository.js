@@ -1,0 +1,148 @@
+/**
+ * Order Type Repository
+ * Handles order type CRUD operations and tenant-specific configurations
+ */
+import { BaseRepository } from '../BaseRepository';
+import { orderTypes, tenantOrderTypes, } from '../../../../shared/schema';
+import { eq, and } from 'drizzle-orm';
+export class OrderTypeRepository extends BaseRepository {
+    constructor(db) {
+        super(db);
+        this.table = orderTypes;
+        this.entityName = 'OrderType';
+    }
+    /**
+     * Find all active order types
+     */
+    async findAll() {
+        try {
+            return await this.db
+                .select()
+                .from(orderTypes)
+                .where(eq(orderTypes.isActive, true));
+        }
+        catch (error) {
+            this.handleError('find all order types', error);
+        }
+    }
+    /**
+     * Find order type by code
+     */
+    async findByCode(code) {
+        try {
+            const result = await this.db
+                .select()
+                .from(orderTypes)
+                .where(eq(orderTypes.code, code))
+                .limit(1);
+            return result[0] || null;
+        }
+        catch (error) {
+            this.handleError('find order type by code', error);
+        }
+    }
+    /**
+     * Find enabled order types for a tenant
+     */
+    async findByTenant(tenantId) {
+        try {
+            const result = await this.db
+                .select({
+                id: orderTypes.id,
+                code: orderTypes.code,
+                name: orderTypes.name,
+                description: orderTypes.description,
+                isOnPremise: orderTypes.isOnPremise,
+                needTableNumber: orderTypes.needTableNumber,
+                needAddress: orderTypes.needAddress,
+                allowScheduled: orderTypes.allowScheduled,
+                isDigitalProduct: orderTypes.isDigitalProduct,
+                affectsServiceCharge: orderTypes.affectsServiceCharge,
+                isActive: orderTypes.isActive,
+                createdAt: orderTypes.createdAt,
+                updatedAt: orderTypes.updatedAt,
+            })
+                .from(orderTypes)
+                .innerJoin(tenantOrderTypes, and(eq(tenantOrderTypes.orderTypeId, orderTypes.id), eq(tenantOrderTypes.tenantId, tenantId), eq(tenantOrderTypes.isEnabled, true)))
+                .where(eq(orderTypes.isActive, true));
+            return result;
+        }
+        catch (error) {
+            this.handleError('find order types by tenant', error);
+        }
+    }
+    /**
+     * Enable an order type for a tenant
+     */
+    async enableForTenant(tenantId, orderTypeId, config) {
+        try {
+            // Check if already exists
+            const existing = await this.db
+                .select()
+                .from(tenantOrderTypes)
+                .where(and(eq(tenantOrderTypes.tenantId, tenantId), eq(tenantOrderTypes.orderTypeId, orderTypeId)))
+                .limit(1);
+            if (existing && existing.length > 0) {
+                // Update existing record
+                const [updated] = await this.db
+                    .update(tenantOrderTypes)
+                    .set({
+                    isEnabled: true,
+                    config: config || null,
+                    updatedAt: new Date(),
+                })
+                    .where(eq(tenantOrderTypes.id, existing[0].id))
+                    .returning();
+                return updated;
+            }
+            else {
+                // Create new record
+                const [created] = await this.db
+                    .insert(tenantOrderTypes)
+                    .values({
+                    tenantId,
+                    orderTypeId,
+                    isEnabled: true,
+                    config: config || null,
+                })
+                    .returning();
+                return created;
+            }
+        }
+        catch (error) {
+            this.handleError('enable order type for tenant', error);
+        }
+    }
+    /**
+     * Disable an order type for a tenant
+     */
+    async disableForTenant(tenantId, orderTypeId) {
+        try {
+            await this.db
+                .update(tenantOrderTypes)
+                .set({
+                isEnabled: false,
+                updatedAt: new Date(),
+            })
+                .where(and(eq(tenantOrderTypes.tenantId, tenantId), eq(tenantOrderTypes.orderTypeId, orderTypeId)));
+        }
+        catch (error) {
+            this.handleError('disable order type for tenant', error);
+        }
+    }
+    /**
+     * Create a new order type
+     */
+    async create(orderType) {
+        try {
+            const [created] = await this.db
+                .insert(orderTypes)
+                .values(orderType)
+                .returning();
+            return created;
+        }
+        catch (error) {
+            this.handleError('create order type', error);
+        }
+    }
+}

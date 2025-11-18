@@ -5,7 +5,7 @@
  * Usage: npm run db:seed
  */
 
-import { db } from '../../../packages/infrastructure/database';
+import { db } from '@pos/infrastructure/database';
 import { 
   tenants, 
   products, 
@@ -20,7 +20,7 @@ import {
   users,
   orderTypes,
   tenantOrderTypes,
-} from '../../../shared/schema';
+} from '@shared/schema';
 import type { 
   InsertTenant, 
   InsertProduct, 
@@ -29,7 +29,7 @@ import type {
   InsertTenantFeature,
   InsertOrderType,
   InsertTenantOrderType,
-} from '../../../shared/schema';
+} from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 
