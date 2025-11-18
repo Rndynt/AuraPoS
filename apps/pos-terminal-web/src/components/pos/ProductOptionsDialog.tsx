@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -274,263 +275,265 @@ export function ProductOptionsDialog({
         className="w-[96vw] max-w-lg max-h-[92vh] flex flex-col gap-0 p-0" 
         data-testid="dialog-product-options"
       >
-        <DialogHeader className="p-4 pb-3 border-b sticky top-0 bg-background z-10">
+        <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg">{product.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-          {/* Product Image */}
-          {product.image_url && (
-            <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
-          {/* Legacy Variants Section */}
-          {product.has_variants && product.variants && product.variants.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between flex-wrap gap-1">
-                <Label className="text-sm font-semibold">Variant</Label>
-                <Badge variant="outline" className="text-[10px]">Required • Select 1</Badge>
+        <ScrollArea className="flex-1">
+          <div className="px-4 py-3 pb-4 space-y-4">
+            {/* Product Image */}
+            {product.image_url && (
+              <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <RadioGroup
-                value={selectedVariant?.id}
-                onValueChange={(id) =>
-                  setSelectedVariant(product.variants?.find((v) => v.id === id))
-                }
-              >
-                <div className="space-y-1.5">
-                  {product.variants.map((variant) => (
-                    <div
-                      key={variant.id}
-                      className="flex items-center gap-2 p-2.5 rounded-md border hover-elevate"
-                      data-testid={`option-variant-${variant.id}`}
-                    >
-                      <RadioGroupItem value={variant.id} id={variant.id} />
-                      <Label
-                        htmlFor={variant.id}
-                        className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+            )}
+
+            {/* Legacy Variants Section */}
+            {product.has_variants && product.variants && product.variants.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <Label className="text-sm font-semibold">Variant</Label>
+                  <Badge variant="outline" className="text-[10px]">Required • Select 1</Badge>
+                </div>
+                <RadioGroup
+                  value={selectedVariant?.id}
+                  onValueChange={(id) =>
+                    setSelectedVariant(product.variants?.find((v) => v.id === id))
+                  }
+                >
+                  <div className="space-y-1.5">
+                    {product.variants.map((variant) => (
+                      <div
+                        key={variant.id}
+                        className="flex items-center gap-2 p-2.5 rounded-md border hover-elevate"
+                        data-testid={`option-variant-${variant.id}`}
                       >
-                        <span className="flex items-center gap-2">
-                          {variant.name}
-                          {variant.color && (
-                            <Badge
-                              style={{ backgroundColor: variant.color }}
-                              className="w-3 h-3 p-0 rounded-full"
-                            />
-                          )}
-                        </span>
-                        {variant.price_delta !== 0 && (
-                          <span className="text-xs font-medium">
-                            {variant.price_delta && variant.price_delta > 0 ? "+" : ""}
-                            {formatPrice(variant.price_delta || 0)}
+                        <RadioGroupItem value={variant.id} id={variant.id} />
+                        <Label
+                          htmlFor={variant.id}
+                          className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                        >
+                          <span className="flex items-center gap-2">
+                            {variant.name}
+                            {variant.color && (
+                              <Badge
+                                style={{ backgroundColor: variant.color }}
+                                className="w-3 h-3 p-0 rounded-full"
+                              />
+                            )}
                           </span>
-                        )}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-
-          {/* Option Groups Section */}
-          {sortedOptionGroups.map((group, index) => {
-            const selections = selectedOptionsByGroup.get(group.id) || [];
-            const error = validationErrors.get(group.id);
-            const warning = selectionWarnings.get(group.id);
-            const availableOptions = group.options.filter(opt => opt.is_available !== false);
-
-            return (
-              <div key={group.id}>
-                {(index > 0 || (product.has_variants && product.variants && product.variants.length > 0)) && (
-                  <Separator className="mb-3" />
-                )}
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-1 flex-wrap">
-                    <Label className="text-sm font-semibold">{group.name}</Label>
-                    <Badge variant="outline" className="text-[10px] whitespace-nowrap">
-                      {getGroupRequirementLabel(group)}
-                    </Badge>
-                  </div>
-
-                  {/* Validation Error */}
-                  {error && (
-                    <div className="flex items-center gap-1.5 text-xs text-destructive" data-testid={`error-${group.id}`}>
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-
-                  {warning && !error && (
-                    <div className="flex items-center gap-1.5 text-xs text-amber-600" data-testid={`warning-${group.id}`}>
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>{warning}</span>
-                    </div>
-                  )}
-
-                  {/* Single Selection (Radio) */}
-                  {group.selection_type === "single" && (
-                    <RadioGroup
-                      value={selections[0]?.option_id || ""}
-                      onValueChange={(optionId) => {
-                        const option = group.options.find(opt => opt.id === optionId);
-                        if (option) {
-                          handleOptionToggle(group, option.id, option.name, option.price_delta);
-                        }
-                      }}
-                    >
-                      <div className="space-y-1.5">
-                        {availableOptions.map((option) => (
-                          <div
-                            key={option.id}
-                            className="flex items-center gap-2 p-2.5 rounded-md border hover-elevate"
-                            data-testid={`option-${group.id}-${option.id}`}
-                          >
-                            <RadioGroupItem value={option.id} id={`${group.id}-${option.id}`} />
-                            <Label
-                              htmlFor={`${group.id}-${option.id}`}
-                              className="flex-1 flex items-center justify-between cursor-pointer text-sm"
-                            >
-                              <span>{option.name}</span>
-                              {option.price_delta !== 0 && (
-                                <span className="text-xs font-medium">
-                                  {option.price_delta > 0 ? "+" : ""}
-                                  {formatPrice(option.price_delta)}
-                                </span>
-                              )}
-                            </Label>
-                          </div>
-                        ))}
+                          {variant.price_delta !== 0 && (
+                            <span className="text-xs font-medium">
+                              {variant.price_delta && variant.price_delta > 0 ? "+" : ""}
+                              {formatPrice(variant.price_delta || 0)}
+                            </span>
+                          )}
+                        </Label>
                       </div>
-                    </RadioGroup>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Option Groups Section */}
+            {sortedOptionGroups.map((group, index) => {
+              const selections = selectedOptionsByGroup.get(group.id) || [];
+              const error = validationErrors.get(group.id);
+              const warning = selectionWarnings.get(group.id);
+              const availableOptions = group.options.filter(opt => opt.is_available !== false);
+
+              return (
+                <div key={group.id}>
+                  {(index > 0 || (product.has_variants && product.variants && product.variants.length > 0)) && (
+                    <Separator className="mb-3" />
                   )}
-
-                  {/* Multiple Selection (Checkbox) */}
-                  {group.selection_type === "multiple" && (
-                    <div className="space-y-1.5">
-                      {availableOptions.map((option) => {
-                        const isSelected = selections.some(sel => sel.option_id === option.id);
-                        const isMaxReached = selections.length >= group.max_selections && !isSelected;
-
-                        return (
-                          <div
-                            key={option.id}
-                            className={`flex items-center gap-2 p-2.5 rounded-md border hover-elevate ${
-                              isSelected ? "bg-accent/50" : ""
-                            }`}
-                            data-testid={`option-${group.id}-${option.id}`}
-                          >
-                            <Checkbox
-                              id={`${group.id}-${option.id}`}
-                              checked={isSelected}
-                              disabled={isMaxReached}
-                              onCheckedChange={() => {
-                                handleOptionToggle(group, option.id, option.name, option.price_delta);
-                              }}
-                            />
-                            <Label
-                              htmlFor={`${group.id}-${option.id}`}
-                              className="flex-1 flex items-center justify-between cursor-pointer text-sm"
-                            >
-                              <span>{option.name}</span>
-                              {option.price_delta !== 0 && (
-                                <span className="text-xs font-medium">
-                                  {option.price_delta > 0 ? "+" : ""}
-                                  {formatPrice(option.price_delta)}
-                                </span>
-                              )}
-                            </Label>
-                          </div>
-                        );
-                      })}
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <Label className="text-sm font-semibold">{group.name}</Label>
+                      <Badge variant="outline" className="text-[10px] whitespace-nowrap">
+                        {getGroupRequirementLabel(group)}
+                      </Badge>
                     </div>
-                  )}
+
+                    {/* Validation Error */}
+                    {error && (
+                      <div className="flex items-center gap-1.5 text-xs text-destructive" data-testid={`error-${group.id}`}>
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
+                    {warning && !error && (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-600" data-testid={`warning-${group.id}`}>
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{warning}</span>
+                      </div>
+                    )}
+
+                    {/* Single Selection (Radio) */}
+                    {group.selection_type === "single" && (
+                      <RadioGroup
+                        value={selections[0]?.option_id || ""}
+                        onValueChange={(optionId) => {
+                          const option = group.options.find(opt => opt.id === optionId);
+                          if (option) {
+                            handleOptionToggle(group, option.id, option.name, option.price_delta);
+                          }
+                        }}
+                      >
+                        <div className="space-y-1.5">
+                          {availableOptions.map((option) => (
+                            <div
+                              key={option.id}
+                              className="flex items-center gap-2 p-2.5 rounded-md border hover-elevate"
+                              data-testid={`option-${group.id}-${option.id}`}
+                            >
+                              <RadioGroupItem value={option.id} id={`${group.id}-${option.id}`} />
+                              <Label
+                                htmlFor={`${group.id}-${option.id}`}
+                                className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                              >
+                                <span>{option.name}</span>
+                                {option.price_delta !== 0 && (
+                                  <span className="text-xs font-medium">
+                                    {option.price_delta > 0 ? "+" : ""}
+                                    {formatPrice(option.price_delta)}
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </RadioGroup>
+                    )}
+
+                    {/* Multiple Selection (Checkbox) */}
+                    {group.selection_type === "multiple" && (
+                      <div className="space-y-1.5">
+                        {availableOptions.map((option) => {
+                          const isSelected = selections.some(sel => sel.option_id === option.id);
+                          const isMaxReached = selections.length >= group.max_selections && !isSelected;
+
+                          return (
+                            <div
+                              key={option.id}
+                              className={`flex items-center gap-2 p-2.5 rounded-md border hover-elevate ${
+                                isSelected ? "bg-accent/50" : ""
+                              }`}
+                              data-testid={`option-${group.id}-${option.id}`}
+                            >
+                              <Checkbox
+                                id={`${group.id}-${option.id}`}
+                                checked={isSelected}
+                                disabled={isMaxReached}
+                                onCheckedChange={() => {
+                                  handleOptionToggle(group, option.id, option.name, option.price_delta);
+                                }}
+                              />
+                              <Label
+                                htmlFor={`${group.id}-${option.id}`}
+                                className="flex-1 flex items-center justify-between cursor-pointer text-sm"
+                              >
+                                <span>{option.name}</span>
+                                {option.price_delta !== 0 && (
+                                  <span className="text-xs font-medium">
+                                    {option.price_delta > 0 ? "+" : ""}
+                                    {formatPrice(option.price_delta)}
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Quantity Selector */}
+            <div>
+              <Separator className="mb-3" />
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Quantity</Label>
+                <div className="flex items-center gap-3 justify-center sm:justify-start">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => setQty(Math.max(1, qty - 1))}
+                    data-testid="button-qty-minus"
+                    className="h-9 w-9"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <div className="w-14 text-center text-base font-semibold tabular-nums" data-testid="text-qty">
+                    {qty}
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => setQty(qty + 1)}
+                    data-testid="button-qty-plus"
+                    className="h-9 w-9"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-            );
-          })}
+            </div>
 
-          {/* Quantity Selector */}
-          <div>
-            <Separator className="mb-3" />
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Quantity</Label>
-              <div className="flex items-center gap-3 justify-center sm:justify-start">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => setQty(Math.max(1, qty - 1))}
-                  data-testid="button-qty-minus"
-                  className="h-9 w-9"
-                >
-                  <Minus className="w-4 h-4" />
-                </Button>
-                <div className="w-14 text-center text-base font-semibold tabular-nums" data-testid="text-qty">
-                  {qty}
+            {/* Price Breakdown */}
+            <div className="p-3 bg-muted rounded-md space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span>Base Price</span>
+                <span className="tabular-nums">{formatPrice(basePrice)}</span>
+              </div>
+              
+              {variantDelta !== 0 && (
+                <div className="flex justify-between text-xs">
+                  <span>Variant</span>
+                  <span className="tabular-nums">
+                    {variantDelta > 0 ? "+" : ""}
+                    {formatPrice(variantDelta)}
+                  </span>
                 </div>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => setQty(qty + 1)}
-                  data-testid="button-qty-plus"
-                  className="h-9 w-9"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
+              )}
+              
+              {optionsDelta !== 0 && (
+                <div className="flex justify-between text-xs">
+                  <span>Options</span>
+                  <span className="tabular-nums">
+                    {optionsDelta > 0 ? "+" : ""}
+                    {formatPrice(optionsDelta)}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex justify-between text-xs">
+                <span>Quantity</span>
+                <span className="tabular-nums">×{qty}</span>
+              </div>
+              
+              <Separator className="my-1.5" />
+              
+              <div className="flex justify-between font-semibold text-sm">
+                <span>Total</span>
+                <span className="tabular-nums" data-testid="text-options-total">
+                  {formatPrice(total)}
+                </span>
               </div>
             </div>
           </div>
+        </ScrollArea>
 
-          {/* Price Breakdown */}
-          <div className="p-3 bg-muted rounded-md space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span>Base Price</span>
-              <span className="tabular-nums">{formatPrice(basePrice)}</span>
-            </div>
-            
-            {variantDelta !== 0 && (
-              <div className="flex justify-between text-xs">
-                <span>Variant</span>
-                <span className="tabular-nums">
-                  {variantDelta > 0 ? "+" : ""}
-                  {formatPrice(variantDelta)}
-                </span>
-              </div>
-            )}
-            
-            {optionsDelta !== 0 && (
-              <div className="flex justify-between text-xs">
-                <span>Options</span>
-                <span className="tabular-nums">
-                  {optionsDelta > 0 ? "+" : ""}
-                  {formatPrice(optionsDelta)}
-                </span>
-              </div>
-            )}
-            
-            <div className="flex justify-between text-xs">
-              <span>Quantity</span>
-              <span className="tabular-nums">×{qty}</span>
-            </div>
-            
-            <Separator className="my-1.5" />
-            
-            <div className="flex justify-between font-semibold text-sm">
-              <span>Total</span>
-              <span className="tabular-nums" data-testid="text-options-total">
-                {formatPrice(total)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="sticky bottom-0 bg-background border-t p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between z-10">
+        <DialogFooter className="flex-shrink-0 border-t p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
           <Button 
             variant="outline" 
             onClick={onClose} 
