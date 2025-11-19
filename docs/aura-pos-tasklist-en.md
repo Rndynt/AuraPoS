@@ -61,22 +61,29 @@
 
 ### 1.3 Application layer use cases
 
-- [ ] `CreateTenant` use case:
-  - [ ] Input includes `business_type`.
-  - [ ] Creates tenant + default `tenant_features` + default `tenant_order_types` based on business type template.
-  - [ ] Initializes `tenant_module_configs` or `settings` with sensible defaults.
-- [ ] `GetTenantProfile` use case:
-  - [ ] Returns tenant + enabled features + enabled modules for a given tenant id.
+- [x] `CreateTenant` use case (implemented in `packages/application/tenants/CreateTenant.ts`):
+  - [x] Input includes `business_type`.
+  - [x] Creates tenant + default `tenant_features` + default `tenant_order_types` based on business type template.
+  - [x] Initializes `tenant_module_configs` with sensible defaults from template.
+  - [x] Validates input, checks slug uniqueness, handles errors gracefully.
+  - [x] Returns created tenant profile.
+- [x] `GetTenantProfile` use case (implemented in `packages/application/tenants/GetTenantProfile.ts`):
+  - [x] Returns tenant + enabled features + enabled modules for a given tenant id.
+  - [x] Parallel loads features and module config for performance.
+  - [x] Clear error handling for missing tenant.
 
 ### 1.4 Business-type templates
 
-- [ ] Define in `@pos/application/tenants`:
-  - [ ] `BusinessTypeTemplate` mapping:
-    - [ ] For each `BusinessType`, list:
-      - [ ] Default `order_types` to enable (e.g. Café = `DINE_IN`, `TAKE_AWAY`, `DELIVERY`).
-      - [ ] Default `feature_codes` (e.g. café: `product_variants`, `kitchen_ticket`, `partial_payment`).
-      - [ ] Default modules (`TABLE_MANAGEMENT` for café only, not for minimarket, etc.).
-- [ ] Wire `CreateTenant` to use templates above.
+- [x] Define in `@pos/application/tenants` (implemented in `businessTypeTemplates.ts`):
+  - [x] `BusinessTypeTemplate` mapping for all 5 business types:
+    - [x] CAFE_RESTAURANT: Default order types = `DINE_IN`, `TAKE_AWAY`, `DELIVERY`. Modules: table_management, kitchen_ticket, delivery enabled.
+    - [x] RETAIL_MINIMARKET: Default order type = `WALK_IN`. Modules: inventory, loyalty enabled.
+    - [x] LAUNDRY: Default order types = `WALK_IN`, `DELIVERY`. Modules: loyalty, delivery, label_printer enabled.
+    - [x] SERVICE_APPOINTMENT: Default order type = `WALK_IN`. Modules: appointments, loyalty enabled.
+    - [x] DIGITAL_PPOB: Default order type = `WALK_IN`. Modules: multi_location, payment_gateway enabled.
+  - [x] Each template includes default feature codes with source=plan_default.
+  - [x] Helper function `getBusinessTypeTemplate(businessType)` to fetch template.
+- [x] Wire `CreateTenant` to use templates above.
 
 ### 1.5 API / backend wiring
 

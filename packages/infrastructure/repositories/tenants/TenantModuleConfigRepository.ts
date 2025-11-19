@@ -78,6 +78,7 @@ export interface ITenantModuleConfigRepository {
   findByTenantId(tenantId: string): Promise<TenantModuleConfig | null>;
   create(config: CreateTenantModuleConfig): Promise<TenantModuleConfig>;
   update(tenantId: string, config: Partial<TenantModuleConfig>): Promise<TenantModuleConfig>;
+  delete(tenantId: string): Promise<void>;
 }
 
 export class TenantModuleConfigRepository
@@ -150,6 +151,20 @@ export class TenantModuleConfigRepository
     } catch (error) {
       if (error instanceof RepositoryError) throw error;
       this.handleError('update tenant module config', error);
+    }
+  }
+
+  /**
+   * Delete tenant module configuration by tenant ID
+   * Used for rollback in case of tenant creation failure
+   */
+  async delete(tenantId: string): Promise<void> {
+    try {
+      await this.db
+        .delete(tenantModuleConfigs)
+        .where(eq(tenantModuleConfigs.tenantId, tenantId));
+    } catch (error) {
+      this.handleError('delete tenant module config', error);
     }
   }
 }

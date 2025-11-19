@@ -33,6 +33,7 @@ export interface ITenantFeatureRepository {
   findByTenantAndFeature(tenantId: string, featureCode: string): Promise<TenantFeature | null>;
   create(tenantFeature: InsertTenantFeature): Promise<TenantFeature>;
   update(id: string, tenantFeature: Partial<InsertTenantFeature>): Promise<TenantFeature>;
+  deleteByTenantId(tenantId: string): Promise<void>;
 }
 
 export class TenantFeatureRepository
@@ -146,5 +147,19 @@ export class TenantFeatureRepository
    */
   async findByTenantId(tenantId: string): Promise<TenantFeature[]> {
     return this.findActiveByTenant(tenantId);
+  }
+
+  /**
+   * Delete all features for a tenant
+   * Used for rollback in case of tenant creation failure
+   */
+  async deleteByTenantId(tenantId: string): Promise<void> {
+    try {
+      await this.db
+        .delete(tenantFeatures)
+        .where(eq(tenantFeatures.tenantId, tenantId));
+    } catch (error) {
+      this.handleError('delete features by tenant id', error);
+    }
   }
 }

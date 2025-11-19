@@ -39,9 +39,56 @@ function mapTenantToDomain(dbTenant: Tenant): DomainTenant {
   };
 }
 
+/**
+ * Input type for creating a new tenant
+ * Maps snake_case domain type to database requirements
+ */
+export type CreateTenantInput = {
+  name: string;
+  slug: string;
+  business_name?: string;
+  business_address?: string;
+  business_phone?: string;
+  business_email?: string;
+  business_type: import('@pos/core').BusinessType;
+  settings?: Record<string, any> | null;
+  plan_tier: 'free' | 'starter' | 'professional' | 'enterprise';
+  subscription_status: 'active' | 'trial' | 'suspended' | 'cancelled';
+  trial_ends_at?: Date;
+  timezone?: string;
+  currency?: string;
+  locale?: string;
+  is_active?: boolean;
+};
+
+/**
+ * Map domain CreateTenantInput to database InsertTenant
+ */
+function mapCreateTenantToDb(input: CreateTenantInput): InsertTenant {
+  return {
+    name: input.name,
+    slug: input.slug,
+    businessName: input.business_name,
+    businessAddress: input.business_address,
+    businessPhone: input.business_phone,
+    businessEmail: input.business_email,
+    businessType: input.business_type,
+    settings: input.settings || null,
+    planTier: input.plan_tier,
+    subscriptionStatus: input.subscription_status,
+    trialEndsAt: input.trial_ends_at,
+    timezone: input.timezone || 'UTC',
+    currency: input.currency || 'USD',
+    locale: input.locale || 'en-US',
+    isActive: input.is_active !== undefined ? input.is_active : true,
+  };
+}
+
 export interface ITenantRepository {
   findById(id: string): Promise<DomainTenant | null>;
   findBySlug(slug: string): Promise<DomainTenant | null>;
+  create(input: CreateTenantInput): Promise<DomainTenant>;
+  delete(tenantId: string): Promise<void>;
 }
 
 export class TenantRepository
@@ -86,6 +133,42 @@ export class TenantRepository
       return result[0] ? mapTenantToDomain(result[0]) : null;
     } catch (error) {
       this.handleError('find tenant by slug', error);
+    }
+  }
+
+  /**
+   * Create a new tenant
+   */
+  async create(input: CreateTenantInput): Promise<DomainTenant> {
+    try {
+      const dbInput = mapCreateTenantToDb(input);
+      
+      const result = await this.db
+        .insert(tenants)
+        .values(dbInput)
+        .returning();
+
+      if (!result || result.length === 0) {
+        throw new Error('Failed to create tenant - no result returned');
+      }
+
+      return mapTenantToDomain(result[0]);
+    } catch (error) {
+      this.handleError('create tenant', error);
+    }
+  }
+
+  /**
+   * Delete a tenant by ID
+   * Used for rollback in case of tenant creation failure
+   */
+  async delete(tenantId: string): Promise<void> {
+    try {
+      await this.db
+        .delete(tenants)
+        .where(eq(tenants.id, tenantId));
+    } catch (error) {
+      this.handleError('delete tenant', error);
     }
   }
 }
