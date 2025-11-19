@@ -281,7 +281,7 @@ export function ProductOptionsDialog({
 
         <div className="flex-1 min-h-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="px-4 py-3 pb-4 space-y-4">
+            <div className="px-4 py-3 pb-32 space-y-4">
             {/* Product Image */}
             {product.image_url && (
               <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">

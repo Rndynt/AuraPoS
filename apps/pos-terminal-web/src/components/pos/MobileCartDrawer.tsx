@@ -55,6 +55,7 @@ export function MobileCartDrawer({
 }: MobileCartDrawerProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [orderDetailsExpanded, setOrderDetailsExpanded] = useState(false);
+  const [pricingDetailsExpanded, setPricingDetailsExpanded] = useState(false);
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
   const showDelivery = !isLoading && hasModule('enable_delivery');
@@ -117,7 +118,7 @@ export function MobileCartDrawer({
           {/* Scrollable content area */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-3">
+              <div className="p-4 pb-8 space-y-3">
               {items.length === 0 ? (
                 <div className="py-16 text-center space-y-3">
                   <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
@@ -199,20 +200,39 @@ export function MobileCartDrawer({
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
             >
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="tabular-nums">{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax ({formatRateLabel(taxRate)})</span>
-                  <span className="tabular-nums">{formatPrice(tax)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Service ({formatRateLabel(serviceChargeRate)})
-                  </span>
-                  <span className="tabular-nums">{formatPrice(serviceCharge)}</span>
-                </div>
+                {/* Collapsible Pricing Details */}
+                <button
+                  onClick={() => setPricingDetailsExpanded(!pricingDetailsExpanded)}
+                  className="w-full flex items-center justify-between text-sm hover-elevate p-2 -mx-2 rounded-md"
+                  data-testid="button-toggle-pricing-details"
+                >
+                  <span className="text-muted-foreground">Pricing Details</span>
+                  {pricingDetailsExpanded ? (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+                
+                {pricingDetailsExpanded && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="tabular-nums">{formatPrice(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Tax ({formatRateLabel(taxRate)})</span>
+                      <span className="tabular-nums">{formatPrice(tax)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Service ({formatRateLabel(serviceChargeRate)})
+                      </span>
+                      <span className="tabular-nums">{formatPrice(serviceCharge)}</span>
+                    </div>
+                  </div>
+                )}
+                
                 <Separator />
                 <div className="flex justify-between text-lg font-semibold pt-1">
                   <span>Total</span>
