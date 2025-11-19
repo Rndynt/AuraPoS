@@ -134,8 +134,19 @@ function createItemKey(
  *   customer_name: "John Doe"
  * };
  */
+export type PaymentMethod = "cash" | "card" | "scan";
+
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [customerName, setCustomerName] = useState<string>("");
+  const [tableNumber, setTableNumber] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  
+  // Generate temporary order number for display (will be replaced by backend)
+  const [orderNumber] = useState<string>(() => {
+    const timestamp = new Date().getTime();
+    return `#${String(timestamp).slice(-6)}`;
+  });
 
   /**
    * Add item to cart with support for variants and option groups
@@ -229,6 +240,9 @@ export function useCart() {
 
   const clearCart = () => {
     setItems([]);
+    setCustomerName("");
+    setTableNumber("");
+    setPaymentMethod("cash");
   };
 
   /**
@@ -302,5 +316,13 @@ export function useCart() {
     serviceCharge,
     total,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    // Cart metadata
+    customerName,
+    setCustomerName,
+    tableNumber,
+    setTableNumber,
+    paymentMethod,
+    setPaymentMethod,
+    orderNumber,
   };
 }

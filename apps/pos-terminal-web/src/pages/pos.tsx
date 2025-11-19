@@ -93,6 +93,8 @@ export default function POSPage() {
     tax_rate: cart.taxRate,
     service_charge_rate: cart.serviceChargeRate,
     order_type_id: selectedOrderTypeId || undefined,
+    customer_name: cart.customerName || undefined,
+    table_number: cart.tableNumber || undefined,
   });
 
   const handleAddToCart = (product: Product) => {
@@ -317,6 +319,13 @@ export default function POSPage() {
           onKitchenTicket={handleKitchenTicket}
           hasPartialPayment={hasPartialPayment}
           hasKitchenTicket={hasKitchenTicket}
+          customerName={cart.customerName}
+          setCustomerName={cart.setCustomerName}
+          orderNumber={cart.orderNumber}
+          tableNumber={cart.tableNumber}
+          setTableNumber={cart.setTableNumber}
+          paymentMethod={cart.paymentMethod}
+          setPaymentMethod={cart.setPaymentMethod}
         />
       </div>
 
@@ -367,6 +376,13 @@ export default function POSPage() {
         onKitchenTicket={handleKitchenTicket}
         hasPartialPayment={hasPartialPayment}
         hasKitchenTicket={hasKitchenTicket}
+        customerName={cart.customerName}
+        setCustomerName={cart.setCustomerName}
+        orderNumber={cart.orderNumber}
+        tableNumber={cart.tableNumber}
+        setTableNumber={cart.setTableNumber}
+        paymentMethod={cart.paymentMethod}
+        setPaymentMethod={cart.setPaymentMethod}
       />
 
       {/* Product Options Dialog */}

@@ -147,7 +147,7 @@ export default function OrdersPage() {
               ) : (
                 orders.map((order) => {
                   const statusConfig = ORDER_STATUS_CONFIG[order.status];
-                  const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status];
+                  const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status] || PAYMENT_STATUS_CONFIG["unpaid"];
                   const StatusIcon = statusConfig.icon;
 
                   return (
@@ -178,7 +178,7 @@ export default function OrdersPage() {
                       <CardContent className="pt-0 space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
-                            {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                            {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? "s" : ""}
                           </span>
                           <Badge className={paymentConfig.className}>
                             {paymentConfig.label}
@@ -246,7 +246,7 @@ export default function OrdersPage() {
                   <div>
                     <h3 className="font-semibold mb-3">Order Details</h3>
                     <div className="space-y-3">
-                      {selectedOrder.items.map((item, idx) => (
+                      {selectedOrder.items?.map((item, idx) => (
                         <div key={idx} className="flex gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm">{item.product_name}</p>

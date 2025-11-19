@@ -1,13 +1,19 @@
-import type { CartItem as CartItemType } from "@/hooks/useCart";
+import type { CartItem as CartItemType, PaymentMethod } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, CreditCard, Printer, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useTenant } from "@/context/TenantContext";
 import { useState } from "react";
 
@@ -28,6 +34,14 @@ type CartPanelProps = {
   onKitchenTicket?: () => void;
   hasPartialPayment?: boolean;
   hasKitchenTicket?: boolean;
+  // New metadata props
+  customerName: string;
+  setCustomerName: (name: string) => void;
+  orderNumber: string;
+  tableNumber?: string;
+  setTableNumber?: (table: string) => void;
+  paymentMethod: PaymentMethod;
+  setPaymentMethod: (method: PaymentMethod) => void;
 };
 
 export function CartPanel({
@@ -47,13 +61,18 @@ export function CartPanel({
   onKitchenTicket,
   hasPartialPayment = false,
   hasKitchenTicket = false,
+  customerName,
+  setCustomerName,
+  orderNumber,
+  tableNumber,
+  setTableNumber,
+  paymentMethod,
+  setPaymentMethod,
 }: CartPanelProps) {
   const { business_type, hasModule, isLoading } = useTenant();
-  const [orderDetailsExpanded, setOrderDetailsExpanded] = useState(false);
+  const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
-  const showDelivery = !isLoading && hasModule('enable_delivery');
-  const showOrderDetails = showTableNumber || showDelivery;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -71,26 +90,74 @@ export function CartPanel({
 
   return (
     <div className="w-full h-full bg-card border-l border-card-border flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-card-border flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5" />
-          <h2 className="font-semibold text-lg">Order</h2>
-          {items.length > 0 && (
-            <Badge variant="secondary" data-testid="badge-item-count">
-              {items.reduce((sum, item) => sum + item.quantity, 0)}
-            </Badge>
-          )}
+      {/* Header with Customer Info */}
+      <div className="p-4 border-b border-card-border flex-shrink-0 space-y-3">
+        {/* Customer Name and Order Number */}
+        <div className="bg-muted/50 rounded-md p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            {isEditingCustomerName ? (
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                onBlur={() => setIsEditingCustomerName(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setIsEditingCustomerName(false);
+                }}
+                placeholder="Customer's Name"
+                className="flex-1"
+                autoFocus
+                data-testid="input-customer-name-edit"
+              />
+            ) : (
+              <div className="flex items-center gap-2 flex-1">
+                <Receipt className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <h3 className="font-medium text-base">
+                  {customerName || "Customer's Name"}
+                </h3>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8 flex-shrink-0"
+              onClick={() => setIsEditingCustomerName(true)}
+              data-testid="button-edit-customer-name"
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Order Number: {orderNumber}
+          </p>
         </div>
-        {items.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            data-testid="button-clear-cart"
-          >
-            Clear
-          </Button>
+
+        {/* Table Selection - Only shown for CAFE_RESTAURANT with table management */}
+        {showTableNumber && setTableNumber && (
+          <div className="space-y-1.5">
+            <Label htmlFor="table-select" className="text-sm">
+              Select Table
+            </Label>
+            <Select 
+              value={tableNumber} 
+              onValueChange={setTableNumber}
+            >
+              <SelectTrigger id="table-select" data-testid="select-table">
+                <SelectValue placeholder="Select table..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Table 1</SelectItem>
+                <SelectItem value="2">Table 2</SelectItem>
+                <SelectItem value="3">Table 3</SelectItem>
+                <SelectItem value="4">Table 4</SelectItem>
+                <SelectItem value="5">Table 5</SelectItem>
+                <SelectItem value="6">Table 6</SelectItem>
+                <SelectItem value="7">Table 7</SelectItem>
+                <SelectItem value="8">Table 8</SelectItem>
+                <SelectItem value="9">Table 9</SelectItem>
+                <SelectItem value="10">Table 10</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
 
@@ -101,73 +168,21 @@ export function CartPanel({
             <div className="py-16 text-center space-y-3">
               <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
               <p className="text-muted-foreground" data-testid="text-empty-cart">
-                Cart is empty
+                No Item Selected
               </p>
             </div>
           ) : (
-            <>
-              {/* Order Details Section (Collapsible) */}
-              {showOrderDetails && (
-                <div className="border border-card-border rounded-md">
-                  <button
-                    onClick={() => setOrderDetailsExpanded(!orderDetailsExpanded)}
-                    className="w-full p-3 flex items-center justify-between hover-elevate"
-                    data-testid="button-toggle-order-details"
-                  >
-                    <span className="font-medium text-sm">Order Details</span>
-                    {orderDetailsExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </button>
-                  
-                  {orderDetailsExpanded && (
-                    <div className="px-3 pb-3 pt-1 space-y-3 border-t border-card-border">
-                      {showTableNumber && (
-                        <div className="space-y-1.5">
-                          <Label htmlFor="table-number" className="text-sm">
-                            Table Number
-                          </Label>
-                          <Input
-                            id="table-number"
-                            type="text"
-                            placeholder="e.g., Table 5"
-                            data-testid="input-table-number"
-                          />
-                        </div>
-                      )}
-                      {showDelivery && (
-                        <div className="space-y-1.5">
-                          <Label htmlFor="delivery-address" className="text-sm">
-                            Delivery Address
-                          </Label>
-                          <Textarea
-                            id="delivery-address"
-                            placeholder="Enter delivery address..."
-                            rows={2}
-                            data-testid="textarea-delivery-address"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Cart Items List */}
-              <div className="space-y-0">
-                {items.map((item) => (
-                  <CartItem
-                    key={item.id}
-                    item={item}
-                    onUpdateQty={onUpdateQty}
-                    onRemove={onRemove}
-                    getItemPrice={getItemPrice}
-                  />
-                ))}
-              </div>
-            </>
+            <div className="space-y-0">
+              {items.map((item) => (
+                <CartItem
+                  key={item.id}
+                  item={item}
+                  onUpdateQty={onUpdateQty}
+                  onRemove={onRemove}
+                  getItemPrice={getItemPrice}
+                />
+              ))}
+            </div>
           )}
         </div>
       </ScrollArea>
@@ -175,7 +190,9 @@ export function CartPanel({
       {/* Footer with totals and actions */}
       {items.length > 0 && (
         <div className="p-4 border-t border-card-border space-y-4 flex-shrink-0 bg-card">
+          {/* Payment Summary */}
           <div className="space-y-2">
+            <h3 className="font-semibold text-base">Payment Summary</h3>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="tabular-nums" data-testid="text-subtotal">
@@ -183,59 +200,73 @@ export function CartPanel({
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax ({formatRateLabel(taxRate)})</span>
+              <span className="text-muted-foreground">Tax</span>
               <span className="tabular-nums" data-testid="text-tax">
                 {formatPrice(tax)}
               </span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                Service ({formatRateLabel(serviceChargeRate)})
-              </span>
-              <span className="tabular-nums" data-testid="text-service">
-                {formatPrice(serviceCharge)}
-              </span>
-            </div>
             <Separator />
             <div className="flex justify-between text-lg font-semibold pt-1">
-              <span>Total</span>
+              <span>Total Payable</span>
               <span className="tabular-nums" data-testid="text-total">
                 {formatPrice(total)}
               </span>
             </div>
           </div>
 
+          {/* Payment Method Selection */}
+          <div className="space-y-2">
+            <h3 className="font-semibold text-sm">Payment Method</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant={paymentMethod === "cash" ? "default" : "outline"}
+                className="flex-col h-auto py-3 gap-1"
+                onClick={() => setPaymentMethod("cash")}
+                data-testid="button-payment-cash"
+              >
+                <Banknote className="w-5 h-5" />
+                <span className="text-xs">Cash</span>
+              </Button>
+              <Button
+                variant={paymentMethod === "card" ? "default" : "outline"}
+                className="flex-col h-auto py-3 gap-1"
+                onClick={() => setPaymentMethod("card")}
+                data-testid="button-payment-card"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span className="text-xs">Card</span>
+              </Button>
+              <Button
+                variant={paymentMethod === "scan" ? "default" : "outline"}
+                className="flex-col h-auto py-3 gap-1"
+                onClick={() => setPaymentMethod("scan")}
+                data-testid="button-payment-scan"
+              >
+                <Scan className="w-5 h-5" />
+                <span className="text-xs">Scan</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
           <div className="space-y-2">
             <Button
-              className="w-full h-12 text-base font-semibold gap-2"
+              className="w-full h-12 text-base font-semibold"
               onClick={onCharge}
-              data-testid="button-charge"
+              data-testid="button-place-order"
             >
-              <CreditCard className="w-5 h-5" />
-              Charge {formatPrice(total)}
+              Place Order
             </Button>
-
-            {hasPartialPayment && onPartialPayment && (
-              <Button
-                variant="secondary"
-                className="w-full gap-2"
-                onClick={onPartialPayment}
-                data-testid="button-partial-payment"
-              >
-                <CreditCard className="w-4 h-4" />
-                Pay DP
-              </Button>
-            )}
 
             {hasKitchenTicket && onKitchenTicket && (
               <Button
                 variant="outline"
                 className="w-full gap-2"
                 onClick={onKitchenTicket}
-                data-testid="button-kitchen-ticket"
+                data-testid="button-print"
               >
                 <Printer className="w-4 h-4" />
-                Send to Kitchen
+                Print
               </Button>
             )}
           </div>
