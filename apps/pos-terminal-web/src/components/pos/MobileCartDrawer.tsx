@@ -213,13 +213,13 @@ export function MobileCartDrawer({
           {/* Footer with totals and actions */}
           {items.length > 0 && (
             <div
-              className="p-4 border-t border-card-border space-y-4 bg-card flex-shrink-0"
+              className="px-4 pt-1 border-t border-card-border space-y-4 bg-card flex-shrink-0"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
             >
               {/* Payment Summary */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-base">Payment Summary</h3>
+                  <h3 className="font-semibold text-base">Subtotal</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -227,7 +227,7 @@ export function MobileCartDrawer({
                     className="h-7 px-2 gap-1"
                     data-testid="button-toggle-pricing-details"
                   >
-                    <span className="text-xs">Details</span>
+                    <span className="text-xs">{formatPrice(subtotal)}</span>
                     {showDetailedPricing ? (
                       <ChevronUp className="w-3 h-3" />
                     ) : (
@@ -236,12 +236,12 @@ export function MobileCartDrawer({
                   </Button>
                 </div>
                 
-                <div className="flex justify-between text-sm">
+                {/*<div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="tabular-nums" data-testid="text-subtotal">
                     {formatPrice(subtotal)}
                   </span>
-                </div>
+                </div>*/}
                 
                 {showDetailedPricing && (
                   <>
@@ -277,7 +277,7 @@ export function MobileCartDrawer({
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant={paymentMethod === "cash" ? "default" : "outline"}
-                    className="flex-col h-auto py-3 gap-1"
+                    className="flex-col h-auto py-2 gap-1"
                     onClick={() => setPaymentMethod("cash")}
                     data-testid="button-payment-cash"
                   >
@@ -286,7 +286,7 @@ export function MobileCartDrawer({
                   </Button>
                   <Button
                     variant={paymentMethod === "card" ? "default" : "outline"}
-                    className="flex-col h-auto py-3 gap-1"
+                    className="flex-col h-auto py-2 gap-1"
                     onClick={() => setPaymentMethod("card")}
                     data-testid="button-payment-card"
                   >
@@ -295,12 +295,12 @@ export function MobileCartDrawer({
                   </Button>
                   <Button
                     variant={paymentMethod === "scan" ? "default" : "outline"}
-                    className="flex-col h-auto py-3 gap-1"
+                    className="flex-col h-auto py-2 gap-1"
                     onClick={() => setPaymentMethod("scan")}
                     data-testid="button-payment-scan"
                   >
                     <Scan className="w-5 h-5" />
-                    <span className="text-xs">Scan</span>
+                    <span className="text-xs">QRIS</span>
                   </Button>
                 </div>
               </div>
