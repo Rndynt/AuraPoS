@@ -170,10 +170,64 @@ export const selectProductOptionSchema = createSelectSchema(productOptions);
 export type InsertProductOption = z.infer<typeof insertProductOptionSchema>;
 export type ProductOption = typeof productOptions.$inferSelect;
 
+export const orderTypes = pgTable("order_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isOnPremise: boolean("is_on_premise").notNull().default(false),
+  needTableNumber: boolean("need_table_number").notNull().default(false),
+  needAddress: boolean("need_address").notNull().default(false),
+  allowScheduled: boolean("allow_scheduled").notNull().default(false),
+  isDigitalProduct: boolean("is_digital_product").notNull().default(false),
+  affectsServiceCharge: boolean("affects_service_charge").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  codeIdx: index("order_types_code_idx").on(table.code),
+}));
+
+export const insertOrderTypeSchema = createInsertSchema(orderTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const selectOrderTypeSchema = createSelectSchema(orderTypes);
+export type InsertOrderType = z.infer<typeof insertOrderTypeSchema>;
+export type OrderType = typeof orderTypes.$inferSelect;
+
+export const tenantOrderTypes = pgTable("tenant_order_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  orderTypeId: varchar("order_type_id").notNull().references(() => orderTypes.id, { onDelete: "cascade" }),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  config: json("config"),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  tenantIdx: index("tenant_order_types_tenant_idx").on(table.tenantId),
+  orderTypeIdx: index("tenant_order_types_order_type_idx").on(table.orderTypeId),
+  tenantOrderTypeUnique: index("tenant_order_types_tenant_order_type_unique").on(table.tenantId, table.orderTypeId),
+}));
+
+export const insertTenantOrderTypeSchema = createInsertSchema(tenantOrderTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  config: z.record(z.any()).nullable().optional(),
+});
+
+export const selectTenantOrderTypeSchema = createSelectSchema(tenantOrderTypes);
+export type InsertTenantOrderType = z.infer<typeof insertTenantOrderTypeSchema>;
+export type TenantOrderType = typeof tenantOrderTypes.$inferSelect;
+
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  orderTypeId: varchar("order_type_id"),
+  orderTypeId: varchar("order_type_id").references(() => orderTypes.id),
   salesChannel: varchar("sales_channel", { length: 50 }),
   orderNumber: text("order_number").notNull(),
   orderDate: timestamp("order_date").notNull().default(sql`CURRENT_TIMESTAMP`),
