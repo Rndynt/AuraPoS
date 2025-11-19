@@ -15,6 +15,13 @@
       "when": 1763549581381,
       "tag": "0001_loose_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763555408347,
+      "tag": "0002_uneven_trauma",
+      "breakpoints": true
     }
   ]
 }

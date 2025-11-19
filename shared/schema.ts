@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -209,7 +209,7 @@ export const tenantOrderTypes = pgTable("tenant_order_types", {
 }, (table) => ({
   tenantIdx: index("tenant_order_types_tenant_idx").on(table.tenantId),
   orderTypeIdx: index("tenant_order_types_order_type_idx").on(table.orderTypeId),
-  tenantOrderTypeUnique: index("tenant_order_types_tenant_order_type_unique").on(table.tenantId, table.orderTypeId),
+  tenantOrderTypeUnique: uniqueIndex("tenant_order_types_tenant_order_type_unique").on(table.tenantId, table.orderTypeId),
 }));
 
 export const insertTenantOrderTypeSchema = createInsertSchema(tenantOrderTypes).omit({
