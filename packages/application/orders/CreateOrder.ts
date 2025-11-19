@@ -22,6 +22,7 @@ export interface CreateOrderItemInput {
 export interface CreateOrderInput {
   tenant_id: string;
   items: CreateOrderItemInput[];
+  order_type_id?: string;
   customer_name?: string;
   table_number?: string;
   notes?: string;
@@ -104,8 +105,31 @@ export class CreateOrder {
       const serviceChargeAmount = subtotal * serviceChargeRate;
       const totalAmount = subtotal + taxAmount + serviceChargeAmount;
 
-      const order: Omit<Order, 'id' | 'created_at' | 'updated_at'> = {
-        tenant_id: input.tenant_id,
+      // Map domain Order type to database InsertOrder type (snake_case to camelCase)
+      const orderForDb = {
+        tenantId: input.tenant_id,
+        orderTypeId: input.order_type_id,
+        orderNumber: orderNumber,
+        status: 'draft' as const,
+        subtotal: subtotal.toString(),
+        taxAmount: taxAmount.toString(),
+        serviceCharge: serviceChargeAmount.toString(),
+        discountAmount: '0',
+        total: totalAmount.toString(),
+        paidAmount: '0',
+        paymentStatus: 'unpaid' as const,
+        customerName: input.customer_name,
+        tableNumber: input.table_number,
+        notes: input.notes,
+      };
+
+      const createdOrderDb = await this.orderRepository.create(orderForDb as any);
+      
+      // Convert back to domain type (camelCase to snake_case)
+      const createdOrder: Order = {
+        id: createdOrderDb.id,
+        tenant_id: createdOrderDb.tenantId,
+        order_type_id: createdOrderDb.orderTypeId,
         items: orderItems,
         subtotal,
         tax_amount: taxAmount,
@@ -119,9 +143,9 @@ export class CreateOrder {
         customer_name: input.customer_name,
         table_number: input.table_number,
         notes: input.notes,
+        created_at: createdOrderDb.createdAt,
+        updated_at: createdOrderDb.updatedAt,
       };
-
-      const createdOrder = await this.orderRepository.create(order);
 
       const pricing: PriceCalculation = {
         base_price: 0,

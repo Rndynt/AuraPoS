@@ -38,6 +38,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
   const bodySchema = z.object({
     items: z.array(orderItemSchema).min(1),
+    order_type_id: z.string().optional(),
     customer_name: z.string().optional(),
     table_number: z.string().optional(),
     notes: z.string().optional(),
