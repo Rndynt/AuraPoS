@@ -4,3 +4,14 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Compiled TypeScript output in packages - these should not be committed
+packages/**/*.js
+packages/**/*.js.map
+packages/**/*.d.ts
+packages/**/*.d.ts.map
+
+# Build artifacts
+*.tsbuildinfo
+build/
+.turbo/
