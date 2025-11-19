@@ -4,8 +4,17 @@
  */
 
 import type { BusinessType } from '@pos/core';
-import type { Tenant } from '@pos/domain/tenants/types';
+import type { Tenant, TenantFeature, TenantModuleConfig } from '@pos/domain/tenants/types';
 import { getBusinessTypeTemplate } from './businessTypeTemplates';
+
+/**
+ * Tenant profile DTO combining all tenant-related data
+ */
+export interface TenantProfileDTO {
+  tenant: Tenant;
+  features: TenantFeature[];
+  moduleConfig: TenantModuleConfig;
+}
 
 /**
  * Repository input types (internal)
@@ -59,12 +68,12 @@ export interface ITenantRepository {
 }
 
 export interface ITenantModuleConfigRepository {
-  create(config: RepositoryCreateModuleConfigInput): Promise<any>;
+  create(config: RepositoryCreateModuleConfigInput): Promise<TenantModuleConfig>;
   delete(tenantId: string): Promise<void>;
 }
 
 export interface ITenantFeatureRepository {
-  create(feature: RepositoryCreateFeatureInput): Promise<any>;
+  create(feature: RepositoryCreateFeatureInput): Promise<TenantFeature>;
   deleteByTenantId(tenantId: string): Promise<void>;
 }
 
@@ -94,7 +103,7 @@ export interface CreateTenantInput {
  * Use case output
  */
 export interface CreateTenantOutput {
-  tenant: Tenant;
+  profile: TenantProfileDTO;
 }
 
 /**
@@ -156,7 +165,7 @@ export class CreateTenant {
 
       // Step 6: Create tenant module configuration
       console.log(`[CreateTenant] Creating module configuration for tenant: ${createdTenant.id}`);
-      await this.tenantModuleConfigRepository.create({
+      const createdModuleConfig = await this.tenantModuleConfigRepository.create({
         tenant_id: createdTenant.id,
         enable_table_management: template.moduleConfig.enable_table_management,
         enable_kitchen_ticket: template.moduleConfig.enable_kitchen_ticket,
@@ -173,8 +182,9 @@ export class CreateTenant {
       // Step 7: Create tenant features
       console.log(`[CreateTenant] Creating ${template.features.length} features for tenant: ${createdTenant.id}`);
       const now = new Date();
+      const createdFeatures: TenantFeature[] = [];
       for (const featureTemplate of template.features) {
-        await this.tenantFeatureRepository.create({
+        const createdFeature = await this.tenantFeatureRepository.create({
           tenantId: createdTenant.id,
           featureCode: featureTemplate.feature_code,
           activatedAt: now,
@@ -182,6 +192,7 @@ export class CreateTenant {
           source: featureTemplate.source,
           isActive: featureTemplate.is_active,
         });
+        createdFeatures.push(createdFeature);
       }
       featuresCreated = true;
       console.log(`[CreateTenant] All features created successfully`);
@@ -198,9 +209,14 @@ export class CreateTenant {
       orderTypesEnabled = true;
       console.log(`[CreateTenant] All order types enabled successfully`);
 
+      // Step 9: Return complete profile with REAL persisted data
       console.log(`[CreateTenant] Tenant creation completed successfully: ${createdTenant.id}`);
       return {
-        tenant: createdTenant,
+        profile: {
+          tenant: createdTenant,
+          features: createdFeatures,
+          moduleConfig: createdModuleConfig,
+        },
       };
     } catch (error) {
       // CRITICAL: Comprehensive rollback mechanism

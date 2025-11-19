@@ -17,6 +17,7 @@ import { KitchenTicketRepository } from '@pos/infrastructure/repositories/orders
 import { OrderTypeRepository } from '@pos/infrastructure/repositories/orders/OrderTypeRepository';
 import { TenantRepository } from '@pos/infrastructure/repositories/tenants/TenantRepository';
 import { TenantFeatureRepository } from '@pos/infrastructure/repositories/tenants/TenantFeatureRepository';
+import { TenantModuleConfigRepository } from '@pos/infrastructure/repositories/tenants/TenantModuleConfigRepository';
 
 // Use Cases - Catalog
 import { GetProducts } from '@pos/application/catalog/GetProducts';
@@ -31,6 +32,8 @@ import { CreateKitchenTicket } from '@pos/application/orders/CreateKitchenTicket
 // Use Cases - Tenants
 import { GetActiveFeaturesForTenant } from '@pos/application/tenants/GetActiveFeaturesForTenant';
 import { CheckFeatureAccess } from '@pos/application/tenants/CheckFeatureAccess';
+import { CreateTenant } from '@pos/application/tenants/CreateTenant';
+import { GetTenantProfile } from '@pos/application/tenants/GetTenantProfile';
 
 /**
  * Container class that holds all dependencies
@@ -55,6 +58,7 @@ class Container {
   // Tenant Repositories
   public readonly tenantRepository: TenantRepository;
   public readonly tenantFeatureRepository: TenantFeatureRepository;
+  public readonly tenantModuleConfigRepository: TenantModuleConfigRepository;
 
   // Catalog Use Cases
   public readonly getProducts: GetProducts;
@@ -69,6 +73,8 @@ class Container {
   // Tenant Use Cases
   public readonly getActiveFeaturesForTenant: GetActiveFeaturesForTenant;
   public readonly checkFeatureAccess: CheckFeatureAccess;
+  public readonly createTenant: CreateTenant;
+  public readonly getTenantProfile: GetTenantProfile;
 
   constructor() {
     // Initialize Repositories
@@ -83,6 +89,7 @@ class Container {
     this.orderTypeRepository = new OrderTypeRepository(db);
     this.tenantRepository = new TenantRepository(db);
     this.tenantFeatureRepository = new TenantFeatureRepository(db);
+    this.tenantModuleConfigRepository = new TenantModuleConfigRepository(db);
 
     // Initialize Use Cases with Repository Dependencies
     // Catalog
@@ -112,6 +119,17 @@ class Container {
     );
     this.checkFeatureAccess = new CheckFeatureAccess(
       this.tenantFeatureRepository as any
+    );
+    this.createTenant = new CreateTenant(
+      this.tenantRepository as any,
+      this.tenantModuleConfigRepository as any,
+      this.tenantFeatureRepository as any,
+      this.orderTypeRepository as any
+    );
+    this.getTenantProfile = new GetTenantProfile(
+      this.tenantRepository as any,
+      this.tenantFeatureRepository as any,
+      this.tenantModuleConfigRepository as any
     );
   }
 }
