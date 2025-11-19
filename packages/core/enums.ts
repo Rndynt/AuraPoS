@@ -28,12 +28,16 @@ export type BusinessType = typeof BusinessType[keyof typeof BusinessType];
  * Matches schema.ts orders table status field.
  * - DRAFT: Order being created, not yet confirmed
  * - CONFIRMED: Order confirmed and sent to kitchen/processing
+ * - PREPARING: Order is being prepared (kitchen/service in progress)
+ * - READY: Order is ready for pickup/delivery
  * - COMPLETED: Order fulfilled and closed
  * - CANCELLED: Order cancelled by customer or staff
  */
 export const OrderStatus = {
   DRAFT: 'draft',
   CONFIRMED: 'confirmed',
+  PREPARING: 'preparing',
+  READY: 'ready',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 } as const;
@@ -95,19 +99,65 @@ export type OrderTypeCode = typeof OrderTypeCode[keyof typeof OrderTypeCode];
 /**
  * FeatureCode - Available feature codes
  * 
- * Feature flags that can be enabled/disabled per tenant:
- * - PRODUCT_VARIANTS: Product variant/options support
- * - PARTIAL_PAYMENT: Allow partial/down payments
- * - KITCHEN_TICKET: Kitchen ticket printing
- * - STOCK_TRACKING: Inventory stock tracking
- * - ORDER_HISTORY: Order history and reports
+ * Feature flags that can be enabled/disabled per tenant.
+ * Synchronized with FEATURE_CODES from packages/domain/tenants/types.ts
+ * 
+ * Printing features:
+ * - KITCHEN_PRINTER: Kitchen ticket/order printing
+ * - RECEIPT_PRINTER: Receipt printing for customers
+ * - LABEL_PRINTER: Label printing for products/orders
+ * 
+ * Kitchen features:
+ * - KITCHEN_DISPLAY: Kitchen display system (KDS)
+ * - ORDER_NOTIFICATIONS: Real-time order notifications
+ * 
+ * POS features:
+ * - MULTI_VARIANT: Product variant/options support
+ * - INVENTORY_TRACKING: Inventory stock tracking
+ * - PARTIAL_PAYMENTS: Allow partial/down payments
+ * - DISCOUNTS: Discount and promotion support
+ * 
+ * Reporting features:
+ * - SALES_REPORTS: Sales reporting and analytics
+ * - INVENTORY_REPORTS: Inventory reports
+ * - ANALYTICS_DASHBOARD: Advanced analytics dashboard
+ * 
+ * UI features:
+ * - DARK_MODE: Dark mode theme support
+ * - CUSTOM_BRANDING: Custom branding and theming
+ * 
+ * Integration features:
+ * - PAYMENT_GATEWAY: Payment gateway integrations
+ * - ACCOUNTING_SYNC: Accounting system synchronization
  */
 export const FeatureCode = {
-  PRODUCT_VARIANTS: 'product_variants',
-  PARTIAL_PAYMENT: 'partial_payment',
-  KITCHEN_TICKET: 'kitchen_ticket',
-  STOCK_TRACKING: 'stock_tracking',
-  ORDER_HISTORY: 'order_history',
+  // Printing features
+  KITCHEN_PRINTER: 'kitchen_printer',
+  RECEIPT_PRINTER: 'receipt_printer',
+  LABEL_PRINTER: 'label_printer',
+  
+  // Kitchen features
+  KITCHEN_DISPLAY: 'kitchen_display',
+  ORDER_NOTIFICATIONS: 'order_notifications',
+  
+  // POS features
+  MULTI_VARIANT: 'multi_variant',
+  INVENTORY_TRACKING: 'inventory_tracking',
+  PARTIAL_PAYMENTS: 'partial_payments',
+  DISCOUNTS: 'discounts',
+  
+  // Reporting features
+  SALES_REPORTS: 'sales_reports',
+  INVENTORY_REPORTS: 'inventory_reports',
+  ANALYTICS_DASHBOARD: 'analytics_dashboard',
+  
+  // UI features
+  DARK_MODE: 'dark_mode',
+  CUSTOM_BRANDING: 'custom_branding',
+  
+  // Integration features
+  PAYMENT_GATEWAY: 'payment_gateway',
+  ACCOUNTING_SYNC: 'accounting_sync',
 } as const;
 
 export type FeatureCode = typeof FeatureCode[keyof typeof FeatureCode];
