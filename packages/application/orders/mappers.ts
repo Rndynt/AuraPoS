@@ -3,8 +3,8 @@
  * Convert between domain Order types (snake_case) and database types (camelCase)
  */
 
-import type { Order as DbOrder, InsertOrder } from '../../../shared/schema';
-import type { Order, OrderItem } from '@pos/domain/orders/types';
+import type { Order as DbOrder, InsertOrder, InsertOrderItem, InsertOrderItemModifier } from '../../../shared/schema';
+import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
 
 /**
  * Convert domain Order to database InsertOrder
@@ -65,5 +65,50 @@ export function toDomainOrder(
     notes: dbOrder.notes || undefined,
     created_at: dbOrder.createdAt,
     updated_at: dbOrder.updatedAt,
+  };
+}
+
+/**
+ * Convert domain OrderItem to database InsertOrderItem
+ */
+export function toInsertOrderItemDb(
+  orderItem: OrderItem,
+  orderId: string
+): InsertOrderItem {
+  const variantDelta = orderItem.variant_price_delta ?? 0;
+  const optionsDelta = orderItem.selected_options?.reduce(
+    (sum, opt) => sum + opt.price_delta,
+    0
+  ) ?? 0;
+  const unitPrice = orderItem.base_price + variantDelta + optionsDelta;
+
+  return {
+    orderId,
+    productId: orderItem.product_id,
+    productName: orderItem.product_name,
+    variantId: orderItem.variant_id,
+    variantName: orderItem.variant_name,
+    quantity: orderItem.quantity,
+    unitPrice: unitPrice.toString(),
+    itemSubtotal: orderItem.item_subtotal.toString(),
+    notes: orderItem.notes,
+    status: orderItem.status || 'pending',
+  };
+}
+
+/**
+ * Convert domain SelectedOption to database InsertOrderItemModifier
+ */
+export function toInsertOrderItemModifierDb(
+  selectedOption: SelectedOption,
+  orderItemId: string
+): InsertOrderItemModifier {
+  return {
+    orderItemId,
+    optionGroupId: selectedOption.group_id,
+    optionGroupName: selectedOption.group_name,
+    optionId: selectedOption.option_id,
+    optionName: selectedOption.option_name,
+    priceDelta: selectedOption.price_delta.toString(),
   };
 }

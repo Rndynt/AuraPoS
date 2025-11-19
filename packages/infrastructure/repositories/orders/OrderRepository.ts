@@ -10,6 +10,7 @@ import {
   orderItems,
   orderItemModifiers,
   orderPayments,
+  products,
   type Order,
   type InsertOrder,
   type OrderItem,
@@ -17,6 +18,8 @@ import {
   type OrderPayment,
 } from '../../../../shared/schema';
 import { eq, and, gte, lte, inArray, desc, sql } from 'drizzle-orm';
+import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from '../../../application/orders/mappers';
+import type { OrderItem as DomainOrderItem } from '@pos/domain/orders/types';
 
 export interface OrderFilters {
   status?: string[];
@@ -27,6 +30,26 @@ export interface OrderFilters {
   offset?: number;
 }
 
+export interface OrderItemInput {
+  product_id: string;
+  product_name: string;
+  base_price: number;
+  quantity: number;
+  variant_id?: string;
+  variant_name?: string;
+  variant_price_delta?: number;
+  selected_options?: Array<{
+    group_id: string;
+    group_name: string;
+    option_id: string;
+    option_name: string;
+    price_delta: number;
+  }>;
+  notes?: string;
+  status?: string;
+  item_subtotal: number;
+}
+
 export interface IOrderRepository {
   findByTenant(tenantId: string, filters?: OrderFilters): Promise<Order[]>;
   countByTenant(
@@ -34,7 +57,7 @@ export interface IOrderRepository {
     filters?: Omit<OrderFilters, 'limit' | 'offset'>
   ): Promise<number>;
   findById(id: string, tenantId: string): Promise<any | null>;
-  create(order: InsertOrder, tenantId: string): Promise<Order>;
+  create(order: InsertOrder, orderItems: OrderItemInput[], tenantId: string): Promise<Order>;
   update(id: string, order: Partial<InsertOrder>, tenantId: string): Promise<Order>;
   updatePaymentStatus(
     id: string,
@@ -193,13 +216,77 @@ export class OrderRepository
   }
 
   /**
-   * Create a new order with all relations
+   * Create a new order with all relations (items and modifiers)
+   * Uses database transaction to ensure atomic writes
    */
-  async create(order: InsertOrder, tenantId: string): Promise<Order> {
+  async create(order: InsertOrder, orderItemsInput: OrderItemInput[], tenantId: string): Promise<Order> {
     try {
-      const data = this.injectTenantId(order, tenantId);
-      const result = await this.db.insert(orders).values(data).returning();
-      return result[0];
+      // STEP 1: Validate tenant/product access BEFORE starting transaction
+      if (orderItemsInput.length > 0) {
+        const productIds = orderItemsInput.map(item => item.product_id);
+        const validProducts = await this.db
+          .select()
+          .from(products)
+          .where(
+            and(
+              inArray(products.id, productIds),
+              eq(products.tenantId, tenantId)
+            )
+          );
+
+        const validProductIds = new Set(validProducts.map(p => p.id));
+        const invalidProductIds = productIds.filter(id => !validProductIds.has(id));
+        
+        if (invalidProductIds.length > 0) {
+          throw new RepositoryError(
+            `Invalid product IDs or products do not belong to tenant: ${invalidProductIds.join(', ')}`,
+            'INVALID_PRODUCT_IDS',
+            null
+          );
+        }
+      }
+
+      // STEP 2: Execute all writes in a single transaction
+      const createdOrder = await this.db.transaction(async (tx) => {
+        // Insert the order
+        const data = this.injectTenantId(order, tenantId);
+        const orderResult = await tx.insert(orders).values(data).returning();
+        const newOrder = orderResult[0];
+
+        // Insert order items if any
+        if (orderItemsInput.length > 0) {
+          // Use mapper utility to convert order items
+          const itemsToInsert = orderItemsInput.map(item => 
+            toInsertOrderItemDb(item as DomainOrderItem, newOrder.id)
+          );
+
+          const insertedItems = await tx.insert(orderItems).values(itemsToInsert).returning();
+
+          // Insert order item modifiers if any
+          const modifiersToInsert = [];
+          for (let i = 0; i < orderItemsInput.length; i++) {
+            const item = orderItemsInput[i];
+            const insertedItem = insertedItems[i];
+            
+            if (item.selected_options && item.selected_options.length > 0) {
+              // Use mapper utility for each selected option
+              for (const option of item.selected_options) {
+                modifiersToInsert.push(
+                  toInsertOrderItemModifierDb(option, insertedItem.id)
+                );
+              }
+            }
+          }
+
+          if (modifiersToInsert.length > 0) {
+            await tx.insert(orderItemModifiers).values(modifiersToInsert);
+          }
+        }
+
+        return newOrder;
+      });
+
+      return createdOrder;
     } catch (error) {
       this.handleError('create order', error);
     }

@@ -37,8 +37,28 @@ export interface CreateOrderOutput {
   pricing: PriceCalculation;
 }
 
+export interface OrderItemInput {
+  product_id: string;
+  product_name: string;
+  base_price: number;
+  quantity: number;
+  variant_id?: string;
+  variant_name?: string;
+  variant_price_delta?: number;
+  selected_options?: Array<{
+    group_id: string;
+    group_name: string;
+    option_id: string;
+    option_name: string;
+    price_delta: number;
+  }>;
+  notes?: string;
+  status?: string;
+  item_subtotal: number;
+}
+
 export interface IOrderRepository {
-  create(order: InsertOrder, tenantId: string): Promise<DbOrder>;
+  create(order: InsertOrder, orderItems: OrderItemInput[], tenantId: string): Promise<DbOrder>;
   generateOrderNumber(tenantId: string): Promise<string>;
 }
 
@@ -121,7 +141,21 @@ export class CreateOrder {
         input.notes
       );
 
-      const createdOrderDb = await this.orderRepository.create(orderForDb, input.tenant_id);
+      const orderItemsForDb: OrderItemInput[] = orderItems.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        base_price: item.base_price,
+        quantity: item.quantity,
+        variant_id: item.variant_id,
+        variant_name: item.variant_name,
+        variant_price_delta: item.variant_price_delta,
+        selected_options: item.selected_options,
+        notes: item.notes,
+        status: item.status,
+        item_subtotal: item.item_subtotal,
+      }));
+
+      const createdOrderDb = await this.orderRepository.create(orderForDb, orderItemsForDb, input.tenant_id);
       
       // Convert back to domain type (camelCase to snake_case)
       const createdOrder = toDomainOrder(createdOrderDb, orderItems);
