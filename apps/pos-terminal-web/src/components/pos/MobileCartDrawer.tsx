@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Drawer } from "vaul";
-import { ShoppingCart, CreditCard, Printer, X } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useTenant } from "@/context/TenantContext";
+import { useState } from "react";
 
 type MobileCartDrawerProps = {
   open: boolean;
@@ -53,9 +54,11 @@ export function MobileCartDrawer({
   hasKitchenTicket = false,
 }: MobileCartDrawerProps) {
   const { business_type, hasModule, isLoading } = useTenant();
+  const [orderDetailsExpanded, setOrderDetailsExpanded] = useState(false);
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
   const showDelivery = !isLoading && hasModule('enable_delivery');
+  const showOrderDetails = showTableNumber || showDelivery;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -79,7 +82,8 @@ export function MobileCartDrawer({
           className="fixed bottom-0 left-0 right-0 max-h-[85vh] bg-card border-t border-card-border rounded-t-xl z-50 flex flex-col"
           data-testid="drawer-mobile-cart"
         >
-          <div className="p-4 border-b border-card-border">
+          {/* Header */}
+          <div className="p-4 border-b border-card-border flex-shrink-0">
             <Drawer.Handle className="mx-auto w-12 h-1 bg-muted-foreground/30 rounded-full mb-4" />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -109,65 +113,88 @@ export function MobileCartDrawer({
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="p-4">
+          {/* Scrollable content area */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-4 space-y-3">
               {items.length === 0 ? (
                 <div className="py-16 text-center space-y-3">
                   <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
                   <p className="text-muted-foreground">Cart is empty</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {items.map((item) => (
-                    <CartItem
-                      key={item.id}
-                      item={item}
-                      onUpdateQty={onUpdateQty}
-                      onRemove={onRemove}
-                      getItemPrice={getItemPrice}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* Order Details Section (Collapsible) */}
+                  {showOrderDetails && (
+                    <div className="border border-card-border rounded-md">
+                      <button
+                        onClick={() => setOrderDetailsExpanded(!orderDetailsExpanded)}
+                        className="w-full p-3 flex items-center justify-between hover-elevate"
+                        data-testid="button-toggle-order-details-mobile"
+                      >
+                        <span className="font-medium text-sm">Order Details</span>
+                        {orderDetailsExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                      
+                      {orderDetailsExpanded && (
+                        <div className="px-3 pb-3 pt-1 space-y-3 border-t border-card-border">
+                          {showTableNumber && (
+                            <div className="space-y-1.5">
+                              <Label htmlFor="table-number-mobile" className="text-sm">
+                                Table Number
+                              </Label>
+                              <Input
+                                id="table-number-mobile"
+                                type="text"
+                                placeholder="e.g., Table 5"
+                                data-testid="input-table-number-mobile"
+                              />
+                            </div>
+                          )}
+                          {showDelivery && (
+                            <div className="space-y-1.5">
+                              <Label htmlFor="delivery-address-mobile" className="text-sm">
+                                Delivery Address
+                              </Label>
+                              <Textarea
+                                id="delivery-address-mobile"
+                                placeholder="Enter delivery address..."
+                                rows={2}
+                                data-testid="textarea-delivery-address-mobile"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cart Items List */}
+                  <div className="space-y-0">
+                    {items.map((item) => (
+                      <CartItem
+                        key={item.id}
+                        item={item}
+                        onUpdateQty={onUpdateQty}
+                        onRemove={onRemove}
+                        getItemPrice={getItemPrice}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </ScrollArea>
 
+          {/* Footer with totals and actions */}
           {items.length > 0 && (
             <div
-              className="p-4 border-t border-card-border space-y-4 bg-card"
+              className="p-4 border-t border-card-border space-y-4 bg-card flex-shrink-0"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
             >
-              {(showTableNumber || showDelivery) && (
-                <div className="space-y-3 pb-2 border-b border-card-border">
-                  {showTableNumber && (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="table-number-mobile" className="text-sm">
-                        Table Number
-                      </Label>
-                      <Input
-                        id="table-number-mobile"
-                        type="text"
-                        placeholder="e.g., Table 5"
-                        data-testid="input-table-number-mobile"
-                      />
-                    </div>
-                  )}
-                  {showDelivery && (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="delivery-address-mobile" className="text-sm">
-                        Delivery Address
-                      </Label>
-                      <Textarea
-                        id="delivery-address-mobile"
-                        placeholder="Enter delivery address..."
-                        rows={2}
-                        data-testid="textarea-delivery-address-mobile"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>

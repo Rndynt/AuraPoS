@@ -40,11 +40,20 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
               <h4 className="font-medium text-sm line-clamp-1" data-testid={`text-cart-product-${item.id}`}>
                 {item.product.name}
               </h4>
-              {item.variant && (
-                <Badge variant="secondary" className="text-xs mt-1">
-                  {item.variant.name}
-                </Badge>
-              )}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {item.variant && (
+                  <Badge variant="secondary" className="text-xs">
+                    {item.variant.name}
+                  </Badge>
+                )}
+                {item.selectedOptions && item.selectedOptions.length > 0 && (
+                  item.selectedOptions.map((option, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {option.option_name}
+                    </Badge>
+                  ))
+                )}
+              </div>
             </div>
             <Button
               size="icon"

@@ -3,12 +3,13 @@ import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, CreditCard, Printer, Send } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useTenant } from "@/context/TenantContext";
+import { useState } from "react";
 
 type CartPanelProps = {
   items: CartItemType[];
@@ -48,9 +49,11 @@ export function CartPanel({
   hasKitchenTicket = false,
 }: CartPanelProps) {
   const { business_type, hasModule, isLoading } = useTenant();
+  const [orderDetailsExpanded, setOrderDetailsExpanded] = useState(false);
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
   const showDelivery = !isLoading && hasModule('enable_delivery');
+  const showOrderDetails = showTableNumber || showDelivery;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -68,7 +71,8 @@ export function CartPanel({
 
   return (
     <div className="w-full h-full bg-card border-l border-card-border flex flex-col">
-      <div className="p-4 border-b border-card-border flex items-center justify-between">
+      {/* Header */}
+      <div className="p-4 border-b border-card-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <ShoppingCart className="w-5 h-5" />
           <h2 className="font-semibold text-lg">Order</h2>
@@ -90,8 +94,9 @@ export function CartPanel({
         )}
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4">
+      {/* Scrollable content area */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-4 space-y-3">
           {items.length === 0 ? (
             <div className="py-16 text-center space-y-3">
               <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
@@ -100,54 +105,76 @@ export function CartPanel({
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {items.map((item) => (
-                <CartItem
-                  key={item.id}
-                  item={item}
-                  onUpdateQty={onUpdateQty}
-                  onRemove={onRemove}
-                  getItemPrice={getItemPrice}
-                />
-              ))}
-            </div>
+            <>
+              {/* Order Details Section (Collapsible) */}
+              {showOrderDetails && (
+                <div className="border border-card-border rounded-md">
+                  <button
+                    onClick={() => setOrderDetailsExpanded(!orderDetailsExpanded)}
+                    className="w-full p-3 flex items-center justify-between hover-elevate"
+                    data-testid="button-toggle-order-details"
+                  >
+                    <span className="font-medium text-sm">Order Details</span>
+                    {orderDetailsExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </button>
+                  
+                  {orderDetailsExpanded && (
+                    <div className="px-3 pb-3 pt-1 space-y-3 border-t border-card-border">
+                      {showTableNumber && (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="table-number" className="text-sm">
+                            Table Number
+                          </Label>
+                          <Input
+                            id="table-number"
+                            type="text"
+                            placeholder="e.g., Table 5"
+                            data-testid="input-table-number"
+                          />
+                        </div>
+                      )}
+                      {showDelivery && (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="delivery-address" className="text-sm">
+                            Delivery Address
+                          </Label>
+                          <Textarea
+                            id="delivery-address"
+                            placeholder="Enter delivery address..."
+                            rows={2}
+                            data-testid="textarea-delivery-address"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cart Items List */}
+              <div className="space-y-0">
+                {items.map((item) => (
+                  <CartItem
+                    key={item.id}
+                    item={item}
+                    onUpdateQty={onUpdateQty}
+                    onRemove={onRemove}
+                    getItemPrice={getItemPrice}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </ScrollArea>
 
+      {/* Footer with totals and actions */}
       {items.length > 0 && (
-        <div className="p-4 border-t border-card-border space-y-4">
-          {(showTableNumber || showDelivery) && (
-            <div className="space-y-3 pb-2 border-b border-card-border">
-              {showTableNumber && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="table-number" className="text-sm">
-                    Table Number
-                  </Label>
-                  <Input
-                    id="table-number"
-                    type="text"
-                    placeholder="e.g., Table 5"
-                    data-testid="input-table-number"
-                  />
-                </div>
-              )}
-              {showDelivery && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="delivery-address" className="text-sm">
-                    Delivery Address
-                  </Label>
-                  <Textarea
-                    id="delivery-address"
-                    placeholder="Enter delivery address..."
-                    rows={2}
-                    data-testid="textarea-delivery-address"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
+        <div className="p-4 border-t border-card-border space-y-4 flex-shrink-0 bg-card">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
