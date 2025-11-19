@@ -100,14 +100,20 @@
 
 ### 1.6 Frontend integration (POS terminal)
 
-- [ ] In `apps/pos-terminal-web`:
-  - [ ] Add hook `useTenantProfile()` which:
-    - [ ] Fetches tenant profile + module flags.
-    - [ ] Stores `business_type` and module map in a React context.
-  - [ ] Use this context to:
-    - [ ] Show/hide table management screens (only for café/restaurant).
-    - [ ] Show/hide delivery address fields if enabled.
-    - [ ] Show/hide loyalty UI (later).
+- [x] In `apps/pos-terminal-web` (implemented):
+  - [x] Add hook `useTenantProfile()` which:
+    - [x] Fetches tenant profile + module flags from `/api/tenants/profile`.
+    - [x] Implemented in `apps/pos-terminal-web/src/hooks/api/useTenantProfile.ts`.
+  - [x] Extended `TenantContext` to store `business_type` and module map:
+    - [x] Added `business_type`, `moduleConfig`, `isLoading`, `error` to context.
+    - [x] Implemented `hasModule(moduleName: string)` helper function.
+    - [x] Preserved existing `tenantId` functionality (backward compatible).
+    - [x] Updated in `apps/pos-terminal-web/src/context/TenantContext.tsx`.
+  - [x] Created usage documentation with examples:
+    - [x] Documentation in `apps/pos-terminal-web/src/hooks/README.md`.
+    - [x] Examples for showing/hiding table management screens (café/restaurant only).
+    - [x] Examples for showing/hiding delivery address fields if enabled.
+    - [x] Examples for showing/hiding loyalty UI based on module flags.
 
 ---
 

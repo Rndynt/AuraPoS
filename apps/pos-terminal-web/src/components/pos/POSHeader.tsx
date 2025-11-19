@@ -3,13 +3,29 @@ import { Input } from "@/components/ui/input";
 import { Search, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { useTenant } from "@/context/TenantContext";
+import type { BusinessType } from "@pos/core";
 
 interface POSHeaderProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   searchDisabled?: boolean;
   sidebarContent: React.ReactNode;
+}
+
+function getBusinessTypeLabel(businessType: BusinessType | null): string {
+  if (!businessType) return "";
+  
+  const labels: Record<BusinessType, string> = {
+    CAFE_RESTAURANT: "Café",
+    RETAIL_MINIMARKET: "Retail",
+    LAUNDRY: "Laundry",
+    SERVICE_APPOINTMENT: "Service",
+    DIGITAL_PPOB: "PPOB",
+  };
+  
+  return labels[businessType] || businessType;
 }
 
 export function POSHeader({ 
@@ -19,7 +35,9 @@ export function POSHeader({
   sidebarContent 
 }: POSHeaderProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { tenantId } = useTenant();
+  const { tenantId, business_type, isLoading } = useTenant();
+  
+  const businessTypeLabel = getBusinessTypeLabel(business_type);
 
   return (
     <div className="sticky top-0 z-20 border-b bg-background shadow-sm overflow-x-hidden w-full">
@@ -59,6 +77,11 @@ export function POSHeader({
           <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground flex-shrink-0">
             <User className="w-4 h-4" />
             <span data-testid="text-tenant" className="whitespace-nowrap">{tenantId}</span>
+            {!isLoading && businessTypeLabel && (
+              <Badge variant="secondary" className="text-xs" data-testid="badge-business-type">
+                {businessTypeLabel}
+              </Badge>
+            )}
           </div>
         </div>
       </div>
@@ -67,6 +90,11 @@ export function POSHeader({
       <div className="sm:hidden px-3 pb-2 flex items-center gap-2 text-xs text-muted-foreground">
         <User className="w-3.5 h-3.5" />
         <span data-testid="text-tenant-mobile">{tenantId}</span>
+        {!isLoading && businessTypeLabel && (
+          <Badge variant="secondary" className="text-xs" data-testid="badge-business-type-mobile">
+            {businessTypeLabel}
+          </Badge>
+        )}
       </div>
     </div>
   );

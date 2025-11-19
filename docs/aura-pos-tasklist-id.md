@@ -100,14 +100,20 @@
 
 ### 1.6 Frontend integration (POS terminal)
 
-- [ ] Di `apps/pos-terminal-web`:
-  - [ ] Tambahkan hook `useTenantProfile()` yang:
-    - [ ] Mengambil profil tenant + flag modul.
-    - [ ] Menyimpan `business_type` dan peta modul di React context.
-  - [ ] Gunakan context ini untuk:
-    - [ ] Menampilkan/menyembunyikan layar manajemen meja (hanya untuk kafe/restoran).
-    - [ ] Menampilkan/menyembunyikan field alamat pengiriman jika diaktifkan.
-    - [ ] Menampilkan/menyembunyikan UI loyalitas (nanti).
+- [x] Di `apps/pos-terminal-web` (sudah diimplementasikan):
+  - [x] Tambahkan hook `useTenantProfile()` yang:
+    - [x] Mengambil profil tenant + flag modul dari `/api/tenants/profile`.
+    - [x] Diimplementasikan di `apps/pos-terminal-web/src/hooks/api/useTenantProfile.ts`.
+  - [x] Perluas `TenantContext` untuk menyimpan `business_type` dan peta modul:
+    - [x] Menambahkan `business_type`, `moduleConfig`, `isLoading`, `error` ke context.
+    - [x] Mengimplementasikan fungsi helper `hasModule(moduleName: string)`.
+    - [x] Mempertahankan fungsionalitas `tenantId` yang ada (backward compatible).
+    - [x] Diperbarui di `apps/pos-terminal-web/src/context/TenantContext.tsx`.
+  - [x] Membuat dokumentasi penggunaan dengan contoh:
+    - [x] Dokumentasi di `apps/pos-terminal-web/src/hooks/README.md`.
+    - [x] Contoh untuk menampilkan/menyembunyikan layar manajemen meja (hanya kafe/restoran).
+    - [x] Contoh untuk menampilkan/menyembunyikan field alamat pengiriman jika diaktifkan.
+    - [x] Contoh untuk menampilkan/menyembunyikan UI loyalitas berdasarkan flag modul.
 
 ---
 

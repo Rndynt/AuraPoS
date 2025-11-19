@@ -5,6 +5,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, CreditCard, Printer, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useTenant } from "@/context/TenantContext";
 
 type CartPanelProps = {
   items: CartItemType[];
@@ -43,6 +47,11 @@ export function CartPanel({
   hasPartialPayment = false,
   hasKitchenTicket = false,
 }: CartPanelProps) {
+  const { business_type, hasModule, isLoading } = useTenant();
+
+  const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
+  const showDelivery = !isLoading && hasModule('enable_delivery');
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -108,6 +117,37 @@ export function CartPanel({
 
       {items.length > 0 && (
         <div className="p-4 border-t border-card-border space-y-4">
+          {(showTableNumber || showDelivery) && (
+            <div className="space-y-3 pb-2 border-b border-card-border">
+              {showTableNumber && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="table-number" className="text-sm">
+                    Table Number
+                  </Label>
+                  <Input
+                    id="table-number"
+                    type="text"
+                    placeholder="e.g., Table 5"
+                    data-testid="input-table-number"
+                  />
+                </div>
+              )}
+              {showDelivery && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery-address" className="text-sm">
+                    Delivery Address
+                  </Label>
+                  <Textarea
+                    id="delivery-address"
+                    placeholder="Enter delivery address..."
+                    rows={2}
+                    data-testid="textarea-delivery-address"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>

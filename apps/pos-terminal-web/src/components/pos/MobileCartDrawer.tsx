@@ -6,6 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { Drawer } from "vaul";
 import { ShoppingCart, CreditCard, Printer, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useTenant } from "@/context/TenantContext";
 
 type MobileCartDrawerProps = {
   open: boolean;
@@ -48,6 +52,11 @@ export function MobileCartDrawer({
   hasPartialPayment = false,
   hasKitchenTicket = false,
 }: MobileCartDrawerProps) {
+  const { business_type, hasModule, isLoading } = useTenant();
+
+  const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
+  const showDelivery = !isLoading && hasModule('enable_delivery');
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -128,6 +137,37 @@ export function MobileCartDrawer({
               className="p-4 border-t border-card-border space-y-4 bg-card"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
             >
+              {(showTableNumber || showDelivery) && (
+                <div className="space-y-3 pb-2 border-b border-card-border">
+                  {showTableNumber && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="table-number-mobile" className="text-sm">
+                        Table Number
+                      </Label>
+                      <Input
+                        id="table-number-mobile"
+                        type="text"
+                        placeholder="e.g., Table 5"
+                        data-testid="input-table-number-mobile"
+                      />
+                    </div>
+                  )}
+                  {showDelivery && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="delivery-address-mobile" className="text-sm">
+                        Delivery Address
+                      </Label>
+                      <Textarea
+                        id="delivery-address-mobile"
+                        placeholder="Enter delivery address..."
+                        rows={2}
+                        data-testid="textarea-delivery-address-mobile"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>

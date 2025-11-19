@@ -1,9 +1,17 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { resolveInitialTenantId, setActiveTenantId } from "@/lib/tenant";
+import { useTenantProfile } from "@/hooks/api/useTenantProfile";
+import type { BusinessType } from "@pos/core";
+import type { TenantModuleConfig } from "@pos/domain/tenants/types";
 
-type TenantContextValue = {
+export type TenantContextValue = {
   tenantId: string;
   setTenantId: (tenantId: string) => void;
+  business_type: BusinessType | null;
+  moduleConfig: TenantModuleConfig | null;
+  hasModule: (moduleName: keyof TenantModuleConfig) => boolean;
+  isLoading: boolean;
+  error: Error | null;
 };
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
@@ -16,7 +24,37 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setActiveTenantId(nextTenantId);
   }, []);
 
-  const value = useMemo(() => ({ tenantId, setTenantId }), [tenantId, setTenantId]);
+  const { data: profile, isLoading, error } = useTenantProfile(tenantId);
+
+  const hasModule = useCallback(
+    (moduleName: keyof TenantModuleConfig): boolean => {
+      if (!profile?.moduleConfig) {
+        return false;
+      }
+
+      const value = profile.moduleConfig[moduleName];
+      
+      if (typeof value === "boolean") {
+        return value;
+      }
+
+      return false;
+    },
+    [profile]
+  );
+
+  const value = useMemo(
+    () => ({
+      tenantId,
+      setTenantId,
+      business_type: profile?.tenant.business_type ?? null,
+      moduleConfig: profile?.moduleConfig ?? null,
+      hasModule,
+      isLoading,
+      error: error as Error | null,
+    }),
+    [tenantId, setTenantId, profile, hasModule, isLoading, error]
+  );
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }

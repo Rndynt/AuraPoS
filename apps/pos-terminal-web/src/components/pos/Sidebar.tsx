@@ -1,5 +1,6 @@
-import { Home, LayoutDashboard, ShoppingCart, Receipt, Settings, LogOut } from "lucide-react";
+import { Home, LayoutDashboard, ShoppingCart, Receipt, Settings, LogOut, Table, Truck, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTenant } from "@/context/TenantContext";
 
 type SidebarItem = {
   icon: typeof Home;
@@ -7,15 +8,33 @@ type SidebarItem = {
   active?: boolean;
 };
 
-const sidebarItems: SidebarItem[] = [
-  { icon: Home, label: "Home", active: true },
-  { icon: LayoutDashboard, label: "Dashboard" },
-  { icon: ShoppingCart, label: "Orders" },
-  { icon: Receipt, label: "Bills" },
-  { icon: Settings, label: "Settings" },
-];
-
 export function Sidebar() {
+  const { hasModule, isLoading } = useTenant();
+
+  const baseSidebarItems: SidebarItem[] = [
+    { icon: Home, label: "Home", active: true },
+    { icon: LayoutDashboard, label: "Dashboard" },
+    { icon: ShoppingCart, label: "Orders" },
+    { icon: Receipt, label: "Bills" },
+  ];
+
+  const conditionalItems: SidebarItem[] = [];
+  if (!isLoading && hasModule('enable_table_management')) {
+    conditionalItems.push({ icon: Table, label: "Tables" });
+  }
+  if (!isLoading && hasModule('enable_delivery')) {
+    conditionalItems.push({ icon: Truck, label: "Delivery" });
+  }
+  if (!isLoading && hasModule('enable_loyalty')) {
+    conditionalItems.push({ icon: Gift, label: "Loyalty" });
+  }
+
+  const sidebarItems = [
+    ...baseSidebarItems,
+    ...conditionalItems,
+    { icon: Settings, label: "Settings" },
+  ];
+
   return (
     <div className="hidden md:flex w-20 bg-card border-r border-card-border flex-col items-center py-6 gap-4">
       {sidebarItems.map((item, index) => {
@@ -25,7 +44,6 @@ export function Sidebar() {
             key={index}
             size="icon"
             variant={item.active ? "default" : "ghost"}
-            className="w-14 h-14"
             data-testid={`button-nav-${item.label.toLowerCase()}`}
             onClick={() => console.log(`Navigate to ${item.label}`)}
           >
@@ -37,7 +55,6 @@ export function Sidebar() {
       <Button
         size="icon"
         variant="ghost"
-        className="w-14 h-14"
         data-testid="button-nav-logout"
         onClick={() => console.log("Logout clicked")}
       >
@@ -48,6 +65,32 @@ export function Sidebar() {
 }
 
 export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
+  const { hasModule, isLoading } = useTenant();
+
+  const baseSidebarItems: SidebarItem[] = [
+    { icon: Home, label: "Home", active: true },
+    { icon: LayoutDashboard, label: "Dashboard" },
+    { icon: ShoppingCart, label: "Orders" },
+    { icon: Receipt, label: "Bills" },
+  ];
+
+  const conditionalItems: SidebarItem[] = [];
+  if (!isLoading && hasModule('enable_table_management')) {
+    conditionalItems.push({ icon: Table, label: "Tables" });
+  }
+  if (!isLoading && hasModule('enable_delivery')) {
+    conditionalItems.push({ icon: Truck, label: "Delivery" });
+  }
+  if (!isLoading && hasModule('enable_loyalty')) {
+    conditionalItems.push({ icon: Gift, label: "Loyalty" });
+  }
+
+  const sidebarItems = [
+    ...baseSidebarItems,
+    ...conditionalItems,
+    { icon: Settings, label: "Settings" },
+  ];
+
   return (
     <div className="flex flex-col gap-2 mt-8">
       {sidebarItems.map((item, index) => {
