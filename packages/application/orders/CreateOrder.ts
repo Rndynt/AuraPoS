@@ -6,6 +6,7 @@
 import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
+import { toInsertOrderDb, toDomainOrder, type OrderDb } from './mappers';
 
 export interface CreateOrderItemInput {
   product_id: string;
@@ -106,46 +107,23 @@ export class CreateOrder {
       const totalAmount = subtotal + taxAmount + serviceChargeAmount;
 
       // Map domain Order type to database InsertOrder type (snake_case to camelCase)
-      const orderForDb = {
-        tenantId: input.tenant_id,
-        orderTypeId: input.order_type_id,
-        orderNumber: orderNumber,
-        status: 'draft' as const,
-        subtotal: subtotal.toString(),
-        taxAmount: taxAmount.toString(),
-        serviceCharge: serviceChargeAmount.toString(),
-        discountAmount: '0',
-        total: totalAmount.toString(),
-        paidAmount: '0',
-        paymentStatus: 'unpaid' as const,
-        customerName: input.customer_name,
-        tableNumber: input.table_number,
-        notes: input.notes,
-      };
+      const orderForDb = toInsertOrderDb(
+        input.tenant_id,
+        orderNumber,
+        input.order_type_id,
+        subtotal,
+        taxAmount,
+        serviceChargeAmount,
+        totalAmount,
+        input.customer_name,
+        input.table_number,
+        input.notes
+      );
 
       const createdOrderDb = await this.orderRepository.create(orderForDb as any);
       
       // Convert back to domain type (camelCase to snake_case)
-      const createdOrder: Order = {
-        id: createdOrderDb.id,
-        tenant_id: createdOrderDb.tenantId,
-        order_type_id: createdOrderDb.orderTypeId,
-        items: orderItems,
-        subtotal,
-        tax_amount: taxAmount,
-        service_charge_amount: serviceChargeAmount,
-        discount_amount: 0,
-        total_amount: totalAmount,
-        paid_amount: 0,
-        payment_status: 'unpaid',
-        order_number: orderNumber,
-        status: 'draft',
-        customer_name: input.customer_name,
-        table_number: input.table_number,
-        notes: input.notes,
-        created_at: createdOrderDb.createdAt,
-        updated_at: createdOrderDb.updatedAt,
-      };
+      const createdOrder = toDomainOrder(createdOrderDb as unknown as OrderDb, orderItems);
 
       const pricing: PriceCalculation = {
         base_price: 0,

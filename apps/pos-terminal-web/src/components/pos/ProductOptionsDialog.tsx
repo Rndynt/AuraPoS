@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -279,9 +278,7 @@ export function ProductOptionsDialog({
           <DialogTitle className="text-base sm:text-lg">{product.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="px-4 py-3 pb-32 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 pb-32 space-y-4">
             {/* Product Image */}
             {product.image_url && (
               <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
@@ -531,8 +528,6 @@ export function ProductOptionsDialog({
                 </span>
               </div>
             </div>
-          </div>
-            </ScrollArea>
         </div>
 
         <DialogFooter 

@@ -1,7 +1,6 @@
 import type { CartItem as CartItemType } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Drawer } from "vaul";
 import { ShoppingCart, CreditCard, Printer, X, ChevronDown, ChevronUp } from "lucide-react";
@@ -116,9 +115,7 @@ export function MobileCartDrawer({
           </div>
 
           {/* Scrollable content area */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4 pb-8 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 pb-8 space-y-3">
               {items.length === 0 ? (
                 <div className="py-16 text-center space-y-3">
                   <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
@@ -189,8 +186,6 @@ export function MobileCartDrawer({
                   </div>
                 </>
               )}
-              </div>
-            </ScrollArea>
           </div>
 
           {/* Footer with totals and actions */}
