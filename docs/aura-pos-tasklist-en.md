@@ -46,16 +46,18 @@
 
 ### 1.2 Database schema & migrations
 
-- [ ] Add `business_types` master table (optional but recommended):
-  - [ ] `code`, `name`, `description`, `is_active`.
-- [ ] Update `tenants` table:
-  - [ ] Add `business_type` (FK to `business_types.code` or enum-like string).
-  - [ ] Add `settings` JSON column (nullable).
-- [ ] Add `tenant_module_configs` table (if you prefer explicit rows instead of JSON):
-  - [ ] `tenant_id`
-  - [ ] `module_code` (e.g. `TABLE_MANAGEMENT`, `LOYALTY`, `DELIVERY`)
-  - [ ] `is_enabled`
-  - [ ] optional `config` JSON.
+- [x] ~~Add `business_types` master table~~ (skipped - using BusinessType enum in code):
+  - Business types defined in `@pos/core/constants.ts` as string union type.
+- [x] Update `tenants` table:
+  - [x] Add `business_type` (varchar enum-like string).
+  - [x] Add `settings` JSONB column (nullable).
+- [x] Add `tenant_module_configs` table (column-based approach):
+  - [x] `tenant_id` (PK, FK to tenants)
+  - [x] Boolean columns for each module: `enable_table_management`, `enable_kitchen_ticket`, `enable_loyalty`, `enable_delivery`, `enable_inventory`, `enable_appointments`, `enable_multi_location`
+  - [x] `config` JSONB for module-specific settings
+  - [x] `updated_at` timestamp
+  - [x] Migration created: `migrations/0001_loose_frank_castle.sql`
+  - [x] Repository implemented: `TenantModuleConfigRepository` with type-safe mappers
 
 ### 1.3 Application layer use cases
 
