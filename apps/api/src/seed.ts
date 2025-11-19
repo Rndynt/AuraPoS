@@ -35,14 +35,14 @@ import { neon } from '@neondatabase/serverless';
 
 // Product images paths
 const PRODUCT_IMAGES = {
-  burger: '/attached_assets/generated_images/Gourmet_beef_burger_product_photo_df61270b.png',
-  rice: '/attached_assets/generated_images/Chicken_rice_bowl_product_photo_3ab2fbee.png',
-  cappuccino: '/attached_assets/generated_images/Cappuccino_coffee_product_photo_d92cda67.png',
-  lava: '/attached_assets/generated_images/Chocolate_lava_cake_product_photo_cb07f0be.png',
-  pizza: '/attached_assets/generated_images/Supreme_pizza_product_photo_78bbaf57.png',
-  fries: '/attached_assets/generated_images/French_fries_product_photo_dc986f4d.png',
-  icedLatte: '/attached_assets/generated_images/Iced_caramel_latte_product_photo_1bc0e828.png',
-  wings: '/attached_assets/generated_images/Fried_chicken_wings_product_photo_fce05207.png',
+  burger: '/generated_images/Gourmet_beef_burger_product_photo_df61270b.png',
+  rice: '/generated_images/Chicken_rice_bowl_product_photo_3ab2fbee.png',
+  cappuccino: '/generated_images/Cappuccino_coffee_product_photo_d92cda67.png',
+  lava: '/generated_images/Chocolate_lava_cake_product_photo_cb07f0be.png',
+  pizza: '/generated_images/Supreme_pizza_product_photo_78bbaf57.png',
+  fries: '/generated_images/French_fries_product_photo_dc986f4d.png',
+  icedLatte: '/generated_images/Iced_caramel_latte_product_photo_1bc0e828.png',
+  wings: '/generated_images/Fried_chicken_wings_product_photo_fce05207.png',
 };
 
 // Feature codes to seed
