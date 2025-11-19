@@ -3,44 +3,8 @@
  * Convert between domain Order types (snake_case) and database types (camelCase)
  */
 
+import type { Order as DbOrder, InsertOrder } from '../../../shared/schema';
 import type { Order, OrderItem } from '@pos/domain/orders/types';
-
-export interface InsertOrderDb {
-  tenantId: string;
-  orderTypeId?: string;
-  orderNumber: string;
-  status: 'draft' | 'confirmed' | 'completed' | 'cancelled';
-  subtotal: string;
-  taxAmount: string;
-  serviceCharge: string;
-  discountAmount: string;
-  total: string;
-  paidAmount: string;
-  paymentStatus: 'paid' | 'partial' | 'unpaid';
-  customerName?: string;
-  tableNumber?: string;
-  notes?: string;
-}
-
-export interface OrderDb {
-  id: string;
-  tenantId: string;
-  orderTypeId?: string | null;
-  orderNumber: string;
-  status: string;
-  subtotal: string;
-  taxAmount: string;
-  serviceCharge: string;
-  discountAmount: string;
-  total: string;
-  paidAmount: string;
-  paymentStatus: string;
-  customerName?: string | null;
-  tableNumber?: string | null;
-  notes?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 /**
  * Convert domain Order to database InsertOrder
@@ -56,7 +20,7 @@ export function toInsertOrderDb(
   customerName?: string,
   tableNumber?: string,
   notes?: string
-): InsertOrderDb {
+): InsertOrder {
   return {
     tenantId,
     orderTypeId,
@@ -79,7 +43,7 @@ export function toInsertOrderDb(
  * Convert database Order to domain Order
  */
 export function toDomainOrder(
-  dbOrder: OrderDb,
+  dbOrder: DbOrder,
   items: OrderItem[]
 ): Order {
   return {

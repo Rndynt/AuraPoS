@@ -7,7 +7,7 @@ import type { Order as DbOrder, InsertOrder } from '../../../shared/schema';
 import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
-import { toInsertOrderDb, toDomainOrder, type OrderDb, type InsertOrderDb } from './mappers';
+import { toInsertOrderDb, toDomainOrder } from './mappers';
 
 export interface CreateOrderItemInput {
   product_id: string;
@@ -121,10 +121,10 @@ export class CreateOrder {
         input.notes
       );
 
-      const createdOrderDb = await this.orderRepository.create(orderForDb as InsertOrder, input.tenant_id);
+      const createdOrderDb = await this.orderRepository.create(orderForDb, input.tenant_id);
       
       // Convert back to domain type (camelCase to snake_case)
-      const createdOrder = toDomainOrder(createdOrderDb as unknown as OrderDb, orderItems);
+      const createdOrder = toDomainOrder(createdOrderDb, orderItems);
 
       const pricing: PriceCalculation = {
         base_price: 0,
