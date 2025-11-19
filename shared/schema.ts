@@ -85,41 +85,6 @@ export const selectTenantModuleConfigSchema = createSelectSchema(tenantModuleCon
 export type InsertTenantModuleConfig = z.infer<typeof insertTenantModuleConfigSchema>;
 export type TenantModuleConfig = typeof tenantModuleConfigs.$inferSelect;
 
-/**
- * Map database TenantModuleConfig to domain TenantModuleConfig (camelCase -> snake_case)
- */
-export function mapTenantModuleConfigToDomain(dbConfig: TenantModuleConfig): import('@pos/domain/tenants/types').TenantModuleConfig {
-  return {
-    tenant_id: dbConfig.tenantId,
-    enable_table_management: dbConfig.enableTableManagement,
-    enable_kitchen_ticket: dbConfig.enableKitchenTicket,
-    enable_loyalty: dbConfig.enableLoyalty,
-    enable_delivery: dbConfig.enableDelivery,
-    enable_inventory: dbConfig.enableInventory,
-    enable_appointments: dbConfig.enableAppointments,
-    enable_multi_location: dbConfig.enableMultiLocation,
-    config: dbConfig.config || undefined,
-    updated_at: dbConfig.updatedAt,
-  };
-}
-
-/**
- * Map domain TenantModuleConfig to database TenantModuleConfig (snake_case -> camelCase)
- */
-export function mapTenantModuleConfigToDb(domainConfig: import('@pos/domain/tenants/types').TenantModuleConfig): InsertTenantModuleConfig {
-  return {
-    tenantId: domainConfig.tenant_id,
-    enableTableManagement: domainConfig.enable_table_management,
-    enableKitchenTicket: domainConfig.enable_kitchen_ticket,
-    enableLoyalty: domainConfig.enable_loyalty,
-    enableDelivery: domainConfig.enable_delivery,
-    enableInventory: domainConfig.enable_inventory,
-    enableAppointments: domainConfig.enable_appointments,
-    enableMultiLocation: domainConfig.enable_multi_location,
-    config: domainConfig.config === null ? undefined : domainConfig.config,
-  };
-}
-
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),

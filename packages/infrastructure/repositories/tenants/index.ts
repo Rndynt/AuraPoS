@@ -5,3 +5,4 @@
 
 export * from './TenantRepository';
 export * from './TenantFeatureRepository';
+export * from './TenantModuleConfigRepository';
