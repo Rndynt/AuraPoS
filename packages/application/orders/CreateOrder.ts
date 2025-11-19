@@ -37,7 +37,7 @@ export interface CreateOrderOutput {
 }
 
 export interface IOrderRepository {
-  create(order: Omit<Order, 'id' | 'created_at' | 'updated_at'>): Promise<Order>;
+  create(order: any, tenantId: string): Promise<any>;
   generateOrderNumber(tenantId: string): Promise<string>;
 }
 
@@ -120,7 +120,7 @@ export class CreateOrder {
         input.notes
       );
 
-      const createdOrderDb = await this.orderRepository.create(orderForDb as any);
+      const createdOrderDb = await this.orderRepository.create(orderForDb, input.tenant_id);
       
       // Convert back to domain type (camelCase to snake_case)
       const createdOrder = toDomainOrder(createdOrderDb as unknown as OrderDb, orderItems);
