@@ -87,12 +87,16 @@
 
 ### 1.5 API / backend wiring
 
-- [ ] Add `/api/tenants/register`:
-  - [ ] Accepts `business_type`, basic tenant info.
-  - [ ] Calls `CreateTenant`.
-  - [ ] Returns tenant and enabled modules/features.
-- [ ] Extend existing `/api/tenants/features` or create `/api/tenants/modules`:
-  - [ ] Returns module flags (table management, loyalty, etc.) for front-end.
+- [x] Add `/api/tenants/register` (implemented in `apps/api/src/http/controllers/TenantsController.ts`):
+  - [x] Accepts `business_type`, basic tenant info.
+  - [x] Calls `CreateTenant`.
+  - [x] Returns tenant and enabled modules/features.
+  - [x] Input validation using Zod schema with business type enum.
+  - [x] Proper error handling using asyncHandler middleware.
+  - [x] Returns complete persisted profile with real IDs and timestamps.
+- [x] Created `/api/tenants/profile` endpoint (extends functionality):
+  - [x] Returns complete tenant profile (tenant + features + moduleConfig) for front-end.
+  - [x] Wired with `GetTenantProfile` use case via DI container.
 
 ### 1.6 Frontend integration (POS terminal)
 

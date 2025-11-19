@@ -87,12 +87,16 @@
 
 ### 1.5 API / backend wiring
 
-- [ ] Tambahkan `/api/tenants/register`:
-  - [ ] Menerima `business_type`, info tenant dasar.
-  - [ ] Memanggil `CreateTenant`.
-  - [ ] Mengembalikan tenant dan modul/fitur yang diaktifkan.
-- [ ] Extend `/api/tenants/features` yang ada atau buat `/api/tenants/modules`:
-  - [ ] Mengembalikan flag modul (table management, loyalty, dll.) untuk front-end.
+- [x] Tambahkan `/api/tenants/register` (diimplementasikan di `apps/api/src/http/controllers/TenantsController.ts`):
+  - [x] Menerima `business_type`, info tenant dasar.
+  - [x] Memanggil `CreateTenant`.
+  - [x] Mengembalikan tenant dan modul/fitur yang diaktifkan.
+  - [x] Validasi input menggunakan Zod schema dengan enum business type.
+  - [x] Error handling yang tepat menggunakan middleware asyncHandler.
+  - [x] Mengembalikan profil lengkap yang telah dipersist dengan ID dan timestamp asli.
+- [x] Membuat endpoint `/api/tenants/profile` (memperluas fungsionalitas):
+  - [x] Mengembalikan profil tenant lengkap (tenant + features + moduleConfig) untuk front-end.
+  - [x] Terhubung dengan use case `GetTenantProfile` melalui DI container.
 
 ### 1.6 Frontend integration (POS terminal)
 
