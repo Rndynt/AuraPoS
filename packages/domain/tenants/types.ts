@@ -3,6 +3,8 @@
  * Multi-tenant management and feature flag system
  */
 
+import type { BusinessType } from '@pos/core';
+
 /**
  * Feature definition available in the system
  * Features can be enabled/disabled per tenant
@@ -54,6 +56,8 @@ export type Tenant = {
   business_address?: string;
   business_phone?: string;
   business_email?: string;
+  business_type: BusinessType;
+  settings: Record<string, any> | null;
   
   // Subscription & billing
   plan_tier: "free" | "starter" | "professional" | "enterprise";
@@ -68,6 +72,27 @@ export type Tenant = {
   // Status
   is_active: boolean;
   created_at: Date;
+  updated_at?: Date;
+};
+
+/**
+ * Module configuration for a tenant
+ * Determines which modules/features are enabled
+ */
+export type TenantModuleConfig = {
+  tenant_id: string;
+  
+  // Module flags - determines which features/screens are available
+  enable_table_management: boolean;      // For café/restaurant - table seating
+  enable_kitchen_ticket: boolean;        // For café/restaurant - kitchen display
+  enable_loyalty: boolean;                // Loyalty points program
+  enable_delivery: boolean;               // Delivery order management
+  enable_inventory: boolean;              // Stock/inventory tracking
+  enable_appointments: boolean;           // For service businesses - appointment scheduling
+  enable_multi_location: boolean;         // Multiple locations support
+  
+  // Configuration metadata
+  config?: Record<string, any>;
   updated_at?: Date;
 };
 

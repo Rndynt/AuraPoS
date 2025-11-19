@@ -9,6 +9,7 @@ export type {
   FeatureCode,
   Tenant,
   TenantFeature,
+  TenantModuleConfig,
 } from './types';
 
 export { FEATURE_CODES } from './types';

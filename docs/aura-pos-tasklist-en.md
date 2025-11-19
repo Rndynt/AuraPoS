@@ -36,13 +36,13 @@
 
 ### 1.1 Domain model
 
-- [ ] In `@pos/domain/tenants`:
-  - [ ] Add `BusinessType` model/type.
-  - [ ] Extend `Tenant` with:
-    - [ ] `business_type: BusinessType`
-    - [ ] `settings: Record<string, any>` (JSON config per tenant, business-type specific).
-  - [ ] Add `TenantModuleConfig` type to represent which modules are enabled for a tenant:
-    - [ ] Flags such as `enable_table_management`, `enable_kitchen_ticket`, `enable_loyalty`, `enable_delivery`, etc.
+- [x] In `@pos/domain/tenants`:
+  - [x] Add `BusinessType` model/type.
+  - [x] Extend `Tenant` with:
+    - [x] `business_type: BusinessType`
+    - [x] `settings: Record<string, any>` (JSON config per tenant, business-type specific).
+  - [x] Add `TenantModuleConfig` type to represent which modules are enabled for a tenant:
+    - [x] Flags such as `enable_table_management`, `enable_kitchen_ticket`, `enable_loyalty`, `enable_delivery`, etc.
 
 ### 1.2 Database schema & migrations
 
