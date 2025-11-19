@@ -106,7 +106,7 @@ export function MobileCartDrawer({
           <div className="p-4 border-b border-card-border flex-shrink-0 space-y-3">
             <Drawer.Handle className="mx-auto w-12 h-1 bg-muted-foreground/30 rounded-full mb-4" />
             
-            <div className="flex items-center justify-end">
+            {/*<div className="flex items-center justify-end">
               <Button
                 variant="ghost"
                 size="icon"
@@ -115,7 +115,7 @@ export function MobileCartDrawer({
               >
                 <X className="w-5 h-5" />
               </Button>
-            </div>
+            </div>*/}
 
             {/* Customer Name and Order Number */}
             <div className="bg-muted/50 rounded-md p-4 space-y-2">
@@ -273,7 +273,7 @@ export function MobileCartDrawer({
 
               {/* Payment Method Selection */}
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Payment Method</h3>
+                {/*<h3 className="font-semibold text-sm">Payment Method</h3>*/}
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant={paymentMethod === "cash" ? "default" : "outline"}
