@@ -17,6 +17,18 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const businessTypes = pgTable("business_types", {
+  code: varchar("code", { length: 50 }).primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+export const insertBusinessTypeSchema = createInsertSchema(businessTypes);
+export const selectBusinessTypeSchema = createSelectSchema(businessTypes);
+export type InsertBusinessType = z.infer<typeof insertBusinessTypeSchema>;
+export type BusinessTypeRecord = typeof businessTypes.$inferSelect;
+
 export const tenants = pgTable("tenants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -25,6 +37,8 @@ export const tenants = pgTable("tenants", {
   businessAddress: text("business_address"),
   businessPhone: text("business_phone"),
   businessEmail: text("business_email"),
+  businessType: varchar("business_type", { length: 50 }).notNull().default("CAFE_RESTAURANT").references(() => businessTypes.code),
+  settings: json("settings"),
   planTier: varchar("plan_tier", { length: 50 }).notNull().default("free"),
   subscriptionStatus: varchar("subscription_status", { length: 50 }).notNull().default("active"),
   trialEndsAt: timestamp("trial_ends_at"),
@@ -45,6 +59,66 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
 export const selectTenantSchema = createSelectSchema(tenants);
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Tenant = typeof tenants.$inferSelect;
+
+export const tenantModuleConfigs = pgTable("tenant_module_configs", {
+  tenantId: varchar("tenant_id").primaryKey().references(() => tenants.id, { onDelete: "cascade" }),
+  enableTableManagement: boolean("enable_table_management").notNull().default(false),
+  enableKitchenTicket: boolean("enable_kitchen_ticket").notNull().default(false),
+  enableLoyalty: boolean("enable_loyalty").notNull().default(false),
+  enableDelivery: boolean("enable_delivery").notNull().default(false),
+  enableInventory: boolean("enable_inventory").notNull().default(false),
+  enableAppointments: boolean("enable_appointments").notNull().default(false),
+  enableMultiLocation: boolean("enable_multi_location").notNull().default(false),
+  config: json("config"),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertTenantModuleConfigSchema = createInsertSchema(tenantModuleConfigs).omit({
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  config: z.record(z.any()).nullable().optional(),
+});
+
+export const selectTenantModuleConfigSchema = createSelectSchema(tenantModuleConfigs);
+export type InsertTenantModuleConfig = z.infer<typeof insertTenantModuleConfigSchema>;
+export type TenantModuleConfig = typeof tenantModuleConfigs.$inferSelect;
+
+/**
+ * Map database TenantModuleConfig to domain TenantModuleConfig (camelCase -> snake_case)
+ */
+export function mapTenantModuleConfigToDomain(dbConfig: TenantModuleConfig): import('@pos/domain/tenants/types').TenantModuleConfig {
+  return {
+    tenant_id: dbConfig.tenantId,
+    enable_table_management: dbConfig.enableTableManagement,
+    enable_kitchen_ticket: dbConfig.enableKitchenTicket,
+    enable_loyalty: dbConfig.enableLoyalty,
+    enable_delivery: dbConfig.enableDelivery,
+    enable_inventory: dbConfig.enableInventory,
+    enable_appointments: dbConfig.enableAppointments,
+    enable_multi_location: dbConfig.enableMultiLocation,
+    config: dbConfig.config || undefined,
+    updated_at: dbConfig.updatedAt,
+  };
+}
+
+/**
+ * Map domain TenantModuleConfig to database TenantModuleConfig (snake_case -> camelCase)
+ */
+export function mapTenantModuleConfigToDb(domainConfig: import('@pos/domain/tenants/types').TenantModuleConfig): InsertTenantModuleConfig {
+  return {
+    tenantId: domainConfig.tenant_id,
+    enableTableManagement: domainConfig.enable_table_management,
+    enableKitchenTicket: domainConfig.enable_kitchen_ticket,
+    enableLoyalty: domainConfig.enable_loyalty,
+    enableDelivery: domainConfig.enable_delivery,
+    enableInventory: domainConfig.enable_inventory,
+    enableAppointments: domainConfig.enable_appointments,
+    enableMultiLocation: domainConfig.enable_multi_location,
+    config: domainConfig.config === null ? undefined : domainConfig.config,
+  };
+}
 
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -131,64 +205,10 @@ export const selectProductOptionSchema = createSelectSchema(productOptions);
 export type InsertProductOption = z.infer<typeof insertProductOptionSchema>;
 export type ProductOption = typeof productOptions.$inferSelect;
 
-export const orderTypes = pgTable("order_types", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  code: varchar("code", { length: 50 }).notNull().unique(),
-  name: text("name").notNull(),
-  description: text("description"),
-  isOnPremise: boolean("is_on_premise").notNull().default(false),
-  needTableNumber: boolean("need_table_number").notNull().default(false),
-  needAddress: boolean("need_address").notNull().default(false),
-  allowScheduled: boolean("allow_scheduled").notNull().default(false),
-  isDigitalProduct: boolean("is_digital_product").notNull().default(false),
-  affectsServiceCharge: boolean("affects_service_charge").notNull().default(true),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (table) => ({
-  codeIdx: index("order_types_code_idx").on(table.code),
-}));
-
-export const insertOrderTypeSchema = createInsertSchema(orderTypes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const selectOrderTypeSchema = createSelectSchema(orderTypes);
-export type InsertOrderType = z.infer<typeof insertOrderTypeSchema>;
-export type OrderType = typeof orderTypes.$inferSelect;
-
-export const tenantOrderTypes = pgTable("tenant_order_types", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  orderTypeId: varchar("order_type_id").notNull().references(() => orderTypes.id, { onDelete: "cascade" }),
-  isEnabled: boolean("is_enabled").notNull().default(true),
-  config: json("config"),
-  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (table) => ({
-  tenantIdx: index("tenant_order_types_tenant_idx").on(table.tenantId),
-  orderTypeIdx: index("tenant_order_types_order_type_idx").on(table.orderTypeId),
-  tenantOrderTypeUnique: index("tenant_order_types_unique").on(table.tenantId, table.orderTypeId),
-}));
-
-export const insertTenantOrderTypeSchema = createInsertSchema(tenantOrderTypes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  config: z.record(z.any()).optional(),
-});
-
-export const selectTenantOrderTypeSchema = createSelectSchema(tenantOrderTypes);
-export type InsertTenantOrderType = z.infer<typeof insertTenantOrderTypeSchema>;
-export type TenantOrderType = typeof tenantOrderTypes.$inferSelect;
-
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  orderTypeId: varchar("order_type_id").references(() => orderTypes.id),
+  orderTypeId: varchar("order_type_id"),
   salesChannel: varchar("sales_channel", { length: 50 }),
   orderNumber: text("order_number").notNull(),
   orderDate: timestamp("order_date").notNull().default(sql`CURRENT_TIMESTAMP`),
