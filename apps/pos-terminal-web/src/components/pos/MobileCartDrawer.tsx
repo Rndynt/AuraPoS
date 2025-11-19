@@ -79,7 +79,8 @@ export function MobileCartDrawer({
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 max-h-[85vh] bg-card border-t border-card-border rounded-t-xl z-50 flex flex-col"
+          className="fixed bottom-0 left-0 right-0 bg-card border-t border-card-border rounded-t-xl z-50 flex flex-col overflow-hidden"
+          style={{ maxHeight: "calc(85vh - env(safe-area-inset-bottom, 0px))" }}
           data-testid="drawer-mobile-cart"
         >
           {/* Header */}
@@ -114,8 +115,9 @@ export function MobileCartDrawer({
           </div>
 
           {/* Scrollable content area */}
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="p-4 space-y-3">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-3">
               {items.length === 0 ? (
                 <div className="py-16 text-center space-y-3">
                   <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
@@ -186,8 +188,9 @@ export function MobileCartDrawer({
                   </div>
                 </>
               )}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </div>
 
           {/* Footer with totals and actions */}
           {items.length > 0 && (

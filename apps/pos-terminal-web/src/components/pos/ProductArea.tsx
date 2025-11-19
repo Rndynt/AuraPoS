@@ -3,7 +3,6 @@ import type { Product } from "@/../../packages/domain/catalog/types";
 import type { OrderType } from "@/../../packages/domain/orders/types";
 import { ProductCard } from "./ProductCardV2";
 import { POSHeader } from "./POSHeader";
-import { SidebarContent } from "./Sidebar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,7 +76,6 @@ export function ProductArea({
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchDisabled={isLoading}
-        sidebarContent={<SidebarContent />}
       />
 
       {/* Order Type Tabs */}

@@ -272,15 +272,16 @@ export function ProductOptionsDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent 
-        className="w-[96vw] max-w-lg max-h-[92vh] flex flex-col gap-0 p-0" 
+        className="w-[96vw] max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col gap-0 p-0" 
         data-testid="dialog-product-options"
       >
         <DialogHeader className="p-4 pb-3 border-b flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg">{product.name}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
-          <div className="px-4 py-3 pb-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="px-4 py-3 pb-4 space-y-4">
             {/* Product Image */}
             {product.image_url && (
               <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
@@ -531,9 +532,13 @@ export function ProductOptionsDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+            </ScrollArea>
+        </div>
 
-        <DialogFooter className="flex-shrink-0 border-t p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+        <DialogFooter 
+          className="flex-shrink-0 border-t p-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <Button 
             variant="outline" 
             onClick={onClose} 

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Sidebar } from "@/components/pos/Sidebar";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
@@ -286,10 +285,7 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex min-h-dvh bg-muted/40 overflow-x-hidden w-full max-w-[100vw]">
-      {/* Sidebar - Responsive (hamburger on mobile, fixed sidebar on desktop) */}
-      <Sidebar />
-
+    <div className="flex flex-1 overflow-x-hidden w-full max-w-[100vw]">
       {/* Main Product Area */}
       <ProductArea 
         products={products}

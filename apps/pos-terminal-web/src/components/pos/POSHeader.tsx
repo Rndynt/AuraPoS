@@ -1,8 +1,5 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, User, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Search, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTenant } from "@/context/TenantContext";
 import type { BusinessType } from "@pos/core";
@@ -11,7 +8,6 @@ interface POSHeaderProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   searchDisabled?: boolean;
-  sidebarContent: React.ReactNode;
 }
 
 function getBusinessTypeLabel(businessType: BusinessType | null): string {
@@ -31,10 +27,8 @@ function getBusinessTypeLabel(businessType: BusinessType | null): string {
 export function POSHeader({ 
   searchQuery, 
   onSearchChange, 
-  searchDisabled,
-  sidebarContent 
+  searchDisabled
 }: POSHeaderProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { tenantId, business_type, isLoading } = useTenant();
   
   const businessTypeLabel = getBusinessTypeLabel(business_type);
@@ -43,23 +37,6 @@ export function POSHeader({
     <div className="sticky top-0 z-20 border-b bg-background shadow-sm overflow-x-hidden w-full">
       <div className="p-3 md:p-4 w-full max-w-full">
         <div className="flex items-center gap-3 w-full max-w-full">
-          {/* Mobile Hamburger Menu */}
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden flex-shrink-0"
-                data-testid="button-menu-mobile"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-6">
-              {sidebarContent}
-            </SheetContent>
-          </Sheet>
-
           {/* Search Bar - Full width on mobile, max-width on larger screens */}
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
