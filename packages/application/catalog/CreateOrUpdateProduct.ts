@@ -48,10 +48,10 @@ export interface CreateOrUpdateProductOptionGroupInput {
 export interface CreateOrUpdateProductInput {
   tenant_id: string;
   product_id?: string;
-  name: string;
+  name?: string;
   description?: string;
-  base_price: number;
-  category: string;
+  base_price?: number;
+  category?: string;
   image_url?: string;
   metadata?: {
     service_duration_minutes?: number;
@@ -294,19 +294,33 @@ export class CreateOrUpdateProduct {
       throw new Error('Tenant ID is required');
     }
 
-    // Validate product name
-    if (!input.name || input.name.trim().length === 0) {
-      throw new Error('Product name is required and cannot be empty');
-    }
+    const isUpdate = Boolean(input.product_id);
 
-    // Validate base price
-    if (input.base_price < 0) {
-      throw new Error('Base price must be greater than or equal to 0');
-    }
+    // For create, core fields are required; for update, validate only when provided
+    if (isUpdate) {
+      if (input.name !== undefined && input.name.trim().length === 0) {
+        throw new Error('Product name cannot be empty');
+      }
 
-    // Validate category
-    if (!input.category || input.category.trim().length === 0) {
-      throw new Error('Product category is required');
+      if (input.base_price !== undefined && input.base_price < 0) {
+        throw new Error('Base price must be greater than or equal to 0');
+      }
+
+      if (input.category !== undefined && input.category.trim().length === 0) {
+        throw new Error('Product category cannot be empty');
+      }
+    } else {
+      if (!input.name || input.name.trim().length === 0) {
+        throw new Error('Product name is required and cannot be empty');
+      }
+
+      if (input.base_price === undefined || input.base_price < 0) {
+        throw new Error('Base price must be provided and be greater than or equal to 0');
+      }
+
+      if (!input.category || input.category.trim().length === 0) {
+        throw new Error('Product category is required');
+      }
     }
 
     // Validate stock quantity if stock tracking is enabled
@@ -388,6 +402,10 @@ export class CreateOrUpdateProduct {
    * Convert number to string only at database boundary (Drizzle decimal field requirement)
    */
   private prepareCreateData(input: CreateOrUpdateProductInput): InsertProduct {
+    if (input.name === undefined || input.base_price === undefined || input.category === undefined) {
+      throw new Error('Name, base price, and category are required for product creation');
+    }
+
     return {
       tenantId: input.tenant_id,
       name: input.name,
@@ -412,10 +430,19 @@ export class CreateOrUpdateProduct {
   private prepareUpdateData(input: CreateOrUpdateProductInput): Partial<InsertProduct> {
     const updateData: Partial<InsertProduct> = {
       tenantId: input.tenant_id,
-      name: input.name,
-      basePrice: input.base_price.toString(),
-      category: input.category,
     };
+
+    if (input.name !== undefined) {
+      updateData.name = input.name;
+    }
+
+    if (input.base_price !== undefined) {
+      updateData.basePrice = input.base_price.toString();
+    }
+
+    if (input.category !== undefined) {
+      updateData.category = input.category;
+    }
 
     // Only include optional fields if explicitly provided
     if (input.description !== undefined) {
