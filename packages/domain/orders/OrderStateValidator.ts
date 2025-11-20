@@ -11,14 +11,21 @@ type OrderStatusType = "draft" | "confirmed" | "preparing" | "ready" | "complete
 /**
  * Map of allowed state transitions
  * Key: current status, Value: array of allowed next statuses
+ * 
+ * Transition rules:
+ * - draft: Can skip to any active state or be cancelled
+ * - confirmed: Idempotent, can progress or be cancelled
+ * - preparing: Can complete directly, go to ready, or be cancelled
+ * - ready: Can complete or be cancelled
+ * - completed/cancelled: Terminal states (no further transitions)
  */
 const ALLOWED_TRANSITIONS: Record<OrderStatusType, OrderStatusType[]> = {
-  draft: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "ready", "cancelled"],
-  preparing: ["ready", "cancelled"],
-  ready: ["completed", "cancelled"],
-  completed: [], // Terminal state - no further transitions allowed
-  cancelled: [], // Terminal state - no further transitions allowed
+  draft: ["draft", "confirmed", "preparing", "ready", "cancelled"],
+  confirmed: ["confirmed", "preparing", "ready", "completed", "cancelled"],
+  preparing: ["preparing", "ready", "completed", "cancelled"],
+  ready: ["ready", "completed", "cancelled"],
+  completed: ["completed"], // Terminal state - idempotent only
+  cancelled: ["cancelled"], // Terminal state - idempotent only
 };
 
 /**

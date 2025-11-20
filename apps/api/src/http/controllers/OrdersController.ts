@@ -238,3 +238,191 @@ export const getOrderById = asyncHandler(async (req: Request, res: Response) => 
     data: order,
   });
 });
+
+/**
+ * POST /api/orders/:id/confirm
+ * Confirm a draft order
+ */
+export const confirmOrder = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw createError('Order ID is required', 400, 'MISSING_PARAMETER');
+  }
+
+  // Execute use case
+  const result = await container.confirmOrder.execute({
+    order_id: id,
+    tenant_id: tenantId,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      order: result.order,
+    },
+  });
+});
+
+/**
+ * POST /api/orders/:id/complete
+ * Complete an order
+ */
+export const completeOrder = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw createError('Order ID is required', 400, 'MISSING_PARAMETER');
+  }
+
+  // Execute use case
+  const result = await container.completeOrder.execute({
+    order_id: id,
+    tenant_id: tenantId,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      order: result.order,
+    },
+  });
+});
+
+/**
+ * POST /api/orders/:id/cancel
+ * Cancel an order
+ */
+export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw createError('Order ID is required', 400, 'MISSING_PARAMETER');
+  }
+
+  // Validate request body (optional cancellation reason)
+  const bodySchema = z.object({
+    cancellation_reason: z.string().optional(),
+  });
+
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  // Execute use case
+  const result = await container.cancelOrder.execute({
+    order_id: id,
+    tenant_id: tenantId,
+    cancellation_reason: parsed.data.cancellation_reason,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      order: result.order,
+    },
+  });
+});
+
+/**
+ * GET /api/orders/open
+ * List open orders (draft, confirmed, preparing, ready)
+ */
+export const listOpenOrders = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+
+  // Validate query params with proper number parsing
+  const querySchema = z.object({
+    limit: z.string().optional().transform((val) => {
+      if (!val) return 50;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error('limit must be a positive number');
+      }
+      return parsed;
+    }),
+    offset: z.string().optional().transform((val) => {
+      if (!val) return 0;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed < 0) {
+        throw new Error('offset must be a non-negative number');
+      }
+      return parsed;
+    }),
+  });
+
+  const parsed = querySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw createError('Invalid query parameters: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  // Execute use case
+  const result = await container.listOpenOrders.execute({
+    tenant_id: tenantId,
+    limit: parsed.data.limit,
+    offset: parsed.data.offset,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      orders: result.orders,
+    },
+  });
+});
+
+/**
+ * GET /api/orders/history
+ * List order history (completed, cancelled) with pagination
+ */
+export const listOrderHistory = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+
+  // Validate query params with proper number parsing
+  const querySchema = z.object({
+    limit: z.string().optional().transform((val) => {
+      if (!val) return 20;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error('limit must be a positive number');
+      }
+      return parsed;
+    }),
+    offset: z.string().optional().transform((val) => {
+      if (!val) return 0;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed < 0) {
+        throw new Error('offset must be a non-negative number');
+      }
+      return parsed;
+    }),
+    from_date: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+    to_date: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  });
+
+  const parsed = querySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw createError('Invalid query parameters: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  // Execute use case
+  const result = await container.listOrderHistory.execute({
+    tenant_id: tenantId,
+    limit: parsed.data.limit,
+    offset: parsed.data.offset,
+    from_date: parsed.data.from_date,
+    to_date: parsed.data.to_date,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      orders: result.orders,
+      pagination: result.pagination,
+    },
+  });
+});

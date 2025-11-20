@@ -29,6 +29,11 @@ import { CreateOrUpdateProduct } from '@pos/application/catalog/CreateOrUpdatePr
 import { CreateOrder } from '@pos/application/orders/CreateOrder';
 import { RecordPayment } from '@pos/application/orders/RecordPayment';
 import { CreateKitchenTicket } from '@pos/application/orders/CreateKitchenTicket';
+import { ConfirmOrder } from '@pos/application/orders/ConfirmOrder';
+import { CompleteOrder } from '@pos/application/orders/CompleteOrder';
+import { CancelOrder } from '@pos/application/orders/CancelOrder';
+import { ListOpenOrders } from '@pos/application/orders/ListOpenOrders';
+import { ListOrderHistory } from '@pos/application/orders/ListOrderHistory';
 
 // Use Cases - Tenants
 import { GetActiveFeaturesForTenant } from '@pos/application/tenants/GetActiveFeaturesForTenant';
@@ -71,6 +76,11 @@ class Container {
   public readonly createOrder: CreateOrder;
   public readonly recordPayment: RecordPayment;
   public readonly createKitchenTicket: CreateKitchenTicket;
+  public readonly confirmOrder: ConfirmOrder;
+  public readonly completeOrder: CompleteOrder;
+  public readonly cancelOrder: CancelOrder;
+  public readonly listOpenOrders: ListOpenOrders;
+  public readonly listOrderHistory: ListOrderHistory;
 
   // Tenant Use Cases
   public readonly getActiveFeaturesForTenant: GetActiveFeaturesForTenant;
@@ -121,6 +131,26 @@ class Container {
     this.createKitchenTicket = new CreateKitchenTicket(
       this.orderRepository as any,
       this.kitchenTicketRepository as any
+    );
+    this.confirmOrder = new ConfirmOrder(
+      this.orderRepository as any,
+      this.tenantRepository as any
+    );
+    this.completeOrder = new CompleteOrder(
+      this.orderRepository as any,
+      this.tenantRepository as any
+    );
+    this.cancelOrder = new CancelOrder(
+      this.orderRepository as any,
+      this.tenantRepository as any
+    );
+    this.listOpenOrders = new ListOpenOrders(
+      this.orderRepository as any,
+      this.tenantRepository as any
+    );
+    this.listOrderHistory = new ListOrderHistory(
+      this.orderRepository as any,
+      this.tenantRepository as any
     );
 
     // Tenants

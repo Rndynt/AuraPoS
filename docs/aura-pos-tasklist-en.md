@@ -177,46 +177,65 @@
 
 ### 3.1 Domain model
 
-- [ ] In `@pos/domain/orders` ensure `Order`:
-  - [ ] Has `order_type_id` / `order_type_code` (DINE_IN, TAKE_AWAY, DELIVERY, WALK_IN, etc.).
-  - [ ] Has `status: 'draft' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'`.
-  - [ ] Has `payment_status: 'unpaid' | 'partial' | 'paid'`.
-  - [ ] Has `table_number?: string` (plain text, no FK to tables).
-  - [ ] Has generic `metadata?: Record<string, any>` for business-specific extra fields.
-- [ ] Keep `KitchenTicket` as separate entity referencing `order_id` (already existing).
-- [ ] Keep `OrderPayment` separate (no external gateway coupling).
+- [x] In `@pos/domain/orders` ensure `Order`:
+  - [x] Has `order_type_id` / `order_type_code` (DINE_IN, TAKE_AWAY, DELIVERY, WALK_IN, etc.).
+  - [x] Has `status: 'draft' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'`.
+  - [x] Has `payment_status: 'unpaid' | 'partial' | 'paid'`.
+  - [x] Has `table_number?: string` (plain text, no FK to tables).
+  - [x] Has generic `metadata?: Record<string, any>` for business-specific extra fields (via JSONB columns).
+- [x] Keep `KitchenTicket` as separate entity referencing `order_id` (already existing).
+- [x] Keep `OrderPayment` separate (no external gateway coupling).
+- [x] **OrderStateValidator** - Centralized state transition validator with comprehensive allowed transitions map.
 
 ### 3.2 Draft vs immediate payment flows
 
-- [ ] In `CreateOrder` use case:
-  - [ ] Create orders with `status = 'draft'` by default.
-  - [ ] Allow both:
-    - [ ] Draft with table: DINE_IN + `table_number`.
-    - [ ] Draft takeaway: TAKE_AWAY without `table_number`.
-  - [ ] `payment_status` initially `unpaid`.
-- [ ] Add `ConfirmOrder` use case:
-  - [ ] Moves `status` from `draft` → `confirmed`.
-  - [ ] Used when order is sent to kitchen or locked.
-- [ ] Add `CompleteOrder` / `CancelOrder` use cases:
-  - [ ] Complete: only allowed if fully paid OR allowed by configuration.
-  - [ ] Cancel: update status, do not require payment.
+- [x] In `CreateOrder` use case (already implemented):
+  - [x] Create orders with `status = 'draft'` by default.
+  - [x] Allow both:
+    - [x] Draft with table: DINE_IN + `table_number`.
+    - [x] Draft takeaway: TAKE_AWAY without `table_number`.
+  - [x] `payment_status` initially `unpaid`.
+- [x] Add `ConfirmOrder` use case (implemented in `packages/application/orders/ConfirmOrder.ts`):
+  - [x] Moves `status` from `draft` → `confirmed`.
+  - [x] Used when order is sent to kitchen or locked.
+  - [x] Validates tenant activation and order ownership.
+  - [x] Uses OrderStateValidator for state transition validation.
+- [x] Add `CompleteOrder` / `CancelOrder` use cases:
+  - [x] `CompleteOrder` (implemented in `packages/application/orders/CompleteOrder.ts`):
+    - [x] Complete: only allowed if fully paid OR total_amount = 0.
+    - [x] Requires status to be 'ready' or 'preparing'.
+    - [x] Sets completed_at timestamp.
+  - [x] `CancelOrder` (implemented in `packages/application/orders/CancelOrder.ts`):
+    - [x] Cancel: update status, do not require payment.
+    - [x] Adds refund warning to notes if paid_amount > 0.
+    - [x] Supports optional cancellation_reason.
 
 ### 3.3 Order querying & listing
 
-- [ ] Add `ListOpenOrders` use case:
-  - [ ] Returns orders with status in `['draft', 'confirmed', 'preparing', 'ready']`.
-  - [ ] Filter by order type (DINE_IN / TAKE_AWAY) and optionally by `table_number`.
-- [ ] Add `ListOrderHistory` use case:
-  - [ ] Paged list for completed/cancelled orders for reporting.
+- [x] Add `ListOpenOrders` use case (implemented in `packages/application/orders/ListOpenOrders.ts`):
+  - [x] Returns orders with status in `['draft', 'confirmed', 'preparing', 'ready']`.
+  - [x] Supports pagination (limit, offset).
+  - [x] Validates tenant activation.
+  - [x] Filter by order type (DINE_IN / TAKE_AWAY) and optionally by `table_number` (via existing repository filters).
+- [x] Add `ListOrderHistory` use case (implemented in `packages/application/orders/ListOrderHistory.ts`):
+  - [x] Paged list for completed/cancelled orders for reporting.
+  - [x] Returns pagination metadata (total, limit, offset, hasMore).
+  - [x] Supports date range filtering (from_date, to_date).
+  - [x] Validates tenant activation.
 
 ### 3.4 API endpoints
 
-- [ ] `/api/orders`:
-  - [ ] `POST` – create draft order (cart→order).
-  - [ ] `GET` – list orders with filters.
-- [ ] `/api/orders/:id/confirm` – confirm order.
-- [ ] `/api/orders/:id/complete` – complete order.
-- [ ] `/api/orders/:id/cancel` – cancel order.
+- [x] `/api/orders`:
+  - [x] `POST` – create draft order (cart→order) (already implemented).
+  - [x] `GET` – list orders with filters (already implemented).
+- [x] `/api/orders/open` – list open orders (implemented).
+- [x] `/api/orders/history` – list order history with pagination (implemented).
+- [x] `/api/orders/:id/confirm` – confirm order (implemented).
+- [x] `/api/orders/:id/complete` – complete order (implemented).
+- [x] `/api/orders/:id/cancel` – cancel order (implemented).
+- [x] All endpoints wired in `apps/api/src/http/controllers/OrdersController.ts` and `apps/api/src/http/routes/orders.ts`.
+- [x] All use cases registered in DI container (`apps/api/src/container.ts`).
+- [x] Input validation with proper NaN checks and domain error handling.
 
 ### 3.5 POS UI
 
