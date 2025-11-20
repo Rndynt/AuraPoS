@@ -280,15 +280,15 @@ export function ProductOptionsDialog({
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 pb-32 space-y-4">
             {/* Product Image */}
-            {product.image_url && (
-              <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
+          {/* {product.image_url && (
+             <div className="hidden sm:block sm:max-h-32 overflow-hidden rounded-md bg-muted">
                 <img
                   src={product.image_url}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
               </div>
-            )}
+            )} */}
 
             {/* Legacy Variants Section */}
             {product.has_variants && product.variants && product.variants.length > 0 && (
