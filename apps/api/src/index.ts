@@ -1,8 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+const databaseUrl = process.env.DATABASE_URL?.trim();
+
+if (!databaseUrl) {
+  log("DATABASE_URL environment variable is not set. Exiting.", "fatal");
+  process.exit(1);
+}
 
 declare module 'http' {
   interface IncomingMessage {
@@ -47,6 +53,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { registerRoutes } = await import("./routes");
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
