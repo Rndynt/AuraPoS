@@ -165,8 +165,7 @@ export function MobileCartDrawer({
                           setTableNumber(val);
                           setIsEditingTable(false);
                         }}
-                        open={isEditingTable}
-                        onOpenChange={setIsEditingTable}
+                        defaultOpen={true}
                       >
                         <SelectTrigger className="h-7 w-24 text-xs" data-testid="select-table-mobile">
                           <SelectValue placeholder="Table..." />
