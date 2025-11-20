@@ -49,14 +49,19 @@ export default function OrdersPage() {
     }).format(price);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string | undefined | null) => {
+    if (!date) return "-";
+
+    const parsedDate = new Date(date);
+    if (!Number.isFinite(parsedDate.getTime())) return "-";
+
     return new Intl.DateTimeFormat("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date(date));
+    }).format(parsedDate);
   };
 
   const getStatusCounts = () => {
