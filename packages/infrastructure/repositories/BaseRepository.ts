@@ -3,7 +3,7 @@
  * Abstract base class providing tenant isolation and common CRUD operations
  */
 
-import { Database } from '../database';
+import { Database, DbClient } from '../database';
 import { SQL, and, eq } from 'drizzle-orm';
 import { PgTable } from 'drizzle-orm/pg-core';
 
@@ -76,13 +76,18 @@ export abstract class BaseRepository<T, TInsert = Partial<T>> {
 
   /**
    * Ensure tenant isolation - validates tenant access
+   * @param id - Entity ID to validate
+   * @param tenantId - Tenant ID to validate against
+   * @param client - Optional database client (for transactions)
    */
   protected async ensureTenantAccess(
     id: string,
-    tenantId: string
+    tenantId: string,
+    client?: DbClient
   ): Promise<void> {
     try {
-      const result = await this.db
+      const dbClient = client ?? this.db;
+      const result = await dbClient
         .select()
         .from(this.table)
         .where(

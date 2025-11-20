@@ -4,6 +4,9 @@
  */
 
 import { drizzle } from 'drizzle-orm/postgres-js';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../../shared/schema';
 
@@ -21,3 +24,8 @@ const sql = postgres(DATABASE_URL);
 export const db = drizzle(sql, { schema });
 
 export type Database = typeof db;
+
+// Type that accepts both regular database and transaction
+export type DbClient = 
+  | Database 
+  | PgTransaction<PostgresJsQueryResultHKT, typeof schema, ExtractTablesWithRelations<typeof schema>>;

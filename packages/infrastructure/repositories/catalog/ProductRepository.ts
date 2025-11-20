@@ -3,7 +3,7 @@
  * Handles product CRUD operations with tenant isolation
  */
 
-import { Database } from '../../database';
+import { Database, DbClient } from '../../database';
 import { BaseRepository, RepositoryError } from '../BaseRepository';
 import {
   products,
@@ -81,12 +81,12 @@ export interface ProductFilters {
 }
 
 export interface IProductRepository {
-  findByTenant(tenantId: string, filters?: ProductFilters): Promise<Product[]>;
-  findById(id: string, tenantId: string): Promise<Product | null>;
-  findByIdWithOptions(id: string, tenantId: string): Promise<Product | null>;
-  create(product: InsertProduct, tenantId: string): Promise<Product>;
-  update(id: string, product: Partial<InsertProduct>, tenantId: string): Promise<Product>;
-  delete(id: string, tenantId: string): Promise<void>;
+  findByTenant(tenantId: string, filters?: ProductFilters, client?: DbClient): Promise<Product[]>;
+  findById(id: string, tenantId: string, client?: DbClient): Promise<Product | null>;
+  findByIdWithOptions(id: string, tenantId: string, client?: DbClient): Promise<Product | null>;
+  create(product: InsertProduct, tenantId: string, client?: DbClient): Promise<Product>;
+  update(id: string, product: Partial<InsertProduct>, tenantId: string, client?: DbClient): Promise<Product>;
+  delete(id: string, tenantId: string, client?: DbClient): Promise<void>;
 }
 
 export class ProductRepository
@@ -105,9 +105,12 @@ export class ProductRepository
    */
   async findByTenant(
     tenantId: string,
-    filters?: ProductFilters
+    filters?: ProductFilters,
+    client?: DbClient
   ): Promise<Product[]> {
     try {
+      const dbClient = client ?? this.db;
+      
       // If businessType filter is provided, need to join with tenants table
       if (filters?.businessType) {
         const conditions = [
@@ -123,7 +126,7 @@ export class ProductRepository
           conditions.push(eq(products.isActive, filters.isActive));
         }
 
-        const result = await this.db
+        const result = await dbClient
           .select({
             id: products.id,
             tenantId: products.tenantId,
@@ -159,7 +162,7 @@ export class ProductRepository
         conditions.push(eq(products.isActive, filters.isActive));
       }
 
-      const dbProducts = await this.db
+      const dbProducts = await dbClient
         .select()
         .from(products)
         .where(and(...conditions));
@@ -173,9 +176,10 @@ export class ProductRepository
   /**
    * Find product by ID with basic option groups
    */
-  async findById(id: string, tenantId: string): Promise<Product | null> {
+  async findById(id: string, tenantId: string, client?: DbClient): Promise<Product | null> {
     try {
-      const result = await this.db
+      const dbClient = client ?? this.db;
+      const result = await dbClient
         .select()
         .from(products)
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
@@ -190,14 +194,16 @@ export class ProductRepository
   /**
    * Find product by ID with all option groups and options
    */
-  async findByIdWithOptions(id: string, tenantId: string): Promise<Product | null> {
+  async findByIdWithOptions(id: string, tenantId: string, client?: DbClient): Promise<Product | null> {
     try {
+      const dbClient = client ?? this.db;
+      
       // Get the product first (already mapped to domain)
-      const product = await this.findById(id, tenantId);
+      const product = await this.findById(id, tenantId, dbClient);
       if (!product) return null;
 
       // Get all option groups for this product (already mapped to domain)
-      const optionGroups = await this.findOptionGroupsByProductId(id);
+      const optionGroups = await this.findOptionGroupsByProductId(id, dbClient);
       
       if (optionGroups.length === 0) {
         return { ...product, option_groups: [] };
@@ -205,7 +211,7 @@ export class ProductRepository
 
       // Get all options for these groups (already mapped to domain)
       const groupIds = optionGroups.map(g => g.id);
-      const optionsMap = await this.findOptionsByGroupIds(groupIds);
+      const optionsMap = await this.findOptionsByGroupIds(groupIds, dbClient);
       
       // Combine groups with their options
       const groupsWithOptions = optionGroups.map(group => ({
@@ -225,10 +231,11 @@ export class ProductRepository
   /**
    * Create a new product
    */
-  async create(product: InsertProduct, tenantId: string): Promise<Product> {
+  async create(product: InsertProduct, tenantId: string, client?: DbClient): Promise<Product> {
     try {
+      const dbClient = client ?? this.db;
       const data = this.injectTenantId(product, tenantId);
-      const result = await this.db.insert(products).values(data).returning();
+      const result = await dbClient.insert(products).values(data).returning();
       return mapProductToDomain(result[0]);
     } catch (error) {
       this.handleError('create product', error);
@@ -241,12 +248,14 @@ export class ProductRepository
   async update(
     id: string,
     product: Partial<InsertProduct>,
-    tenantId: string
+    tenantId: string,
+    client?: DbClient
   ): Promise<Product> {
     try {
-      await this.ensureTenantAccess(id, tenantId);
+      const dbClient = client ?? this.db;
+      await this.ensureTenantAccess(id, tenantId, dbClient);
 
-      const result = await this.db
+      const result = await dbClient
         .update(products)
         .set({ ...product, updatedAt: new Date() })
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
@@ -266,11 +275,12 @@ export class ProductRepository
   /**
    * Delete a product (soft delete by setting isActive to false)
    */
-  async delete(id: string, tenantId: string): Promise<void> {
+  async delete(id: string, tenantId: string, client?: DbClient): Promise<void> {
     try {
-      await this.ensureTenantAccess(id, tenantId);
+      const dbClient = client ?? this.db;
+      await this.ensureTenantAccess(id, tenantId, dbClient);
 
-      await this.db
+      await dbClient
         .update(products)
         .set({ isActive: false, updatedAt: new Date() })
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)));
@@ -292,13 +302,14 @@ export class ProductRepository
    * Find option groups for multiple products
    * Returns a map of productId -> option groups (mapped to domain types)
    */
-  async findOptionGroupsByProductIds(productIds: string[]): Promise<Map<string, ProductOptionGroup[]>> {
+  async findOptionGroupsByProductIds(productIds: string[], client?: DbClient): Promise<Map<string, ProductOptionGroup[]>> {
     try {
+      const dbClient = client ?? this.db;
       if (productIds.length === 0) {
         return new Map();
       }
 
-      const groups = await this.db
+      const groups = await dbClient
         .select()
         .from(productOptionGroups)
         .where(inArray(productOptionGroups.productId, productIds))
@@ -323,13 +334,14 @@ export class ProductRepository
    * Find options for multiple option groups
    * Returns a map of groupId -> options (mapped to domain types)
    */
-  async findOptionsByGroupIds(groupIds: string[]): Promise<Map<string, ProductOption[]>> {
+  async findOptionsByGroupIds(groupIds: string[], client?: DbClient): Promise<Map<string, ProductOption[]>> {
     try {
+      const dbClient = client ?? this.db;
       if (groupIds.length === 0) {
         return new Map();
       }
 
-      const options = await this.db
+      const options = await dbClient
         .select()
         .from(productOptions)
         .where(inArray(productOptions.optionGroupId, groupIds))
@@ -354,9 +366,10 @@ export class ProductRepository
    * Find option groups by product ID (for GetProductById use case)
    * Returns option groups mapped to domain types
    */
-  async findOptionGroupsByProductId(productId: string): Promise<ProductOptionGroup[]> {
+  async findOptionGroupsByProductId(productId: string, client?: DbClient): Promise<ProductOptionGroup[]> {
     try {
-      const groups = await this.db
+      const dbClient = client ?? this.db;
+      const groups = await dbClient
         .select()
         .from(productOptionGroups)
         .where(eq(productOptionGroups.productId, productId))

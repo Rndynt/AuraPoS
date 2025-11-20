@@ -3,7 +3,7 @@
  * Handles product option CRUD operations with tenant isolation
  */
 
-import { Database } from '../../database';
+import { Database, DbClient } from '../../database';
 import { BaseRepository } from '../BaseRepository';
 import {
   productOptions,
@@ -15,7 +15,7 @@ import { eq, and } from 'drizzle-orm';
 export interface IProductOptionRepository {
   findByOptionGroup(optionGroupId: string, tenantId: string): Promise<ProductOption[]>;
   findById(id: string, tenantId: string): Promise<ProductOption | null>;
-  create(option: InsertProductOption, tenantId: string): Promise<ProductOption>;
+  create(option: InsertProductOption, tenantId: string, client?: DbClient): Promise<ProductOption>;
 }
 
 export class ProductOptionRepository
@@ -76,11 +76,13 @@ export class ProductOptionRepository
    */
   async create(
     option: InsertProductOption,
-    tenantId: string
+    tenantId: string,
+    client?: DbClient
   ): Promise<ProductOption> {
     try {
+      const dbClient = client ?? this.db;
       const data = this.injectTenantId(option, tenantId);
-      const result = await this.db.insert(productOptions).values(data).returning();
+      const result = await dbClient.insert(productOptions).values(data).returning();
       return result[0];
     } catch (error) {
       this.handleError('create option', error);

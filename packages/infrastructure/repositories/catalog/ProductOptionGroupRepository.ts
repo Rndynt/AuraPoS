@@ -3,7 +3,7 @@
  * Handles option group CRUD operations with tenant isolation
  */
 
-import { Database } from '../../database';
+import { Database, DbClient } from '../../database';
 import { BaseRepository, RepositoryError } from '../BaseRepository';
 import {
   productOptionGroups,
@@ -15,8 +15,9 @@ import { eq, and } from 'drizzle-orm';
 export interface IProductOptionGroupRepository {
   findByProduct(productId: string, tenantId: string): Promise<ProductOptionGroup[]>;
   findById(id: string, tenantId: string): Promise<ProductOptionGroup | null>;
-  create(optionGroup: InsertProductOptionGroup, tenantId: string): Promise<ProductOptionGroup>;
+  create(optionGroup: InsertProductOptionGroup, tenantId: string, client?: DbClient): Promise<ProductOptionGroup>;
   update(id: string, optionGroup: Partial<InsertProductOptionGroup>, tenantId: string): Promise<ProductOptionGroup>;
+  deleteByProductId(productId: string, tenantId: string, client?: DbClient): Promise<void>;
 }
 
 export class ProductOptionGroupRepository
@@ -80,11 +81,13 @@ export class ProductOptionGroupRepository
    */
   async create(
     optionGroup: InsertProductOptionGroup,
-    tenantId: string
+    tenantId: string,
+    client?: DbClient
   ): Promise<ProductOptionGroup> {
     try {
+      const dbClient = client ?? this.db;
       const data = this.injectTenantId(optionGroup, tenantId);
-      const result = await this.db
+      const result = await dbClient
         .insert(productOptionGroups)
         .values(data)
         .returning();
@@ -124,6 +127,58 @@ export class ProductOptionGroupRepository
     } catch (error) {
       if (error instanceof RepositoryError) throw error;
       this.handleError('update option group', error);
+    }
+  }
+
+  /**
+   * Delete all option groups for a product
+   * Cascade delete will automatically remove associated options
+   * Includes explicit tenant ownership verification before deletion
+   */
+  async deleteByProductId(productId: string, tenantId: string, client?: DbClient): Promise<void> {
+    try {
+      const dbClient = client ?? this.db;
+      
+      // Step 1: Verify tenant ownership - find all option groups for this product
+      const existingGroups = await dbClient
+        .select()
+        .from(productOptionGroups)
+        .where(eq(productOptionGroups.productId, productId));
+
+      // Step 2: Validate that all groups belong to the correct tenant
+      if (existingGroups.length > 0) {
+        const groupsNotOwnedByTenant = existingGroups.filter(
+          (group) => group.tenantId !== tenantId
+        );
+
+        if (groupsNotOwnedByTenant.length > 0) {
+          throw new RepositoryError(
+            `Cannot delete option groups for product '${productId}': ` +
+            `${groupsNotOwnedByTenant.length} group(s) do not belong to tenant '${tenantId}'`,
+            'FORBIDDEN',
+            null
+          );
+        }
+      }
+
+      // Step 3: Perform the deletion with tenant scoping
+      const result = await dbClient
+        .delete(productOptionGroups)
+        .where(
+          and(
+            eq(productOptionGroups.productId, productId),
+            eq(productOptionGroups.tenantId, tenantId)
+          )
+        )
+        .returning();
+
+      console.log(
+        `[ProductOptionGroupRepository] Deleted ${result.length} option group(s) for product '${productId}' ` +
+        `owned by tenant '${tenantId}'`
+      );
+    } catch (error) {
+      if (error instanceof RepositoryError) throw error;
+      this.handleError('delete option groups by product id', error);
     }
   }
 }

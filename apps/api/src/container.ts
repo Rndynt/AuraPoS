@@ -23,6 +23,7 @@ import { TenantModuleConfigRepository } from '@pos/infrastructure/repositories/t
 import { GetProducts } from '@pos/application/catalog/GetProducts';
 import { GetProductById } from '@pos/application/catalog/GetProductById';
 import { CheckProductAvailability } from '@pos/application/catalog/CheckProductAvailability';
+import { CreateOrUpdateProduct } from '@pos/application/catalog/CreateOrUpdateProduct';
 
 // Use Cases - Orders
 import { CreateOrder } from '@pos/application/orders/CreateOrder';
@@ -64,6 +65,7 @@ class Container {
   public readonly getProducts: GetProducts;
   public readonly getProductById: GetProductById;
   public readonly checkProductAvailability: CheckProductAvailability;
+  public readonly createOrUpdateProduct: CreateOrUpdateProduct;
 
   // Order Use Cases
   public readonly createOrder: CreateOrder;
@@ -97,6 +99,13 @@ class Container {
     this.getProductById = new GetProductById(this.productRepository as any);
     this.checkProductAvailability = new CheckProductAvailability(
       this.productRepository as any
+    );
+    this.createOrUpdateProduct = new CreateOrUpdateProduct(
+      db,
+      this.productRepository as any,
+      this.productOptionGroupRepository as any,
+      this.productOptionRepository as any,
+      this.tenantRepository as any
     );
 
     // Orders

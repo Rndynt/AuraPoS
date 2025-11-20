@@ -25,3 +25,15 @@ export type {
   CheckProductAvailabilityOutput,
   IProductRepository as IProductRepositoryForCheckAvailability
 } from './CheckProductAvailability';
+
+export { CreateOrUpdateProduct } from './CreateOrUpdateProduct';
+export type {
+  CreateOrUpdateProductInput,
+  CreateOrUpdateProductOutput,
+  CreateOrUpdateProductOptionInput,
+  CreateOrUpdateProductOptionGroupInput,
+  IProductRepository as IProductRepositoryForCreateOrUpdate,
+  IProductOptionGroupRepository as IProductOptionGroupRepositoryForCreateOrUpdate,
+  IProductOptionRepository as IProductOptionRepositoryForCreateOrUpdate,
+  ITenantRepository as ITenantRepositoryForCreateOrUpdate
+} from './CreateOrUpdateProduct';
