@@ -120,3 +120,25 @@
 ## Catatan
 File ini merupakan versi bahasa Indonesia dari `docs/aura-pos-tasklist-en.md`. 
 Untuk task domain lainnya (Catalog, Orders, Table Management, Kitchen, Payment, Authentication, Loyalty, Reporting, Frontend, Documentation), silakan lihat versi bahasa Inggris.
+
+---
+
+## 3. Ordering Domain (Generic, No Hard Table Dependency)
+
+> Aturan inti: Orders bersifat generik.  
+> Tables, kitchen, DP, loyalty, dll. adalah **modul terpisah** yang mereferensi orders, bukan sebaliknya (kecuali field netral opsional seperti `table_number`).
+
+### 3.5 POS UI
+
+- [x] Tambahkan tampilan "Order list" di POS terminal (diimplementasikan di apps/pos-terminal-web/src/pages/orders.tsx):
+  - [x] Tab / filter untuk:
+    - [x] Draft dine-in (dengan meja) - Tab "Dine-In" memfilter order dengan status=draft dan memiliki table_number.
+    - [x] Draft takeaway - Tab "Takeaway" memfilter order dengan status=draft tanpa table_number.
+    - [x] Siap untuk pembayaran (status + total) - Tab "Payment" memfilter order confirmed/preparing/ready yang belum dibayar penuh.
+    - [x] Tab untuk semua order aktif dan order selesai.
+- [x] Saat membuat order dari cart (diimplementasikan di apps/pos-terminal-web/src/components/pos/OrderTypeSelectionDialog.tsx):
+  - [x] Tampilkan dialog:
+    - [x] Pilih order_type (Dine In / Take Away / Delivery) - Radio group dengan ikon.
+    - [x] Jika Dine In dan table management enabled - dropdown pilih meja.
+    - [x] Jika tidak ada table management - input teks bebas untuk table_number.
+    - [x] Opsi untuk langsung "Mark as paid" atau biarkan sebagai draft - Checkbox dengan tampilan jumlah.

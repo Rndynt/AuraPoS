@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   ListFilter, 
   X, 
@@ -13,7 +14,10 @@ import {
   CheckCircle2, 
   XCircle, 
   ChefHat,
-  CheckCircle
+  CheckCircle,
+  Utensils,
+  ShoppingBag,
+  CreditCard
 } from "lucide-react";
 import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
 
@@ -32,7 +36,7 @@ const PAYMENT_STATUS_CONFIG = {
   unpaid: { label: "Unpaid", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
 };
 
-type OrderStatusFilter = "all" | "draft" | "confirmed" | "completed" | "cancelled";
+type OrderViewTab = "all" | "dine-in" | "takeaway" | "ready-payment" | "completed";
 
 type NormalizedMoneyFields = {
   subtotal: number;
@@ -109,12 +113,13 @@ const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
 };
 
 export default function OrdersPage() {
-  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>("all");
+  const [activeTab, setActiveTab] = useState<OrderViewTab>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const { data, isLoading } = useOrders(
-    statusFilter !== "all" ? { status: statusFilter } : {}
-  );
+  // Fetch all open orders (draft, confirmed, preparing, ready)
+  const { data, isLoading } = useOrders({
+    status: activeTab === "completed" ? "completed" : undefined,
+  });
 
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
 
@@ -122,6 +127,35 @@ export default function OrdersPage() {
     () => (data?.orders || []).map((order) => normalizeOrder(order)),
     [data]
   );
+
+  // Filter orders based on active tab
+  const filteredOrders = useMemo(() => {
+    if (activeTab === "all") {
+      return normalizedOrders.filter(o => 
+        ["draft", "confirmed", "preparing", "ready"].includes(o.status)
+      );
+    }
+    if (activeTab === "dine-in") {
+      return normalizedOrders.filter(o => 
+        o.status === "draft" && o.table_number
+      );
+    }
+    if (activeTab === "takeaway") {
+      return normalizedOrders.filter(o => 
+        o.status === "draft" && !o.table_number
+      );
+    }
+    if (activeTab === "ready-payment") {
+      return normalizedOrders.filter(o => 
+        ["confirmed", "preparing", "ready"].includes(o.status) && 
+        o.payment_status !== "paid"
+      );
+    }
+    if (activeTab === "completed") {
+      return normalizedOrders.filter(o => o.status === "completed");
+    }
+    return normalizedOrders;
+  }, [normalizedOrders, activeTab]);
 
   const selectedOrder = useMemo(() => {
     if (selectedOrderResponse) return normalizeOrder(selectedOrderResponse);
@@ -152,18 +186,21 @@ export default function OrdersPage() {
     }).format(parsedDate);
   };
 
-  const getStatusCounts = () => {
+  const getTabCounts = () => {
     const allOrders = normalizedOrders;
     return {
-      all: allOrders.length,
-      draft: allOrders.filter((o) => o.status === "draft").length,
-      confirmed: allOrders.filter((o) => o.status === "confirmed").length,
-      completed: allOrders.filter((o) => o.status === "completed").length,
-      cancelled: allOrders.filter((o) => o.status === "cancelled").length,
+      all: allOrders.filter(o => ["draft", "confirmed", "preparing", "ready"].includes(o.status)).length,
+      dineIn: allOrders.filter(o => o.status === "draft" && o.table_number).length,
+      takeaway: allOrders.filter(o => o.status === "draft" && !o.table_number).length,
+      readyPayment: allOrders.filter(o => 
+        ["confirmed", "preparing", "ready"].includes(o.status) && 
+        o.payment_status !== "paid"
+      ).length,
+      completed: allOrders.filter(o => o.status === "completed").length,
     };
   };
 
-  const counts = getStatusCounts();
+  const counts = getTabCounts();
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -187,43 +224,37 @@ export default function OrdersPage() {
       <div className="flex-1 flex min-h-0">
         {/* Orders List */}
         <div className="flex-1 flex flex-col border-r border-border">
-          {/* Filters */}
+          {/* Tabs Filter */}
           <div className="px-6 py-4 border-b border-border flex-shrink-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <ListFilter className="w-4 h-4 text-muted-foreground" />
-              <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter("all")}
-                data-testid="filter-all"
-              >
-                All ({counts.all})
-              </Button>
-              <Button
-                variant={statusFilter === "confirmed" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter("confirmed")}
-                data-testid="filter-confirmed"
-              >
-                Confirmed ({counts.confirmed})
-              </Button>
-              <Button
-                variant={statusFilter === "completed" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter("completed")}
-                data-testid="filter-completed"
-              >
-                Completed ({counts.completed})
-              </Button>
-              <Button
-                variant={statusFilter === "cancelled" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter("cancelled")}
-                data-testid="filter-cancelled"
-              >
-                Cancelled ({counts.cancelled})
-              </Button>
-            </div>
+            <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as OrderViewTab)}>
+              <TabsList className="grid w-full grid-cols-5 gap-2">
+                <TabsTrigger value="all" data-testid="tab-all" className="flex items-center gap-2">
+                  <ListFilter className="w-4 h-4" />
+                  <span>All</span>
+                  <Badge variant="secondary" className="ml-1">{counts.all}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="dine-in" data-testid="tab-dine-in" className="flex items-center gap-2">
+                  <Utensils className="w-4 h-4" />
+                  <span>Dine-In</span>
+                  <Badge variant="secondary" className="ml-1">{counts.dineIn}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="takeaway" data-testid="tab-takeaway" className="flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Takeaway</span>
+                  <Badge variant="secondary" className="ml-1">{counts.takeaway}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="ready-payment" data-testid="tab-ready-payment" className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Payment</span>
+                  <Badge variant="secondary" className="ml-1">{counts.readyPayment}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="completed" data-testid="tab-completed" className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Done</span>
+                  <Badge variant="secondary" className="ml-1">{counts.completed}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {/* Order Cards */}
@@ -233,12 +264,12 @@ export default function OrdersPage() {
                 <div className="text-center py-16 text-muted-foreground">
                   Loading orders...
                 </div>
-              ) : normalizedOrders.length === 0 ? (
+              ) : filteredOrders.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   No orders found
                 </div>
               ) : (
-                normalizedOrders.map((order) => {
+                filteredOrders.map((order) => {
                   const statusConfig = ORDER_STATUS_CONFIG[order.status];
                   const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status] || PAYMENT_STATUS_CONFIG["unpaid"];
                   const StatusIcon = statusConfig.icon;

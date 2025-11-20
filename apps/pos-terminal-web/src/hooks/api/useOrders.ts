@@ -38,10 +38,31 @@ async function postWithTenantHeader(url: string, data: unknown) {
   return res.json();
 }
 
-export function useOrders() {
-  return useQuery<Order[]>({
-    queryKey: ["/api/orders"],
-    queryFn: () => fetchWithTenantHeader("/api/orders"),
+type OrderFilters = {
+  status?: string;
+  order_type_id?: string;
+  table_number?: string;
+};
+
+export function useOrders(filters?: OrderFilters) {
+  const queryParams = new URLSearchParams();
+  if (filters?.status) queryParams.append("status", filters.status);
+  if (filters?.order_type_id) queryParams.append("order_type_id", filters.order_type_id);
+  if (filters?.table_number) queryParams.append("table_number", filters.table_number);
+  
+  const queryString = queryParams.toString();
+  const url = queryString ? `/api/orders?${queryString}` : "/api/orders";
+
+  return useQuery<{ orders: Order[] }>({
+    queryKey: ["/api/orders", filters],
+    queryFn: () => fetchWithTenantHeader(url),
+  });
+}
+
+export function useOpenOrders() {
+  return useQuery<{ orders: Order[]; total: number }>({
+    queryKey: ["/api/orders/open"],
+    queryFn: () => fetchWithTenantHeader("/api/orders/open"),
   });
 }
 

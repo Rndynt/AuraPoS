@@ -239,17 +239,18 @@
 
 ### 3.5 POS UI
 
-- [ ] Add “Order list” view in POS terminal:
-  - [ ] Tab / filter for:
-    - [ ] Dine-in drafts (with table).
-    - [ ] Takeaway drafts.
-    - [ ] Ready for payment (status + totals).
-- [ ] When creating order from cart:
-  - [ ] Show dialog:
-    - [ ] Choose `order_type` (Dine In / Take Away / Delivery).
-    - [ ] If Dine In and table management enabled → select table.
-    - [ ] If no table management → free-text `table_number` input.
-    - [ ] Option to immediately “Mark as paid” or leave as draft.
+- [x] Add "Order list" view in POS terminal (implemented in apps/pos-terminal-web/src/pages/orders.tsx):
+  - [x] Tab / filter for:
+    - [x] Dine-in drafts (with table) - "Dine-In" tab filters orders with status=draft and has table_number.
+    - [x] Takeaway drafts - "Takeaway" tab filters orders with status=draft and no table_number.
+    - [x] Ready for payment (status + totals) - "Payment" tab filters confirmed/preparing/ready orders not fully paid.
+    - [x] All active orders tab and Completed orders tab.
+- [x] When creating order from cart (implemented in apps/pos-terminal-web/src/components/pos/OrderTypeSelectionDialog.tsx):
+  - [x] Show dialog:
+    - [x] Choose order_type (Dine In / Take Away / Delivery) - Radio group with icons.
+    - [x] If Dine In and table management enabled - select table dropdown.
+    - [x] If no table management - free-text table_number input.
+    - [x] Option to immediately "Mark as paid" or leave as draft - Checkbox with amount display.
 
 ---
 
