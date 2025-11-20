@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, jsonb, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -93,6 +93,7 @@ export const products = pgTable("products", {
   basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
   category: text("category").notNull(),
   imageUrl: text("image_url"),
+  metadata: jsonb("metadata"),
   hasVariants: boolean("has_variants").notNull().default(false),
   stockTrackingEnabled: boolean("stock_tracking_enabled").notNull().default(false),
   stockQty: integer("stock_qty"),

@@ -9,6 +9,7 @@ import {
   products,
   productOptionGroups,
   productOptions,
+  tenants,
   type Product as DBProduct,
   type InsertProduct,
   type ProductOptionGroup as DBProductOptionGroup,
@@ -33,6 +34,7 @@ function mapProductToDomain(dbProduct: DBProduct): Product {
     base_price: parseFloat(dbProduct.basePrice),
     category: dbProduct.category,
     image_url: dbProduct.imageUrl || undefined,
+    metadata: dbProduct.metadata as Product['metadata'] || undefined,
     has_variants: dbProduct.hasVariants,
     stock_tracking_enabled: dbProduct.stockTrackingEnabled,
     stock_qty: dbProduct.stockQty || undefined,
@@ -75,6 +77,7 @@ function mapOptionToDomain(dbOption: DBProductOption): ProductOption {
 export interface ProductFilters {
   category?: string;
   isActive?: boolean;
+  businessType?: string;
 }
 
 export interface IProductRepository {
@@ -105,6 +108,47 @@ export class ProductRepository
     filters?: ProductFilters
   ): Promise<Product[]> {
     try {
+      // If businessType filter is provided, need to join with tenants table
+      if (filters?.businessType) {
+        const conditions = [
+          eq(products.tenantId, tenantId),
+          eq(tenants.businessType, filters.businessType),
+        ];
+
+        if (filters.category) {
+          conditions.push(eq(products.category, filters.category));
+        }
+
+        if (filters.isActive !== undefined) {
+          conditions.push(eq(products.isActive, filters.isActive));
+        }
+
+        const result = await this.db
+          .select({
+            id: products.id,
+            tenantId: products.tenantId,
+            name: products.name,
+            description: products.description,
+            basePrice: products.basePrice,
+            category: products.category,
+            imageUrl: products.imageUrl,
+            metadata: products.metadata,
+            hasVariants: products.hasVariants,
+            stockTrackingEnabled: products.stockTrackingEnabled,
+            stockQty: products.stockQty,
+            sku: products.sku,
+            isActive: products.isActive,
+            createdAt: products.createdAt,
+            updatedAt: products.updatedAt,
+          })
+          .from(products)
+          .innerJoin(tenants, eq(products.tenantId, tenants.id))
+          .where(and(...conditions));
+
+        return result.map(mapProductToDomain);
+      }
+
+      // Standard query without businessType filter
       const conditions = [eq(products.tenantId, tenantId)];
 
       if (filters?.category) {

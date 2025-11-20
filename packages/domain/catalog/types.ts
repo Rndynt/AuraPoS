@@ -54,6 +54,15 @@ export type Product = {
   category: string;
   image_url?: string;
   
+  // Multi-vertical metadata for business-specific attributes
+  metadata?: {
+    service_duration_minutes?: number;
+    weight_based?: boolean;
+    weight_unit?: 'kg' | 'lbs' | 'gr';
+    sku_type?: 'physical' | 'digital' | 'service' | 'ppob';
+    [key: string]: any;
+  };
+  
   // Legacy variant support
   has_variants: boolean;
   variants?: ProductVariant[];
