@@ -4,11 +4,10 @@ import { CartPanel } from "../pos/CartPanel";
 import { mockProducts } from "@/lib/mockData";
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
 import type { CartItem } from "@/hooks/useCart";
+import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 
 export default function CartPanelExample() {
-  type ProductVariant = NonNullable<(typeof mockProducts)[number]["variants"]>[number];
-
-  const createCartItem = (product: (typeof mockProducts)[number], variant?: ProductVariant, quantity = 1): CartItem => {
+  const createCartItem = (product: Product, variant?: ProductVariant, quantity = 1): CartItem => {
     const variantDelta = variant?.price_delta || 0;
     const unitPrice = product.base_price + variantDelta;
     return {
