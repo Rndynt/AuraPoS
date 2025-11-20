@@ -12,8 +12,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background w-full">
-      {/* Desktop Sidebar */}
+    <div className="flex h-screen bg-background w-full overflow-hidden">
+      {/* Desktop Sidebar - Fixed */}
       <Sidebar />
 
       {/* Mobile Menu Sheet */}
@@ -24,9 +24,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       </Sheet>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header with Hamburger Menu */}
-        <header className="md:hidden flex items-center gap-3 p-4 border-b border-border bg-card">
+        <header className="md:hidden flex items-center gap-3 p-4 border-b border-border bg-card flex-shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -39,7 +39,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-hidden">
           {children}
         </main>
       </div>

@@ -116,10 +116,9 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<OrderViewTab>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Fetch all open orders (draft, confirmed, preparing, ready)
-  const { data, isLoading } = useOrders({
-    status: activeTab === "completed" ? "completed" : undefined,
-  });
+  // Fetch all orders without filtering by status on the API level
+  // We'll filter on the client side to avoid double filtering issues
+  const { data, isLoading, error } = useOrders();
 
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
 
@@ -203,35 +202,35 @@ export default function OrdersPage() {
   const counts = getTabCounts();
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold" data-testid="heading-orders">
+      <header className="border-b border-border bg-card px-4 md:px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl md:text-2xl font-semibold truncate" data-testid="heading-orders">
               Order List
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
               Manage and track all your orders
             </p>
           </div>
-          <Button variant="outline" size="sm" data-testid="button-see-all">
+          <Button variant="outline" size="sm" className="flex-shrink-0" data-testid="button-see-all">
             See All
           </Button>
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col md:flex-row min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Orders List */}
-        <div className="flex-1 flex flex-col md:border-r border-border">
+        <div className="flex-1 flex flex-col md:border-r border-border overflow-hidden">
           {/* Tabs Filter */}
-          <div className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0">
+          <div className="px-4 md:px-6 py-3 border-b border-border flex-shrink-0 overflow-x-auto">
             <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as OrderViewTab)}>
-              <TabsList className="w-full h-auto flex flex-wrap md:grid md:grid-cols-5 gap-1 md:gap-2 p-1">
+              <TabsList className="w-full h-auto inline-flex md:grid md:grid-cols-5 gap-1 md:gap-2 p-1">
                 <TabsTrigger 
                   value="all" 
                   data-testid="tab-all" 
-                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
                 >
                   <ListFilter className="w-3 h-3 md:w-4 md:h-4" />
                   <span className="text-xs md:text-sm">All</span>
@@ -240,7 +239,7 @@ export default function OrdersPage() {
                 <TabsTrigger 
                   value="dine-in" 
                   data-testid="tab-dine-in" 
-                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
                 >
                   <Utensils className="w-3 h-3 md:w-4 md:h-4" />
                   <span className="text-xs md:text-sm">Dine-In</span>
@@ -249,7 +248,7 @@ export default function OrdersPage() {
                 <TabsTrigger 
                   value="takeaway" 
                   data-testid="tab-takeaway" 
-                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
                 >
                   <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" />
                   <span className="text-xs md:text-sm">Takeaway</span>
@@ -258,7 +257,7 @@ export default function OrdersPage() {
                 <TabsTrigger 
                   value="ready-payment" 
                   data-testid="tab-ready-payment" 
-                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
                 >
                   <CreditCard className="w-3 h-3 md:w-4 md:h-4" />
                   <span className="text-xs md:text-sm">Payment</span>
@@ -267,7 +266,7 @@ export default function OrdersPage() {
                 <TabsTrigger 
                   value="completed" 
                   data-testid="tab-completed" 
-                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
                 >
                   <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4" />
                   <span className="text-xs md:text-sm">Done</span>
@@ -278,8 +277,8 @@ export default function OrdersPage() {
           </div>
 
           {/* Order Cards */}
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-3">
+          <ScrollArea className="flex-1 overflow-auto">
+            <div className="p-4 md:p-6 space-y-3">
               {isLoading ? (
                 <div className="text-center py-16 text-muted-foreground">
                   Loading orders...
@@ -351,10 +350,10 @@ export default function OrdersPage() {
         </div>
 
         {/* Order Details Panel */}
-        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l">
+        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l overflow-hidden">
           {selectedOrder ? (
             <>
-              <div className="p-6 border-b border-border flex items-center justify-between flex-shrink-0">
+              <div className="p-4 md:p-6 border-b border-border flex items-center justify-between flex-shrink-0">
                 <h2 className="text-lg font-semibold">Customer Information</h2>
                 <Button
                   variant="ghost"
@@ -366,8 +365,8 @@ export default function OrdersPage() {
                 </Button>
               </div>
 
-              <ScrollArea className="flex-1">
-                <div className="p-6 space-y-6">
+              <ScrollArea className="flex-1 overflow-auto">
+                <div className="p-4 md:p-6 space-y-6">
                   {/* Customer Info */}
                   <div className="space-y-3">
                     <div>
@@ -460,9 +459,9 @@ export default function OrdersPage() {
                 </div>
               </ScrollArea>
 
-              <div className="p-6 border-t border-border flex-shrink-0">
+              <div className="p-4 md:p-6 border-t border-border flex-shrink-0">
                 <Button className="w-full" data-testid="button-process-transaction">
-                  Proccess Transaction
+                  Process Transaction
                 </Button>
               </div>
             </>
