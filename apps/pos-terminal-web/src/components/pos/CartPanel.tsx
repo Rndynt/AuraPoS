@@ -71,6 +71,7 @@ export function CartPanel({
 }: CartPanelProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
+  const [isEditingTable, setIsEditingTable] = useState(false);
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
 
@@ -126,66 +127,81 @@ export function CartPanel({
               <Edit2 className="w-4 h-4" />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Order Number: {orderNumber}
-          </p>
-        </div>
-
-        {/* Table Selection - Only shown for CAFE_RESTAURANT with table management */}
-        {showTableNumber && setTableNumber && (
-          <div className="space-y-1.5">
-            <Label htmlFor="table-select" className="text-sm">
-              Select Table
-            </Label>
-            <Select 
-              value={tableNumber} 
-              onValueChange={setTableNumber}
-            >
-              <SelectTrigger id="table-select" data-testid="select-table">
-                <SelectValue placeholder="Select table..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Table 1</SelectItem>
-                <SelectItem value="2">Table 2</SelectItem>
-                <SelectItem value="3">Table 3</SelectItem>
-                <SelectItem value="4">Table 4</SelectItem>
-                <SelectItem value="5">Table 5</SelectItem>
-                <SelectItem value="6">Table 6</SelectItem>
-                <SelectItem value="7">Table 7</SelectItem>
-                <SelectItem value="8">Table 8</SelectItem>
-                <SelectItem value="9">Table 9</SelectItem>
-                <SelectItem value="10">Table 10</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-sm text-muted-foreground">
+              Order Number: {orderNumber}
+            </p>
+            {showTableNumber && setTableNumber && (
+              <div className="flex items-center gap-2">
+                {isEditingTable ? (
+                  <Select 
+                    value={tableNumber} 
+                    onValueChange={(val) => {
+                      setTableNumber(val);
+                      setIsEditingTable(false);
+                    }}
+                    open={isEditingTable}
+                    onOpenChange={setIsEditingTable}
+                  >
+                    <SelectTrigger className="h-7 w-24 text-xs" data-testid="select-table">
+                      <SelectValue placeholder="Table..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Table 1</SelectItem>
+                      <SelectItem value="2">Table 2</SelectItem>
+                      <SelectItem value="3">Table 3</SelectItem>
+                      <SelectItem value="4">Table 4</SelectItem>
+                      <SelectItem value="5">Table 5</SelectItem>
+                      <SelectItem value="6">Table 6</SelectItem>
+                      <SelectItem value="7">Table 7</SelectItem>
+                      <SelectItem value="8">Table 8</SelectItem>
+                      <SelectItem value="9">Table 9</SelectItem>
+                      <SelectItem value="10">Table 10</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover-elevate active-elevate-2"
+                    onClick={() => setIsEditingTable(true)}
+                    data-testid="badge-table-number"
+                  >
+                    {tableNumber ? `Table ${tableNumber}` : "Set Table"}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Scrollable content area */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-4 space-y-3">
-          {items.length === 0 ? (
-            <div className="py-16 text-center space-y-3">
-              <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground" data-testid="text-empty-cart">
-                No Item Selected
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-0">
-              {items.map((item) => (
-                <CartItem
-                  key={item.id}
-                  item={item}
-                  onUpdateQty={onUpdateQty}
-                  onRemove={onRemove}
-                  getItemPrice={getItemPrice}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+      {/* Scrollable content area with max height to keep footer visible */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ScrollArea className="h-full">
+          <div className="p-4 space-y-3">
+            {items.length === 0 ? (
+              <div className="py-16 text-center space-y-3">
+                <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
+                <p className="text-muted-foreground" data-testid="text-empty-cart">
+                  No Item Selected
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {items.map((item) => (
+                  <CartItem
+                    key={item.id}
+                    item={item}
+                    onUpdateQty={onUpdateQty}
+                    onRemove={onRemove}
+                    getItemPrice={getItemPrice}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Footer with totals and actions */}
       {items.length > 0 && (

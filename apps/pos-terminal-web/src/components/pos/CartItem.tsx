@@ -66,6 +66,9 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
             </Button>
           </div>
           <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-semibold tabular-nums" data-testid={`text-item-total-${item.id}`}>
+              {formatPrice(totalPrice)}
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 size="icon"
@@ -89,9 +92,7 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
                 <Plus className="w-3 h-3" />
               </Button>
             </div>
-            <div className="text-sm font-semibold tabular-nums" data-testid={`text-item-total-${item.id}`}>
-              {formatPrice(totalPrice)}
-            </div>
+            
           </div>
         </div>
       </div>
