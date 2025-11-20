@@ -75,6 +75,7 @@ export function MobileCartDrawer({
 }: MobileCartDrawerProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
+  const [isEditingTable, setIsEditingTable] = useState(false);
   const [showDetailedPricing, setShowDetailedPricing] = useState(false);
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
@@ -99,7 +100,7 @@ export function MobileCartDrawer({
         <Drawer.Overlay className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" />
         <Drawer.Content
           className="fixed bottom-0 left-0 right-0 bg-card border-t border-card-border rounded-t-xl z-50 flex flex-col overflow-hidden"
-          style={{ maxHeight: "calc(85vh - env(safe-area-inset-bottom, 0px))" }}
+          style={{ maxHeight: "calc(92vh - env(safe-area-inset-bottom, 0px))" }}
           data-testid="drawer-mobile-cart"
         >
           {/* Header with Customer Info */}
@@ -151,39 +152,52 @@ export function MobileCartDrawer({
                   <Edit2 className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Order Number: {orderNumber}
-              </p>
-            </div>
-
-            {/* Table Selection - Only shown for CAFE_RESTAURANT with table management */}
-            {showTableNumber && setTableNumber && (
-              <div className="space-y-1.5">
-                <Label htmlFor="table-select-mobile" className="text-sm">
-                  Select Table
-                </Label>
-                <Select 
-                  value={tableNumber} 
-                  onValueChange={setTableNumber}
-                >
-                  <SelectTrigger id="table-select-mobile" data-testid="select-table-mobile">
-                    <SelectValue placeholder="Select table..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Table 1</SelectItem>
-                    <SelectItem value="2">Table 2</SelectItem>
-                    <SelectItem value="3">Table 3</SelectItem>
-                    <SelectItem value="4">Table 4</SelectItem>
-                    <SelectItem value="5">Table 5</SelectItem>
-                    <SelectItem value="6">Table 6</SelectItem>
-                    <SelectItem value="7">Table 7</SelectItem>
-                    <SelectItem value="8">Table 8</SelectItem>
-                    <SelectItem value="9">Table 9</SelectItem>
-                    <SelectItem value="10">Table 10</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-sm text-muted-foreground">
+                  Order Number: {orderNumber}
+                </p>
+                {showTableNumber && setTableNumber && (
+                  <div className="flex items-center gap-2">
+                    {isEditingTable ? (
+                      <Select 
+                        value={tableNumber} 
+                        onValueChange={(val) => {
+                          setTableNumber(val);
+                          setIsEditingTable(false);
+                        }}
+                        open={isEditingTable}
+                        onOpenChange={setIsEditingTable}
+                      >
+                        <SelectTrigger className="h-7 w-24 text-xs" data-testid="select-table-mobile">
+                          <SelectValue placeholder="Table..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Table 1</SelectItem>
+                          <SelectItem value="2">Table 2</SelectItem>
+                          <SelectItem value="3">Table 3</SelectItem>
+                          <SelectItem value="4">Table 4</SelectItem>
+                          <SelectItem value="5">Table 5</SelectItem>
+                          <SelectItem value="6">Table 6</SelectItem>
+                          <SelectItem value="7">Table 7</SelectItem>
+                          <SelectItem value="8">Table 8</SelectItem>
+                          <SelectItem value="9">Table 9</SelectItem>
+                          <SelectItem value="10">Table 10</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge 
+                        variant="secondary" 
+                        className="cursor-pointer hover-elevate active-elevate-2"
+                        onClick={() => setIsEditingTable(true)}
+                        data-testid="badge-table-number"
+                      >
+                        {tableNumber ? `Table ${tableNumber}` : "Set Table"}
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Scrollable content area */}
