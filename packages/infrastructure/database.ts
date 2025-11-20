@@ -11,17 +11,35 @@ import postgres from 'postgres';
 import * as schema from '../../shared/schema';
 
 // Get database URL from environment
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL?.trim();
 
 if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set');
+  console.error('[database] DATABASE_URL environment variable is not set. Exiting.');
+  process.exit(1);
 }
 
 // Create postgres client for proper .returning() support
-const sql = postgres(DATABASE_URL);
+let sql;
+
+try {
+  sql = postgres(DATABASE_URL);
+} catch (error) {
+  console.error(
+    '[database] Failed to initialize database connection. Ensure DATABASE_URL is valid.',
+    error,
+  );
+  process.exit(1);
+}
 
 // Initialize Drizzle with schema
-export const db = drizzle(sql, { schema });
+export const db = (() => {
+  try {
+    return drizzle(sql, { schema });
+  } catch (error) {
+    console.error('[database] Failed to initialize Drizzle ORM instance.', error);
+    process.exit(1);
+  }
+})();
 
 export type Database = typeof db;
 
