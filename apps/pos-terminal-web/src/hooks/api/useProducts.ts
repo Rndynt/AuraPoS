@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Product } from "@/../../packages/domain/catalog/types";
+import type { Product } from "@pos/domain/catalog/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
 async function fetchWithTenantHeader(url: string) {

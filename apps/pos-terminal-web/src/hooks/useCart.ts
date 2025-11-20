@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { nanoid } from "nanoid";
-import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
-import type { SelectedOption } from "@/../../packages/domain/orders/types";
+import type { Product, ProductVariant } from "@pos/domain/catalog/types";
+import type { SelectedOption } from "@pos/domain/orders/types";
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
 
 /**

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
+import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import {
   Dialog,
   DialogContent,

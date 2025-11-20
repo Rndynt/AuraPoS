@@ -5,9 +5,9 @@
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Product } from "@/../../packages/domain/catalog/types";
-import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption, OrderType, TenantOrderType } from "@/../../packages/domain/orders/types";
-import type { TenantFeature, FeatureCheck } from "@/../../packages/domain/tenants/types";
+import type { Product } from "@pos/domain/catalog/types";
+import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption, OrderType, TenantOrderType } from "@pos/domain/orders/types";
+import type { TenantFeature, FeatureCheck } from "@pos/domain/tenants/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
 // Helper to add tenant header to fetch requests

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { Product, ProductVariant, ProductOptionGroup } from "@/../../packages/domain/catalog/types";
-import type { SelectedOption } from "@/../../packages/domain/orders/types";
+import type { Product, ProductVariant, ProductOptionGroup } from "@pos/domain/catalog/types";
+import type { SelectedOption } from "@pos/domain/orders/types";
 import {
   Dialog,
   DialogContent,

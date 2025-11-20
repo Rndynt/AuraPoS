@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import type { Product, ProductVariant } from "@/../../packages/domain/catalog/types";
+import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 
 // Product images - import from generated assets
 import burgerImg from "@assets/generated_images/Gourmet_beef_burger_product_photo_df61270b.png";

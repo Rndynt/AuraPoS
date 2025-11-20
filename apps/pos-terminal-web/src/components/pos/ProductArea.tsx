@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import type { Product } from "@/../../packages/domain/catalog/types";
-import type { OrderType } from "@/../../packages/domain/orders/types";
+import type { Product } from "@pos/domain/catalog/types";
+import type { OrderType } from "@pos/domain/orders/types";
 import { ProductCard } from "./ProductCardV2";
 import { POSHeader } from "./POSHeader";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";

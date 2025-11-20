@@ -14,7 +14,7 @@ import {
   XCircle, 
   ChefHat 
 } from "lucide-react";
-import type { Order } from "@/../../packages/domain/orders/types";
+import type { Order } from "@pos/domain/orders/types";
 
 const ORDER_STATUS_CONFIG = {
   draft: { label: "Draft", variant: "outline" as const, icon: Clock, color: "text-gray-600" },
