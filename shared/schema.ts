@@ -259,7 +259,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  status: z.enum(["draft", "confirmed", "completed", "cancelled"]).default("draft"),
+  status: z.enum(["draft", "confirmed", "preparing", "ready", "completed", "cancelled"]).default("draft"),
   paymentStatus: z.enum(["paid", "partial", "unpaid"]).default("unpaid"),
   salesChannel: z.enum(["POS", "WHATSAPP", "WEBSITE", "MARKETPLACE", "GOFOOD", "GRABFOOD", "PHONE", "OTHER"]).optional(),
 });

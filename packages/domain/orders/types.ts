@@ -101,7 +101,7 @@ export type Order = {
   
   // Order metadata
   order_number: string;
-  status: "draft" | "confirmed" | "completed" | "cancelled";
+  status: "draft" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled";
   customer_name?: string;
   table_number?: string;
   notes?: string;
