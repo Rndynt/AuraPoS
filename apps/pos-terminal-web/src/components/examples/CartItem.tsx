@@ -2,11 +2,10 @@ import { nanoid } from "nanoid";
 import { CartItem as CartItemComponent } from "../pos/CartItem";
 import { mockProducts } from "@/lib/mockData";
 import type { CartItem } from "@/hooks/useCart";
+import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 
 export default function CartItemExample() {
-  type ProductVariant = NonNullable<(typeof mockProducts)[number]["variants"]>[number];
-
-  const createCartItem = (product: (typeof mockProducts)[number], variant?: ProductVariant, quantity: number = 1): CartItem => {
+  const createCartItem = (product: Product, variant?: ProductVariant, quantity: number = 1): CartItem => {
     const variantDelta = variant?.price_delta || 0;
     const unitPrice = product.base_price + variantDelta;
     return {

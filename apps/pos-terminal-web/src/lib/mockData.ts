@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
+import type { Feature } from "@pos/domain/tenants/types";
 
 // Product images - import from generated assets
 import burgerImg from "@assets/generated_images/Gourmet_beef_burger_product_photo_df61270b.png";
@@ -10,15 +11,6 @@ import pizzaImg from "@assets/generated_images/Supreme_pizza_product_photo_78bba
 import friesImg from "@assets/generated_images/French_fries_product_photo_dc986f4d.png";
 import icedLatteImg from "@assets/generated_images/Iced_caramel_latte_product_photo_1bc0e828.png";
 import wingsImg from "@assets/generated_images/Fried_chicken_wings_product_photo_fce05207.png";
-
-export type Feature = {
-  code: string;
-  name: string;
-  description: string;
-  type: "one_time" | "subscription";
-  group: "printing" | "kitchen" | "pos" | "reporting" | "ui";
-  price?: number;
-};
 
 // Mock products //todo: remove mock functionality
 export const mockProducts: Product[] = [
@@ -139,7 +131,9 @@ export const mockProducts: Product[] = [
 ];
 
 // Mock features catalog //todo: remove mock functionality
-export const featuresCatalog: Feature[] = [
+type PricedFeature = Feature & { price?: number };
+
+export const featuresCatalog: PricedFeature[] = [
   {
     code: "receipt_compact",
     name: "Compact Receipt",
@@ -215,7 +209,7 @@ export const featuresCatalog: Feature[] = [
 ];
 
 // Helper to get active features (initially some are active for demo) //todo: remove mock functionality
-export const getActiveFeatures = (): Feature[] => {
+export const getActiveFeatures = (): PricedFeature[] => {
   // For demo purposes, activate some features by default
   const activeCodes = ["product_variants", "kitchen_ticket"];
   return featuresCatalog.filter((f) => activeCodes.includes(f.code));
