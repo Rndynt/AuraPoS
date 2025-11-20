@@ -10,7 +10,7 @@ export interface ProductWithFullDetails extends Product {
 }
 
 export interface IProductRepository {
-  findById(productId: string): Promise<Product | null>;
+  findById(productId: string, tenantId: string): Promise<Product | null>;
   findOptionGroupsByProductId(productId: string): Promise<ProductOptionGroup[]>;
   findOptionsByGroupIds(groupIds: string[]): Promise<Map<string, ProductOption[]>>;
 }
@@ -29,7 +29,7 @@ export class GetProductById {
 
   async execute(input: GetProductByIdInput): Promise<GetProductByIdOutput> {
     try {
-      const product = await this.productRepository.findById(input.productId);
+      const product = await this.productRepository.findById(input.productId, input.tenantId);
 
       if (!product) {
         return { product: null };
