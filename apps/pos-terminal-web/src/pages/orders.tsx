@@ -12,13 +12,16 @@ import {
   Clock, 
   CheckCircle2, 
   XCircle, 
-  ChefHat 
+  ChefHat,
+  CheckCircle
 } from "lucide-react";
 import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
 
 const ORDER_STATUS_CONFIG = {
   draft: { label: "Draft", variant: "outline" as const, icon: Clock, color: "text-gray-600" },
   confirmed: { label: "Confirmed", variant: "secondary" as const, icon: Clock, color: "text-blue-600" },
+  preparing: { label: "Preparing", variant: "secondary" as const, icon: ChefHat, color: "text-orange-600" },
+  ready: { label: "Ready", variant: "default" as const, icon: CheckCircle, color: "text-emerald-600" },
   completed: { label: "Completed", variant: "default" as const, icon: CheckCircle2, color: "text-green-600" },
   cancelled: { label: "Cancelled", variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
 };

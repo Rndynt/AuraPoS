@@ -296,6 +296,66 @@ export function useDisableOrderType() {
   });
 }
 
+/**
+ * Confirm an order (transition from draft to confirmed)
+ */
+export type ConfirmOrderInput = {
+  orderId: string;
+};
+
+export function useConfirmOrder() {
+  return useMutation<Order, Error, ConfirmOrderInput>({
+    mutationFn: ({ orderId }) =>
+      mutateWithTenantHeader("POST", `/api/orders/${orderId}/confirm`, {}),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/open"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
+    },
+  });
+}
+
+/**
+ * Complete an order (mark as completed)
+ */
+export type CompleteOrderInput = {
+  orderId: string;
+};
+
+export function useCompleteOrder() {
+  return useMutation<Order, Error, CompleteOrderInput>({
+    mutationFn: ({ orderId }) =>
+      mutateWithTenantHeader("POST", `/api/orders/${orderId}/complete`, {}),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/open"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
+    },
+  });
+}
+
+/**
+ * Cancel an order
+ */
+export type CancelOrderInput = {
+  orderId: string;
+};
+
+export function useCancelOrder() {
+  return useMutation<Order, Error, CancelOrderInput>({
+    mutationFn: ({ orderId }) =>
+      mutateWithTenantHeader("POST", `/api/orders/${orderId}/cancel`, {}),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/open"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
+    },
+  });
+}
+
 // ============================================================================
 // TENANT HOOKS
 // ============================================================================

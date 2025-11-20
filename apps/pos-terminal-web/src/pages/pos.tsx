@@ -4,9 +4,11 @@ import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
+import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDialog";
+import type { OrderTypeSelectionResult } from "@/components/pos/OrderTypeSelectionDialog";
 import { useCart } from "@/hooks/useCart";
 import { useFeatures } from "@/hooks/useFeatures";
-import { useProducts, useCreateOrder, useCreateKitchenTicket, useOrderTypes } from "@/lib/api/hooks";
+import { useProducts, useCreateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment } from "@/lib/api/hooks";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,7 @@ export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
+  const [orderTypeSelectionDialogOpen, setOrderTypeSelectionDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
   const cart = useCart();
@@ -47,6 +50,7 @@ export default function POSPage() {
   // Mutations
   const createOrderMutation = useCreateOrder();
   const createKitchenTicketMutation = useCreateKitchenTicket();
+  const recordPaymentMutation = useRecordPayment();
 
   const hasPartialPayment = hasFeature("partial_payment");
   const hasKitchenTicket = hasFeature("kitchen_ticket");
@@ -140,19 +144,55 @@ export default function POSPage() {
     });
   };
 
-  const handleCharge = async () => {
+  const handleCharge = () => {
     if (!ensureCartHasItems()) return;
-    if (!validateOrderType()) return;
+    setOrderTypeSelectionDialogOpen(true);
+    setMobileCartOpen(false);
+  };
 
+  const handleOrderTypeConfirm = async (result: OrderTypeSelectionResult) => {
     try {
-      const result = await createOrderMutation.mutateAsync(buildOrderPayload());
+      // Build order payload with order type and table number from dialog
+      const orderPayload = {
+        items: cart.toBackendOrderItems(),
+        tax_rate: cart.taxRate,
+        service_charge_rate: cart.serviceChargeRate,
+        order_type_id: result.orderTypeId,
+        customer_name: cart.customerName || undefined,
+        table_number: result.tableNumber || undefined,
+      };
 
-      toast({
-        title: "Payment successful",
-        description: `Order #${result.order.order_number} - Total: Rp ${result.pricing.total_amount.toLocaleString("id-ID")}`,
-      });
-      
+      // Create the order
+      const orderResult = await createOrderMutation.mutateAsync(orderPayload);
+
+      // If mark as paid, record full payment
+      if (result.markAsPaid) {
+        await recordPaymentMutation.mutateAsync({
+          orderId: orderResult.order.id,
+          amount: orderResult.pricing.total_amount,
+          payment_method: "cash", // Default to cash when marking as paid
+        });
+
+        toast({
+          title: "Order completed & paid",
+          description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")} (Paid)`,
+        });
+      } else {
+        toast({
+          title: "Order created",
+          description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")}`,
+        });
+      }
+
+      // Update selected order type and table number in cart state
+      setSelectedOrderTypeId(result.orderTypeId);
+      if (result.tableNumber) {
+        cart.setTableNumber(result.tableNumber);
+      }
+
+      // Clear cart
       cart.clearCart();
+      setOrderTypeSelectionDialogOpen(false);
     } catch (error) {
       let errorMessage = "Failed to process order";
       if (error instanceof Error) {
@@ -165,11 +205,11 @@ export default function POSPage() {
       } else if (apiError?.body?.message) {
         errorMessage = apiError.body.message;
       }
-      
-      console.error("Payment error details:", error);
-      
+
+      console.error("Order creation error details:", error);
+
       toast({
-        title: "Payment failed",
+        title: "Order failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -403,6 +443,16 @@ export default function POSPage() {
           isSubmitting={isSubmittingPartialPayment}
         />
       )}
+
+      {/* Order Type Selection Dialog */}
+      <OrderTypeSelectionDialog
+        open={orderTypeSelectionDialogOpen}
+        onClose={() => setOrderTypeSelectionDialogOpen(false)}
+        onConfirm={handleOrderTypeConfirm}
+        orderTypes={orderTypes || []}
+        orderTypesLoading={orderTypesLoading}
+        cartTotal={cart.total}
+      />
     </div>
   );
 }
