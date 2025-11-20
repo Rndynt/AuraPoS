@@ -6,7 +6,7 @@
 import type { Product } from '@pos/domain/catalog/types';
 
 export interface IProductRepository {
-  findById(productId: string): Promise<Product | null>;
+  findById(productId: string, tenantId: string): Promise<Product | null>;
 }
 
 export interface CheckProductAvailabilityInput {
@@ -36,7 +36,7 @@ export class CheckProductAvailability {
         };
       }
 
-      const product = await this.productRepository.findById(input.productId);
+      const product = await this.productRepository.findById(input.productId, input.tenantId);
 
       if (!product) {
         return {
