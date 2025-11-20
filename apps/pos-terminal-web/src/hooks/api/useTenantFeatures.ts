@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { TenantFeature, FeatureCheck } from "@/../../packages/domain/tenants/types";
+import type { TenantFeature, FeatureCheck } from "@pos/domain/tenants/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
 async function fetchWithTenantHeader(url: string) {

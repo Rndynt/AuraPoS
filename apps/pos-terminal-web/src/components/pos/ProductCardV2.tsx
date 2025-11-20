@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Product } from "@/../../packages/domain/catalog/types";
+import type { Product } from "@pos/domain/catalog/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Plus, Layers } from "lucide-react";

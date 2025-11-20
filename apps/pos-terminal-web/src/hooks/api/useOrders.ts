@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import type { Order, OrderItem, OrderPayment } from "@/../../packages/domain/orders/types";
+import type { Order, OrderItem, OrderPayment } from "@pos/domain/orders/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
 async function fetchWithTenantHeader(url: string) {
