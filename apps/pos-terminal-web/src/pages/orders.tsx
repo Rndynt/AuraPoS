@@ -221,37 +221,57 @@ export default function OrdersPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0">
         {/* Orders List */}
-        <div className="flex-1 flex flex-col border-r border-border">
+        <div className="flex-1 flex flex-col md:border-r border-border">
           {/* Tabs Filter */}
-          <div className="px-6 py-4 border-b border-border flex-shrink-0">
+          <div className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0">
             <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as OrderViewTab)}>
-              <TabsList className="grid w-full grid-cols-5 gap-2">
-                <TabsTrigger value="all" data-testid="tab-all" className="flex items-center gap-2">
-                  <ListFilter className="w-4 h-4" />
-                  <span>All</span>
-                  <Badge variant="secondary" className="ml-1">{counts.all}</Badge>
+              <TabsList className="w-full h-auto flex flex-wrap md:grid md:grid-cols-5 gap-1 md:gap-2 p-1">
+                <TabsTrigger 
+                  value="all" 
+                  data-testid="tab-all" 
+                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                >
+                  <ListFilter className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">All</span>
+                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.all}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="dine-in" data-testid="tab-dine-in" className="flex items-center gap-2">
-                  <Utensils className="w-4 h-4" />
-                  <span>Dine-In</span>
-                  <Badge variant="secondary" className="ml-1">{counts.dineIn}</Badge>
+                <TabsTrigger 
+                  value="dine-in" 
+                  data-testid="tab-dine-in" 
+                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                >
+                  <Utensils className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Dine-In</span>
+                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.dineIn}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="takeaway" data-testid="tab-takeaway" className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Takeaway</span>
-                  <Badge variant="secondary" className="ml-1">{counts.takeaway}</Badge>
+                <TabsTrigger 
+                  value="takeaway" 
+                  data-testid="tab-takeaway" 
+                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                >
+                  <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Takeaway</span>
+                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.takeaway}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="ready-payment" data-testid="tab-ready-payment" className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  <span>Payment</span>
-                  <Badge variant="secondary" className="ml-1">{counts.readyPayment}</Badge>
+                <TabsTrigger 
+                  value="ready-payment" 
+                  data-testid="tab-ready-payment" 
+                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                >
+                  <CreditCard className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Payment</span>
+                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.readyPayment}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="completed" data-testid="tab-completed" className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Done</span>
-                  <Badge variant="secondary" className="ml-1">{counts.completed}</Badge>
+                <TabsTrigger 
+                  value="completed" 
+                  data-testid="tab-completed" 
+                  className="flex items-center gap-1 md:gap-2 flex-1 min-w-[80px] md:min-w-0 justify-center"
+                >
+                  <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Done</span>
+                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.completed}</Badge>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -331,7 +351,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Order Details Panel */}
-        <div className="w-96 bg-card flex flex-col">
+        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l">
           {selectedOrder ? (
             <>
               <div className="p-6 border-b border-border flex items-center justify-between flex-shrink-0">
