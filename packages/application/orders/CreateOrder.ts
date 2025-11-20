@@ -98,23 +98,38 @@ export class CreateOrder {
         throw new Error('Order must contain at least one item');
       }
 
+      const productQuantities = new Map<string, number>();
+      const productNames = new Map<string, string>();
+      for (const itemInput of input.items) {
+        const currentQuantity = productQuantities.get(itemInput.product_id) ?? 0;
+        productQuantities.set(itemInput.product_id, currentQuantity + itemInput.quantity);
+        if (!productNames.has(itemInput.product_id)) {
+          productNames.set(itemInput.product_id, itemInput.product_name);
+        }
+      }
+
+      for (const [productId, requestedQuantity] of productQuantities) {
+        const availability = await this.productAvailabilityService.execute({
+          productId,
+          tenantId: input.tenant_id,
+          requestedQuantity,
+        });
+
+        if (!availability.isAvailable) {
+          const productName = productNames.get(productId);
+          const productLabel = productName ? `${productName} (${productId})` : productId;
+          throw new Error(
+            availability.reason || `${productLabel} is not available in requested quantity`
+          );
+        }
+      }
+
       const orderNumber = await this.orderRepository.generateOrderNumber(input.tenant_id);
 
       const orderItems: OrderItem[] = [];
       let subtotal = 0;
 
       for (const itemInput of input.items) {
-        const availability = await this.productAvailabilityService.execute({
-          productId: itemInput.product_id,
-          tenantId: input.tenant_id,
-          requestedQuantity: itemInput.quantity,
-        });
-
-        if (!availability.isAvailable) {
-          throw new Error(
-            availability.reason || 'Product is not available in requested quantity'
-          );
-        }
 
         const variantDelta = itemInput.variant_price_delta ?? 0;
         const optionsDelta = calculateSelectedOptionsDelta(
