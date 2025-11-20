@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useOrders } from "@/lib/api/hooks";
+import { useMemo, useState } from "react";
+import { useOrder, useOrders } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import {
   XCircle, 
   ChefHat 
 } from "lucide-react";
-import type { Order } from "@pos/domain/orders/types";
+import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
 
 const ORDER_STATUS_CONFIG = {
   draft: { label: "Draft", variant: "outline" as const, icon: Clock, color: "text-gray-600" },
@@ -31,15 +31,100 @@ const PAYMENT_STATUS_CONFIG = {
 
 type OrderStatusFilter = "all" | "draft" | "confirmed" | "completed" | "cancelled";
 
+type NormalizedMoneyFields = {
+  subtotal: number;
+  tax_amount: number;
+  service_charge_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  paid_amount: number;
+};
+
+type NormalizedOrderItem = Omit<OrderItem, "selected_options"> & {
+  selected_options?: SelectedOption[];
+};
+
+type NormalizedOrder = Omit<Order, keyof NormalizedMoneyFields | "created_at"> &
+  NormalizedMoneyFields & {
+    created_at?: Date;
+    items: NormalizedOrderItem[];
+    payment_status: Order["payment_status"];
+  };
+
+const normalizeMoney = (value: unknown): number => {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const normalizeItem = (item: Partial<OrderItem>): NormalizedOrderItem => ({
+  id: item.id || crypto.randomUUID(),
+  product_id: item.product_id || "",
+  product_name: item.product_name || (item as any).productName || "",
+  base_price: normalizeMoney(item.base_price ?? (item as any).basePrice),
+  variant_id: item.variant_id || (item as any).variantId,
+  variant_name: item.variant_name || (item as any).variantName,
+  variant_price_delta: normalizeMoney(item.variant_price_delta ?? (item as any).variantPriceDelta),
+  selected_options: item.selected_options as SelectedOption[] | undefined,
+  selected_option_groups: item.selected_option_groups,
+  quantity: item.quantity || 0,
+  item_subtotal: normalizeMoney(item.item_subtotal ?? (item as any).itemSubtotal),
+  notes: item.notes,
+  status: item.status as NormalizedOrderItem["status"],
+});
+
+const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
+  const created_at = order.created_at || (order as any).createdAt || (order as any).orderDate;
+
+  return {
+    id: order.id || "",
+    tenant_id: order.tenant_id || (order as any).tenantId || "",
+    order_type_id: order.order_type_id || (order as any).orderTypeId,
+    sales_channel:
+      (order.sales_channel as NormalizedOrder["sales_channel"]) || (order as any).salesChannel,
+    items: Array.isArray(order.items)
+      ? order.items.map((item) => normalizeItem(item))
+      : [],
+    subtotal: normalizeMoney(order.subtotal ?? (order as any).subtotal),
+    tax_amount: normalizeMoney(order.tax_amount ?? (order as any).taxAmount),
+    service_charge_amount: normalizeMoney(
+      order.service_charge_amount ?? (order as any).serviceCharge ?? (order as any).service_charge
+    ),
+    discount_amount: normalizeMoney(order.discount_amount ?? (order as any).discountAmount),
+    total_amount: normalizeMoney(order.total_amount ?? (order as any).total),
+    paid_amount: normalizeMoney(order.paid_amount ?? (order as any).paidAmount),
+    payment_status: order.payment_status || (order as any).paymentStatus || "unpaid",
+    payments: (order as any).payments,
+    order_number: order.order_number || (order as any).orderNumber || "-",
+    status: order.status || "draft",
+    customer_name: order.customer_name || (order as any).customerName,
+    table_number: order.table_number || (order as any).tableNumber,
+    notes: order.notes,
+    created_at: created_at ? new Date(created_at as Date | string) : undefined,
+    updated_at: order.updated_at,
+    completed_at: order.completed_at,
+  };
+};
+
 export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>("all");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const { data, isLoading } = useOrders(
     statusFilter !== "all" ? { status: statusFilter } : {}
   );
 
-  const orders = data?.orders || [];
+  const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
+
+  const normalizedOrders = useMemo(
+    () => (data?.orders || []).map((order) => normalizeOrder(order)),
+    [data]
+  );
+
+  const selectedOrder = useMemo(() => {
+    if (selectedOrderResponse) return normalizeOrder(selectedOrderResponse);
+    if (selectedOrderId) return normalizedOrders.find((order) => order.id === selectedOrderId) || null;
+    return null;
+  }, [normalizedOrders, selectedOrderId, selectedOrderResponse]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -49,18 +134,23 @@ export default function OrdersPage() {
     }).format(price);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string | undefined | null) => {
+    if (!date) return "-";
+
+    const parsedDate = new Date(date);
+    if (!Number.isFinite(parsedDate.getTime())) return "-";
+
     return new Intl.DateTimeFormat("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date(date));
+    }).format(parsedDate);
   };
 
   const getStatusCounts = () => {
-    const allOrders = data?.orders || [];
+    const allOrders = normalizedOrders;
     return {
       all: allOrders.length,
       draft: allOrders.filter((o) => o.status === "draft").length,
@@ -140,12 +230,12 @@ export default function OrdersPage() {
                 <div className="text-center py-16 text-muted-foreground">
                   Loading orders...
                 </div>
-              ) : orders.length === 0 ? (
+              ) : normalizedOrders.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   No orders found
                 </div>
               ) : (
-                orders.map((order) => {
+                normalizedOrders.map((order) => {
                   const statusConfig = ORDER_STATUS_CONFIG[order.status];
                   const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status] || PAYMENT_STATUS_CONFIG["unpaid"];
                   const StatusIcon = statusConfig.icon;
@@ -156,14 +246,14 @@ export default function OrdersPage() {
                       className={`cursor-pointer hover-elevate ${
                         selectedOrder?.id === order.id ? "ring-2 ring-primary" : ""
                       }`}
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={() => setSelectedOrderId(order.id)}
                       data-testid={`order-card-${order.id}`}
                     >
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <CardTitle className="text-base">
-                              {order.customer_name || "Walk-in Customer"}
+                              {order.customer_name || "Customer"}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground mt-1">
                               #{order.order_number}
@@ -215,7 +305,7 @@ export default function OrdersPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSelectedOrder(null)}
+                  onClick={() => setSelectedOrderId(null)}
                   data-testid="button-close-details"
                 >
                   <X className="w-4 h-4" />
@@ -229,7 +319,7 @@ export default function OrdersPage() {
                     <div>
                       <Label className="text-sm text-muted-foreground">Customer Name</Label>
                       <p className="font-medium">
-                        {selectedOrder.customer_name || "Walk-in Customer"}
+                        {selectedOrder.customer_name || "Customer"}
                       </p>
                     </div>
                     {selectedOrder.table_number && (
@@ -246,35 +336,39 @@ export default function OrdersPage() {
                   <div>
                     <h3 className="font-semibold mb-3">Order Details</h3>
                     <div className="space-y-3">
-                      {selectedOrder.items?.map((item, idx) => (
-                        <div key={idx} className="flex gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{item.product_name}</p>
-                            {item.variant_name && (
-                              <p className="text-xs text-muted-foreground">
-                                {item.variant_name}
-                              </p>
-                            )}
-                            {item.selected_options && item.selected_options.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {item.selected_options.map((opt, optIdx) => (
-                                  <Badge key={optIdx} variant="outline" className="text-xs">
-                                    {opt.option_name}
-                                  </Badge>
-                                ))}
+                      {selectedOrder.items?.length ? (
+                        selectedOrder.items.map((item, idx) => (
+                          <div key={idx} className="flex gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{item.product_name}</p>
+                              {item.variant_name && (
+                                <p className="text-xs text-muted-foreground">
+                                  {item.variant_name}
+                                </p>
+                              )}
+                              {item.selected_options && item.selected_options.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {item.selected_options.map((opt, optIdx) => (
+                                    <Badge key={optIdx} variant="outline" className="text-xs">
+                                      {opt.option_name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-sm text-muted-foreground">
+                                  x{item.quantity}
+                                </span>
+                                <span className="font-medium text-sm">
+                                  {formatPrice(item.item_subtotal)}
+                                </span>
                               </div>
-                            )}
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-sm text-muted-foreground">
-                                x{item.quantity}
-                              </span>
-                              <span className="font-medium text-sm">
-                                {formatPrice(item.item_subtotal)}
-                              </span>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No items for this order.</p>
+                      )}
                     </div>
                   </div>
 
