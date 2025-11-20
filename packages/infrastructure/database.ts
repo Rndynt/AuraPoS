@@ -19,7 +19,7 @@ if (!DATABASE_URL) {
 }
 
 // Create postgres client for proper .returning() support
-let sql;
+let sql: ReturnType<typeof postgres>;
 
 try {
   sql = postgres(DATABASE_URL);
