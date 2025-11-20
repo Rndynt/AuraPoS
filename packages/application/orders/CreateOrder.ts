@@ -4,10 +4,15 @@
  */
 
 import type { Order as DbOrder, InsertOrder } from '../../../shared/schema';
-import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
+import type { Order, OrderItem, SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
 import { toInsertOrderDb, toDomainOrder } from './mappers';
+import {
+  type CheckProductAvailabilityInput,
+  type CheckProductAvailabilityOutput,
+} from '../catalog';
+import { calculateSelectedOptionsDelta, flattenSelectedOptions } from '../catalog';
 
 export interface CreateOrderItemInput {
   product_id: string;
@@ -18,6 +23,7 @@ export interface CreateOrderItemInput {
   variant_name?: string;
   variant_price_delta?: number;
   selected_options?: SelectedOption[];
+  selected_option_groups?: SelectedOptionGroup[];
   notes?: string;
 }
 
@@ -52,6 +58,7 @@ export interface OrderItemInput {
     option_name: string;
     price_delta: number;
   }>;
+  selected_option_groups?: SelectedOptionGroup[];
   notes?: string;
   status?: string;
   item_subtotal: number;
@@ -66,10 +73,15 @@ export interface ITenantRepository {
   findById(tenantId: string): Promise<{ id: string; is_active: boolean } | null>;
 }
 
+export interface IProductAvailabilityService {
+  execute(input: CheckProductAvailabilityInput): Promise<CheckProductAvailabilityOutput>;
+}
+
 export class CreateOrder {
   constructor(
     private readonly orderRepository: IOrderRepository,
-    private readonly tenantRepository: ITenantRepository
+    private readonly tenantRepository: ITenantRepository,
+    private readonly productAvailabilityService: IProductAvailabilityService
   ) {}
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
@@ -92,11 +104,28 @@ export class CreateOrder {
       let subtotal = 0;
 
       for (const itemInput of input.items) {
+        const availability = await this.productAvailabilityService.execute({
+          productId: itemInput.product_id,
+          tenantId: input.tenant_id,
+          requestedQuantity: itemInput.quantity,
+        });
+
+        if (!availability.isAvailable) {
+          throw new Error(
+            availability.reason || 'Product is not available in requested quantity'
+          );
+        }
+
         const variantDelta = itemInput.variant_price_delta ?? 0;
-        const optionsDelta = itemInput.selected_options?.reduce(
-          (sum, opt) => sum + opt.price_delta,
-          0
-        ) ?? 0;
+        const optionsDelta = calculateSelectedOptionsDelta(
+          itemInput.selected_options,
+          itemInput.selected_option_groups
+        );
+
+        const flattenedOptions = flattenSelectedOptions(
+          itemInput.selected_options,
+          itemInput.selected_option_groups
+        );
 
         const itemPrice = itemInput.base_price + variantDelta + optionsDelta;
         const itemSubtotal = itemPrice * itemInput.quantity;
@@ -109,7 +138,8 @@ export class CreateOrder {
           variant_id: itemInput.variant_id,
           variant_name: itemInput.variant_name,
           variant_price_delta: variantDelta,
-          selected_options: itemInput.selected_options,
+          selected_options: flattenedOptions,
+          selected_option_groups: itemInput.selected_option_groups,
           quantity: itemInput.quantity,
           item_subtotal: itemSubtotal,
           notes: itemInput.notes,

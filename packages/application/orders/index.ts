@@ -9,7 +9,8 @@ export type {
   CreateOrderOutput,
   CreateOrderItemInput,
   IOrderRepository as IOrderRepositoryForCreateOrder,
-  ITenantRepository as ITenantRepositoryForCreateOrder
+  ITenantRepository as ITenantRepositoryForCreateOrder,
+  IProductAvailabilityService
 } from './CreateOrder';
 
 export { CalculateOrderPricing } from './CalculateOrderPricing';

@@ -12,6 +12,11 @@ export type ProductOption = {
   price_delta: number;
   inventory_sku?: string;
   is_available?: boolean;
+  /**
+   * Nested modifier groups that become available after selecting this option
+   * Enables layered option configurations (e.g., choose sauce → choose toppings)
+   */
+  child_groups?: ProductOptionGroup[];
 };
 
 /**

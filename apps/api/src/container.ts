@@ -111,7 +111,8 @@ class Container {
     // Orders
     this.createOrder = new CreateOrder(
       this.orderRepository as any,
-      this.tenantRepository as any
+      this.tenantRepository as any,
+      this.checkProductAvailability as any
     );
     this.recordPayment = new RecordPayment(
       this.orderRepository as any,

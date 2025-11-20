@@ -3,14 +3,16 @@
  * Calculates comprehensive pricing breakdown for an order
  */
 
-import type { SelectedOption } from '@pos/domain/orders/types';
+import type { SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import type { PriceCalculation, AppliedDiscount } from '@pos/domain/pricing/types';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
+import { calculateSelectedOptionsDelta } from '../catalog';
 
 export interface OrderItemForPricing {
   base_price: number;
   variant_price_delta?: number;
   selected_options?: SelectedOption[];
+  selected_option_groups?: SelectedOptionGroup[];
   quantity: number;
 }
 
@@ -32,10 +34,10 @@ export class CalculateOrderPricing {
 
       for (const item of input.items) {
         const variantDelta = item.variant_price_delta ?? 0;
-        const optionsDelta = item.selected_options?.reduce(
-          (sum, opt) => sum + opt.price_delta,
-          0
-        ) ?? 0;
+        const optionsDelta = calculateSelectedOptionsDelta(
+          item.selected_options,
+          item.selected_option_groups
+        );
 
         const itemPrice = item.base_price + variantDelta + optionsDelta;
         const itemSubtotal = itemPrice * item.quantity;
@@ -83,10 +85,10 @@ export class CalculateOrderPricing {
 
   calculateItemPrice(item: OrderItemForPricing): number {
     const variantDelta = item.variant_price_delta ?? 0;
-    const optionsDelta = item.selected_options?.reduce(
-      (sum, opt) => sum + opt.price_delta,
-      0
-    ) ?? 0;
+    const optionsDelta = calculateSelectedOptionsDelta(
+      item.selected_options,
+      item.selected_option_groups
+    );
 
     return item.base_price + variantDelta + optionsDelta;
   }
