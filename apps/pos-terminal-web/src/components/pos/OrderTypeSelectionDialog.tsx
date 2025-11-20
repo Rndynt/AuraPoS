@@ -33,7 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useTenant } from "@/context/TenantContext";
 import type { OrderType } from "@pos/domain/orders/types";
-import { ShoppingBag, Utensils, Coffee, Package } from "lucide-react";
+import { ShoppingBag, Utensils, Coffee, Package, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   orderTypeId: z.string().min(1, "Please select an order type"),
@@ -56,6 +56,7 @@ type OrderTypeSelectionDialogProps = {
   orderTypes: OrderType[];
   orderTypesLoading: boolean;
   cartTotal: number;
+  isSubmitting?: boolean;
 };
 
 const getOrderTypeIcon = (code: string) => {
@@ -79,6 +80,7 @@ export function OrderTypeSelectionDialog({
   orderTypes,
   orderTypesLoading,
   cartTotal,
+  isSubmitting = false,
 }: OrderTypeSelectionDialogProps) {
   const { hasModule } = useTenant();
   const hasTableManagement = hasModule("enable_table_management");
@@ -117,13 +119,12 @@ export function OrderTypeSelectionDialog({
     }).format(value);
   };
 
-  const handleSubmit = (values: FormValues) => {
-    onConfirm({
+  const handleSubmit = async (values: FormValues) => {
+    await onConfirm({
       orderTypeId: values.orderTypeId,
       tableNumber: values.tableNumber || undefined,
       markAsPaid: values.markAsPaid,
     });
-    onClose();
   };
 
   const handleCancel = () => {
@@ -169,7 +170,14 @@ export function OrderTypeSelectionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleCancel}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!isSubmitting && !nextOpen) {
+          handleCancel();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-order-type-selection">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)}>
@@ -207,6 +215,7 @@ export function OrderTypeSelectionDialog({
                         value={field.value}
                         onValueChange={field.onChange}
                         data-testid="radiogroup-order-type"
+                        disabled={isSubmitting}
                       >
                         <div className="space-y-2">
                           {activeOrderTypes.map((orderType) => (
@@ -246,7 +255,11 @@ export function OrderTypeSelectionDialog({
                     <FormLabel>Table Number (Optional)</FormLabel>
                     <FormControl>
                       {hasTableManagement ? (
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isSubmitting}
+                        >
                           <SelectTrigger data-testid="select-table">
                             <SelectValue placeholder="Select a table" />
                           </SelectTrigger>
@@ -274,9 +287,10 @@ export function OrderTypeSelectionDialog({
                           type="text"
                           placeholder="Enter table number"
                           data-testid="input-table-number"
+                          disabled={isSubmitting}
                         />
                       )}
-                    </FormControl>
+                  </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -294,6 +308,7 @@ export function OrderTypeSelectionDialog({
                           checked={field.value}
                           onCheckedChange={field.onChange}
                           data-testid="checkbox-mark-as-paid"
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <div className="flex-1 space-y-1">
@@ -317,12 +332,14 @@ export function OrderTypeSelectionDialog({
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
+                disabled={isSubmitting}
                 data-testid="button-cancel"
               >
                 Cancel
               </Button>
-              <Button type="submit" data-testid="button-confirm-order">
-                Confirm Order
+              <Button type="submit" data-testid="button-confirm-order" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? "Processing..." : "Confirm Order"}
               </Button>
             </DialogFooter>
           </form>

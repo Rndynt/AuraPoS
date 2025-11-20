@@ -23,6 +23,7 @@ export default function POSPage() {
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
   const [orderTypeSelectionDialogOpen, setOrderTypeSelectionDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
   const cart = useCart();
   const { hasFeature } = useFeatures();
@@ -152,6 +153,17 @@ export default function POSPage() {
 
   const handleOrderTypeConfirm = async (result: OrderTypeSelectionResult) => {
     try {
+      setIsSubmittingOrder(true);
+
+      if (!result.orderTypeId) {
+        toast({
+          title: "Order type required",
+          description: "Please select an order type before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Build order payload with order type and table number from dialog
       const orderPayload = {
         items: cart.toBackendOrderItems(),
@@ -213,6 +225,8 @@ export default function POSPage() {
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -452,6 +466,7 @@ export default function POSPage() {
         orderTypes={orderTypes || []}
         orderTypesLoading={orderTypesLoading}
         cartTotal={cart.total}
+        isSubmitting={isSubmittingOrder}
       />
     </div>
   );
