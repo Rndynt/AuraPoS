@@ -4,6 +4,7 @@
  */
 
 import type { Order, OrderPayment } from '@pos/domain/orders/types';
+import type { InsertOrderPayment } from '../../../shared/schema';
 
 export interface RecordPaymentInput {
   order_id: string;
@@ -21,12 +22,12 @@ export interface RecordPaymentOutput {
 }
 
 export interface IOrderRepository {
-  findById(orderId: string): Promise<Order | null>;
-  update(orderId: string, updates: Partial<Order>): Promise<Order>;
+  findById(orderId: string, tenantId: string): Promise<any | null>;
+  update(orderId: string, updates: Record<string, any>, tenantId: string): Promise<Order>;
 }
 
 export interface IPaymentRepository {
-  create(payment: Omit<OrderPayment, 'id'>): Promise<OrderPayment>;
+  create(payment: InsertOrderPayment, tenantId: string): Promise<OrderPayment>;
 }
 
 export class RecordPayment {
@@ -41,20 +42,23 @@ export class RecordPayment {
         throw new Error('Payment amount must be greater than zero');
       }
 
-      const order = await this.orderRepository.findById(input.order_id);
+      const order = await this.orderRepository.findById(input.order_id, input.tenant_id);
       if (!order) {
         throw new Error('Order not found');
       }
 
-      if (order.tenant_id !== input.tenant_id) {
+      if ((order.tenant_id || order.tenantId) !== input.tenant_id) {
         throw new Error('Order does not belong to the specified tenant');
       }
 
-      if (order.status === 'cancelled') {
+      if ((order.status as string) === 'cancelled') {
         throw new Error('Cannot record payment for cancelled order');
       }
 
-      const remainingAmount = order.total_amount - order.paid_amount;
+      const orderTotal = parseFloat(order.total_amount ?? order.total ?? '0');
+      const orderPaid = parseFloat(order.paid_amount ?? order.paidAmount ?? '0');
+
+      const remainingAmount = orderTotal - orderPaid;
 
       if (input.amount > remainingAmount) {
         throw new Error(
@@ -62,20 +66,19 @@ export class RecordPayment {
         );
       }
 
-      const payment: Omit<OrderPayment, 'id'> = {
-        order_id: input.order_id,
-        amount: input.amount,
-        payment_method: input.payment_method,
-        payment_status: 'completed',
-        transaction_ref: input.transaction_ref,
+      const payment: InsertOrderPayment = {
+        orderId: input.order_id,
+        amount: input.amount.toString(),
+        paymentMethod: input.payment_method,
+        paymentDate: new Date(),
+        referenceNumber: input.transaction_ref,
         notes: input.notes,
-        paid_at: new Date(),
       };
 
-      const createdPayment = await this.paymentRepository.create(payment);
+      const createdPayment = await this.paymentRepository.create(payment, input.tenant_id);
 
-      const newPaidAmount = order.paid_amount + input.amount;
-      const newRemainingAmount = order.total_amount - newPaidAmount;
+      const newPaidAmount = orderPaid + input.amount;
+      const newRemainingAmount = orderTotal - newPaidAmount;
 
       let newPaymentStatus: 'paid' | 'partial' | 'unpaid';
       if (newRemainingAmount === 0) {
@@ -86,10 +89,14 @@ export class RecordPayment {
         newPaymentStatus = 'unpaid';
       }
 
-      const updatedOrder = await this.orderRepository.update(input.order_id, {
-        paid_amount: newPaidAmount,
-        payment_status: newPaymentStatus,
-      });
+      const updatedOrder = await this.orderRepository.update(
+        input.order_id,
+        {
+          paidAmount: newPaidAmount.toString(),
+          paymentStatus: newPaymentStatus,
+        },
+        input.tenant_id
+      );
 
       return {
         payment: createdPayment,
