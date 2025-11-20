@@ -1,7 +1,6 @@
 import type { CartItem as CartItemType, PaymentMethod } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -176,31 +175,27 @@ export function CartPanel({
       </div>
 
       {/* Scrollable content area with max height to keep footer visible */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="p-4 space-y-3">
-            {items.length === 0 ? (
-              <div className="py-16 text-center space-y-3">
-                <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground" data-testid="text-empty-cart">
-                  No Item Selected
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {items.map((item) => (
-                  <CartItem
-                    key={item.id}
-                    item={item}
-                    onUpdateQty={onUpdateQty}
-                    onRemove={onRemove}
-                    getItemPrice={getItemPrice}
-                  />
-                ))}
-              </div>
-            )}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+        {items.length === 0 ? (
+          <div className="py-16 text-center space-y-3">
+            <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
+            <p className="text-muted-foreground" data-testid="text-empty-cart">
+              No Item Selected
+            </p>
           </div>
-        </ScrollArea>
+        ) : (
+          <div className="space-y-0">
+            {items.map((item) => (
+              <CartItem
+                key={item.id}
+                item={item}
+                onUpdateQty={onUpdateQty}
+                onRemove={onRemove}
+                getItemPrice={getItemPrice}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Footer with totals and actions */}

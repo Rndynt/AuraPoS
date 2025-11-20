@@ -301,7 +301,7 @@ export default function POSPage() {
       />
 
       {/* Cart Panel - Hidden on mobile */}
-      <div className="hidden lg:block w-[360px]">
+      <div className="hidden lg:block w-[360px] h-full">
         <CartPanel
           items={cart.items}
           onUpdateQty={cart.updateQuantity}
