@@ -4,10 +4,15 @@
  */
 
 import type { Order as DbOrder, InsertOrder } from '../../../shared/schema';
-import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
+import type { Order, OrderItem, SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
 import { toInsertOrderDb, toDomainOrder } from './mappers';
+import {
+  type CheckProductAvailabilityInput,
+  type CheckProductAvailabilityOutput,
+} from '../catalog';
+import { calculateSelectedOptionsDelta, flattenSelectedOptions } from '../catalog';
 
 export interface CreateOrderItemInput {
   product_id: string;
@@ -18,6 +23,7 @@ export interface CreateOrderItemInput {
   variant_name?: string;
   variant_price_delta?: number;
   selected_options?: SelectedOption[];
+  selected_option_groups?: SelectedOptionGroup[];
   notes?: string;
 }
 
@@ -52,6 +58,7 @@ export interface OrderItemInput {
     option_name: string;
     price_delta: number;
   }>;
+  selected_option_groups?: SelectedOptionGroup[];
   notes?: string;
   status?: string;
   item_subtotal: number;
@@ -66,10 +73,15 @@ export interface ITenantRepository {
   findById(tenantId: string): Promise<{ id: string; is_active: boolean } | null>;
 }
 
+export interface IProductAvailabilityService {
+  execute(input: CheckProductAvailabilityInput): Promise<CheckProductAvailabilityOutput>;
+}
+
 export class CreateOrder {
   constructor(
     private readonly orderRepository: IOrderRepository,
-    private readonly tenantRepository: ITenantRepository
+    private readonly tenantRepository: ITenantRepository,
+    private readonly productAvailabilityService: IProductAvailabilityService
   ) {}
 
   async execute(input: CreateOrderInput): Promise<CreateOrderOutput> {
@@ -86,17 +98,49 @@ export class CreateOrder {
         throw new Error('Order must contain at least one item');
       }
 
+      const productQuantities = new Map<string, number>();
+      const productNames = new Map<string, string>();
+      for (const itemInput of input.items) {
+        const currentQuantity = productQuantities.get(itemInput.product_id) ?? 0;
+        productQuantities.set(itemInput.product_id, currentQuantity + itemInput.quantity);
+        if (!productNames.has(itemInput.product_id)) {
+          productNames.set(itemInput.product_id, itemInput.product_name);
+        }
+      }
+
+      for (const [productId, requestedQuantity] of productQuantities) {
+        const availability = await this.productAvailabilityService.execute({
+          productId,
+          tenantId: input.tenant_id,
+          requestedQuantity,
+        });
+
+        if (!availability.isAvailable) {
+          const productName = productNames.get(productId);
+          const productLabel = productName ? `${productName} (${productId})` : productId;
+          throw new Error(
+            availability.reason || `${productLabel} is not available in requested quantity`
+          );
+        }
+      }
+
       const orderNumber = await this.orderRepository.generateOrderNumber(input.tenant_id);
 
       const orderItems: OrderItem[] = [];
       let subtotal = 0;
 
       for (const itemInput of input.items) {
+
         const variantDelta = itemInput.variant_price_delta ?? 0;
-        const optionsDelta = itemInput.selected_options?.reduce(
-          (sum, opt) => sum + opt.price_delta,
-          0
-        ) ?? 0;
+        const optionsDelta = calculateSelectedOptionsDelta(
+          itemInput.selected_options,
+          itemInput.selected_option_groups
+        );
+
+        const flattenedOptions = flattenSelectedOptions(
+          itemInput.selected_options,
+          itemInput.selected_option_groups
+        );
 
         const itemPrice = itemInput.base_price + variantDelta + optionsDelta;
         const itemSubtotal = itemPrice * itemInput.quantity;
@@ -109,7 +153,8 @@ export class CreateOrder {
           variant_id: itemInput.variant_id,
           variant_name: itemInput.variant_name,
           variant_price_delta: variantDelta,
-          selected_options: itemInput.selected_options,
+          selected_options: flattenedOptions,
+          selected_option_groups: itemInput.selected_option_groups,
           quantity: itemInput.quantity,
           item_subtotal: itemSubtotal,
           notes: itemInput.notes,

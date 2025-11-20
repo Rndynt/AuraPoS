@@ -13,6 +13,21 @@ export type SelectedOption = {
   option_id: string;
   option_name: string;
   price_delta: number;
+  /**
+   * Nested modifier groups chosen after selecting this option
+   */
+  child_groups?: SelectedOptionGroup[];
+};
+
+/**
+ * A collection of selected options that belong to the same option group
+ * Supports layered modifier configurations (groups unlocked by parent options)
+ */
+export type SelectedOptionGroup = {
+  group_id: string;
+  group_name: string;
+  selection_type?: "single" | "multiple";
+  selected_options: SelectedOption[];
 };
 
 /**
@@ -29,9 +44,10 @@ export type OrderItem = {
   variant_id?: string;
   variant_name?: string;
   variant_price_delta?: number;
-  
+
   // Modern multi-variant support
   selected_options?: SelectedOption[];
+  selected_option_groups?: SelectedOptionGroup[];
   
   // Quantity and pricing
   quantity: number;

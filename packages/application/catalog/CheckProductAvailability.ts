@@ -27,6 +27,15 @@ export class CheckProductAvailability {
 
   async execute(input: CheckProductAvailabilityInput): Promise<CheckProductAvailabilityOutput> {
     try {
+      if (input.requestedQuantity <= 0) {
+        return {
+          isAvailable: false,
+          product: null,
+          availableQuantity: 0,
+          reason: 'Requested quantity must be greater than zero',
+        };
+      }
+
       const product = await this.productRepository.findById(input.productId);
 
       if (!product) {

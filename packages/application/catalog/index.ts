@@ -37,3 +37,8 @@ export type {
   IProductOptionRepository as IProductOptionRepositoryForCreateOrUpdate,
   ITenantRepository as ITenantRepositoryForCreateOrUpdate
 } from './CreateOrUpdateProduct';
+
+export {
+  calculateSelectedOptionsDelta,
+  flattenSelectedOptions,
+} from './pricing';
