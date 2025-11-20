@@ -287,7 +287,7 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-1 overflow-x-hidden w-full max-w-[100vw]">
+    <div className="flex flex-1 min-h-0 overflow-hidden w-full max-w-[100vw]">
       {/* Main Product Area */}
       <ProductArea 
         products={products}
@@ -301,7 +301,7 @@ export default function POSPage() {
       />
 
       {/* Cart Panel - Hidden on mobile */}
-      <div className="hidden lg:block w-[360px] h-full">
+      <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full">
         <CartPanel
           items={cart.items}
           onUpdateQty={cart.updateQuantity}
