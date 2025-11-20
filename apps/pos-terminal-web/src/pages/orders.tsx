@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useOrder, useOrders } from "@/lib/api/hooks";
+import { useOrder, useOrders, useRecordPayment } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ListFilter, 
   X, 
@@ -115,12 +116,15 @@ const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<OrderViewTab>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch all orders without filtering by status on the API level
   // We'll filter on the client side to avoid double filtering issues
   const { data, isLoading, error } = useOrders();
 
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
+  
+  const recordPaymentMutation = useRecordPayment();
 
   const normalizedOrders = useMemo(
     () => (data?.orders || []).map((order) => normalizeOrder(order)),
@@ -200,6 +204,41 @@ export default function OrdersPage() {
   };
 
   const counts = getTabCounts();
+
+  const handleProcessTransaction = async () => {
+    if (!selectedOrder) return;
+
+    const remainingAmount = selectedOrder.total_amount - selectedOrder.paid_amount;
+
+    if (remainingAmount <= 0) {
+      toast({
+        title: "Already Paid",
+        description: "This order has already been fully paid.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await recordPaymentMutation.mutateAsync({
+        orderId: selectedOrder.id,
+        amount: remainingAmount,
+        payment_method: "cash",
+      });
+
+      toast({
+        title: "Payment Recorded",
+        description: `Payment of ${formatPrice(remainingAmount)} recorded successfully.`,
+      });
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "Failed to record payment",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">
@@ -460,8 +499,13 @@ export default function OrdersPage() {
               </ScrollArea>
 
               <div className="p-4 md:p-6 border-t border-border flex-shrink-0">
-                <Button className="w-full" data-testid="button-process-transaction">
-                  Process Transaction
+                <Button 
+                  className="w-full" 
+                  data-testid="button-process-transaction"
+                  onClick={handleProcessTransaction}
+                  disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
+                >
+                  {recordPaymentMutation.isPending ? "Processing..." : "Process Transaction"}
                 </Button>
               </div>
             </>

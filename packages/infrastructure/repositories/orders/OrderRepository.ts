@@ -18,7 +18,7 @@ import {
   type OrderPayment,
 } from '../../../../shared/schema';
 import { eq, and, gte, lte, inArray, desc, sql } from 'drizzle-orm';
-import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from '../../../application/orders/mappers';
+import { toInsertOrderItemDb, toInsertOrderItemModifierDb, toDomainSelectedOption } from '../../../application/orders/mappers';
 import type { OrderItem as DomainOrderItem } from '@pos/domain/orders/types';
 
 export interface OrderFilters {
@@ -199,11 +199,18 @@ export class OrderRepository
         return acc;
       }, {} as Record<string, OrderItemModifier[]>);
 
-      // Build complete items with modifiers
-      const completeItems = items.map((item) => ({
-        ...item,
-        modifiers: modifiersByItem[item.id] || [],
-      }));
+      // Add modifiers to items and convert to selected_options for frontend
+      const completeItems = items.map((item) => {
+        const itemModifiers = modifiersByItem[item.id] || [];
+        
+        // Keep original item structure, just add selected_options
+        return {
+          ...item,
+          modifiers: itemModifiers,
+          // Add selected_options for frontend compatibility
+          selected_options: itemModifiers.map(mod => toDomainSelectedOption(mod)),
+        };
+      });
 
       return {
         ...order,

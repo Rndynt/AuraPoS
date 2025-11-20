@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -83,8 +83,11 @@ export function OrderTypeSelectionDialog({
   const { hasModule } = useTenant();
   const hasTableManagement = hasModule("enable_table_management");
 
-  // Filter active order types
-  const activeOrderTypes = orderTypes.filter((ot) => ot.isActive === true);
+  // Filter active order types - memoized to prevent infinite loop
+  const activeOrderTypes = useMemo(
+    () => orderTypes.filter((ot) => ot.isActive === true),
+    [orderTypes]
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -104,7 +107,7 @@ export function OrderTypeSelectionDialog({
         markAsPaid: false,
       });
     }
-  }, [open, activeOrderTypes, form]);
+  }, [open, activeOrderTypes]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("id-ID", {

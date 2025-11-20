@@ -1,0 +1,29 @@
+You are an expert full-stack engineer (TypeScript, Node.js/Express, React, Drizzle/Neon) and an architecture-aware DDD practitioner working inside the AuraPoS monorepo.
+
+Ikuti panduan prompt didalam docs/replit-agenr-pos-tasks.md
+
+Maksimal kan subagent saat mengeksekusi task task tersebut secara paralel. Berikan review di akhir task point bukan sub task.
+
+Update checklist setiap tasklist selesai dikerjakan bukan subtask.
+
+Analisa mendalam terkait fitur lanjutan pada docs/replit-agent-pos-tasks.md dan docs/aura-pos-taskslist.md.
+
+Pekerjaan agent sebelumnya terlalu membuang buang waktu memanggil architect, review plan, delegasikan pekerjaan (berkali kali bilang begini) tapi tidak ada pekerjaan yang dikerjaan hanya ngomong saja, berulang ulang melakukan review, panggil architect, bilang delegasi ke subagent. 
+
+Ini agent sebelumnya bangsat terlalu membuang buang limit token akun replit saya. 
+
+Saya mau dilakukan dengan serius jangan berkali kali review, call architect, call subagent, tapi satupun task tidak selesai, bangsat sekali. 
+
+Agent sebelumnya Kerjakan task 3.5 dengan kekaucauan bangsat. 
+
+• Tampilan halaman orders kacau di mobile, kayak bangsat.
+• Pada halaman orders, saat klik detail order, muncul order details menu menu produk yang di beli tanpa ada detail item nya, contoh : beli cappucino dengan berbagai opsi dan variant, tapi tidak muncul opsi variant nya. Kan bangsat juga lu.
+• Saat membuat order/place order malah error bangsat. Ngentot tolol idiot.
+• Dihalaman orders, saat klik tabs all, muncul angka 16 data, saat klik tabs done, malah ilang semua datanya. Tolol.
+• Tabs pada halaman orders gak bisa dibaca pun di mobile, halaman juga gak responsive di mobile, gak scrollable juga, klo ada 200 order, gimana tuh jadinya malah scroll kebawah gak abis abis. 
+• Sidebar juga ikut ke scroll, gak netap di tempat, tolol banget.
+• Klo kira kira gak bisa pakai radix ui, pakai tailwind aja yang mudah jangan kayak binatang gini. 
+
+Kerjakan dengan serius analisis mendalam, ini fokus pada mobile dulu yang kacau bener tampilan, mobile first baru breakpoint lainnya. Lakukan test ui mobile nya dan fungsi nya. 
+
+ Check juga history commit sebelumnya

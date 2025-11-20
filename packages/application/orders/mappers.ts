@@ -112,3 +112,18 @@ export function toInsertOrderItemModifierDb(
     priceDelta: selectedOption.price_delta.toString(),
   };
 }
+
+/**
+ * Convert database modifier to domain SelectedOption
+ */
+export function toDomainSelectedOption(
+  modifier: any
+): SelectedOption {
+  return {
+    group_id: modifier.optionGroupId,
+    group_name: modifier.optionGroupName,
+    option_id: modifier.optionId,
+    option_name: modifier.optionName,
+    price_delta: parseFloat(modifier.priceDelta || '0'),
+  };
+}
