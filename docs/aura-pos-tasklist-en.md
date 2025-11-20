@@ -147,6 +147,16 @@
   - [ ] Returns products including option groups/options.
 - [ ] `CreateOrUpdateProduct`:
   - [ ] Handles product + variants + option groups in one operation.
+  - [ ] **Design decision pending:** clarify whether updates must include core fields (`name`, `base_price`, `category`) or should allow true partial updates where any single field can be changed without resending the others.
+    - **Current issue:** validation still enforces `name`, `base_price`, and `category` on update, so callers cannot patch a single field (e.g., change price only). This regresses the advertised "CreateOrUpdateProduct" contract and blocks idempotent PATCH-like behavior.
+    - **Impact:** mobile/POS clients must supply stale values for untouched fields, increasing risk of accidental data loss when payloads omit nested option groups/variants. It also prevents lightweight price/category tweaks and complicates bulk update tooling.
+    - **Bug manifestation:** update attempts that omit required fields fail validation entirely, so retries/backfills cannot proceed; when callers include stale nested data to satisfy validation, product options/variants can be overwritten unintentionally (data loss regression vs docs that promise atomic product+variant updates).
+    - **Design gap vs docs:** checklist advertises a single orchestration endpoint that can update product/variant/option groups together. The current required-field validation effectively behaves like a full-replace PUT, conflicting with the implied PATCH-like semantics for nested objects and partial metadata updates.
+    - **Recommended remediation:**
+      - Treat updates as partial by default (all fields optional, merge into existing record) while keeping create path strict.
+      - Add transactional integration tests covering: price-only update; option-group-only update; metadata-only update; variant add/remove/update with untouched product fields; idempotent retries.
+      - Ensure nested collection handling follows an explicit strategy (e.g., upsert by id + soft delete for missing items) to avoid silent drops when callers send partial payloads.
+      - Add clear API docs describing required vs optional fields for create vs update, and error codes for conflicting nested operations.
 - [ ] (Later) `BulkImportProducts` for retail/minimarket.
 
 ### 2.4 POS UI integration
