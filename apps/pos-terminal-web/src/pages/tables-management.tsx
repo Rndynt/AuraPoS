@@ -304,9 +304,27 @@ export default function TablesManagementPage() {
                     {order.orderItems && order.orderItems.length > 0 && (
                       <div className="bg-background p-2 rounded text-xs space-y-1 border border-muted-foreground/10">
                         {order.orderItems.map((item: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-start gap-1">
-                            <span className="text-muted-foreground">{item.productName}</span>
-                            <span className="font-medium text-xs">×{item.quantity}</span>
+                          <div key={idx} className="space-y-0.5">
+                            <div className="flex justify-between items-start gap-1">
+                              <span className="text-muted-foreground font-medium">{item.productName || item.product_name}</span>
+                              <span className="font-medium">×{item.quantity}</span>
+                            </div>
+                            {/* Show variant if exists */}
+                            {(item.variantName || item.variant_name) && (
+                              <div className="text-xs text-muted-foreground/70 ml-1">
+                                • {item.variantName || item.variant_name}
+                              </div>
+                            )}
+                            {/* Show selected options if exists */}
+                            {item.selectedOptions && item.selectedOptions.length > 0 && (
+                              <div className="text-xs text-muted-foreground/70 ml-1">
+                                {item.selectedOptions.map((opt: any) => (
+                                  <div key={`${opt.group_id || opt.groupId}-${opt.option_id || opt.optionId}`}>
+                                    • {opt.option_name || opt.optionName}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

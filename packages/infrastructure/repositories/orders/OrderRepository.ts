@@ -148,12 +148,34 @@ export class OrderRepository
         .from(orderItems)
         .where(inArray(orderItems.orderId, orderIds));
 
-      // Group items by order ID
+      // Fetch all modifiers for these items
+      const itemIds = allItems.map((item) => item.id);
+      const modifiersMap = new Map<string, any[]>();
+
+      if (itemIds.length > 0) {
+        const allModifiers = await this.db
+          .select()
+          .from(orderItemModifiers)
+          .where(inArray(orderItemModifiers.orderItemId, itemIds));
+
+        allModifiers.forEach((modifier) => {
+          if (!modifiersMap.has(modifier.orderItemId)) {
+            modifiersMap.set(modifier.orderItemId, []);
+          }
+          modifiersMap.get(modifier.orderItemId)!.push(modifier);
+        });
+      }
+
+      // Group items by order ID and attach modifiers
       allItems.forEach((item) => {
+        const itemWithModifiers = {
+          ...item,
+          selectedOptions: modifiersMap.get(item.id) || [],
+        };
         if (!itemsMap.has(item.orderId)) {
           itemsMap.set(item.orderId, []);
         }
-        itemsMap.get(item.orderId)!.push(item);
+        itemsMap.get(item.orderId)!.push(itemWithModifiers);
       });
 
       // Attach items to each order
