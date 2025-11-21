@@ -57,6 +57,7 @@ type OrderTypeSelectionDialogProps = {
   orderTypesLoading: boolean;
   cartTotal: number;
   isSubmitting?: boolean;
+  initialSelectedOrderTypeId?: string | null;
 };
 
 const getOrderTypeIcon = (code: string) => {
@@ -81,6 +82,7 @@ export function OrderTypeSelectionDialog({
   orderTypesLoading,
   cartTotal,
   isSubmitting = false,
+  initialSelectedOrderTypeId,
 }: OrderTypeSelectionDialogProps) {
   const { hasModule } = useTenant();
   const hasTableManagement = hasModule("enable_table_management");
@@ -100,16 +102,17 @@ export function OrderTypeSelectionDialog({
     },
   });
 
-  // Reset form when dialog opens
+  // Reset form when dialog opens - use initialSelectedOrderTypeId if provided
   useEffect(() => {
     if (open && activeOrderTypes.length > 0) {
+      const defaultOrderTypeId = initialSelectedOrderTypeId || activeOrderTypes[0].id;
       form.reset({
-        orderTypeId: activeOrderTypes[0].id,
+        orderTypeId: defaultOrderTypeId,
         tableNumber: "",
         markAsPaid: false,
       });
     }
-  }, [open, activeOrderTypes]);
+  }, [open, activeOrderTypes, initialSelectedOrderTypeId, form]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("id-ID", {

@@ -144,8 +144,82 @@ export default function POSPage() {
     });
   };
 
-  const handleCharge = () => {
+  const handleCharge = async () => {
     if (!ensureCartHasItems()) return;
+    
+    // P2 Quick Charge Path - check if order type already selected
+    if (cart.selectedOrderTypeId) {
+      // Get the selected order type metadata
+      const selectedOrderType = activeOrderTypes.find(ot => ot.id === cart.selectedOrderTypeId);
+      
+      if (selectedOrderType) {
+        // Check if order type requires table number
+        const needsTable = selectedOrderType.needTableNumber === true;
+        
+        // If table is required but not set, open dialog for table entry
+        if (needsTable && !cart.tableNumber) {
+          setOrderTypeSelectionDialogOpen(true);
+          setMobileCartOpen(false);
+          return;
+        }
+        
+        // All metadata ready - direct charge without dialog
+        try {
+          setIsSubmittingOrder(true);
+          
+          const orderPayload = {
+            items: cart.toBackendOrderItems(),
+            tax_rate: cart.taxRate,
+            service_charge_rate: cart.serviceChargeRate,
+            order_type_id: cart.selectedOrderTypeId,
+            customer_name: cart.customerName || undefined,
+            table_number: cart.tableNumber || undefined,
+          };
+          
+          // Create the order
+          const orderResult = await createOrderMutation.mutateAsync(orderPayload);
+          
+          // Auto-pay on direct charge (quick cash sales workflow)
+          await recordPaymentMutation.mutateAsync({
+            orderId: orderResult.order.id,
+            amount: orderResult.pricing.total_amount,
+            payment_method: cart.paymentMethod,
+          });
+          
+          toast({
+            title: "Order completed & paid",
+            description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")} (Paid)`,
+          });
+          
+          cart.clearCart();
+          setMobileCartOpen(false);
+        } catch (error) {
+          let errorMessage = "Failed to process order";
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          const apiError = error as any;
+          if (apiError?.response?.data?.message) {
+            errorMessage = apiError.response.data.message;
+          } else if (apiError?.body?.message) {
+            errorMessage = apiError.body.message;
+          }
+          
+          console.error("Quick charge error details:", error);
+          
+          toast({
+            title: "Order failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        } finally {
+          setIsSubmittingOrder(false);
+        }
+        return;
+      }
+    }
+    
+    // No order type selected - open dialog for selection
     setOrderTypeSelectionDialogOpen(true);
     setMobileCartOpen(false);
   };
@@ -466,6 +540,7 @@ export default function POSPage() {
         orderTypesLoading={orderTypesLoading}
         cartTotal={cart.total}
         isSubmitting={isSubmittingOrder}
+        initialSelectedOrderTypeId={cart.selectedOrderTypeId}
       />
     </div>
   );
