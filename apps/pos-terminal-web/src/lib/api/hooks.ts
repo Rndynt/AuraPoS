@@ -279,6 +279,7 @@ export function useUpdateOrder() {
       mutateWithTenantHeader("PATCH", `/api/orders/${orderId}`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/open"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
     },
   });
