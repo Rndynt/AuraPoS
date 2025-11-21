@@ -38,6 +38,9 @@ router.get('/', OrdersController.listOrders);
 // GET /api/orders/:id - Get single order
 router.get('/:id', OrdersController.getOrderById);
 
+// PATCH /api/orders/:id - Update order
+router.patch('/:id', OrdersController.updateOrder);
+
 // POST /api/orders/:id/confirm - Confirm draft order
 router.post('/:id/confirm', OrdersController.confirmOrder);
 

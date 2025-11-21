@@ -240,6 +240,69 @@ export const getOrderById = asyncHandler(async (req: Request, res: Response) => 
 });
 
 /**
+ * PATCH /api/orders/:id
+ * Update an existing order (items, customer name, table, etc)
+ */
+export const updateOrder = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw createError('Order ID is required', 400, 'MISSING_PARAMETER');
+  }
+
+  const selectedOptionSchema = z.object({
+    group_id: z.string(),
+    group_name: z.string(),
+    option_id: z.string(),
+    option_name: z.string(),
+    price_delta: z.number(),
+  });
+
+  const orderItemSchema = z.object({
+    product_id: z.string(),
+    product_name: z.string(),
+    base_price: z.number(),
+    quantity: z.number().int().positive(),
+    variant_id: z.string().optional(),
+    variant_name: z.string().optional(),
+    variant_price_delta: z.number().optional(),
+    selected_options: z.array(selectedOptionSchema).optional(),
+    notes: z.string().optional(),
+  });
+
+  const bodySchema = z.object({
+    items: z.array(orderItemSchema).min(1),
+    order_type_id: z.string().optional(),
+    customer_name: z.string().optional(),
+    table_number: z.string().optional(),
+    notes: z.string().optional(),
+    tax_rate: z.number().optional(),
+    service_charge_rate: z.number().optional(),
+  });
+
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  // Execute use case - update existing order
+  const result = await container.updateOrder.execute({
+    order_id: id,
+    tenant_id: tenantId,
+    ...parsed.data,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      order: result.order,
+      pricing: result.pricing,
+    },
+  });
+});
+
+/**
  * POST /api/orders/:id/confirm
  * Confirm a draft order
  */
