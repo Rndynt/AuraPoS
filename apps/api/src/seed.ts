@@ -52,7 +52,6 @@ const FEATURE_CODES = [
   'kitchen_ticket',
   'stock_tracking',
   'order_history',
-  'enable_table_management',
 ];
 
 // Features to enable for demo tenant
@@ -60,7 +59,6 @@ const DEMO_TENANT_FEATURES = [
   'product_variants',
   'partial_payment',
   'kitchen_ticket',
-  'enable_table_management',
 ];
 
 /**
