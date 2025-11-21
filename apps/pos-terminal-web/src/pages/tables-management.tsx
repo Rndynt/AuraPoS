@@ -147,7 +147,7 @@ export default function TablesManagementPage() {
   // Get orders for selected table
   const tableOrders = useMemo(() => {
     if (!selectedTableData) return [];
-    return orders.filter((order) => order.table_number === selectedTableData.tableNumber && order.status !== "completed" && order.status !== "cancelled");
+    return orders.filter((order) => order.tableNumber === selectedTableData.tableNumber && order.status !== "completed" && order.status !== "cancelled");
   }, [selectedTableData, orders]);
 
   if (isLoading) {
@@ -278,27 +278,15 @@ export default function TablesManagementPage() {
                   <div key={order.id} className="bg-muted p-3 rounded-lg space-y-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground">Order #{order.order_number}</p>
+                        <p className="text-xs font-medium text-muted-foreground">Order #{order.orderNumber}</p>
                         <p className="text-sm font-semibold mt-1">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                        {order.customerName && <p className="text-xs text-muted-foreground">{order.customerName}</p>}
                       </div>
-                      <Badge variant={order.payment_status === "paid" ? "default" : "secondary"} className="text-xs">
-                        {order.payment_status === "paid" ? "Paid" : "Unpaid"}
+                      <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
+                        {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
                       </Badge>
                     </div>
-                    {order.order_items && order.order_items.length > 0 && (
-                      <div className="text-xs space-y-1">
-                        {order.order_items.slice(0, 3).map((item) => (
-                          <div key={item.id} className="flex justify-between text-muted-foreground">
-                            <span>{item.product_name} x{item.quantity}</span>
-                            <span>Rp {parseFloat(item.subtotal).toLocaleString("id-ID")}</span>
-                          </div>
-                        ))}
-                        {order.order_items.length > 3 && (
-                          <div className="text-xs text-muted-foreground italic">+{order.order_items.length - 3} more items</div>
-                        )}
-                      </div>
-                    )}
-                    {order.payment_status !== "paid" && (
+                    {order.paymentStatus !== "paid" && (
                       <Button
                         size="sm"
                         variant="outline"
