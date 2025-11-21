@@ -24,7 +24,7 @@ export function Sidebar() {
 
   const conditionalItems: SidebarItem[] = [];
   if (!isLoading && hasModule('enable_table_management')) {
-    conditionalItems.push({ icon: Table, label: "Tables", disabled: true });
+    conditionalItems.push({ icon: Table, label: "Tables", route: "/tables" });
   }
   if (!isLoading && hasModule('enable_delivery')) {
     conditionalItems.push({ icon: Truck, label: "Delivery", disabled: true });
@@ -114,7 +114,7 @@ export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
 
   const conditionalItems: SidebarItem[] = [];
   if (!isLoading && hasModule('enable_table_management')) {
-    conditionalItems.push({ icon: Table, label: "Tables", disabled: true });
+    conditionalItems.push({ icon: Table, label: "Tables", route: "/tables" });
   }
   if (!isLoading && hasModule('enable_delivery')) {
     conditionalItems.push({ icon: Truck, label: "Delivery", disabled: true });

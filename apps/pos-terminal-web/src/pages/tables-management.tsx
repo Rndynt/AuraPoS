@@ -47,7 +47,7 @@ function TableCard({ table }: { table: Table }) {
     >
       <div className="font-bold text-lg">{table.tableNumber}</div>
       <div className="text-xs mt-1 font-medium">{table.tableName || `Table ${table.tableNumber}`}</div>
-      {table.currentOrderId && <div className="text-xs mt-1">Order: {table.currentOrderId.slice(0, 8)}</div>}
+      {table.currentOrderId && <div className="text-xs mt-1">Order: {(table.currentOrderId || "").slice(0, 8)}</div>}
       <div className="text-xs mt-2 opacity-75">Cap: {table.capacity || "-"}</div>
     </div>
   );
