@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import HomePage from "@/pages/home";
 import POSPage from "@/pages/pos";
 import OrdersPage from "@/pages/orders";
+import TablesManagementPage from "@/pages/tables-management";
 import NotFound from "@/pages/not-found";
 import { TenantProvider } from "@/context/TenantContext";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -22,6 +23,12 @@ const OrdersPageWithLayout = () => (
   </MainLayout>
 );
 
+const TablesManagementPageWithLayout = () => (
+  <MainLayout>
+    <TablesManagementPage />
+  </MainLayout>
+);
+
 const NotFoundWithLayout = () => (
   <MainLayout>
     <NotFound />
@@ -34,6 +41,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/pos" component={POSPageWithLayout} />
       <Route path="/orders" component={OrdersPageWithLayout} />
+      <Route path="/tables" component={TablesManagementPageWithLayout} />
       <Route component={NotFoundWithLayout} />
     </Switch>
   );
