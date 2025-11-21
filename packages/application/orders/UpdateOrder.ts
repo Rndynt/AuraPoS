@@ -139,11 +139,24 @@ export class UpdateOrder {
         service_charge_rate: serviceChargeRate,
       };
 
+      // Convert orderItems back to UpdateOrderItemInput format with calculated subtotals
+      const itemsForUpdate: UpdateOrderItemInput[] = orderItems.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        base_price: item.base_price,
+        quantity: item.quantity,
+        variant_id: item.variant_id,
+        variant_name: item.variant_name,
+        variant_price_delta: item.variant_price_delta,
+        selected_options: item.selected_options,
+        notes: item.notes,
+      }));
+
       // Update order with new items
       const updatedOrder = await this.orderRepository.updateWithItems(
         input.order_id,
         orderUpdates,
-        input.items,
+        itemsForUpdate,
         input.tenant_id
       );
 
