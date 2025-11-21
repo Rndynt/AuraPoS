@@ -253,14 +253,16 @@ export function useCart() {
     setCustomerName(order.customerName || order.customer_name || "");
     
     // Convert order items back to cart items
-    // Support both camelCase (orderItems) and snake_case (order_items)
-    const orderItems = order.orderItems || order.order_items || [];
+    // Support multiple formats: items, orderItems, order_items
+    const orderItems = order.items || order.orderItems || order.order_items || [];
     const cartItems = orderItems.map((item: any) => {
       // Handle both camelCase and snake_case field names
+      // API returns: productId, productName, unitPrice, itemSubtotal
       const productId = item.productId || item.product_id;
       const productName = item.productName || item.product_name;
-      const basePrice = item.basePrice || item.base_price;
-      const itemSubtotal = item.itemSubtotal || item.subtotal;
+      // unitPrice is the single item price from API
+      const basePrice = item.unitPrice || item.basePrice || item.base_price || item.unit_price;
+      const itemSubtotal = item.itemSubtotal || item.subtotal || item.item_subtotal || (parseFloat(basePrice || 0) * item.quantity);
       const itemQuantity = item.quantity;
       const itemNotes = item.notes || item.note || "";
       const selectedOpts = item.selectedOptions || item.selected_options || [];
