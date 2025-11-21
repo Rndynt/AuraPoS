@@ -4,9 +4,11 @@
  */
 
 import { Router } from 'express';
+import { db } from '@pos/infrastructure/database';
 import catalogRoutes from './catalog';
 import ordersRoutes from './orders';
 import tenantsRoutes from './tenants';
+import { createTablesRouter } from './tables';
 
 const router = Router();
 
@@ -14,6 +16,7 @@ const router = Router();
 router.use('/catalog', catalogRoutes);
 router.use('/orders', ordersRoutes);
 router.use('/tenants', tenantsRoutes);
+router.use('/tables', createTablesRouter(db));
 
 // Health check endpoint
 router.get('/health', (req, res) => {

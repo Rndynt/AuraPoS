@@ -249,13 +249,13 @@ export function CartPanel({
                 <span className="text-xs">Card</span>
               </Button>
               <Button
-                variant={paymentMethod === "scan" ? "default" : "outline"}
+                variant={paymentMethod === "ewallet" ? "default" : "outline"}
                 className="flex-col h-auto py-3 gap-1"
-                onClick={() => setPaymentMethod("scan")}
-                data-testid="button-payment-scan"
+                onClick={() => setPaymentMethod("ewallet")}
+                data-testid="button-payment-ewallet"
               >
                 <Scan className="w-5 h-5" />
-                <span className="text-xs">Scan</span>
+                <span className="text-xs">E-Wallet</span>
               </Button>
             </div>
           </div>

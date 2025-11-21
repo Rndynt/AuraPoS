@@ -1,4 +1,3 @@
-import { IUseCase } from "@pos/application/types";
 import { TableRepository } from "@pos/infrastructure/repositories/seating/TableRepository";
 import type { Table } from "@shared/schema";
 
@@ -8,7 +7,7 @@ export interface UpdateTableStatusRequest {
   currentOrderId?: string;
 }
 
-export class UpdateTableStatus implements IUseCase<UpdateTableStatusRequest, Table> {
+export class UpdateTableStatus {
   constructor(private tableRepository: TableRepository) {}
 
   async execute(request: UpdateTableStatusRequest): Promise<Table> {

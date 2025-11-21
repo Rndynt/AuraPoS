@@ -1,4 +1,3 @@
-import { IUseCase } from "@pos/application/types";
 import { TableRepository } from "@pos/infrastructure/repositories/seating/TableRepository";
 import type { Table } from "@shared/schema";
 
@@ -13,7 +12,7 @@ export interface ListTablesResponse {
   total: number;
 }
 
-export class ListTables implements IUseCase<ListTablesRequest, ListTablesResponse> {
+export class ListTables {
   constructor(private tableRepository: TableRepository) {}
 
   async execute(request: ListTablesRequest): Promise<ListTablesResponse> {
