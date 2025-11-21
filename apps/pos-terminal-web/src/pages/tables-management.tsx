@@ -359,50 +359,53 @@ export default function TablesManagementPage() {
         </div>
       </div>
 
-      {/* Table Grid - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredTables.length > 0 ? (
-          <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1 sm:gap-1.5 auto-rows-max">
-              {filteredTables.map((table) => (
-                <div key={table.id}>
-                  <TableCard
-                    table={table}
-                    selected={selectedTable === table.id}
-                    onSelect={() => {
-                      setSelectedTable(table.id);
-                      setShowDetailsMobile(true);
-                    }}
-                  />
-                </div>
-              ))}
+      {/* Main Content Area - Flex Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Table Grid - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredTables.length > 0 ? (
+            <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-9 gap-1 sm:gap-1.5 auto-rows-max">
+                {filteredTables.map((table) => (
+                  <div key={table.id}>
+                    <TableCard
+                      table={table}
+                      selected={selectedTable === table.id}
+                      onSelect={() => {
+                        setSelectedTable(table.id);
+                        setShowDetailsMobile(true);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center space-y-2">
-              <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-muted-foreground" />
-              <p className="text-xs sm:text-sm text-muted-foreground">No tables found</p>
+          ) : (
+            <div className="flex items-center justify-center h-48">
+              <div className="text-center space-y-2">
+                <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-muted-foreground" />
+                <p className="text-xs sm:text-sm text-muted-foreground">No tables found</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Desktop Sidebar - Part of layout on lg+ */}
+        <div className="hidden lg:flex lg:w-96 lg:border-l lg:bg-background lg:overflow-y-auto lg:flex-col">
+          {selectedTableData ? (
+            <div className="w-full p-4 space-y-4">
+              <TableDetailsContent />
+            </div>
+          ) : (
+            <div className="w-full p-4 text-center text-muted-foreground flex items-center justify-center h-full">
+              <p className="text-sm">Select a table to view details</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden lg:flex lg:absolute lg:right-0 lg:top-0 lg:bottom-0 lg:w-96 lg:border-l lg:bg-background lg:overflow-y-auto">
-        {selectedTableData ? (
-          <div className="w-full p-4">
-            <TableDetailsContent />
-          </div>
-        ) : (
-          <div className="w-full p-4 text-center text-muted-foreground">
-            <p className="text-sm">Select a table to view details</p>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile Bottom Sheet */}
-      <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>
+      {/* Mobile/Tablet Bottom Sheet - Only on md and below */}
+      <Sheet open={showDetailsMobile && window.innerWidth < 1024} onOpenChange={setShowDetailsMobile}>
         <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl px-3 py-3 sm:px-4 sm:py-4">
           <SheetHeader className="mb-3">
             <SheetTitle className="text-base sm:text-lg">Table Details</SheetTitle>
