@@ -225,7 +225,7 @@ export default function POSPage() {
         setIsProcessingQuickCharge(false);
         toast({
           title: "Order updated",
-          description: `Order #${orderResult.order.order_number} has been updated successfully`,
+          description: `Order updated successfully`,
         });
       }, 500);
       
@@ -641,6 +641,7 @@ export default function POSPage() {
         setTableNumber={cart.setTableNumber}
         paymentMethod={cart.paymentMethod}
         setPaymentMethod={cart.setPaymentMethod}
+        continueOrderId={continueOrderId}
       />
 
       {/* Product Options Dialog */}

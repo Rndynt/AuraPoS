@@ -36,6 +36,7 @@ type MobileCartDrawerProps = {
   onKitchenTicket?: () => void;
   hasPartialPayment?: boolean;
   hasKitchenTicket?: boolean;
+  isProcessing?: boolean;
   // New metadata props
   customerName: string;
   setCustomerName: (name: string) => void;
@@ -44,6 +45,7 @@ type MobileCartDrawerProps = {
   setTableNumber?: (table: string) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
+  continueOrderId?: string | null;
 };
 
 export function MobileCartDrawer({
@@ -65,6 +67,7 @@ export function MobileCartDrawer({
   onKitchenTicket,
   hasPartialPayment = false,
   hasKitchenTicket = false,
+  isProcessing = false,
   customerName,
   setCustomerName,
   orderNumber,
@@ -72,6 +75,7 @@ export function MobileCartDrawer({
   setTableNumber,
   paymentMethod,
   setPaymentMethod,
+  continueOrderId,
 }: MobileCartDrawerProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
