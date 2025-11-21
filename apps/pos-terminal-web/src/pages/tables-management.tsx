@@ -1,47 +1,30 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useTables, useOpenOrders } from "@/lib/api/tableHooks";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit, ChevronDown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Search, X, ShoppingCart, Clock, Edit, ChevronDown, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Table } from "@shared/schema";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
-const getStatusColor = (status: string) => {
+const getStatusVariant = (status: string): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
     case "available":
-      return "border-green-500 bg-green-50 dark:bg-green-950/20";
+      return "default";
     case "occupied":
-      return "border-orange-500 bg-orange-50 dark:bg-orange-950/20";
+      return "secondary";
     case "reserved":
-      return "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
+      return "outline";
     case "maintenance":
-      return "border-gray-400 bg-gray-100 dark:bg-gray-800";
+      return "destructive";
     default:
-      return "border-gray-300 bg-gray-50 dark:bg-gray-900";
-  }
-};
-
-const getStatusBadgeColor = (status: string) => {
-  switch (status) {
-    case "available":
-      return "bg-green-500 hover:bg-green-600";
-    case "occupied":
-      return "bg-orange-500 hover:bg-orange-600";
-    case "reserved":
-      return "bg-yellow-500 hover:bg-yellow-600";
-    case "maintenance":
-      return "bg-gray-400 cursor-not-allowed";
-    default:
-      return "bg-gray-300";
+      return "secondary";
   }
 };
 
@@ -67,20 +50,25 @@ function TableCard({ table, selected, onSelect }: { table: Table; selected: bool
     <button
       onClick={onSelect}
       disabled={isDisabled}
-      className={`relative w-full h-10 sm:h-12 md:h-14 rounded-lg border-2 flex flex-col items-center justify-center font-bold transition cursor-pointer disabled:cursor-not-allowed hover:shadow-md ${getStatusColor(table.status)} ${
-        selected ? "ring-2 ring-offset-2 ring-blue-500 shadow-lg" : ""
+      className={`relative w-full h-24 md:h-28 rounded-md border-2 bg-card flex flex-col items-center justify-center font-semibold transition cursor-pointer disabled:cursor-not-allowed hover-elevate ${
+        selected ? "ring-2 ring-primary" : ""
       }`}
       data-testid={`table-select-${table.tableNumber}`}
     >
-      <div className="text-center space-y-0">
-        <div className="text-xs sm:text-sm font-bold">{table.tableNumber}</div>
-        <div className="text-[7px] sm:text-[8px] opacity-75 leading-none">
-          {table.status === "occupied" && "Occupied"}
-          {table.status === "reserved" && "Reserved"}
-          {table.status === "available" && "Free"}
-          {table.status === "maintenance" && "Maint."}
-        </div>
-        {table.capacity && <div className="text-[6px] sm:text-[7px] opacity-60 leading-none">{table.capacity}p</div>}
+      <Badge 
+        variant={getStatusVariant(table.status)} 
+        className="absolute top-1 right-1 text-xs"
+      >
+        {getStatusLabel(table.status)}
+      </Badge>
+      <div className="text-center space-y-1">
+        <div className="text-base md:text-lg font-bold">{table.tableNumber}</div>
+        {table.capacity && (
+          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <Users className="w-4 h-4" />
+            {table.capacity}
+          </div>
+        )}
       </div>
     </button>
   );
@@ -95,17 +83,7 @@ export default function TablesManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "reserved" | "occupied">("all");
-  const [showDetailsMobile, setShowDetailsMobile] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Track mobile vs desktop for conditional rendering
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const toggleOrderExpand = (orderId: string) => {
     const newExpanded = new Set(expandedOrders);
@@ -164,9 +142,10 @@ export default function TablesManagementPage() {
 
   const statusCounts = useMemo(() => {
     return {
+      all: tables.length,
       reserved: tables.filter((t) => t.status === "reserved").length,
       occupied: tables.filter((t) => t.status === "occupied").length,
-      free: tables.filter((t) => t.status === "available").length,
+      available: tables.filter((t) => t.status === "available").length,
     };
   }, [tables]);
 
@@ -177,255 +156,329 @@ export default function TablesManagementPage() {
     return orders.filter((order) => order.tableNumber === selectedTableData.tableNumber && order.status !== "completed" && order.status !== "cancelled");
   }, [selectedTableData, orders]);
 
+  const formatPrice = (price: string | number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(parseFloat(String(price)));
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center space-y-3">
-          <AlertCircle className="w-8 h-8 sm:w-12 sm:h-12 mx-auto text-muted-foreground" />
-          <p className="text-xs sm:text-sm text-muted-foreground">Loading tables...</p>
+      <div className="h-full flex items-center justify-center bg-background">
+        <div className="text-center text-muted-foreground">
+          Loading tables...
         </div>
       </div>
     );
   }
 
-  // Table Details Component
-  const TableDetailsContent = () => {
-    if (!selectedTableData) return null;
-    
-    return (
-      <div className="space-y-3">
-        {/* Header - Clean Single Line */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2 rounded-lg flex items-center justify-between gap-2">
-          <div className="flex-1">
-            <div className="text-xl font-bold">{selectedTableData.tableNumber}</div>
-            <div className="text-[10px] text-blue-100">{selectedTableData.tableName} • {selectedTableData.capacity}p</div>
-          </div>
-          <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white text-[9px]`}>
-            {getStatusLabel(selectedTableData.status)}
-          </Badge>
-        </div>
-
-        {/* Orders Section */}
-        {tableOrders.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold px-1">
-              <ShoppingCart className="w-3 h-3" />
-              Orders ({tableOrders.length})
-            </div>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {tableOrders.map((order) => (
-                <div key={order.id} className="border border-border rounded-lg overflow-hidden">
-                  <div className="bg-card space-y-2 p-2">
-                    {/* Order Summary Header */}
-                    <button
-                      onClick={() => toggleOrderExpand(order.id)}
-                      className="w-full hover:bg-muted/50 transition p-1.5 text-left flex items-center justify-between gap-2 -m-1.5 -mb-0 px-1.5 py-1.5"
-                      data-testid={`button-toggle-order-${order.id}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-muted-foreground font-medium">Order #{order.orderNumber}</p>
-                        <p className="text-sm font-semibold">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
-                        {order.customerName && <p className="text-[9px] text-muted-foreground truncate">{order.customerName}</p>}
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[9px] py-0 px-1 h-auto">
-                          {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
-                        </Badge>
-                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedOrders.has(order.id) ? "rotate-180" : ""}`} />
-                      </div>
-                    </button>
-
-                    {/* Order Items - Expandable */}
-                    {expandedOrders.has(order.id) && order.orderItems && order.orderItems.length > 0 && (
-                      <div className="bg-muted/30 p-1.5 rounded text-[9px] space-y-0.5 border border-border/50">
-                        {order.orderItems.map((item: any, idx: number) => (
-                          <div key={idx} className="space-y-0.5">
-                            <div className="flex justify-between gap-1">
-                              <span className="font-medium truncate">{item.productName || item.product_name}</span>
-                              <span className="whitespace-nowrap">×{item.quantity}</span>
-                            </div>
-                            {(item.variantName || item.variant_name) && (
-                              <div className="text-muted-foreground/80 ml-1 text-[8px]">
-                                • {item.variantName || item.variant_name}
-                              </div>
-                            )}
-                            {item.selectedOptions && item.selectedOptions.length > 0 && (
-                              <div className="text-muted-foreground/70 ml-1 text-[8px] space-y-0">
-                                {item.selectedOptions.map((opt: any, optIdx: number) => (
-                                  <div key={optIdx}>• {opt.option_name || opt.optionName}</div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Continue Order Button - Always Visible */}
-                    {order.paymentStatus !== "paid" && (
-                      <Button
-                        size="sm"
-                        className="w-full text-[10px] py-1 h-auto"
-                        onClick={() => handleContinueOrder(order)}
-                        data-testid={`button-continue-order-${order.id}`}
-                      >
-                        <Edit className="w-3 h-3 mr-1" />
-                        Continue Order
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="space-y-1.5 pt-2 border-t">
-          {selectedTableData.status === "occupied" && (
-            <Button variant="outline" className="w-full text-xs py-1 h-auto" data-testid="button-checkout-table">
-              <Check className="w-3 h-3 mr-1" />
-              Checkout & Payment
-            </Button>
-          )}
-          {selectedTableData.status === "available" && (
-            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1 h-auto" data-testid="button-new-order">
-              <Clock className="w-3 h-3 mr-1" />
-              New Order
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden">
-      {/* Header - Compact & Sticky */}
-      <div className="sticky top-0 z-10 bg-background border-b px-3 py-2 sm:px-4 sm:py-3 space-y-2">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Tables</h1>
-          <p className="text-[11px] sm:text-xs text-muted-foreground hidden sm:block">Manage your restaurant tables</p>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tables..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-7 text-xs sm:text-sm h-8 sm:h-9"
-            data-testid="input-search-tables"
-          />
-        </div>
-
-        {/* Filter Buttons - Compact */}
-        <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-hide">
-          <Button
-            variant={statusFilter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStatusFilter("all")}
-            data-testid="filter-all"
-            className="whitespace-nowrap text-[10px] sm:text-xs py-1 h-7 sm:h-8"
-          >
-            All ({tables.length})
-          </Button>
-          <Button
-            variant={statusFilter === "reserved" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStatusFilter("reserved")}
-            data-testid="filter-reserved"
-            className="whitespace-nowrap text-[10px] sm:text-xs py-1 h-7 sm:h-8"
-          >
-            Reserved ({statusCounts.reserved})
-          </Button>
-          <Button
-            variant={statusFilter === "occupied" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStatusFilter("occupied")}
-            data-testid="filter-occupied"
-            className="whitespace-nowrap text-[10px] sm:text-xs py-1 h-7 sm:h-8"
-          >
-            Occupied ({statusCounts.occupied})
-          </Button>
-        </div>
-
-        {/* Status Summary - Compact */}
-        <div className="flex gap-1 text-[10px] sm:text-xs overflow-x-auto pb-0.5 scrollbar-hide">
-          <div className="flex items-center gap-1 px-1.5 py-1 bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-200 rounded whitespace-nowrap">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span>Free: {statusCounts.free}</span>
+    <div className="h-full flex flex-col bg-background overflow-hidden">
+      {/* Header - Matches Orders Page */}
+      <header className="border-b border-border bg-card px-4 md:px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl md:text-2xl font-semibold truncate" data-testid="heading-tables">
+              Tables
+            </h1>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
+              Manage and track your restaurant tables
+            </p>
           </div>
-          <div className="flex items-center gap-1 px-1.5 py-1 bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-200 rounded whitespace-nowrap">
-            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-            <span>Reserved: {statusCounts.reserved}</span>
-          </div>
-          <div className="flex items-center gap-1 px-1.5 py-1 bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-200 rounded whitespace-nowrap">
-            <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-            <span>Occupied: {statusCounts.occupied}</span>
+          <div className="flex gap-2 text-xs">
+            <Badge variant="secondary">
+              {statusCounts.available} Available
+            </Badge>
+            <Badge variant="secondary">
+              {statusCounts.occupied} Occupied
+            </Badge>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content Area - Flex Layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Table Grid - Scrollable */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredTables.length > 0 ? (
-            <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-9 gap-1 sm:gap-1.5 auto-rows-max">
-                {filteredTables.map((table) => (
-                  <div key={table.id}>
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Tables Content Area */}
+        <div className="flex-1 flex flex-col md:border-r border-border overflow-hidden">
+          {/* Search & Filters */}
+          <div className="px-4 md:px-6 py-3 border-b border-border flex-shrink-0 space-y-3">
+            {/* Search Bar */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tables..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-tables"
+              />
+            </div>
+
+            {/* Filter Buttons */}
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={statusFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("all")}
+                data-testid="filter-all"
+              >
+                All ({statusCounts.all})
+              </Button>
+              <Button
+                variant={statusFilter === "reserved" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("reserved")}
+                data-testid="filter-reserved"
+              >
+                Reserved ({statusCounts.reserved})
+              </Button>
+              <Button
+                variant={statusFilter === "occupied" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("occupied")}
+                data-testid="filter-occupied"
+              >
+                Occupied ({statusCounts.occupied})
+              </Button>
+            </div>
+          </div>
+
+          {/* Table Grid */}
+          <ScrollArea className="flex-1 overflow-auto">
+            <div className="p-4 md:p-6">
+              {filteredTables.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {filteredTables.map((table) => (
                     <TableCard
+                      key={table.id}
                       table={table}
                       selected={selectedTable === table.id}
-                      onSelect={() => {
-                        setSelectedTable(table.id);
-                        setShowDetailsMobile(true);
-                      }}
+                      onSelect={() => setSelectedTable(table.id)}
                     />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-muted-foreground">
+                  No tables found
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-48">
-              <div className="text-center space-y-2">
-                <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-muted-foreground" />
-                <p className="text-xs sm:text-sm text-muted-foreground">No tables found</p>
-              </div>
-            </div>
-          )}
+          </ScrollArea>
         </div>
 
-        {/* Desktop Sidebar - Part of layout on lg+ */}
-        <div className="hidden lg:flex lg:w-96 lg:border-l lg:bg-background lg:overflow-y-auto lg:flex-col">
+        {/* Table Details Sidebar - Matches Orders Page */}
+        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l overflow-hidden">
           {selectedTableData ? (
-            <div className="w-full p-4 space-y-4">
-              <TableDetailsContent />
-            </div>
+            <>
+              <div className="p-4 md:p-6 border-b border-border flex items-center justify-between flex-shrink-0">
+                <h2 className="text-lg font-semibold">Table Details</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedTable(null)}
+                  data-testid="button-close-details"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <ScrollArea className="flex-1 overflow-auto">
+                <div className="p-4 md:p-6 space-y-6">
+                  {/* Table Info */}
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Table Number</Label>
+                      <p className="text-2xl font-bold">{selectedTableData.tableNumber}</p>
+                    </div>
+                    {selectedTableData.tableName && (
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Table Name</Label>
+                        <p className="font-medium">{selectedTableData.tableName}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Capacity</Label>
+                      <p className="font-medium flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        {selectedTableData.capacity} people
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Status</Label>
+                      <div className="mt-1">
+                        <Badge variant={getStatusVariant(selectedTableData.status)}>
+                          {getStatusLabel(selectedTableData.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Active Orders */}
+                  {tableOrders.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold mb-3 flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4" />
+                        Active Orders ({tableOrders.length})
+                      </h3>
+                      <div className="space-y-3">
+                        {tableOrders.map((order) => (
+                          <Card key={order.id} className="overflow-hidden">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-sm">Order #{order.orderNumber}</CardTitle>
+                                  {order.customerName && (
+                                    <p className="text-xs text-muted-foreground mt-1">{order.customerName}</p>
+                                  )}
+                                </div>
+                                <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"}>
+                                  {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-0 space-y-3">
+                              {/* Order Items - Always show first 2 items */}
+                              {order.orderItems && order.orderItems.length > 0 && (
+                                <>
+                                  <div className="space-y-2">
+                                    {order.orderItems.slice(0, 2).map((item: any, idx: number) => (
+                                      <div key={idx} className="flex gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-sm">{item.productName || item.product_name}</p>
+                                          {(item.variantName || item.variant_name) && (
+                                            <p className="text-xs text-muted-foreground">
+                                              {item.variantName || item.variant_name}
+                                            </p>
+                                          )}
+                                          {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {item.selectedOptions.map((opt: any, optIdx: number) => (
+                                                <Badge key={optIdx} variant="outline" className="text-xs">
+                                                  {opt.option_name || opt.optionName}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
+                                          <div className="flex items-center justify-between mt-1">
+                                            <span className="text-sm text-muted-foreground">×{item.quantity}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Show remaining items if more than 2 */}
+                                  {order.orderItems.length > 2 && (
+                                    <>
+                                      <button
+                                        onClick={() => toggleOrderExpand(order.id)}
+                                        className="w-full flex items-center justify-between text-sm text-muted-foreground hover-elevate p-2 rounded-md"
+                                        data-testid={`button-toggle-order-${order.id}`}
+                                      >
+                                        <span>View {order.orderItems.length - 2} more items</span>
+                                        <ChevronDown
+                                          className={`w-4 h-4 transition-transform ${
+                                            expandedOrders.has(order.id) ? "rotate-180" : ""
+                                          }`}
+                                        />
+                                      </button>
+
+                                      {/* Expanded Remaining Items */}
+                                      {expandedOrders.has(order.id) && (
+                                        <div className="space-y-2">
+                                          {order.orderItems.slice(2).map((item: any, idx: number) => (
+                                            <div key={idx + 2} className="flex gap-3 bg-muted/30 p-2 rounded-md">
+                                              <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-sm">{item.productName || item.product_name}</p>
+                                                {(item.variantName || item.variant_name) && (
+                                                  <p className="text-xs text-muted-foreground">
+                                                    {item.variantName || item.variant_name}
+                                                  </p>
+                                                )}
+                                                {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                                  <div className="flex flex-wrap gap-1 mt-1">
+                                                    {item.selectedOptions.map((opt: any, optIdx: number) => (
+                                                      <Badge key={optIdx} variant="outline" className="text-xs">
+                                                        {opt.option_name || opt.optionName}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                                <div className="flex items-center justify-between mt-1">
+                                                  <span className="text-sm text-muted-foreground">×{item.quantity}</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Order Total */}
+                              <div className="flex justify-between items-center pt-2 border-t">
+                                <span className="font-semibold">Total</span>
+                                <span className="font-bold">{formatPrice(order.total)}</span>
+                              </div>
+
+                              {/* Continue Order Button */}
+                              {order.paymentStatus !== "paid" && (
+                                <Button
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => handleContinueOrder(order)}
+                                  data-testid={`button-continue-order-${order.id}`}
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Continue Order
+                                </Button>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {tableOrders.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ShoppingCart className="w-12 h-12 mx-auto opacity-50 mb-2" />
+                      <p className="text-sm">No active orders for this table</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Action Buttons */}
+              <div className="p-4 md:p-6 border-t border-border flex-shrink-0 space-y-2">
+                {selectedTableData.status === "available" && (
+                  <Button className="w-full" data-testid="button-new-order">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Start New Order
+                  </Button>
+                )}
+                {selectedTableData.status === "occupied" && (
+                  <Button variant="outline" className="w-full" data-testid="button-checkout-table">
+                    Checkout & Payment
+                  </Button>
+                )}
+              </div>
+            </>
           ) : (
-            <div className="w-full p-4 text-center text-muted-foreground flex items-center justify-center h-full">
-              <p className="text-sm">Select a table to view details</p>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-muted-foreground space-y-2">
+                <Users className="w-16 h-16 mx-auto opacity-50" />
+                <p>Select a table to view details</p>
+              </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Mobile/Tablet Bottom Sheet - Only render on mobile */}
-      {isMobile && (
-        <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>
-          <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl px-3 py-3 sm:px-4 sm:py-4">
-            <SheetHeader className="mb-3">
-              <SheetTitle className="text-base sm:text-lg">Table Details</SheetTitle>
-            </SheetHeader>
-            <div className="pb-4">
-              <TableDetailsContent />
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
     </div>
   );
 }
