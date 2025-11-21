@@ -27,6 +27,7 @@ import { CreateOrUpdateProduct } from '@pos/application/catalog/CreateOrUpdatePr
 
 // Use Cases - Orders
 import { CreateOrder } from '@pos/application/orders/CreateOrder';
+import { UpdateOrder } from '@pos/application/orders/UpdateOrder';
 import { RecordPayment } from '@pos/application/orders/RecordPayment';
 import { CreateKitchenTicket } from '@pos/application/orders/CreateKitchenTicket';
 import { ConfirmOrder } from '@pos/application/orders/ConfirmOrder';
@@ -74,6 +75,7 @@ class Container {
 
   // Order Use Cases
   public readonly createOrder: CreateOrder;
+  public readonly updateOrder: UpdateOrder;
   public readonly recordPayment: RecordPayment;
   public readonly createKitchenTicket: CreateKitchenTicket;
   public readonly confirmOrder: ConfirmOrder;
@@ -123,6 +125,10 @@ class Container {
       this.orderRepository as any,
       this.tenantRepository as any,
       this.checkProductAvailability as any
+    );
+    this.updateOrder = new UpdateOrder(
+      this.orderRepository as any,
+      this.tenantRepository as any
     );
     this.recordPayment = new RecordPayment(
       this.orderRepository as any,
