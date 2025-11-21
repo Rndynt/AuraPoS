@@ -5,9 +5,15 @@ import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit } from "lucide-react";
+import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Table } from "@shared/schema";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -99,6 +105,7 @@ export default function TablesManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "reserved" | "occupied">("all");
+  const [showDetailsMobile, setShowDetailsMobile] = useState(false);
 
   const tables = tablesData?.tables || [];
   const orders = ordersData?.orders || [];
