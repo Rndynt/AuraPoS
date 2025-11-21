@@ -142,6 +142,7 @@ export function useCart() {
   const [tableNumber, setTableNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   
   // Generate temporary order number for display (will be replaced by backend)
   const [orderNumber] = useState<string>(() => {
@@ -245,6 +246,29 @@ export function useCart() {
     setTableNumber("");
     setPaymentMethod("cash");
     setSelectedOrderTypeId(null);
+    setOrderId(null);
+  };
+
+  const loadOrder = (order: any) => {
+    setOrderId(order.id);
+    setTableNumber(order.table_number || "");
+    setCustomerName(order.customer_name || "");
+    
+    // Convert order items back to cart items
+    const cartItems = (order.order_items || []).map((item: any) => ({
+      id: item.id || `cart-${Math.random()}`,
+      product: {
+        id: item.product_id,
+        name: item.product_name,
+        base_price: parseFloat(item.base_price || 0),
+      },
+      selectedOptions: item.selected_options || [],
+      quantity: item.quantity,
+      itemTotal: parseFloat(item.subtotal || 0),
+      note: item.notes || "",
+    }));
+    
+    setItems(cartItems);
   };
 
   /**
@@ -309,6 +333,7 @@ export function useCart() {
     updateQuantity,
     updateNote,
     clearCart,
+    loadOrder,
     getItemPrice,
     toBackendOrderItems,
     subtotal,
@@ -327,6 +352,7 @@ export function useCart() {
     setPaymentMethod,
     selectedOrderTypeId,
     setSelectedOrderTypeId,
+    orderId,
     orderNumber,
   };
 }
