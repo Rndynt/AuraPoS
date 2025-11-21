@@ -125,17 +125,27 @@ export class UpdateOrder {
       const serviceChargeAmount = subtotal * serviceChargeRate;
       const totalAmount = subtotal + taxAmount + serviceChargeAmount;
 
-      // Prepare order updates (convert decimals to strings for database compatibility)
-      const orderUpdates: Partial<any> = {
-        orderTypeId: input.order_type_id,
-        customerName: input.customer_name,
-        tableNumber: input.table_number,
-        notes: input.notes,
+      // Prepare order updates (only include defined fields to avoid Drizzle issues with undefined)
+      const orderUpdates: Record<string, any> = {
         subtotal: subtotal.toString(),
         taxAmount: taxAmount.toString(),
         serviceCharge: serviceChargeAmount.toString(),
         total: totalAmount.toString(),
       };
+
+      // Only add optional fields if they're actually provided
+      if (input.order_type_id !== undefined) {
+        orderUpdates.orderTypeId = input.order_type_id;
+      }
+      if (input.customer_name !== undefined) {
+        orderUpdates.customerName = input.customer_name;
+      }
+      if (input.table_number !== undefined) {
+        orderUpdates.tableNumber = input.table_number;
+      }
+      if (input.notes !== undefined) {
+        orderUpdates.notes = input.notes;
+      }
 
       // Convert orderItems back to UpdateOrderItemInput format with calculated subtotals
       const itemsForUpdate: UpdateOrderItemInput[] = orderItems.map(item => ({
