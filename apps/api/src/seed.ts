@@ -13,6 +13,7 @@ import {
   productOptions,
   tenantFeatures,
   tenantModuleConfigs,
+  tables,
   orders,
   orderItems,
   orderItemModifiers,
@@ -29,6 +30,7 @@ import type {
   InsertProductOption,
   InsertTenantFeature,
   InsertTenantModuleConfig,
+  InsertTable,
   InsertOrderType,
   InsertTenantOrderType,
 } from '@shared/schema';
@@ -747,6 +749,30 @@ async function seedTenantModuleConfigs(tenantId: string) {
 }
 
 /**
+ * Seed demo tables for restaurant floor plan
+ */
+async function seedTables(tenantId: string) {
+  console.log('🪑 Seeding demo tables...');
+  
+  const demoTables: InsertTable[] = [
+    { tenantId, tableNumber: '1', tableName: 'Window Seat A', floor: 'Ground', capacity: 2, status: 'available' },
+    { tenantId, tableNumber: '2', tableName: 'Window Seat B', floor: 'Ground', capacity: 2, status: 'available' },
+    { tenantId, tableNumber: '3', tableName: 'Corner Table', floor: 'Ground', capacity: 4, status: 'available' },
+    { tenantId, tableNumber: '4', tableName: 'Center Table 1', floor: 'Ground', capacity: 4, status: 'available' },
+    { tenantId, tableNumber: '5', tableName: 'Center Table 2', floor: 'Ground', capacity: 4, status: 'available' },
+    { tenantId, tableNumber: '6', tableName: 'VIP Table', floor: 'Ground', capacity: 6, status: 'available' },
+    { tenantId, tableNumber: 'A1', tableName: 'Upper Terrace 1', floor: '2nd Floor', capacity: 2, status: 'available' },
+    { tenantId, tableNumber: 'A2', tableName: 'Upper Terrace 2', floor: '2nd Floor', capacity: 4, status: 'available' },
+    { tenantId, tableNumber: 'B1', tableName: 'Lounge Area', floor: '2nd Floor', capacity: 6, status: 'maintenance' },
+    { tenantId, tableNumber: 'B2', tableName: 'Private Dining', floor: '2nd Floor', capacity: 8, status: 'available' },
+  ];
+  
+  await db.insert(tables).values(demoTables);
+  
+  console.log(`✅ Created ${demoTables.length} demo tables for floor plan`);
+}
+
+/**
  * Seed tenant features for demo tenant
  */
 async function seedTenantFeatures(tenantId: string) {
@@ -794,6 +820,10 @@ async function seed() {
     
     // Seed tenant module configs (feature flags)
     await seedTenantModuleConfigs(tenantId);
+    console.log('');
+    
+    // Seed demo tables for floor plan
+    await seedTables(tenantId);
     console.log('');
     
     // Seed tenant features
