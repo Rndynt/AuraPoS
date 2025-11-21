@@ -311,13 +311,13 @@ export function MobileCartDrawer({
                     <span className="text-xs">Card</span>
                   </Button>
                   <Button
-                    variant={paymentMethod === "scan" ? "default" : "outline"}
+                    variant={paymentMethod === "ewallet" ? "default" : "outline"}
                     className="flex-col h-auto py-2 gap-1"
-                    onClick={() => setPaymentMethod("scan")}
-                    data-testid="button-payment-scan"
+                    onClick={() => setPaymentMethod("ewallet")}
+                    data-testid="button-payment-ewallet"
                   >
                     <Scan className="w-5 h-5" />
-                    <span className="text-xs">QRIS</span>
+                    <span className="text-xs">E-Wallet</span>
                   </Button>
                 </div>
               </div>
@@ -327,9 +327,19 @@ export function MobileCartDrawer({
                 <Button
                   className="w-full h-12 text-base font-semibold"
                   onClick={onCharge}
-                  data-testid="button-place-order"
+                  disabled={isProcessing}
+                  data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
                 >
-                  Place Order
+                  {isProcessing ? (
+                    <>
+                      <Printer className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : continueOrderId ? (
+                    "Update Order"
+                  ) : (
+                    "Place Order"
+                  )}
                 </Button>
 
                 {hasKitchenTicket && onKitchenTicket && (
