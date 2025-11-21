@@ -184,60 +184,60 @@ export default function TablesManagementPage() {
     if (!selectedTableData) return null;
     
     return (
-      <div className="space-y-3">
-        {/* Table Header - Compact on mobile */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 sm:p-4 rounded-lg">
-          <div className="text-2xl sm:text-3xl font-bold">{selectedTableData.tableNumber}</div>
-          <p className="text-blue-100 text-xs sm:text-sm">{selectedTableData.tableName}</p>
-          <p className="text-blue-100 text-xs sm:text-sm">Capacity: {selectedTableData.capacity} persons</p>
+      <div className="space-y-2">
+        {/* Table Header - Very Compact */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2 sm:p-3 rounded-lg">
+          <div className="text-lg sm:text-2xl font-bold leading-tight">{selectedTableData.tableNumber}</div>
+          <p className="text-blue-100 text-[11px] sm:text-xs leading-tight">{selectedTableData.tableName}</p>
+          <p className="text-blue-100 text-[10px] sm:text-[11px] leading-tight">Cap: {selectedTableData.capacity}p</p>
         </div>
 
         {/* Status */}
-        <div className="flex items-center gap-2">
-          <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white text-xs`}>
+        <div className="flex items-center gap-1">
+          <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white text-[10px]`}>
             {getStatusLabel(selectedTableData.status)}
           </Badge>
         </div>
 
         {/* Open Orders */}
         {tableOrders.length > 0 && (
-          <div className="border-t pt-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold">
-              <ShoppingCart className="w-4 h-4" />
-              Open Orders ({tableOrders.length})
+          <div className="border-t pt-2 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+              <ShoppingCart className="w-3 h-3" />
+              Orders ({tableOrders.length})
             </div>
-            <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
+            <div className="space-y-1.5 max-h-96 overflow-y-auto">
               {tableOrders.map((order) => (
-                <div key={order.id} className="bg-card border border-border p-2 sm:p-3 rounded-lg space-y-1.5 hover:shadow-md transition">
-                  <div className="flex justify-between items-start gap-2">
+                <div key={order.id} className="bg-card border border-border p-1.5 rounded space-y-1 hover:shadow-md transition">
+                  <div className="flex justify-between items-start gap-1.5">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] sm:text-xs text-muted-foreground font-medium">Order #{order.orderNumber}</p>
-                      <p className="text-sm sm:text-lg font-semibold text-foreground">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
-                      {order.customerName && <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{order.customerName}</p>}
+                      <p className="text-[10px] text-muted-foreground font-medium leading-tight">#{order.orderNumber}</p>
+                      <p className="text-xs font-semibold text-foreground leading-tight">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                      {order.customerName && <p className="text-[9px] text-muted-foreground truncate leading-tight">{order.customerName}</p>}
                     </div>
-                    <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[10px] whitespace-nowrap">
+                    <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[9px] whitespace-nowrap py-0 px-1 h-auto">
                       {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
                     </Badge>
                   </div>
                   
-                  {/* Order Items */}
+                  {/* Order Items - Compact */}
                   {order.orderItems && order.orderItems.length > 0 && (
-                    <div className="bg-muted p-1.5 sm:p-2 rounded text-[10px] sm:text-xs space-y-1 border border-muted-foreground/10">
+                    <div className="bg-muted p-1 rounded text-[9px] space-y-0.5 border border-muted-foreground/10">
                       {order.orderItems.slice(0, expandedOrders.has(order.id) ? order.orderItems.length : 3).map((item: any, idx: number) => (
-                        <div key={idx} className="space-y-0.5 pb-1 border-b border-muted-foreground/20 last:border-b-0 last:pb-0">
+                        <div key={idx} className="pb-0.5 border-b border-muted-foreground/20 last:border-b-0 last:pb-0">
                           <div className="flex justify-between items-start gap-1">
-                            <span className="text-muted-foreground font-medium truncate text-[10px] sm:text-xs">{item.productName || item.product_name}</span>
-                            <span className="font-medium whitespace-nowrap text-[10px] sm:text-xs">×{item.quantity}</span>
+                            <span className="text-muted-foreground font-medium truncate text-[9px]">{item.productName || item.product_name}</span>
+                            <span className="font-medium whitespace-nowrap text-[9px]">×{item.quantity}</span>
                           </div>
                           {(item.variantName || item.variant_name) && (
-                            <div className="text-[9px] sm:text-[10px] text-muted-foreground/80 ml-1">
+                            <div className="text-[8px] text-muted-foreground/80 ml-0.5 leading-tight">
                               • {item.variantName || item.variant_name}
                             </div>
                           )}
                           {item.selectedOptions && item.selectedOptions.length > 0 && (
-                            <div className="text-[9px] sm:text-[10px] text-muted-foreground/70 ml-1 space-y-0.5">
+                            <div className="text-[8px] text-muted-foreground/70 ml-0.5 space-y-0">
                               {item.selectedOptions.map((opt: any, optIdx: number) => (
-                                <div key={optIdx}>
+                                <div key={optIdx} className="leading-tight">
                                   • {opt.option_name || opt.optionName}
                                 </div>
                               ))}
@@ -248,10 +248,10 @@ export default function TablesManagementPage() {
                       {order.orderItems.length > 3 && (
                         <button
                           onClick={() => toggleOrderExpand(order.id)}
-                          className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline pt-1 block w-full text-left"
+                          className="text-[9px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline pt-0.5 block w-full text-left"
                           data-testid={`button-expand-items-${order.id}`}
                         >
-                          {expandedOrders.has(order.id) ? "▼ Show less" : `► +${order.orderItems.length - 3} more items`}
+                          {expandedOrders.has(order.id) ? "▼ Show less" : `► +${order.orderItems.length - 3} more`}
                         </button>
                       )}
                     </div>
