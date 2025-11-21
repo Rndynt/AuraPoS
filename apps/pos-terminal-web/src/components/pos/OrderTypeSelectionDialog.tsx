@@ -34,6 +34,7 @@ import { Separator } from "@/components/ui/separator";
 import { useTenant } from "@/context/TenantContext";
 import type { OrderType } from "@pos/domain/orders/types";
 import { ShoppingBag, Utensils, Coffee, Package, Loader2 } from "lucide-react";
+import { useTables } from "@/lib/api/tableHooks";
 
 const formSchema = z.object({
   orderTypeId: z.string().min(1, "Please select an order type"),
@@ -86,6 +87,7 @@ export function OrderTypeSelectionDialog({
 }: OrderTypeSelectionDialogProps) {
   const { hasModule } = useTenant();
   const hasTableManagement = hasModule("enable_table_management");
+  const { data: tablesData, isLoading: tablesLoading } = useTables("available");
 
   // Filter active order types - memoized to prevent infinite loop
   const activeOrderTypes = useMemo(
@@ -261,27 +263,23 @@ export function OrderTypeSelectionDialog({
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || tablesLoading}
                         >
                           <SelectTrigger data-testid="select-table">
-                            <SelectValue placeholder="Select a table" />
+                            <SelectValue placeholder={tablesLoading ? "Loading tables..." : "Select a table"} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1" data-testid="option-table-1">
-                              Table 1
-                            </SelectItem>
-                            <SelectItem value="2" data-testid="option-table-2">
-                              Table 2
-                            </SelectItem>
-                            <SelectItem value="3" data-testid="option-table-3">
-                              Table 3
-                            </SelectItem>
-                            <SelectItem value="4" data-testid="option-table-4">
-                              Table 4
-                            </SelectItem>
-                            <SelectItem value="5" data-testid="option-table-5">
-                              Table 5
-                            </SelectItem>
+                            {tablesLoading ? (
+                              <div className="p-2 text-sm text-muted-foreground">Loading tables...</div>
+                            ) : tablesData?.tables && tablesData.tables.length > 0 ? (
+                              tablesData.tables.map((table) => (
+                                <SelectItem key={table.id} value={table.tableNumber} data-testid={`option-table-${table.tableNumber}`}>
+                                  {table.tableName || `Table ${table.tableNumber}`}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="p-2 text-sm text-muted-foreground">No available tables</div>
+                            )}
                           </SelectContent>
                         </Select>
                       ) : (

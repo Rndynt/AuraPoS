@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useTenant } from "@/context/TenantContext";
 import { useState } from "react";
+import { useTables } from "@/lib/api/tableHooks";
 
 type CartPanelProps = {
   items: CartItemType[];
@@ -73,6 +74,7 @@ export function CartPanel({
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
   const [isEditingTable, setIsEditingTable] = useState(false);
+  const { data: tablesData, isLoading: tablesLoading } = useTables();
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
 
@@ -144,19 +146,21 @@ export function CartPanel({
                     defaultOpen={true}
                   >
                     <SelectTrigger className="h-7 w-24 text-xs" data-testid="select-table">
-                      <SelectValue placeholder="Table..." />
+                      <SelectValue placeholder={tablesLoading ? "..." : "Table..."} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Table 1</SelectItem>
-                      <SelectItem value="2">Table 2</SelectItem>
-                      <SelectItem value="3">Table 3</SelectItem>
-                      <SelectItem value="4">Table 4</SelectItem>
-                      <SelectItem value="5">Table 5</SelectItem>
-                      <SelectItem value="6">Table 6</SelectItem>
-                      <SelectItem value="7">Table 7</SelectItem>
-                      <SelectItem value="8">Table 8</SelectItem>
-                      <SelectItem value="9">Table 9</SelectItem>
-                      <SelectItem value="10">Table 10</SelectItem>
+                      {tablesLoading ? (
+                        <div className="p-2 text-xs text-muted-foreground">Loading...</div>
+                      ) : tablesData?.tables && tablesData.tables.length > 0 ? (
+                        tablesData.tables.map((table) => (
+                          <SelectItem key={table.id} value={table.tableNumber} data-testid={`option-table-${table.tableNumber}`}>
+                            {table.tableName || `Table ${table.tableNumber}`}
+                            {table.status !== "available" && ` (${table.status})`}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-xs text-muted-foreground">No tables</div>
+                      )}
                     </SelectContent>
                   </Select>
                 ) : (
