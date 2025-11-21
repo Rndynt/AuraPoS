@@ -201,13 +201,33 @@ export default function POSPage() {
   };
 
   const handleUpdateContinueOrder = async () => {
-    if (!ensureCartHasItems()) return;
+    console.log("🔴 [UPDATE] handleUpdateContinueOrder called, continueOrderId:", continueOrderId);
+    console.log("🔴 [UPDATE] Cart items:", cart.items.length, cart.items);
+    
+    if (!ensureCartHasItems()) {
+      console.log("🔴 [UPDATE] No items in cart - aborting");
+      return;
+    }
+    
+    if (!continueOrderId) {
+      console.log("🔴 [UPDATE] No continueOrderId - aborting");
+      toast({
+        title: "Error",
+        description: "No order ID found",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       setIsProcessingQuickCharge(true);
+      console.log("🔴 [UPDATE] Building order payload...");
+      
+      const items = cart.toBackendOrderItems();
+      console.log("🔴 [UPDATE] Backend items:", items);
       
       const orderPayload = {
-        items: cart.toBackendOrderItems(),
+        items,
         tax_rate: cart.taxRate,
         service_charge_rate: cart.serviceChargeRate,
         order_type_id: cart.selectedOrderTypeId,
@@ -215,26 +235,32 @@ export default function POSPage() {
         table_number: cart.tableNumber || undefined,
       };
       
+      console.log("🔴 [UPDATE] Full payload:", orderPayload);
+      
       // Update the existing order
+      console.log("🔴 [UPDATE] Calling mutation for order:", continueOrderId);
       const orderResult = await updateOrderMutation.mutateAsync({
-        orderId: continueOrderId!,
+        orderId: continueOrderId,
         ...orderPayload,
       });
       
-      setTimeout(() => {
-        setIsProcessingQuickCharge(false);
-        toast({
-          title: "Order updated",
-          description: `Order updated successfully`,
-        });
-      }, 500);
+      console.log("🔴 [UPDATE] Success! Response:", orderResult);
+      
+      setIsProcessingQuickCharge(false);
+      toast({
+        title: "Order updated",
+        description: `Order updated successfully`,
+      });
       
       cart.clearCart();
       setMobileCartOpen(false);
     } catch (error) {
+      console.error("🔴 [UPDATE] Error caught:", error);
+      
       let errorMessage = "Failed to update order";
       if (error instanceof Error) {
         errorMessage = error.message;
+        console.error("🔴 [UPDATE] Error message:", errorMessage);
       }
       const apiError = error as any;
       if (apiError?.response?.data?.message) {
@@ -242,8 +268,6 @@ export default function POSPage() {
       } else if (apiError?.body?.message) {
         errorMessage = apiError.body.message;
       }
-      
-      console.error("Update order error:", error);
       
       setIsProcessingQuickCharge(false);
       toast({
@@ -255,13 +279,21 @@ export default function POSPage() {
   };
   
   const handleCharge = async () => {
-    if (!ensureCartHasItems()) return;
+    console.log("🟡 [CHARGE] handleCharge called, continueOrderId:", continueOrderId);
+    
+    if (!ensureCartHasItems()) {
+      console.log("🟡 [CHARGE] No items - aborting");
+      return;
+    }
     
     // If continuing an order, update it directly without dialog
     if (continueOrderId) {
-      handleUpdateContinueOrder();
+      console.log("🟡 [CHARGE] Continuing existing order:", continueOrderId);
+      await handleUpdateContinueOrder();
       return;
     }
+    
+    console.log("🟡 [CHARGE] Creating new order");
     
     // P2 Quick Charge Path - check if order type already selected (NEW ORDERS ONLY)
     if (cart.selectedOrderTypeId) {
