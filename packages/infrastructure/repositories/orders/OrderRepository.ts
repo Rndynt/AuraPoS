@@ -59,6 +59,12 @@ export interface IOrderRepository {
   findById(id: string, tenantId: string): Promise<any | null>;
   create(order: InsertOrder, orderItems: OrderItemInput[], tenantId: string): Promise<Order>;
   update(id: string, order: Partial<InsertOrder>, tenantId: string): Promise<Order>;
+  updateWithItems(
+    id: string,
+    orderUpdates: Partial<InsertOrder>,
+    orderItemsInput: OrderItemInput[],
+    tenantId: string
+  ): Promise<Order>;
   updatePaymentStatus(
     id: string,
     paidAmount: string,
@@ -324,6 +330,115 @@ export class OrderRepository
     } catch (error) {
       if (error instanceof RepositoryError) throw error;
       this.handleError('update order', error);
+    }
+  }
+
+  /**
+   * Update an existing order with new items (replaces all items)
+   * Uses database transaction to ensure atomic writes
+   */
+  async updateWithItems(
+    id: string,
+    orderUpdates: Partial<InsertOrder>,
+    orderItemsInput: OrderItemInput[],
+    tenantId: string
+  ): Promise<Order> {
+    try {
+      await this.ensureTenantAccess(id, tenantId);
+
+      // Validate items
+      if (!orderItemsInput || orderItemsInput.length === 0) {
+        throw new RepositoryError('Order must contain at least one item', 'INVALID_ITEMS', null);
+      }
+
+      // Validate products belong to tenant
+      const productIds = orderItemsInput.map(item => item.product_id);
+      const validProducts = await this.db
+        .select()
+        .from(products)
+        .where(
+          and(
+            inArray(products.id, productIds),
+            eq(products.tenantId, tenantId)
+          )
+        );
+
+      const validProductIds = new Set(validProducts.map(p => p.id));
+      const invalidProductIds = productIds.filter(id => !validProductIds.has(id));
+      
+      if (invalidProductIds.length > 0) {
+        throw new RepositoryError(
+          `Invalid product IDs or products do not belong to tenant: ${invalidProductIds.join(', ')}`,
+          'INVALID_PRODUCT_IDS',
+          null
+        );
+      }
+
+      // Execute all writes in a single transaction
+      const updatedOrder = await this.db.transaction(async (tx) => {
+        // Update the order
+        const updateData = { ...orderUpdates, updatedAt: new Date() };
+        const orderResult = await tx
+          .update(orders)
+          .set(updateData)
+          .where(and(eq(orders.id, id), eq(orders.tenantId, tenantId)))
+          .returning();
+
+        if (!orderResult || orderResult.length === 0) {
+          throw new RepositoryError('Order not found', 'NOT_FOUND', null);
+        }
+
+        const updatedOrderData = orderResult[0];
+
+        // Delete existing items and modifiers
+        const existingItems = await tx
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.orderId, id));
+
+        if (existingItems.length > 0) {
+          const existingItemIds = existingItems.map(item => item.id);
+          await tx
+            .delete(orderItemModifiers)
+            .where(inArray(orderItemModifiers.orderItemId, existingItemIds));
+          await tx.delete(orderItems).where(eq(orderItems.orderId, id));
+        }
+
+        // Insert new items
+        if (orderItemsInput.length > 0) {
+          const itemsToInsert = orderItemsInput.map(item =>
+            toInsertOrderItemDb(item as DomainOrderItem, id)
+          );
+
+          const insertedItems = await tx.insert(orderItems).values(itemsToInsert).returning();
+
+          // Insert modifiers for new items
+          const modifiersToInsert = [];
+          for (let i = 0; i < orderItemsInput.length; i++) {
+            const item = orderItemsInput[i];
+            const insertedItem = insertedItems[i];
+
+            if (item.selected_options && item.selected_options.length > 0) {
+              for (const option of item.selected_options) {
+                modifiersToInsert.push(
+                  toInsertOrderItemModifierDb(option, insertedItem.id)
+                );
+              }
+            }
+          }
+
+          if (modifiersToInsert.length > 0) {
+            await tx.insert(orderItemModifiers).values(modifiersToInsert);
+          }
+        }
+
+        return updatedOrderData;
+      });
+
+      return updatedOrder;
+    } catch (error) {
+      if (error instanceof RepositoryError) throw error;
+      this.handleError('update order with items', error);
     }
   }
 

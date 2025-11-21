@@ -74,15 +74,10 @@ export class UpdateOrder {
         throw new Error('Tenant is not active');
       }
 
-      // Validate order exists
+      // Validate order exists (findById already checks tenant isolation)
       const order = await this.orderRepository.findById(input.order_id, input.tenant_id);
       if (!order) {
         throw new Error('Order not found');
-      }
-
-      // Validate order belongs to tenant
-      if (order.tenant_id !== input.tenant_id) {
-        throw new Error('Order does not belong to the specified tenant');
       }
 
       // Validate items
