@@ -203,7 +203,15 @@ export default function POSPage() {
   const handleCharge = async () => {
     if (!ensureCartHasItems()) return;
     
-    // P2 Quick Charge Path - check if order type already selected
+    // If continuing an order, don't do quick charge - need to update not create
+    // Go through the full dialog flow
+    if (continueOrderId) {
+      setOrderTypeSelectionDialogOpen(true);
+      setMobileCartOpen(false);
+      return;
+    }
+    
+    // P2 Quick Charge Path - check if order type already selected (NEW ORDERS ONLY)
     if (cart.selectedOrderTypeId) {
       // Get the selected order type metadata
       const selectedOrderType = activeOrderTypes.find(ot => ot.id === cart.selectedOrderTypeId);
