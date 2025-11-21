@@ -305,22 +305,23 @@ Whenever you finish implementing a task or sub-task:
 
 **Root Cause:** Every order forced through OrderTypeSelectionDialog even when all metadata already set in cart. Unnecessary friction for counter service / quick cash sales.
 
-**Implementation:**
-- [ ] Add conditional logic in `handleCharge()` (pos.tsx line 148):
-  - [ ] Check if `cart.selectedOrderTypeId` set
-  - [ ] Fetch selected order type metadata
-  - [ ] Check if order type requires table (needTableNumber flag)
-  - [ ] If table required, check if `cart.tableNumber` is set
-  - [ ] If all required metadata present → call `handleQuickCharge()` directly (bypass dialog)
-  - [ ] If metadata missing → open dialog as fallback
-- [ ] Implement handleQuickCharge function:
-  - [ ] Create order with all cart metadata already set
-  - [ ] Record payment with `cart.paymentMethod`
-  - [ ] Show success toast with order number
-  - [ ] Clear cart on success
-  - [ ] Handle errors gracefully (keep cart, show error toast)
-- [ ] Add keyboard shortcut (Ctrl+Enter or F9) for quick charge
-- [ ] Support Cafe A counter service use case (1-click charge)
+**Implementation: COMPLETED ✓**
+- [x] Add conditional logic in `handleCharge()` (pos.tsx line 150):
+  - [x] Check if `cart.selectedOrderTypeId` set
+  - [x] Fetch selected order type metadata
+  - [x] Check if order type requires table (needTableNumber flag)
+  - [x] If table required, check if `cart.tableNumber` is set
+  - [x] If all required metadata present → call `handleQuickCharge()` directly (bypass dialog)
+  - [x] If metadata missing → open dialog as fallback
+- [x] Implement handleQuickCharge function:
+  - [x] Create order with all cart metadata already set
+  - [x] Record payment with `cart.paymentMethod`
+  - [x] Show success toast with order number
+  - [x] Clear cart on success
+  - [x] Handle errors gracefully (keep cart, show error toast)
+- [x] Add loading dialog modal with spinner for UX feedback
+- [x] Disable Place Order button during processing
+- [x] Support Cafe A counter service use case (1-click charge)
 
 ### 12.4 [P3-CRITICAL] Transaction Safety - Atomic Order + Payment
 

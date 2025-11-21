@@ -1,0 +1,69 @@
+import { eq, and } from "drizzle-orm";
+import { Database } from "@pos/infrastructure/database";
+import { tables } from "@shared/schema";
+import type { Table, InsertTable } from "@shared/schema";
+
+export class TableRepository {
+  constructor(private db: Database) {}
+
+  async findByTenant(tenantId: string, filters?: { status?: string; floor?: string }): Promise<Table[]> {
+    const where = [eq(tables.tenantId, tenantId)];
+    
+    if (filters?.status) {
+      where.push(eq(tables.status, filters.status));
+    }
+    
+    if (filters?.floor) {
+      where.push(eq(tables.floor, filters.floor));
+    }
+
+    return this.db
+      .select()
+      .from(tables)
+      .where(and(...where))
+      .execute();
+  }
+
+  async findById(id: string): Promise<Table | null> {
+    const result = await this.db
+      .select()
+      .from(tables)
+      .where(eq(tables.id, id))
+      .execute();
+    
+    return result[0] || null;
+  }
+
+  async create(data: InsertTable): Promise<Table> {
+    const result = await this.db
+      .insert(tables)
+      .values(data)
+      .returning()
+      .execute();
+    
+    return result[0];
+  }
+
+  async updateStatus(id: string, status: string, orderId?: string): Promise<Table> {
+    const result = await this.db
+      .update(tables)
+      .set({
+        status,
+        currentOrderId: orderId || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(tables.id, id))
+      .returning()
+      .execute();
+    
+    return result[0];
+  }
+
+  async bulkCreate(tablesList: InsertTable[]): Promise<Table[]> {
+    return this.db
+      .insert(tables)
+      .values(tablesList)
+      .returning()
+      .execute();
+  }
+}

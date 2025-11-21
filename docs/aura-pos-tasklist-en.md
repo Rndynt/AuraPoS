@@ -91,60 +91,46 @@
 > **Current Problem:** OrderTypeSelectionDialog.tsx lines 267-282 and CartPanel.tsx lines 148-158 hardcode tables.  
 > **Fix:** Implement dynamic tables table with per-tenant customization & availability checking.
 
+**Implementation: IN PROGRESS**
+
 ### 4.2 Database schema
 
 **Add to `shared/schema.ts`:**
 
-```typescript
-export const tables = sqliteTable('tables', {
-  id: varchar('id').primaryKey().$default(() => randomUUID()),
-  tenant_id: varchar('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  table_number: varchar('table_number').notNull(), // "1", "A1", "VIP-1"
-  table_name: text('table_name'), // "Window Seat", "Terrace"
-  floor: varchar('floor'), // "Ground Floor", "2nd Floor"
-  capacity: integer('capacity'), // max persons
-  status: varchar('status', { enum: ['available', 'occupied', 'reserved', 'maintenance'] }).notNull().default('available'),
-  current_order_id: varchar('current_order_id'), // soft reference (no FK)
-  created_at: integer('created_at', { mode: 'timestamp_ms' }).$default(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp_ms' }).$onUpdateNow(),
-}, (table) => ({
-  tenant_idx: index('tables_tenant_idx').on(table.tenant_id),
-  status_idx: index('tables_status_idx').on(table.status),
-  unique_table_per_tenant: unique().on(table.tenant_id, table.table_number),
-}));
-```
-
-- [ ] Run migration: `npm run db:push --force`
+- [x] Added tables schema with proper PostgreSQL structure
+- [x] Fields: id, tenant_id, table_number, table_name, floor, capacity, status, current_order_id
+- [x] Indexes: tenant_idx, status_idx, unique constraint on (tenant_id, table_number)
+- [x] Run migration: `npm run db:push --force`
 
 ### 4.3 Application layer
 
 **Repository:** `packages/infrastructure/repositories/seating/TableRepository.ts`
-- [ ] `findByTenant(tenantId, filters?: { status?, floor? })` → Table[]
-- [ ] `findById(id)` → Table | null
-- [ ] `create(data)` → Table
-- [ ] `updateStatus(id, status, orderId?)` → Table
-- [ ] `bulkCreate(tables)` → Table[]
+- [x] `findByTenant(tenantId, filters?: { status?, floor? })` → Table[]
+- [x] `findById(id)` → Table | null
+- [x] `create(data)` → Table
+- [x] `updateStatus(id, status, orderId?)` → Table
+- [x] `bulkCreate(tables)` → Table[]
 
 **Use Cases:**
-- [ ] `packages/application/seating/ListTables.ts` - List, filter, validate tenant.
-- [ ] `packages/application/seating/CreateTable.ts` - Admin only, unique validation.
-- [ ] `packages/application/seating/UpdateTableStatus.ts` - Status transitions.
+- [x] `packages/application/seating/ListTables.ts` - List, filter, validate tenant.
+- [x] `packages/application/seating/CreateTable.ts` - Admin only, unique validation.
+- [x] `packages/application/seating/UpdateTableStatus.ts` - Status transitions.
 
 ### 4.4 API endpoints
 
-- [ ] `GET /api/tables?status=available&floor=Ground%20Floor`
-  - [ ] Returns: `{ tables: Table[], total: number }`
-- [ ] `POST /api/tables` - Create (admin only)
-  - [ ] Body: `{ table_number, table_name?, floor?, capacity? }`
-- [ ] `PATCH /api/tables/:id/status`
-  - [ ] Body: `{ status, current_order_id? }`
+- [x] `GET /api/tables?status=available&floor=Ground%20Floor`
+  - [x] Returns: `{ tables: Table[], total: number }`
+- [x] `POST /api/tables` - Create (admin only)
+  - [x] Body: `{ table_number, table_name?, floor?, capacity? }`
+- [x] `PATCH /api/tables/:id/status`
+  - [x] Body: `{ status, current_order_id? }`
 
 ### 4.5 Frontend integration (Fixes to Section 3.5)
 
-- [ ] Add `useTables()` hook in `apps/pos-terminal-web/src/lib/api/hooks.ts`
-- [ ] Update `OrderTypeSelectionDialog.tsx` (line 267):
-  - [ ] Replace hardcoded tables with dynamic map from useTables()
-  - [ ] Filter: `tables.filter(t => t.status === 'available')`
+- [x] Add `useTables()` hook in `apps/pos-terminal-web/src/lib/api/hooks.ts`
+- [x] Update `OrderTypeSelectionDialog.tsx` (line 267):
+  - [x] Replace hardcoded tables with dynamic map from useTables()
+  - [x] Filter: `tables.filter(t => t.status === 'available')`
 - [ ] Update `CartPanel.tsx` (line 148):
   - [ ] Replace hardcoded 1-10 with dynamic list
   - [ ] Show status badges, gray out occupied
@@ -154,12 +140,12 @@ export const tables = sqliteTable('tables', {
 
 ### 4.6 Seeder data
 
-- [ ] Create 10-15 sample tables: `packages/infrastructure/seeders/tables.seeder.ts`
-  - [ ] Mix: "1", "2", "A1", "B1", "VIP-1" table_numbers
-  - [ ] Mix: "Ground Floor", "2nd Floor" floors
-  - [ ] Capacity: 2, 4, 6, 8
-  - [ ] Status: all 'available'
-- [ ] Register in main seeder: `packages/infrastructure/seeders/index.ts`
+- [x] Create 10 sample tables: `packages/infrastructure/seeders/tables.seeder.ts`
+  - [x] Mix: "1", "2", "A1", "B1", "VIP-1" table_numbers
+  - [x] Mix: "Ground Floor", "2nd Floor" floors
+  - [x] Capacity: 2, 4, 6, 8
+  - [x] Status: all 'available'
+- [x] Register in main seeder: `packages/infrastructure/seeders/index.ts`
 
 ### 4.7 Future Phase 2 (Post-MVP)
 

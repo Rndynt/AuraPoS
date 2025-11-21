@@ -60,6 +60,32 @@ export const selectTenantSchema = createSelectSchema(tenants);
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Tenant = typeof tenants.$inferSelect;
 
+export const tables = pgTable("tables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  tableNumber: varchar("table_number").notNull(), // "1", "A1", "VIP-1"
+  tableName: text("table_name"), // "Window Seat", "Terrace"
+  floor: varchar("floor"), // "Ground Floor", "2nd Floor"
+  capacity: integer("capacity"), // max persons
+  status: varchar("status", { length: 20 }).notNull().default("available"), // available, occupied, reserved, maintenance
+  currentOrderId: varchar("current_order_id"), // soft reference to orders.id
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  tenantIdx: index("tables_tenant_idx").on(table.tenantId),
+  statusIdx: index("tables_status_idx").on(table.status),
+  uniqueTablePerTenant: uniqueIndex("tables_unique_per_tenant").on(table.tenantId, table.tableNumber),
+}));
+
+export const insertTableSchema = createInsertSchema(tables).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTable = z.infer<typeof insertTableSchema>;
+export type Table = typeof tables.$inferSelect;
+
 export const tenantModuleConfigs = pgTable("tenant_module_configs", {
   tenantId: varchar("tenant_id").primaryKey().references(() => tenants.id, { onDelete: "cascade" }),
   enableTableManagement: boolean("enable_table_management").notNull().default(false),
