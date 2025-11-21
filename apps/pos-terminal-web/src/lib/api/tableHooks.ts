@@ -33,6 +33,11 @@ interface OpenOrdersResponse {
   orders: Order[];
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 export function useTables(status?: string, floor?: string) {
   const { tenantId } = useTenant();
 
@@ -73,7 +78,8 @@ export function useOpenOrders() {
         }
       );
       if (!response.ok) throw new Error("Failed to fetch open orders");
-      return response.json();
+      const json = await response.json() as ApiResponse<OpenOrdersResponse>;
+      return json.data;
     },
     enabled: !!tenantId,
   });
