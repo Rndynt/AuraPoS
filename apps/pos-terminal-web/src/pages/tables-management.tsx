@@ -184,83 +184,78 @@ export default function TablesManagementPage() {
     if (!selectedTableData) return null;
     
     return (
-      <div className="space-y-2">
-        {/* Table Header - Very Compact */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2 sm:p-3 rounded-lg">
-          <div className="text-lg sm:text-2xl font-bold leading-tight">{selectedTableData.tableNumber}</div>
-          <p className="text-blue-100 text-[11px] sm:text-xs leading-tight">{selectedTableData.tableName}</p>
-          <p className="text-blue-100 text-[10px] sm:text-[11px] leading-tight">Cap: {selectedTableData.capacity}p</p>
-        </div>
-
-        {/* Status */}
-        <div className="flex items-center gap-1">
-          <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white text-[10px]`}>
+      <div className="space-y-3">
+        {/* Header - Clean Single Line */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2 rounded-lg flex items-center justify-between gap-2">
+          <div className="flex-1">
+            <div className="text-xl font-bold">{selectedTableData.tableNumber}</div>
+            <div className="text-[10px] text-blue-100">{selectedTableData.tableName} • {selectedTableData.capacity}p</div>
+          </div>
+          <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white text-[9px]`}>
             {getStatusLabel(selectedTableData.status)}
           </Badge>
         </div>
 
-        {/* Open Orders */}
+        {/* Orders Section */}
         {tableOrders.length > 0 && (
-          <div className="border-t pt-2 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-xs font-semibold">
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold px-1">
               <ShoppingCart className="w-3 h-3" />
               Orders ({tableOrders.length})
             </div>
-            <div className="space-y-1.5 max-h-96 overflow-y-auto">
+            <div className="space-y-2 max-h-80 overflow-y-auto">
               {tableOrders.map((order) => (
-                <div key={order.id} className="bg-card border border-border p-1.5 rounded space-y-1 hover:shadow-md transition">
-                  <div className="flex justify-between items-start gap-1.5">
+                <div key={order.id} className="border border-border rounded-lg overflow-hidden">
+                  {/* Order Summary - Always Visible */}
+                  <button
+                    onClick={() => toggleOrderExpand(order.id)}
+                    className="w-full bg-card hover:bg-muted/50 transition p-2 text-left flex items-center justify-between gap-2"
+                    data-testid={`button-toggle-order-${order.id}`}
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground font-medium leading-tight">#{order.orderNumber}</p>
-                      <p className="text-xs font-semibold text-foreground leading-tight">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
-                      {order.customerName && <p className="text-[9px] text-muted-foreground truncate leading-tight">{order.customerName}</p>}
+                      <p className="text-[10px] text-muted-foreground font-medium">Order #{order.orderNumber}</p>
+                      <p className="text-sm font-semibold">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                      {order.customerName && <p className="text-[9px] text-muted-foreground truncate">{order.customerName}</p>}
                     </div>
-                    <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[9px] whitespace-nowrap py-0 px-1 h-auto">
-                      {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
-                    </Badge>
-                  </div>
-                  
-                  {/* Order Items - Compact */}
-                  {order.orderItems && order.orderItems.length > 0 && (
-                    <div className="bg-muted p-1 rounded text-[9px] space-y-0.5 border border-muted-foreground/10">
-                      {order.orderItems.slice(0, expandedOrders.has(order.id) ? order.orderItems.length : 3).map((item: any, idx: number) => (
-                        <div key={idx} className="pb-0.5 border-b border-muted-foreground/20 last:border-b-0 last:pb-0">
-                          <div className="flex justify-between items-start gap-1">
-                            <span className="text-muted-foreground font-medium truncate text-[9px]">{item.productName || item.product_name}</span>
-                            <span className="font-medium whitespace-nowrap text-[9px]">×{item.quantity}</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[9px] py-0 px-1 h-auto">
+                        {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                      </Badge>
+                      <span className="text-muted-foreground text-lg">{expandedOrders.has(order.id) ? "▼" : "►"}</span>
+                    </div>
+                  </button>
+
+                  {/* Order Items - Expandable */}
+                  {expandedOrders.has(order.id) && order.orderItems && order.orderItems.length > 0 && (
+                    <div className="border-t bg-muted/30 p-2 space-y-1 text-[9px]">
+                      {order.orderItems.map((item: any, idx: number) => (
+                        <div key={idx} className="space-y-0.5">
+                          <div className="flex justify-between gap-1">
+                            <span className="font-medium truncate">{item.productName || item.product_name}</span>
+                            <span className="whitespace-nowrap">×{item.quantity}</span>
                           </div>
                           {(item.variantName || item.variant_name) && (
-                            <div className="text-[8px] text-muted-foreground/80 ml-0.5 leading-tight">
+                            <div className="text-muted-foreground/80 ml-1 text-[8px]">
                               • {item.variantName || item.variant_name}
                             </div>
                           )}
                           {item.selectedOptions && item.selectedOptions.length > 0 && (
-                            <div className="text-[8px] text-muted-foreground/70 ml-0.5 space-y-0">
+                            <div className="text-muted-foreground/70 ml-1 text-[8px] space-y-0">
                               {item.selectedOptions.map((opt: any, optIdx: number) => (
-                                <div key={optIdx} className="leading-tight">
-                                  • {opt.option_name || opt.optionName}
-                                </div>
+                                <div key={optIdx}>• {opt.option_name || opt.optionName}</div>
                               ))}
                             </div>
                           )}
                         </div>
                       ))}
-                      {order.orderItems.length > 3 && (
-                        <button
-                          onClick={() => toggleOrderExpand(order.id)}
-                          className="text-[9px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline pt-0.5 block w-full text-left"
-                          data-testid={`button-expand-items-${order.id}`}
-                        >
-                          {expandedOrders.has(order.id) ? "▼ Show less" : `► +${order.orderItems.length - 3} more`}
-                        </button>
-                      )}
                     </div>
                   )}
-                  
-                  {order.paymentStatus !== "paid" && (
+
+                  {/* Continue Order Button */}
+                  {expandedOrders.has(order.id) && order.paymentStatus !== "paid" && (
                     <Button
                       size="sm"
-                      className="w-full text-[10px] sm:text-xs py-1 h-auto"
+                      className="w-full text-[10px] py-1 h-auto rounded-none border-t"
                       onClick={() => handleContinueOrder(order)}
                       data-testid={`button-continue-order-${order.id}`}
                     >
@@ -274,16 +269,16 @@ export default function TablesManagementPage() {
           </div>
         )}
 
-        {/* Actions */}
-        <div className="pt-3 space-y-2 border-t">
+        {/* Action Buttons */}
+        <div className="space-y-1.5 pt-2 border-t">
           {selectedTableData.status === "occupied" && (
-            <Button variant="outline" className="w-full text-xs sm:text-sm py-1 h-auto" data-testid="button-checkout-table">
+            <Button variant="outline" className="w-full text-xs py-1 h-auto" data-testid="button-checkout-table">
               <Check className="w-3 h-3 mr-1" />
               Checkout & Payment
             </Button>
           )}
           {selectedTableData.status === "available" && (
-            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm py-1 h-auto" data-testid="button-new-order">
+            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-1 h-auto" data-testid="button-new-order">
               <Clock className="w-3 h-3 mr-1" />
               New Order
             </Button>
