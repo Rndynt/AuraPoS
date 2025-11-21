@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { useTables } from "@/lib/api/tableHooks";
+import { useTables, useOpenOrders } from "@/lib/api/tableHooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertCircle, Check } from "lucide-react";
+import { Search, AlertCircle, Check, ShoppingCart, Clock } from "lucide-react";
 import type { Table } from "@shared/schema";
 
 const getStatusColor = (status: string) => {
@@ -89,11 +89,13 @@ function TableCardNew({ table, selected, onSelect }: { table: Table; selected: b
 
 export default function TablesManagementPage() {
   const { data: tablesData, isLoading } = useTables();
+  const { data: ordersData } = useOpenOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "reserved" | "occupied">("all");
 
   const tables = tablesData?.tables || [];
+  const orders = ordersData?.orders || [];
 
   const filteredTables = useMemo(() => {
     return tables.filter((table) => {
@@ -118,6 +120,12 @@ export default function TablesManagementPage() {
   }, [tables]);
 
   const selectedTableData = tables.find((t) => t.id === selectedTable);
+  
+  // Get orders for selected table
+  const tableOrders = useMemo(() => {
+    if (!selectedTableData) return [];
+    return orders.filter((order) => order.table_number === selectedTableData.tableNumber && order.status !== "completed" && order.status !== "cancelled");
+  }, [selectedTableData, orders]);
 
   if (isLoading) {
     return (
@@ -219,7 +227,7 @@ export default function TablesManagementPage() {
       </div>
 
       {/* Right Sidebar - Guest Information */}
-      <div className="w-64 border-l pl-6 py-4 flex flex-col gap-4 max-h-[calc(100vh-200px)] overflow-auto">
+      <div className="w-80 border-l pl-6 py-4 flex flex-col gap-4 max-h-[calc(100vh-200px)] overflow-auto">
         {selectedTableData ? (
           <>
             <div>
@@ -236,16 +244,53 @@ export default function TablesManagementPage() {
               </div>
             </div>
 
+            {/* Open Orders Section */}
+            {tableOrders.length > 0 && (
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <ShoppingCart className="w-4 h-4" />
+                  Open Orders ({tableOrders.length})
+                </div>
+                {tableOrders.map((order) => (
+                  <div key={order.id} className="bg-muted p-3 rounded-lg space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Order #{order.order_number}</p>
+                        <p className="text-sm font-semibold mt-1">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                      </div>
+                      <Badge variant={order.payment_status === "paid" ? "default" : "secondary"} className="text-xs">
+                        {order.payment_status === "paid" ? "Paid" : "Unpaid"}
+                      </Badge>
+                    </div>
+                    {order.order_items && order.order_items.length > 0 && (
+                      <div className="text-xs space-y-1">
+                        {order.order_items.slice(0, 3).map((item) => (
+                          <div key={item.id} className="flex justify-between text-muted-foreground">
+                            <span>{item.product_name} x{item.quantity}</span>
+                            <span>Rp {parseFloat(item.subtotal).toLocaleString("id-ID")}</span>
+                          </div>
+                        ))}
+                        {order.order_items.length > 3 && (
+                          <div className="text-xs text-muted-foreground italic">+{order.order_items.length - 3} more items</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="pt-4 space-y-3">
               {selectedTableData.status === "occupied" && (
-                <Button variant="outline" className="w-full" size="sm" data-testid="button-checkin-table">
+                <Button variant="outline" className="w-full" size="sm" data-testid="button-checkout-table">
                   <Check className="w-4 h-4 mr-2" />
-                  Check Out
+                  Check Out & Payment
                 </Button>
               )}
               {selectedTableData.status === "available" && (
-                <Button className="w-full bg-orange-500 hover:bg-orange-600" size="sm" data-testid="button-reserve-table">
-                  Reserve Table
+                <Button className="w-full bg-orange-500 hover:bg-orange-600" size="sm" data-testid="button-new-order">
+                  <Clock className="w-4 h-4 mr-2" />
+                  New Order
                 </Button>
               )}
               <Button variant="outline" className="w-full" size="sm" data-testid="button-view-details">
