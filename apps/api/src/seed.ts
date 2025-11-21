@@ -859,9 +859,9 @@ async function seedOpenOrders(tenantId: string) {
             orderId: order.id,
             productId: product.id,
             productName: item.productName,
-            basePrice: item.price.toString(),
+            unitPrice: item.price.toString(),
             quantity: item.qty,
-            subtotal: (item.price * item.qty).toString(),
+            itemSubtotal: (item.price * item.qty).toString(),
           });
         }
       }
