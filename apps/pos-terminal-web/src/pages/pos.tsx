@@ -12,10 +12,16 @@ import { useProducts, useCreateOrder, useCreateKitchenTicket, useOrderTypes, use
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getActiveTenantId } from "@/lib/tenant";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -24,6 +30,7 @@ export default function POSPage() {
   const [orderTypeSelectionDialogOpen, setOrderTypeSelectionDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
@@ -164,9 +171,8 @@ export default function POSPage() {
         }
         
         // All metadata ready - direct charge without dialog
+        setIsProcessingQuickCharge(true);
         try {
-          setIsSubmittingOrder(true);
-          
           const orderPayload = {
             items: cart.toBackendOrderItems(),
             tax_rate: cart.taxRate,
@@ -186,10 +192,14 @@ export default function POSPage() {
             payment_method: cart.paymentMethod,
           });
           
-          toast({
-            title: "Order completed & paid",
-            description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")} (Paid)`,
-          });
+          // Show success message
+          setTimeout(() => {
+            setIsProcessingQuickCharge(false);
+            toast({
+              title: "Order completed & paid",
+              description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")} (Paid)`,
+            });
+          }, 500);
           
           cart.clearCart();
           setMobileCartOpen(false);
@@ -207,13 +217,12 @@ export default function POSPage() {
           
           console.error("Quick charge error details:", error);
           
+          setIsProcessingQuickCharge(false);
           toast({
             title: "Order failed",
             description: errorMessage,
             variant: "destructive",
           });
-        } finally {
-          setIsSubmittingOrder(false);
         }
         return;
       }
@@ -446,6 +455,7 @@ export default function POSPage() {
           onKitchenTicket={handleKitchenTicket}
           hasPartialPayment={hasPartialPayment}
           hasKitchenTicket={hasKitchenTicket}
+          isProcessing={isProcessingQuickCharge}
           customerName={cart.customerName}
           setCustomerName={cart.setCustomerName}
           orderNumber={cart.orderNumber}
@@ -503,6 +513,7 @@ export default function POSPage() {
         onKitchenTicket={handleKitchenTicket}
         hasPartialPayment={hasPartialPayment}
         hasKitchenTicket={hasKitchenTicket}
+        isProcessing={isProcessingQuickCharge}
         customerName={cart.customerName}
         setCustomerName={cart.setCustomerName}
         orderNumber={cart.orderNumber}
@@ -542,6 +553,21 @@ export default function POSPage() {
         isSubmitting={isSubmittingOrder}
         initialSelectedOrderTypeId={cart.selectedOrderTypeId}
       />
+
+      {/* Quick Charge Processing Dialog */}
+      <Dialog open={isProcessingQuickCharge} onOpenChange={setIsProcessingQuickCharge}>
+        <DialogContent className="sm:max-w-[300px]" data-testid="dialog-quick-charge-processing">
+          <DialogHeader>
+            <DialogTitle>Processing Order</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-center text-sm text-muted-foreground">
+              Creating order and recording payment...
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

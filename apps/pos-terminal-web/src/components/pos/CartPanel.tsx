@@ -33,6 +33,7 @@ type CartPanelProps = {
   onKitchenTicket?: () => void;
   hasPartialPayment?: boolean;
   hasKitchenTicket?: boolean;
+  isProcessing?: boolean;
   // New metadata props
   customerName: string;
   setCustomerName: (name: string) => void;
@@ -60,6 +61,7 @@ export function CartPanel({
   onKitchenTicket,
   hasPartialPayment = false,
   hasKitchenTicket = false,
+  isProcessing = false,
   customerName,
   setCustomerName,
   orderNumber,
@@ -263,9 +265,17 @@ export function CartPanel({
             <Button
               className="w-full h-12 text-base font-semibold"
               onClick={onCharge}
+              disabled={isProcessing}
               data-testid="button-place-order"
             >
-              Place Order
+              {isProcessing ? (
+                <>
+                  <Printer className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Place Order"
+              )}
             </Button>
 
             {hasKitchenTicket && onKitchenTicket && (
