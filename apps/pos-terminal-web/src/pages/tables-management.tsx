@@ -222,20 +222,36 @@ export default function TablesManagementPage() {
                   
                   {/* Order Items */}
                   {order.orderItems && order.orderItems.length > 0 && (
-                    <div className="bg-muted p-1.5 sm:p-2 rounded text-[10px] sm:text-xs space-y-0.5 border border-muted-foreground/10">
+                    <div className="bg-muted p-1.5 sm:p-2 rounded text-[10px] sm:text-xs space-y-1 border border-muted-foreground/10">
                       {order.orderItems.slice(0, expandedOrders.has(order.id) ? order.orderItems.length : 3).map((item: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-start gap-1">
-                          <span className="text-muted-foreground font-medium truncate text-[10px] sm:text-xs">{item.productName || item.product_name}</span>
-                          <span className="font-medium whitespace-nowrap text-[10px] sm:text-xs">×{item.quantity}</span>
+                        <div key={idx} className="space-y-0.5 pb-1 border-b border-muted-foreground/20 last:border-b-0 last:pb-0">
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="text-muted-foreground font-medium truncate text-[10px] sm:text-xs">{item.productName || item.product_name}</span>
+                            <span className="font-medium whitespace-nowrap text-[10px] sm:text-xs">×{item.quantity}</span>
+                          </div>
+                          {(item.variantName || item.variant_name) && (
+                            <div className="text-[9px] sm:text-[10px] text-muted-foreground/80 ml-1">
+                              • {item.variantName || item.variant_name}
+                            </div>
+                          )}
+                          {item.selectedOptions && item.selectedOptions.length > 0 && (
+                            <div className="text-[9px] sm:text-[10px] text-muted-foreground/70 ml-1 space-y-0.5">
+                              {item.selectedOptions.map((opt: any, optIdx: number) => (
+                                <div key={optIdx}>
+                                  • {opt.option_name || opt.optionName}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {order.orderItems.length > 3 && (
                         <button
                           onClick={() => toggleOrderExpand(order.id)}
-                          className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline pt-0.5 block"
+                          className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline pt-1 block w-full text-left"
                           data-testid={`button-expand-items-${order.id}`}
                         >
-                          {expandedOrders.has(order.id) ? "Show less" : `+${order.orderItems.length - 3} more`}
+                          {expandedOrders.has(order.id) ? "▼ Show less" : `► +${order.orderItems.length - 3} more items`}
                         </button>
                       )}
                     </div>
