@@ -341,7 +341,7 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 w-full max-w-[100vw]">
+    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
       {/* Main Product Area */}
       <ProductArea 
         products={products}

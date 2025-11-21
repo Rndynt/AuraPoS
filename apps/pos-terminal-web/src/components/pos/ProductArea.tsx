@@ -70,7 +70,7 @@ export function ProductArea({
   }, [products, selectedCategory, searchQuery]);
 
   return (
-    <div className="flex-1 flex flex-col bg-muted/40 min-h-0 overflow-x-hidden w-full max-w-full">
+    <div className="flex flex-col bg-muted/40 h-full min-h-0 overflow-x-hidden w-full max-w-full">
       {/* Unified Header */}
       <POSHeader 
         searchQuery={searchQuery}
