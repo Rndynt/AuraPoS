@@ -9,23 +9,24 @@ interface TablesResponse {
 
 interface OrderItem {
   id: string;
-  product_name: string;
+  productName: string;
   quantity: number;
-  unit_price: string;
-  subtotal: string;
+  unitPrice: string;
+  itemSubtotal: string;
 }
 
 interface Order {
   id: string;
-  order_number: string;
-  table_number: string;
+  orderNumber: string;
+  tableNumber: string;
   status: string;
   subtotal: string;
-  tax_amount: string;
-  service_charge: string;
+  taxAmount: string;
+  serviceChargeAmount: string;
   total: string;
-  payment_status: string;
-  order_items?: OrderItem[];
+  paymentStatus: string;
+  customerName?: string;
+  orderItems?: OrderItem[];
 }
 
 interface OpenOrdersResponse {
