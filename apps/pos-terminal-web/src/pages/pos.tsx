@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearch } from "wouter";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
@@ -53,8 +53,12 @@ export default function POSPage() {
   }, [orderTypes]);
 
   // Load order into cart if continueOrderId is provided
+  const loadedOrderRef = useRef<string | null>(null);
+  
   useEffect(() => {
-    if (continueOrderId) {
+    if (continueOrderId && loadedOrderRef.current !== continueOrderId) {
+      loadedOrderRef.current = continueOrderId;
+      
       const loadOrderIntoCart = async () => {
         try {
           const tenantId = localStorage.getItem("tenantId") || "demo-tenant";
@@ -74,13 +78,6 @@ export default function POSPage() {
           // Load order into cart with fresh state
           cart.loadOrder(fullOrder);
           
-          console.log("Order loaded:", {
-            orderNumber: fullOrder.orderNumber,
-            tableNumber: fullOrder.tableNumber,
-            customerName: fullOrder.customerName,
-            itemCount: fullOrder.items?.length || 0,
-          });
-          
           toast({
             title: "Order loaded",
             description: `Order #${fullOrder.orderNumber} for Table ${fullOrder.tableNumber} loaded. Continue editing and submit to save changes.`,
@@ -96,7 +93,7 @@ export default function POSPage() {
       };
       loadOrderIntoCart();
     }
-  }, [continueOrderId, cart, toast]);
+  }, [continueOrderId]);
 
   // Auto-select first ACTIVE order type when loaded (only if not already in cart)
   useEffect(() => {
