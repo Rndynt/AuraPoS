@@ -248,22 +248,36 @@ export function useCart() {
   };
 
   const loadOrder = (order: any): string => {
-    setTableNumber(order.table_number || "");
-    setCustomerName(order.customer_name || "");
+    // Handle camelCase field names from API (tableNumber, customerName)
+    setTableNumber(order.tableNumber || order.table_number || "");
+    setCustomerName(order.customerName || order.customer_name || "");
     
     // Convert order items back to cart items
-    const cartItems = (order.order_items || []).map((item: any) => ({
-      id: item.id || `cart-${Math.random()}`,
-      product: {
-        id: item.product_id,
-        name: item.product_name,
-        base_price: parseFloat(item.base_price || 0),
-      },
-      selectedOptions: item.selected_options || [],
-      quantity: item.quantity,
-      itemTotal: parseFloat(item.subtotal || 0),
-      note: item.notes || "",
-    }));
+    // Support both camelCase (orderItems) and snake_case (order_items)
+    const orderItems = order.orderItems || order.order_items || [];
+    const cartItems = orderItems.map((item: any) => {
+      // Handle both camelCase and snake_case field names
+      const productId = item.productId || item.product_id;
+      const productName = item.productName || item.product_name;
+      const basePrice = item.basePrice || item.base_price;
+      const itemSubtotal = item.itemSubtotal || item.subtotal;
+      const itemQuantity = item.quantity;
+      const itemNotes = item.notes || item.note || "";
+      const selectedOpts = item.selectedOptions || item.selected_options || [];
+      
+      return {
+        id: item.id || `cart-${Math.random()}`,
+        product: {
+          id: productId,
+          name: productName,
+          base_price: parseFloat(basePrice || 0),
+        },
+        selectedOptions: selectedOpts,
+        quantity: itemQuantity,
+        itemTotal: parseFloat(itemSubtotal || 0),
+        note: itemNotes,
+      };
+    });
     
     setItems(cartItems);
     return order.id;
