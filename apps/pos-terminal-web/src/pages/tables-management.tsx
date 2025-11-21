@@ -96,6 +96,17 @@ export default function TablesManagementPage() {
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "reserved" | "occupied">("all");
   const [showDetailsMobile, setShowDetailsMobile] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+
+  const toggleOrderExpand = (orderId: string) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrders(newExpanded);
+  };
 
   const tables = tablesData?.tables || [];
   const orders = ordersData?.orders || [];
