@@ -481,6 +481,340 @@ Whenever you finish implementing a task or sub-task:
 
 ---
 
+## 12. POS Terminal UX Improvements & Critical Fixes
+
+> Based on comprehensive code analysis (Nov 2025)  
+> Priority: P0 (critical scroll bug) → P1-P3 (cart/payment refactoring) → P4-P6 (data & features) → Documentation
+
+### 12.1 Critical: Fix POS Page Scroll Behavior (P0)
+
+**Problem:** Product area cannot scroll on any breakpoint; cart panel action buttons invisible on tablet/desktop.
+
+**Root Cause Analysis:**
+- `apps/pos-terminal-web/src/pages/pos.tsx` line 344: Parent `div.flex-1` has `overflow-hidden`, blocking child `overflow-y-auto`
+- `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` line 143: Product grid `overflow-y-auto` prevented by parent constraint
+- `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` line 177: Hardcoded `maxHeight: calc(100vh - 450px)` too large for tablet, hiding action buttons
+
+**Implementation:**
+- [ ] Fix POS page layout overflow control:
+  - [ ] `apps/pos-terminal-web/src/pages/pos.tsx`: Change root container from `overflow-hidden` to `overflow-hidden lg:overflow-visible`
+  - [ ] Ensure `ProductArea` and `CartPanel` manage their own scroll independently
+- [ ] Fix ProductArea scroll:
+  - [ ] `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` line 143: Ensure product grid wrapper has `min-h-0 flex-1 overflow-y-auto`
+  - [ ] Verify sticky headers (order type tabs, category tabs) remain fixed while content scrolls
+- [ ] Fix CartPanel scroll:
+  - [ ] `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` line 177: Replace hardcoded `maxHeight: calc(100vh - 450px)` with responsive approach
+  - [ ] Use `flex-1 min-h-0 overflow-y-auto` for cart items area
+  - [ ] Use CSS variables for adaptive height: `--cart-header-height`, `--cart-footer-height`
+  - [ ] Ensure action buttons (Charge, Partial Payment, Kitchen Ticket) always visible at bottom
+- [ ] Test across breakpoints:
+  - [ ] Mobile (375px - cart in drawer, not affected)
+  - [ ] Tablet (768px - 1024px - verify cart panel actions visible)
+  - [ ] Desktop (1280px+ - verify both product area and cart panel scroll independently)
+
+### 12.2 Cart State Refactoring (P1)
+
+**Problem:** Order type selection duplicated between POSPage state and cart; metadata (tableNumber, paymentMethod) in cart but ignored during checkout.
+
+**Root Cause Analysis:**
+- `apps/pos-terminal-web/src/pages/pos.tsx` line 27: `selectedOrderTypeId` state separate from cart
+- `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` lines 351-354: Order type tabs controlled by POSPage state
+- `apps/pos-terminal-web/src/components/pos/OrderTypeSelectionDialog.tsx`: Dialog re-prompts for order type user already selected
+- `apps/pos-terminal-web/src/hooks/useCart.ts` lines 141-143: Cart has `customerName`, `tableNumber`, `paymentMethod` but these are ignored during checkout
+- `apps/pos-terminal-web/src/pages/pos.tsx` line 174: Dialog `result.tableNumber` used instead of `cart.tableNumber`
+- `apps/pos-terminal-web/src/pages/pos.tsx` line 185: Payment method hardcoded to `"cash"` instead of using `cart.paymentMethod`
+
+**Implementation:**
+- [ ] Move order type to cart state:
+  - [ ] `apps/pos-terminal-web/src/hooks/useCart.ts`: Add `selectedOrderTypeId` state and setter
+  - [ ] Keep `selectedOrderTypeId` persistent across cart clears (user preference)
+  - [ ] Return `selectedOrderTypeId`, `setSelectedOrderTypeId` from useCart hook
+- [ ] Update POSPage to use cart state:
+  - [ ] `apps/pos-terminal-web/src/pages/pos.tsx`: Remove local `selectedOrderTypeId` state (line 27)
+  - [ ] Use `cart.selectedOrderTypeId` and `cart.setSelectedOrderTypeId` throughout
+  - [ ] Pass to ProductArea as `selectedOrderTypeId={cart.selectedOrderTypeId}` `onSelectOrderType={cart.setSelectedOrderTypeId}`
+- [ ] Update OrderTypeSelectionDialog:
+  - [ ] Pre-fill dialog with `cart.selectedOrderTypeId` as default
+  - [ ] Pre-fill `cart.tableNumber` as default (if set)
+  - [ ] When user confirms, update cart state not just local dialog state
+- [ ] Fix checkout payload:
+  - [ ] `apps/pos-terminal-web/src/pages/pos.tsx` line 174: Use `cart.tableNumber` as fallback if dialog doesn't provide
+  - [ ] `apps/pos-terminal-web/src/pages/pos.tsx` line 185: Use `cart.paymentMethod` instead of hardcoded `"cash"`
+  - [ ] Ensure all cart metadata flows to backend order payload
+
+### 12.3 Quick Charge Path (P2)
+
+**Problem:** Every order requires opening OrderTypeSelectionDialog, even for simple counter cash sales where all metadata already set.
+
+**Root Cause Analysis:**
+- `apps/pos-terminal-web/src/pages/pos.tsx` lines 148-152: `handleCharge()` ALWAYS opens dialog, no bypass logic
+- Even if `cart.selectedOrderTypeId` and `cart.tableNumber` already set, dialog still shown
+- This creates unnecessary friction for fast-paced counter service
+
+**Implementation:**
+- [ ] Add quick charge logic in handleCharge:
+  - [ ] Check if `cart.selectedOrderTypeId` is set
+  - [ ] Fetch selected order type metadata (from `activeOrderTypes` array)
+  - [ ] Check if order type requires table (`needTableNumber` flag)
+  - [ ] If table required, check if `cart.tableNumber` is set
+  - [ ] If all required metadata present, call `handleQuickCharge()` directly (bypass dialog)
+  - [ ] If metadata missing, open dialog as fallback
+- [ ] Implement handleQuickCharge function:
+  - [ ] Create order with `cart.toBackendOrderItems()`, `cart.selectedOrderTypeId`, `cart.tableNumber`, `cart.customerName`
+  - [ ] Record payment with `cart.paymentMethod` (not hardcoded)
+  - [ ] Show success toast with order number and amount
+  - [ ] Clear cart on success
+  - [ ] Handle errors gracefully (keep cart, show error toast)
+- [ ] Add UI indicators:
+  - [ ] Show visual feedback when quick charge conditions met (e.g., "Ready to charge" badge)
+  - [ ] Keyboard shortcut for quick charge (e.g., Ctrl+Enter)
+- [ ] Support Cafe A use case (counter service):
+  - [ ] Pre-select order type on mount (e.g., "Walk In" or "Dine In" based on tenant)
+  - [ ] Quick tender buttons in CartPanel (Cash exact amount, Card, etc.)
+
+### 12.4 Transaction Safety (P3)
+
+**Problem:** Order creation and payment recording not atomic; if payment fails after order created, orphaned order with cart already cleared. No rollback mechanism.
+
+**Root Cause Analysis:**
+- `apps/pos-terminal-web/src/pages/pos.tsx` lines 177-207: `handleOrderTypeConfirm` creates order, then records payment separately
+- If `recordPaymentMutation` fails (line 182), order already exists in DB
+- Cart cleared at line 206 regardless of payment success
+- User cannot retry payment because cart lost
+- No compensating transaction to cancel/delete failed order
+
+**Implementation Options:**
+
+**Option A: Backend Atomic Transaction (Recommended)**
+- [ ] Create new backend endpoint `/api/orders/create-and-pay`:
+  - [ ] File: `apps/api/src/http/routes/orders.ts`
+  - [ ] Accepts: order payload + payment details in single request
+  - [ ] Uses DB transaction to create order + record payment atomically
+  - [ ] On success: return order + payment data
+  - [ ] On failure: rollback both operations, return error
+- [ ] Update frontend to use new endpoint:
+  - [ ] Replace `createOrderMutation` + `recordPaymentMutation` with single `createAndPayMutation`
+  - [ ] Clear cart only after successful response
+  - [ ] Show error toast on failure, keep cart intact for retry
+
+**Option B: Frontend Compensating Transaction**
+- [ ] Wrap order creation + payment in try-catch:
+  - [ ] Create order (get orderId)
+  - [ ] Try record payment
+  - [ ] If payment fails, call `cancelOrderMutation` to cancel the order
+  - [ ] If cancel also fails, log error but still show payment failure to user
+  - [ ] Keep cart intact for retry
+- [ ] Add `CancelOrder` mutation hook:
+  - [ ] File: `apps/pos-terminal-web/src/lib/api/hooks.ts`
+  - [ ] Calls `/api/orders/:id/cancel` endpoint (already exists)
+
+**Decision:** Implement Option A first (cleaner, guaranteed atomicity), keep Option B as fallback if backend cannot support transactions.
+
+### 12.5 Table Master Data (P4)
+
+**Problem:** Tables hardcoded 1-5 in OrderTypeSelectionDialog; no table master data, no availability checking, cannot customize per tenant.
+
+**Root Cause Analysis:**
+- `apps/pos-terminal-web/src/components/pos/OrderTypeSelectionDialog.tsx` lines 267-282: Hardcoded `<SelectItem value="1">Table 1</SelectItem>` through Table 5
+- `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` lines 148-158: Hardcoded tables 1-10
+- `shared/schema.ts`: NO `tables` table in schema
+- Cannot track table status (available, occupied, reserved, maintenance)
+- Cannot customize table names, floor, capacity per tenant
+
+**Implementation:**
+- [ ] Create tables schema:
+  - [ ] File: `shared/schema.ts`
+  - [ ] Add `tables` table:
+    - [ ] `id` (varchar, UUID PK)
+    - [ ] `tenant_id` (FK to tenants, cascading delete)
+    - [ ] `table_number` (varchar, not null) - e.g., "1", "A1", "Outdoor-3"
+    - [ ] `table_name` (text, nullable) - e.g., "Window Seat 1", "VIP Room"
+    - [ ] `floor` (varchar, nullable) - e.g., "Ground Floor", "2nd Floor"
+    - [ ] `capacity` (integer, nullable) - max persons
+    - [ ] `status` (varchar, not null, default 'available') - 'available' | 'occupied' | 'reserved' | 'maintenance'
+    - [ ] `current_order_id` (varchar, FK to orders, nullable) - track active order
+    - [ ] `created_at`, `updated_at` timestamps
+  - [ ] Indexes: tenant_id, status, tenant+table_number unique
+- [ ] Run migration:
+  - [ ] `npm run db:push --force` to create table
+- [ ] Add repository:
+  - [ ] File: `packages/infrastructure/repositories/seating/TableRepository.ts`
+  - [ ] Methods: `findByTenant()`, `findById()`, `create()`, `update()`, `updateStatus()`
+- [ ] Add use cases:
+  - [ ] File: `packages/application/seating/ListTables.ts`
+  - [ ] File: `packages/application/seating/CreateTable.ts`
+  - [ ] File: `packages/application/seating/UpdateTableStatus.ts`
+- [ ] Add API endpoints:
+  - [ ] `GET /api/tables` - list tables for tenant (with status filter)
+  - [ ] `POST /api/tables` - create table (admin only)
+  - [ ] `PATCH /api/tables/:id/status` - update table status
+- [ ] Update frontend:
+  - [ ] Add `useTables()` hook to fetch tables from API
+  - [ ] Update OrderTypeSelectionDialog to use dynamic table list
+  - [ ] Filter by status: only show 'available' tables in selection
+  - [ ] Update CartPanel table selection to use same dynamic list
+- [ ] Seeder data:
+  - [ ] Create 10-15 tables for demo tenant with various statuses
+
+### 12.6 Order Type Metadata Validation (P5)
+
+**Problem:** `needTableNumber` flag exists in schema but not used for validation; dialog always shows table field (optional) regardless of order type requirements.
+
+**Root Cause Analysis:**
+- `shared/schema.ts` lines 174-190: `orderTypes` table has `needTableNumber`, `needAddress`, `isOnPremise` flags
+- `apps/pos-terminal-web/src/components/pos/OrderTypeSelectionDialog.tsx`: Dialog shows table field for ALL order types
+- No conditional rendering based on `needTableNumber`
+- No validation to enforce required table when flag is true
+- Takeaway/Delivery orders can have table numbers (incorrect)
+
+**Implementation:**
+- [ ] Update OrderTypeSelectionDialog validation:
+  - [ ] Fetch selected order type from `activeOrderTypes` array by `selectedOrderTypeId`
+  - [ ] Check `selectedOrderType.needTableNumber` flag
+  - [ ] Update Zod schema dynamically:
+    - [ ] If `needTableNumber === true`: `tableNumber: z.string().min(1, "Table required for this order type")`
+    - [ ] If `needTableNumber === false`: `tableNumber: z.string().optional()`
+  - [ ] Conditionally render table field:
+    - [ ] Only show table selection if `selectedOrderType.needTableNumber === true`
+    - [ ] Hide field completely for Takeaway, Delivery order types
+- [ ] Update form labels:
+  - [ ] Add red asterisk `*` next to "Table Number" label if required
+  - [ ] Show helpful text: "Table required for Dine-In orders"
+- [ ] Add order type templates validation:
+  - [ ] Ensure Dine-In order types have `needTableNumber: true`
+  - [ ] Ensure Takeaway/Delivery have `needTableNumber: false`
+  - [ ] Update seeder data to match
+
+### 12.7 Order Queue / Order Line Feature (P6)
+
+**Problem:** No quick view of active orders within POS page; cashier must navigate to separate Orders page to see order status.
+
+**User Requirements (from screenshots):**
+- Horizontal card-based view of active orders
+- Each card shows: customer name, order number, table number, time/status
+- Status badges: Cancelled, Waiting, Ready to Serve, Completed, Order Prepare
+- Displayed IN the POS page (not separate page) above or beside product area
+- Quick access to order details, update status
+
+**Implementation:**
+- [ ] Create OrderQueue component:
+  - [ ] File: `apps/pos-terminal-web/src/components/pos/OrderQueue.tsx`
+  - [ ] Horizontal scrollable card layout (similar to screenshot)
+  - [ ] Each card:
+    - [ ] Customer name (from order.customer_name)
+    - [ ] Order number (order.order_number)
+    - [ ] Table number (order.table_number)
+    - [ ] Status badge with color coding:
+      - [ ] Draft → Gray
+      - [ ] Confirmed / Waiting → Orange
+      - [ ] Preparing → Yellow
+      - [ ] Ready to Serve → Green
+      - [ ] Completed → Blue
+      - [ ] Cancelled → Red
+    - [ ] Elapsed time (since order created_at)
+    - [ ] Click to view order details or update status
+- [ ] Data fetching:
+  - [ ] Use existing `useListOpenOrders()` hook (already implemented)
+  - [ ] Filter by status: `['draft', 'confirmed', 'preparing', 'ready']`
+  - [ ] Auto-refresh every 30 seconds (or use websocket for real-time)
+  - [ ] Show loading skeleton while fetching
+- [ ] Integrate into POS page:
+  - [ ] `apps/pos-terminal-web/src/pages/pos.tsx`: Add `<OrderQueue />` above ProductArea
+  - [ ] Collapsible panel (can hide/show to save space)
+  - [ ] Default visible on desktop (>=1280px), hidden on mobile/tablet
+  - [ ] Toggle button to show/hide queue
+- [ ] Status update actions:
+  - [ ] Quick action buttons on each card:
+    - [ ] "Start Preparing" (draft → confirmed)
+    - [ ] "Ready" (preparing → ready)
+    - [ ] "Complete" (ready → completed, if paid)
+    - [ ] "Cancel" (any → cancelled)
+  - [ ] Confirmation dialog for destructive actions (cancel, complete)
+- [ ] Module gating:
+  - [ ] Only show OrderQueue if tenant has orders feature enabled
+  - [ ] For cafe/restaurant, always visible
+  - [ ] For retail/minimarket, may hide (different workflow)
+
+### 12.8 Order Lifecycle Documentation & Terminology Clarity
+
+**Problem:** Confusion between "open order", "draft order", "active order" - unclear state machine.
+
+**User Question:** What is "open order"? Is it same as draft? Customer masih menikmati makanan, order belum dibayar - status apa?
+
+**Analysis:**
+- Current schema: `status: 'draft' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'`
+- Current schema: `payment_status: 'unpaid' | 'partial' | 'paid'`
+- `ListOpenOrders` returns: status in `['draft', 'confirmed', 'preparing', 'ready']`
+
+**Proposed Terminology:**
+1. **Draft Order**: Order in cart, not yet submitted/printed. `status = 'draft'`, `payment_status = 'unpaid'`. Temporary, can be deleted/modified freely.
+2. **Open Order (Active Tab)**: Order submitted and confirmed but not yet paid. `status = 'confirmed'`, `payment_status = 'unpaid'` or `'partial'`. Customer enjoying meal, bill not settled.
+3. **In-Progress Order**: Order being prepared. `status = 'preparing'` or `'ready'`.
+4. **Completed Order**: Order fully paid and closed. `status = 'completed'`, `payment_status = 'paid'`.
+
+**State Machine (for Cafe/Restaurant Dine-In):**
+```
+Cart → [Submit] → Draft (printed)
+Draft → [Confirm] → Open Tab (status=confirmed, payment=unpaid)
+Open Tab → [Send to Kitchen] → Preparing
+Preparing → [Chef marks ready] → Ready to Serve
+Ready → [Record Payment] → (payment_status: unpaid → partial or paid)
+If payment_status=paid → [Complete] → Completed
+```
+
+**Implementation:**
+- [ ] Document state machine:
+  - [ ] File: `docs/order-lifecycle.md`
+  - [ ] Mermaid diagram showing all transitions
+  - [ ] Explain terminology: draft vs open vs active vs completed
+- [ ] Update use case naming:
+  - [ ] Consider renaming `ListOpenOrders` to `ListActiveOrders` for clarity
+  - [ ] Or keep `ListOpenOrders` but document it includes draft+confirmed+preparing+ready
+- [ ] Update UI labels:
+  - [ ] Orders page: rename tab "Open Orders" to "Active Orders" or "In Progress"
+  - [ ] Clearly distinguish draft (in cart) vs confirmed (open tab)
+- [ ] Add order status helper:
+  - [ ] File: `packages/core/utils/orderStatus.ts`
+  - [ ] `isDraft()`, `isOpenTab()`, `isInProgress()`, `isCompleted()`, `isCancelled()`
+  - [ ] `canAddItems()`, `canSendToKitchen()`, `canRecordPayment()`, `canComplete()`
+
+### 12.9 Bills Feature Specification (Future)
+
+**Problem:** Sidebar has disabled "Bills" menu (line 22 in Sidebar.tsx) with no clear specification. What should this feature do?
+
+**Possible Interpretations:**
+1. **Print Bill / Check**: Print itemized bill for customer review before payment (common in restaurants)
+2. **Pending Invoices**: List of unpaid orders that need follow-up
+3. **Split Bill**: Feature to split single order into multiple payments
+4. **Bill History**: Archive of all printed bills/receipts
+
+**Recommendation:**
+- **Short-term**: Remove disabled "Bills" menu item from sidebar to reduce confusion
+- **Long-term**: Define clear scope based on business requirements:
+  - If needed for "Print Bill before Payment" → implement as action in Order details page
+  - If needed for "Unpaid Orders" → rename to "Unpaid Orders" and use `ListOpenOrders` with payment_status filter
+  - If needed for "Split Bill" → implement as feature in payment dialog
+
+**Implementation (when scoped):**
+- [ ] Define Bills feature requirements:
+  - [ ] Gather user stories from cafe/restaurant operators
+  - [ ] Differentiate from Orders, Payments, Receipts
+  - [ ] Decide on terminology: "Bills", "Invoices", "Tabs", "Checks"
+- [ ] If implementing "Print Bill":
+  - [ ] Add "Print Bill" button in Order details page
+  - [ ] Generate PDF/thermal printer format with itemized list, subtotal, tax, total
+  - [ ] Mark order as "bill_printed" (optional flag in metadata)
+- [ ] If implementing "Unpaid Orders":
+  - [ ] Rename menu to "Unpaid Orders" or "Open Tabs"
+  - [ ] Create page showing orders with payment_status = 'unpaid' or 'partial'
+  - [ ] Group by table, customer, or date
+  - [ ] Quick actions: Record Payment, Cancel Order
+- [ ] For now:
+  - [ ] Remove disabled Bills menu item from Sidebar.tsx
+  - [ ] Document in backlog for future consideration
+
+---
+
 When you finish a group of tasks for a domain, ensure:
 
 - All tests and type checks pass.

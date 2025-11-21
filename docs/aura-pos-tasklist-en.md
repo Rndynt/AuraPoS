@@ -465,3 +465,168 @@
   - [ ] How business type affects modules.
 - [ ] Maintain a `features_checklist.md` synchronized with this tasklist.
 - [ ] Document how to run seeding and sample flows for café tenant.
+
+---
+
+## 12. URGENT: POS Page Critical Fixes & Cart Flow Improvements
+
+> **CRITICAL ISSUES** identified in comprehensive code analysis (Nov 2025)  
+> These are NOT new features but **critical bugs and workflow blockers** in existing POS implementation (Sections 3, 6, 10)  
+> **Must fix before production deployment**
+
+### 12.1 [P0-BLOCKER] Fix POS Page Scroll Regression
+
+**Problem:** Product area cannot scroll on any breakpoint; cart panel action buttons invisible on tablet/desktop.
+
+**Root Cause Analysis:**
+- `apps/pos-terminal-web/src/pages/pos.tsx` line 344: Parent `div.flex-1` has `overflow-hidden`, blocking child `overflow-y-auto`
+- `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` line 143: Product grid `overflow-y-auto` prevented by parent constraint
+- `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` line 177: Hardcoded `maxHeight: calc(100vh - 450px)` too large for tablet, hiding action buttons
+
+**Implementation:**
+- [ ] Fix POS page layout overflow control (apps/pos-terminal-web/src/pages/pos.tsx line 344)
+- [ ] Fix ProductArea scroll (apps/pos-terminal-web/src/components/pos/ProductArea.tsx line 143)
+- [ ] Fix CartPanel scroll with responsive height (apps/pos-terminal-web/src/components/pos/CartPanel.tsx line 177)
+- [ ] Test across all breakpoints: mobile (375px), tablet (768-1024px), desktop (1280px+)
+
+### 12.2 [P1] Cart State Refactoring
+
+> **Fixes:** Section 3.5 POS UI implementation issues where cart metadata ignored during checkout
+
+**Root Cause:** `selectedOrderTypeId` state duplicated between POSPage and cart; cart metadata (`tableNumber`, `paymentMethod`) exists but ignored; payment method hardcoded to "cash".
+
+**Files affected:**
+- `apps/pos-terminal-web/src/hooks/useCart.ts` lines 141-143
+- `apps/pos-terminal-web/src/pages/pos.tsx` lines 27, 174, 185
+- `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` lines 351-354
+
+**Implementation:**
+- [ ] Move `selectedOrderTypeId` to cart state (useCart.ts) for single source of truth
+- [ ] Remove duplicate `selectedOrderTypeId` from POSPage component state
+- [ ] Pre-fill OrderTypeSelectionDialog with cart metadata (orderTypeId, tableNumber)
+- [ ] Use `cart.paymentMethod` instead of hardcoded "cash" in payment recording (pos.tsx line 185)
+
+### 12.3 [P2] Quick Charge Path
+
+> **Enhances:** Section 6.4 POS UI payment flow to support express checkout
+
+**Root Cause:** Every order forced through OrderTypeSelectionDialog even when all metadata already set in cart. Causes unnecessary friction for counter service / quick cash sales.
+
+**Implementation:**
+- [ ] Add conditional logic in `handleCharge()`: check if `cart.selectedOrderTypeId` set + table (if needed)
+- [ ] If all required metadata present → call `handleQuickCharge()` directly (bypass dialog)
+- [ ] If metadata missing → open dialog as fallback
+- [ ] Add keyboard shortcut (Ctrl+Enter or F9) for quick charge
+- [ ] Support Cafe A counter service use case (1-click charge)
+
+### 12.4 [P3] Transaction Safety - Atomic Order + Payment
+
+> **Fixes:** Section 6.2 RecordPayment use case critical bug: orphaned orders when payment fails
+
+**Root Cause:** Order creation (`createOrderMutation`) and payment recording (`recordPaymentMutation`) are separate API calls. If payment fails, order already created and cart cleared. No rollback mechanism.
+
+**Files affected:** `apps/pos-terminal-web/src/pages/pos.tsx` lines 177-207
+
+**Implementation Option A (Recommended):**
+- [ ] Backend: Create `/api/orders/create-and-pay` endpoint with DB transaction (apps/api/src/http/routes/orders.ts)
+  - [ ] Accepts order payload + payment details in single request
+  - [ ] Wraps `CreateOrder` + `RecordPayment` in DB transaction
+  - [ ] On failure: automatic rollback (no orphan order)
+- [ ] Frontend: Replace two mutations with single `createAndPayMutation`
+  - [ ] Clear cart ONLY after successful response
+  - [ ] On error: keep cart intact, show error toast, allow retry
+
+**Implementation Option B (Fallback if DB transaction not supported):**
+- [ ] Frontend compensating transaction:
+  - [ ] Create order → get orderId
+  - [ ] Try record payment
+  - [ ] If payment fails → call `/api/orders/:id/cancel` to cancel the order
+  - [ ] Keep cart intact for retry
+
+---
+
+## 13. Order Lifecycle & Terminology Standardization
+
+> **Clarifies:** Section 3 Ordering Domain terminology confusion
+
+**Problem:** Users confused about "open order" vs "draft order" vs "active order". No clear state machine documented.
+
+**Proposed Terminology (standardize across codebase and UI):**
+1. **Draft Order**: In cart, not yet submitted/printed. `status='draft'`, `payment_status='unpaid'`
+2. **Open Order (Open Tab)**: Confirmed but not fully paid. `status='confirmed'`, `payment_status='unpaid'|'partial'`. Customer still dining or order awaiting settlement.
+3. **In-Progress Order**: Being prepared in kitchen. `status='preparing'|'ready'`. Any payment_status allowed.
+4. **Completed Order**: Fully paid and closed. `status='completed'`, `payment_status='paid'`. Lifecycle finished.
+
+**State Machine (Cafe/Restaurant Dine-In):**
+```
+Cart → [Submit] → Draft (status=draft, payment=unpaid)
+Draft → [Confirm/Print] → Open Tab (status=confirmed, payment=unpaid)
+Open Tab → [Send to Kitchen] → Preparing (payment still unpaid/partial)
+Preparing → [Chef marks ready] → Ready (payment still unpaid/partial)
+Ready → [Record Payment] → Updates payment_status:
+  - If amount < total → payment=partial (tab remains open)
+  - If amount = total → payment=paid → eligible for [Complete]
+[Only if payment=paid] → [Complete] → status=completed (lifecycle finished)
+```
+
+**Critical Notes:**
+- Open orders (`status=confirmed|preparing|ready`) can have `payment_status=unpaid|partial` for extended periods
+- Partial payments allowed at ANY stage (before kitchen, during cooking, after ready)
+- Transition to `status=completed` ONLY when `payment_status=paid` (enforcement in CompleteOrder use case)
+
+**Implementation:**
+- [ ] Document state machine in `docs/order-lifecycle.md` with Mermaid diagram
+- [ ] Create order status helper utils (`packages/core/utils/orderStatus.ts`):
+  - [ ] `isDraft()`, `isOpenTab()`, `isInProgress()`, `isCompleted()`, `isCancelled()`
+  - [ ] `canSendToKitchen()`, `canRecordPayment()`, `canComplete()`, `allowsPartialPayment()`
+- [ ] Update UI labels for clarity:
+  - [ ] Rename "Open Orders" tab → "Active Orders" or "In Progress"
+  - [ ] Add "Open Tabs (Unpaid)" filter for dine-in
+- [ ] Update `ListOpenOrders` documentation to clarify scope: `['draft', 'confirmed', 'preparing', 'ready']`
+
+---
+
+## 14. Sidebar Navigation Cleanup
+
+> **Removes:** Disabled/confusing menu items pending feature spec
+
+**Problem:** "Bills" menu item disabled with "Coming Soon" tooltip. No clear specification what this should do. Causes operator confusion.
+
+**Possible Interpretations (to be scoped later):**
+1. Print Bill / Check before payment (restaurant workflow)
+2. Pending Invoices list (unpaid orders for follow-up)
+3. Split Bill feature (multiple payments for single order)
+4. Bill History archive (completed bills for audit)
+
+**Recommendation:**
+- **Immediate:** Remove disabled "Bills" menu from sidebar (reduces UI clutter and confusion)
+- **Future:** Define Bills feature requirements based on actual business needs before re-adding
+
+**Implementation:**
+- [ ] Remove disabled Bills menu item from `apps/pos-terminal-web/src/components/pos/Sidebar.tsx` line 22
+- [ ] Document Bills feature ideas in backlog (`docs/backlog/bills-feature-spec.md`)
+- [ ] Gather user feedback: Do operators need "Print Bill" before payment? Or "Unpaid Orders" list?
+
+---
+
+## Critical Fixes Implementation Priority
+
+**Immediate (Week 1 - URGENT):**
+1. Section 12.1 - POS Scroll Fix [P0-BLOCKER] → Blocks all tablet/desktop usage
+2. Section 12.2 - Cart State Refactoring [P1] → Foundation for P2, P3
+3. Section 13 - Order Lifecycle Documentation → Clarifies business logic
+
+**Short-term (Week 2-3):**
+4. Section 12.3 - Quick Charge Path [P2] → Depends on P1, improves counter service UX
+5. Section 12.4 - Transaction Safety [P3] → Depends on P1, prevents data corruption
+6. Section 14 - Sidebar Cleanup → Low-hanging fruit, reduces confusion
+
+**Medium-term (Week 4+):**
+7. Section 4 - Table Master Data → Dynamic tables with availability
+8. Section 10.2 - Order Queue UI → In-page active orders view  
+9. Section 3.5 - Order Type Validation → needTableNumber enforcement
+
+**Dependencies:**
+- P2, P3 MUST wait for P1 completion (cart state refactoring)
+- P0 independent, do immediately
+- Documentation tasks (13, 14) can be done anytime
