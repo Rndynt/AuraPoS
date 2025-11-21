@@ -147,8 +147,8 @@ export class UpdateOrder {
         orderUpdates.notes = input.notes;
       }
 
-      // Convert orderItems back to UpdateOrderItemInput format with calculated subtotals
-      const itemsForUpdate: UpdateOrderItemInput[] = orderItems.map(item => ({
+      // Convert orderItems back to OrderItemInput format (required by repository)
+      const itemsForUpdate: any[] = orderItems.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
         base_price: item.base_price,
@@ -158,6 +158,8 @@ export class UpdateOrder {
         variant_price_delta: item.variant_price_delta,
         selected_options: item.selected_options,
         notes: item.notes,
+        item_subtotal: item.item_subtotal,  // REQUIRED BY REPOSITORY
+        status: item.status,
       }));
 
       // Update order with new items
