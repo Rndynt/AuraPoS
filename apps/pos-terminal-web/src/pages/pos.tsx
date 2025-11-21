@@ -24,7 +24,6 @@ export default function POSPage() {
   const [orderTypeSelectionDialogOpen, setOrderTypeSelectionDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
@@ -41,12 +40,12 @@ export default function POSPage() {
     return orderTypes?.filter(ot => ot.isActive === true) || [];
   }, [orderTypes]);
 
-  // Auto-select first ACTIVE order type when loaded
+  // Auto-select first ACTIVE order type when loaded (only if not already in cart)
   useEffect(() => {
-    if (!orderTypesLoading && activeOrderTypes.length > 0 && !selectedOrderTypeId) {
-      setSelectedOrderTypeId(activeOrderTypes[0].id);
+    if (!orderTypesLoading && activeOrderTypes.length > 0 && !cart.selectedOrderTypeId) {
+      cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
     }
-  }, [activeOrderTypes, orderTypesLoading, selectedOrderTypeId]);
+  }, [activeOrderTypes, orderTypesLoading, cart]);
 
   // Mutations
   const createOrderMutation = useCreateOrder();
@@ -69,7 +68,7 @@ export default function POSPage() {
   };
 
   const validateOrderType = () => {
-    if (!selectedOrderTypeId) {
+    if (!cart.selectedOrderTypeId) {
       toast({
         title: "Order type required",
         description: "Please select an order type before continuing",
@@ -79,14 +78,14 @@ export default function POSPage() {
     }
 
     // Validate that selected order type is active
-    const isValidOrderType = activeOrderTypes.some(ot => ot.id === selectedOrderTypeId);
+    const isValidOrderType = activeOrderTypes.some(ot => ot.id === cart.selectedOrderTypeId);
     if (!isValidOrderType) {
       toast({
         title: "Invalid order type",
         description: "The selected order type is no longer available. Please select a valid order type.",
         variant: "destructive",
       });
-      setSelectedOrderTypeId(null);
+      cart.setSelectedOrderTypeId(null);
       return false;
     }
 
@@ -97,7 +96,7 @@ export default function POSPage() {
     items: cart.toBackendOrderItems(),
     tax_rate: cart.taxRate,
     service_charge_rate: cart.serviceChargeRate,
-    order_type_id: selectedOrderTypeId || undefined,
+    order_type_id: cart.selectedOrderTypeId || undefined,
     customer_name: cart.customerName || undefined,
     table_number: cart.tableNumber || undefined,
   });
@@ -182,7 +181,7 @@ export default function POSPage() {
         await recordPaymentMutation.mutateAsync({
           orderId: orderResult.order.id,
           amount: orderResult.pricing.total_amount,
-          payment_method: "cash", // Default to cash when marking as paid
+          payment_method: cart.paymentMethod,
         });
 
         toast({
@@ -197,7 +196,7 @@ export default function POSPage() {
       }
 
       // Update selected order type and table number in cart state
-      setSelectedOrderTypeId(result.orderTypeId);
+      cart.setSelectedOrderTypeId(result.orderTypeId);
       if (result.tableNumber) {
         cart.setTableNumber(result.tableNumber);
       }
@@ -350,8 +349,8 @@ export default function POSPage() {
         onAddToCart={handleAddToCart}
         orderTypes={activeOrderTypes}
         orderTypesLoading={orderTypesLoading}
-        selectedOrderTypeId={selectedOrderTypeId}
-        onSelectOrderType={setSelectedOrderTypeId}
+        selectedOrderTypeId={cart.selectedOrderTypeId}
+        onSelectOrderType={cart.setSelectedOrderTypeId}
       />
 
       {/* Cart Panel - Hidden on mobile */}

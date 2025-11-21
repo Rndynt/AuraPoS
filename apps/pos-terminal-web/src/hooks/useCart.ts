@@ -141,6 +141,7 @@ export function useCart() {
   const [customerName, setCustomerName] = useState<string>("");
   const [tableNumber, setTableNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
   
   // Generate temporary order number for display (will be replaced by backend)
   const [orderNumber] = useState<string>(() => {
@@ -243,6 +244,7 @@ export function useCart() {
     setCustomerName("");
     setTableNumber("");
     setPaymentMethod("cash");
+    setSelectedOrderTypeId(null);
   };
 
   /**
@@ -323,6 +325,8 @@ export function useCart() {
     setTableNumber,
     paymentMethod,
     setPaymentMethod,
+    selectedOrderTypeId,
+    setSelectedOrderTypeId,
     orderNumber,
   };
 }
