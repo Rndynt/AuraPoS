@@ -110,12 +110,12 @@ export class OrderRepository
   }
 
   /**
-   * Find orders by tenant with filters and pagination
+   * Find orders by tenant with filters and pagination (includes items)
    */
   async findByTenant(
     tenantId: string,
     filters?: OrderFilters
-  ): Promise<Order[]> {
+  ): Promise<any[]> {
     try {
       const conditions = this.buildFilterConditions(tenantId, filters);
 
@@ -133,7 +133,34 @@ export class OrderRepository
         query = query.offset(filters.offset) as any;
       }
 
-      return await query;
+      const orderList = await query;
+
+      // Fetch items for all orders
+      if (orderList.length === 0) {
+        return [];
+      }
+
+      const orderIds = orderList.map((o) => o.id);
+      const itemsMap = new Map<string, any[]>();
+
+      const allItems = await this.db
+        .select()
+        .from(orderItems)
+        .where(inArray(orderItems.orderId, orderIds));
+
+      // Group items by order ID
+      allItems.forEach((item) => {
+        if (!itemsMap.has(item.orderId)) {
+          itemsMap.set(item.orderId, []);
+        }
+        itemsMap.get(item.orderId)!.push(item);
+      });
+
+      // Attach items to each order
+      return orderList.map((order) => ({
+        ...order,
+        orderItems: itemsMap.get(order.id) || [],
+      }));
     } catch (error) {
       this.handleError('find orders by tenant', error);
     }
