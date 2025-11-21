@@ -77,13 +77,13 @@ function TableCardNew({ table, selected, onSelect }: { table: Table; selected: b
     <button
       onClick={onSelect}
       disabled={isDisabled}
-      className={`relative w-24 h-16 rounded-xl border-2 flex items-center justify-center font-bold text-sm transition cursor-pointer disabled:cursor-not-allowed ${getStatusColor(table.status)} ${
+      className={`relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl border-2 flex items-center justify-center font-bold text-xs sm:text-sm transition cursor-pointer disabled:cursor-not-allowed ${getStatusColor(table.status)} ${
         selected ? "ring-2 ring-offset-1 ring-blue-500" : ""
       }`}
       data-testid={`table-select-${table.tableNumber}`}
     >
       <div className="text-center">
-        <div className="font-bold text-base">{table.tableNumber}</div>
+        <div className="font-bold text-sm sm:text-base">{table.tableNumber}</div>
         {table.status === "occupied" && <div className="text-xs text-orange-600">Checked-in</div>}
         {table.status === "reserved" && <div className="text-xs text-yellow-600">Reserved</div>}
         {table.status === "available" && <div className="text-xs text-green-600">Free</div>}
@@ -181,43 +181,149 @@ export default function TablesManagementPage() {
     );
   }
 
+  // Component untuk sidebar details
+  const TableDetailsContent = () => (
+    <>
+      <div>
+        <h2 className="font-semibold text-lg">Table {selectedTableData?.tableNumber}</h2>
+        <p className="text-sm text-muted-foreground">{selectedTableData?.tableName}</p>
+        <p className="text-xs text-muted-foreground mt-1">Capacity: {selectedTableData?.capacity} persons</p>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Badge className={`${getStatusBadgeColor(selectedTableData?.status || "")} text-white`}>
+            {selectedTableData?.status.charAt(0).toUpperCase() + selectedTableData?.status.slice(1)}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Open Orders Section */}
+      {tableOrders.length > 0 && (
+        <div className="border-t pt-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <ShoppingCart className="w-4 h-4" />
+            Open Orders ({tableOrders.length})
+          </div>
+          {tableOrders.map((order) => (
+            <div key={order.id} className="bg-muted p-3 rounded-lg space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Order #{order.orderNumber}</p>
+                  <p className="text-sm font-semibold mt-1">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                  {order.customerName && <p className="text-xs text-muted-foreground">{order.customerName}</p>}
+                </div>
+                <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
+                  {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                </Badge>
+              </div>
+              
+              {/* Order Items */}
+              {order.orderItems && order.orderItems.length > 0 && (
+                <div className="bg-background p-2 rounded text-xs space-y-1 border border-muted-foreground/10">
+                  {order.orderItems.map((item: any, idx: number) => (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="flex justify-between items-start gap-1">
+                        <span className="text-muted-foreground font-medium">{item.productName || item.product_name}</span>
+                        <span className="font-medium">×{item.quantity}</span>
+                      </div>
+                      {/* Show variant if exists */}
+                      {(item.variantName || item.variant_name) && (
+                        <div className="text-xs text-muted-foreground/70 ml-1">
+                          • {item.variantName || item.variant_name}
+                        </div>
+                      )}
+                      {/* Show selected options if exists */}
+                      {item.selectedOptions && item.selectedOptions.length > 0 && (
+                        <div className="text-xs text-muted-foreground/70 ml-1">
+                          {item.selectedOptions.map((opt: any) => (
+                            <div key={`${opt.group_id || opt.groupId}-${opt.option_id || opt.optionId}`}>
+                              • {opt.option_name || opt.optionName}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {order.paymentStatus !== "paid" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => handleContinueOrder(order)}
+                  data-testid={`button-continue-order-${order.id}`}
+                >
+                  <Edit className="w-3 h-3 mr-1" />
+                  Continue Order
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="pt-4 space-y-3">
+        {selectedTableData?.status === "occupied" && (
+          <Button variant="outline" className="w-full" size="sm" data-testid="button-checkout-table">
+            <Check className="w-4 h-4 mr-2" />
+            Check Out & Payment
+          </Button>
+        )}
+        {selectedTableData?.status === "available" && (
+          <Button className="w-full bg-orange-500 hover:bg-orange-600" size="sm" data-testid="button-new-order">
+            <Clock className="w-4 h-4 mr-2" />
+            New Order
+          </Button>
+        )}
+        <Button variant="outline" className="w-full" size="sm" data-testid="button-view-details">
+          View Details
+        </Button>
+      </div>
+    </>
+  );
+
   return (
-    <div className="flex h-full gap-6 p-6">
+    <div className="flex flex-col lg:flex-row h-full gap-3 lg:gap-6 p-3 lg:p-6 overflow-hidden">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-3 lg:gap-4 min-h-0">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Choose Tables</h1>
-          <p className="text-sm text-muted-foreground">Select a table to manage reservations and check-ins</p>
+        <div className="space-y-1 lg:space-y-2">
+          <h1 className="text-2xl lg:text-3xl font-bold">Choose Tables</h1>
+          <p className="text-xs lg:text-sm text-muted-foreground hidden sm:block">Select a table to manage reservations and check-ins</p>
         </div>
 
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search tables..."
+            placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 text-sm"
             data-testid="input-search-tables"
           />
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2">
+        {/* Filter Tabs - Responsive wrap */}
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={statusFilter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("all")}
             data-testid="filter-all"
+            className="text-xs lg:text-sm"
           >
-            All Tables
+            All
           </Button>
           <Button
             variant={statusFilter === "reserved" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("reserved")}
             data-testid="filter-reserved"
+            className="text-xs lg:text-sm"
           >
             Reserved ({statusCounts.reserved})
           </Button>
@@ -226,158 +332,81 @@ export default function TablesManagementPage() {
             size="sm"
             onClick={() => setStatusFilter("occupied")}
             data-testid="filter-occupied"
+            className="text-xs lg:text-sm"
           >
             Checked-in ({statusCounts.occupied})
           </Button>
         </div>
 
-        {/* Status Legend */}
-        <div className="flex gap-4 p-3 bg-muted rounded-lg text-sm">
+        {/* Status Legend - Stack on mobile */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 p-2 lg:p-3 bg-muted rounded-lg text-xs lg:text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-green-500 bg-green-50" />
+            <div className="w-3 h-3 lg:w-4 lg:h-4 rounded border-2 border-green-500 bg-green-50" />
             <span>Free: {statusCounts.free}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-yellow-500 bg-yellow-50" />
+            <div className="w-3 h-3 lg:w-4 lg:h-4 rounded border-2 border-yellow-500 bg-yellow-50" />
             <span>Reserved: {statusCounts.reserved}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-orange-500 bg-orange-50" />
+            <div className="w-3 h-3 lg:w-4 lg:h-4 rounded border-2 border-orange-500 bg-orange-50" />
             <span>Checked-in: {statusCounts.occupied}</span>
           </div>
         </div>
 
-        {/* Table Grid */}
+        {/* Table Grid - Responsive */}
         <div className="flex-1 overflow-auto">
           {filteredTables.length > 0 ? (
-            <div className="grid gap-6 p-4 bg-muted/30 rounded-lg auto-fit" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}>
+            <div className="grid gap-3 lg:gap-6 p-2 lg:p-4 bg-muted/30 rounded-lg auto-fit" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}>
               {filteredTables.map((table) => (
                 <div key={table.id} className="flex justify-center">
                   <TableCardNew
                     table={table}
                     selected={selectedTable === table.id}
-                    onSelect={() => setSelectedTable(table.id)}
+                    onSelect={() => {
+                      setSelectedTable(table.id);
+                      setShowDetailsMobile(true);
+                    }}
                   />
                 </div>
               ))}
             </div>
           ) : (
             <div className="flex items-center justify-center h-48">
-              <p className="text-muted-foreground">No tables found</p>
+              <p className="text-muted-foreground text-sm">No tables found</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Right Sidebar - Guest Information */}
-      <div className="w-80 border-l pl-6 py-4 flex flex-col gap-4 max-h-[calc(100vh-200px)] overflow-auto">
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden lg:flex lg:w-80 border-l pl-6 py-4 flex-col gap-4 max-h-[calc(100vh-200px)] overflow-auto">
         {selectedTableData ? (
-          <>
-            <div>
-              <h2 className="font-semibold text-lg">Table {selectedTableData.tableNumber}</h2>
-              <p className="text-sm text-muted-foreground">{selectedTableData.tableName}</p>
-              <p className="text-xs text-muted-foreground mt-1">Capacity: {selectedTableData.capacity} persons</p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white`}>
-                  {selectedTableData.status.charAt(0).toUpperCase() + selectedTableData.status.slice(1)}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Open Orders Section */}
-            {tableOrders.length > 0 && (
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <ShoppingCart className="w-4 h-4" />
-                  Open Orders ({tableOrders.length})
-                </div>
-                {tableOrders.map((order) => (
-                  <div key={order.id} className="bg-muted p-3 rounded-lg space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Order #{order.orderNumber}</p>
-                        <p className="text-sm font-semibold mt-1">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
-                        {order.customerName && <p className="text-xs text-muted-foreground">{order.customerName}</p>}
-                      </div>
-                      <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
-                        {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
-                      </Badge>
-                    </div>
-                    
-                    {/* Order Items */}
-                    {order.orderItems && order.orderItems.length > 0 && (
-                      <div className="bg-background p-2 rounded text-xs space-y-1 border border-muted-foreground/10">
-                        {order.orderItems.map((item: any, idx: number) => (
-                          <div key={idx} className="space-y-0.5">
-                            <div className="flex justify-between items-start gap-1">
-                              <span className="text-muted-foreground font-medium">{item.productName || item.product_name}</span>
-                              <span className="font-medium">×{item.quantity}</span>
-                            </div>
-                            {/* Show variant if exists */}
-                            {(item.variantName || item.variant_name) && (
-                              <div className="text-xs text-muted-foreground/70 ml-1">
-                                • {item.variantName || item.variant_name}
-                              </div>
-                            )}
-                            {/* Show selected options if exists */}
-                            {item.selectedOptions && item.selectedOptions.length > 0 && (
-                              <div className="text-xs text-muted-foreground/70 ml-1">
-                                {item.selectedOptions.map((opt: any) => (
-                                  <div key={`${opt.group_id || opt.groupId}-${opt.option_id || opt.optionId}`}>
-                                    • {opt.option_name || opt.optionName}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {order.paymentStatus !== "paid" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => handleContinueOrder(order)}
-                        data-testid={`button-continue-order-${order.id}`}
-                      >
-                        <Edit className="w-3 h-3 mr-1" />
-                        Continue Order
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-4 space-y-3">
-              {selectedTableData.status === "occupied" && (
-                <Button variant="outline" className="w-full" size="sm" data-testid="button-checkout-table">
-                  <Check className="w-4 h-4 mr-2" />
-                  Check Out & Payment
-                </Button>
-              )}
-              {selectedTableData.status === "available" && (
-                <Button className="w-full bg-orange-500 hover:bg-orange-600" size="sm" data-testid="button-new-order">
-                  <Clock className="w-4 h-4 mr-2" />
-                  New Order
-                </Button>
-              )}
-              <Button variant="outline" className="w-full" size="sm" data-testid="button-view-details">
-                View Details
-              </Button>
-            </div>
-          </>
+          <TableDetailsContent />
         ) : (
           <div className="text-center text-muted-foreground">
             <p className="text-sm">Select a table to view details</p>
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Sheet */}
+      <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>
+        <SheetContent side="bottom" className="h-[80vh] overflow-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Table Details</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 pb-6">
+            {selectedTableData ? (
+              <TableDetailsContent />
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <p className="text-sm">Select a table to view details</p>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
