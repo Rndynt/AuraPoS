@@ -14,11 +14,17 @@ export function useTables(status?: string, floor?: string) {
     queryKey: ["/api/tables", tenantId, status, floor],
     queryFn: async (): Promise<TablesResponse> => {
       const params = new URLSearchParams();
-      if (tenantId) params.append("tenant_id", tenantId);
       if (status) params.append("status", status);
       if (floor) params.append("floor", floor);
       
-      const response = await fetch(`/api/tables${params.toString() ? `?${params.toString()}` : ""}`);
+      const response = await fetch(
+        `/api/tables${params.toString() ? `?${params.toString()}` : ""}`,
+        {
+          headers: {
+            "x-tenant-id": tenantId,
+          },
+        }
+      );
       if (!response.ok) throw new Error("Failed to fetch tables");
       return response.json();
     },
