@@ -125,18 +125,16 @@ export class UpdateOrder {
       const serviceChargeAmount = subtotal * serviceChargeRate;
       const totalAmount = subtotal + taxAmount + serviceChargeAmount;
 
-      // Prepare order updates
+      // Prepare order updates (using correct database column names)
       const orderUpdates: Partial<Order> = {
-        order_type_id: input.order_type_id,
-        customer_name: input.customer_name,
-        table_number: input.table_number,
+        orderTypeId: input.order_type_id,
+        customerName: input.customer_name,
+        tableNumber: input.table_number,
         notes: input.notes,
-        order_subtotal: subtotal,
-        tax_amount: taxAmount,
-        service_charge_amount: serviceChargeAmount,
-        total_amount: totalAmount,
-        tax_rate: taxRate,
-        service_charge_rate: serviceChargeRate,
+        subtotal: subtotal,
+        taxAmount: taxAmount,
+        serviceCharge: serviceChargeAmount,
+        total: totalAmount,
       };
 
       // Convert orderItems back to UpdateOrderItemInput format with calculated subtotals
