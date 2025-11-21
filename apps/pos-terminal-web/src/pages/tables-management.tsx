@@ -5,7 +5,7 @@ import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit, X } from "lucide-react";
+import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Table } from "@shared/schema";
 import {
@@ -18,15 +18,15 @@ import {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "available":
-      return "border-green-500 bg-green-50";
+      return "border-green-500 bg-green-50 dark:bg-green-950/20";
     case "occupied":
-      return "border-orange-500 bg-orange-50";
+      return "border-orange-500 bg-orange-50 dark:bg-orange-950/20";
     case "reserved":
-      return "border-yellow-500 bg-yellow-50";
+      return "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
     case "maintenance":
-      return "border-gray-400 bg-gray-100";
+      return "border-gray-400 bg-gray-100 dark:bg-gray-800";
     default:
-      return "border-gray-300 bg-gray-50";
+      return "border-gray-300 bg-gray-50 dark:bg-gray-900";
   }
 };
 
@@ -45,53 +45,43 @@ const getStatusBadgeColor = (status: string) => {
   }
 };
 
-interface SeatIndicatorProps {
-  capacity: number;
-  position: "top" | "right" | "bottom" | "left";
-}
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case "available":
+      return "Available";
+    case "occupied":
+      return "Occupied";
+    case "reserved":
+      return "Reserved";
+    case "maintenance":
+      return "Maintenance";
+    default:
+      return status;
+  }
+};
 
-function SeatIndicator({ capacity, position }: SeatIndicatorProps) {
-  const maxSeats = Math.min(capacity, 4);
-  const seats = Array.from({ length: maxSeats }, (_, i) => i);
-
-  const positionClasses = {
-    top: "absolute -top-2 left-1/2 transform -translate-x-1/2 flex gap-1",
-    right: "absolute -right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-1",
-    bottom: "absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1",
-    left: "absolute -left-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-1",
-  };
-
-  return (
-    <div className={positionClasses[position]}>
-      {seats.map((i) => (
-        <div key={i} className="w-2 h-2 rounded-full bg-gray-400" />
-      ))}
-    </div>
-  );
-}
-
-function TableCardNew({ table, selected, onSelect }: { table: Table; selected: boolean; onSelect: () => void }) {
+function TableCard({ table, selected, onSelect }: { table: Table; selected: boolean; onSelect: () => void }) {
   const isDisabled = table.status === "maintenance";
 
   return (
     <button
       onClick={onSelect}
       disabled={isDisabled}
-      className={`relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl border-2 flex items-center justify-center font-bold text-xs sm:text-sm transition cursor-pointer disabled:cursor-not-allowed ${getStatusColor(table.status)} ${
-        selected ? "ring-2 ring-offset-1 ring-blue-500" : ""
+      className={`relative w-full aspect-square rounded-lg border-2 flex flex-col items-center justify-center font-bold text-sm transition cursor-pointer disabled:cursor-not-allowed hover:shadow-md ${getStatusColor(table.status)} ${
+        selected ? "ring-2 ring-offset-2 ring-blue-500 shadow-lg" : ""
       }`}
       data-testid={`table-select-${table.tableNumber}`}
     >
-      <div className="text-center">
-        <div className="font-bold text-sm sm:text-base">{table.tableNumber}</div>
-        {table.status === "occupied" && <div className="text-xs text-orange-600">Checked-in</div>}
-        {table.status === "reserved" && <div className="text-xs text-yellow-600">Reserved</div>}
-        {table.status === "available" && <div className="text-xs text-green-600">Free</div>}
+      <div className="text-center space-y-1">
+        <div className="text-2xl font-bold">{table.tableNumber}</div>
+        <div className="text-xs opacity-75">
+          {table.status === "occupied" && "Occupied"}
+          {table.status === "reserved" && "Reserved"}
+          {table.status === "available" && "Free"}
+          {table.status === "maintenance" && "Maintenance"}
+        </div>
+        {table.capacity && <div className="text-xs opacity-60">{table.capacity} seats</div>}
       </div>
-
-      {/* Seat indicators */}
-      <SeatIndicator capacity={table.capacity || 2} position="top" />
-      <SeatIndicator capacity={table.capacity || 2} position="bottom" />
     </button>
   );
 }
@@ -112,7 +102,6 @@ export default function TablesManagementPage() {
 
   const handleContinueOrder = async (order: any) => {
     try {
-      // Fetch full order details with items from API
       const response = await fetch(`/api/orders/${order.id}`, {
         headers: {
           "x-tenant-id": localStorage.getItem("tenantId") || "demo-tenant",
@@ -123,11 +112,10 @@ export default function TablesManagementPage() {
       const json = await response.json();
       const fullOrder = json.data;
       
-      // Load the full order (with items) into cart
       const orderId = cart.loadOrder(fullOrder);
       toast({
         title: "Order loaded",
-        description: `Order #${order.orderNumber} loaded into cart. Continue editing and add more items if needed.`,
+        description: `Order #${order.orderNumber} loaded into cart.`,
       });
       setLocation(`/pos?continueOrderId=${orderId}`);
     } catch (error) {
@@ -164,7 +152,6 @@ export default function TablesManagementPage() {
 
   const selectedTableData = tables.find((t) => t.id === selectedTable);
   
-  // Get orders for selected table
   const tableOrders = useMemo(() => {
     if (!selectedTableData) return [];
     return orders.filter((order) => order.tableNumber === selectedTableData.tableNumber && order.status !== "completed" && order.status !== "cancelled");
@@ -172,7 +159,7 @@ export default function TablesManagementPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center space-y-3">
           <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">Loading tables...</p>
@@ -181,125 +168,112 @@ export default function TablesManagementPage() {
     );
   }
 
-  // Component untuk sidebar details
-  const TableDetailsContent = () => (
-    <>
-      <div>
-        <h2 className="font-semibold text-lg">Table {selectedTableData?.tableNumber}</h2>
-        <p className="text-sm text-muted-foreground">{selectedTableData?.tableName}</p>
-        <p className="text-xs text-muted-foreground mt-1">Capacity: {selectedTableData?.capacity} persons</p>
-      </div>
+  // Table Details Component
+  const TableDetailsContent = () => {
+    if (!selectedTableData) return null;
+    
+    return (
+      <div className="space-y-4">
+        {/* Table Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg">
+          <div className="text-3xl font-bold">{selectedTableData.tableNumber}</div>
+          <p className="text-blue-100 text-sm">{selectedTableData.tableName}</p>
+          <p className="text-blue-100 text-sm">Capacity: {selectedTableData.capacity} persons</p>
+        </div>
 
-      <div className="space-y-2">
+        {/* Status */}
         <div className="flex items-center gap-2">
-          <Badge className={`${getStatusBadgeColor(selectedTableData?.status || "")} text-white`}>
-            {selectedTableData?.status.charAt(0).toUpperCase() + selectedTableData?.status.slice(1)}
+          <Badge className={`${getStatusBadgeColor(selectedTableData.status)} text-white text-sm`}>
+            {getStatusLabel(selectedTableData.status)}
           </Badge>
         </div>
-      </div>
 
-      {/* Open Orders Section */}
-      {tableOrders.length > 0 && (
-        <div className="border-t pt-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <ShoppingCart className="w-4 h-4" />
-            Open Orders ({tableOrders.length})
-          </div>
-          {tableOrders.map((order) => (
-            <div key={order.id} className="bg-muted p-3 rounded-lg space-y-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Order #{order.orderNumber}</p>
-                  <p className="text-sm font-semibold mt-1">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
-                  {order.customerName && <p className="text-xs text-muted-foreground">{order.customerName}</p>}
-                </div>
-                <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
-                  {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
-                </Badge>
-              </div>
-              
-              {/* Order Items */}
-              {order.orderItems && order.orderItems.length > 0 && (
-                <div className="bg-background p-2 rounded text-xs space-y-1 border border-muted-foreground/10">
-                  {order.orderItems.map((item: any, idx: number) => (
-                    <div key={idx} className="space-y-0.5">
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="text-muted-foreground font-medium">{item.productName || item.product_name}</span>
-                        <span className="font-medium">×{item.quantity}</span>
-                      </div>
-                      {/* Show variant if exists */}
-                      {(item.variantName || item.variant_name) && (
-                        <div className="text-xs text-muted-foreground/70 ml-1">
-                          • {item.variantName || item.variant_name}
+        {/* Open Orders */}
+        {tableOrders.length > 0 && (
+          <div className="border-t pt-4 space-y-3">
+            <div className="flex items-center gap-2 font-semibold">
+              <ShoppingCart className="w-4 h-4" />
+              Open Orders ({tableOrders.length})
+            </div>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {tableOrders.map((order) => (
+                <div key={order.id} className="bg-card border border-border p-3 rounded-lg space-y-2 hover:shadow-md transition">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground font-medium">Order #{order.orderNumber}</p>
+                      <p className="text-lg font-semibold text-foreground">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                      {order.customerName && <p className="text-xs text-muted-foreground truncate">{order.customerName}</p>}
+                    </div>
+                    <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs whitespace-nowrap">
+                      {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                    </Badge>
+                  </div>
+                  
+                  {/* Order Items */}
+                  {order.orderItems && order.orderItems.length > 0 && (
+                    <div className="bg-muted p-2 rounded text-xs space-y-1 border border-muted-foreground/10">
+                      {order.orderItems.slice(0, 3).map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-start gap-1">
+                          <span className="text-muted-foreground font-medium truncate">{item.productName || item.product_name}</span>
+                          <span className="font-medium whitespace-nowrap">×{item.quantity}</span>
                         </div>
-                      )}
-                      {/* Show selected options if exists */}
-                      {item.selectedOptions && item.selectedOptions.length > 0 && (
-                        <div className="text-xs text-muted-foreground/70 ml-1">
-                          {item.selectedOptions.map((opt: any) => (
-                            <div key={`${opt.group_id || opt.groupId}-${opt.option_id || opt.optionId}`}>
-                              • {opt.option_name || opt.optionName}
-                            </div>
-                          ))}
-                        </div>
+                      ))}
+                      {order.orderItems.length > 3 && (
+                        <p className="text-xs text-muted-foreground italic pt-1">+{order.orderItems.length - 3} more items</p>
                       )}
                     </div>
-                  ))}
+                  )}
+                  
+                  {order.paymentStatus !== "paid" && (
+                    <Button
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => handleContinueOrder(order)}
+                      data-testid={`button-continue-order-${order.id}`}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Continue Order
+                    </Button>
+                  )}
                 </div>
-              )}
-              
-              {order.paymentStatus !== "paid" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => handleContinueOrder(order)}
-                  data-testid={`button-continue-order-${order.id}`}
-                >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Continue Order
-                </Button>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
 
-      <div className="pt-4 space-y-3">
-        {selectedTableData?.status === "occupied" && (
-          <Button variant="outline" className="w-full" size="sm" data-testid="button-checkout-table">
-            <Check className="w-4 h-4 mr-2" />
-            Check Out & Payment
-          </Button>
-        )}
-        {selectedTableData?.status === "available" && (
-          <Button className="w-full bg-orange-500 hover:bg-orange-600" size="sm" data-testid="button-new-order">
-            <Clock className="w-4 h-4 mr-2" />
-            New Order
-          </Button>
-        )}
-        <Button variant="outline" className="w-full" size="sm" data-testid="button-view-details">
-          View Details
-        </Button>
+        {/* Actions */}
+        <div className="pt-4 space-y-2 border-t">
+          {selectedTableData.status === "occupied" && (
+            <Button variant="outline" className="w-full" size="sm" data-testid="button-checkout-table">
+              <Check className="w-4 h-4 mr-2" />
+              Checkout & Payment
+            </Button>
+          )}
+          {selectedTableData.status === "available" && (
+            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" size="sm" data-testid="button-new-order">
+              <Clock className="w-4 h-4 mr-2" />
+              New Order
+            </Button>
+          )}
+        </div>
       </div>
-    </>
-  );
+    );
+  };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-3 lg:gap-6 p-3 lg:p-6 overflow-hidden">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col gap-3 lg:gap-4 min-h-0">
-        {/* Header */}
-        <div className="space-y-1 lg:space-y-2">
-          <h1 className="text-2xl lg:text-3xl font-bold">Choose Tables</h1>
-          <p className="text-xs lg:text-sm text-muted-foreground hidden sm:block">Select a table to manage reservations and check-ins</p>
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      {/* Header - Sticky */}
+      <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 space-y-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Tables</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Manage your restaurant tables</p>
         </div>
 
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Search table number or name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 text-sm"
@@ -307,23 +281,23 @@ export default function TablesManagementPage() {
           />
         </div>
 
-        {/* Filter Tabs - Responsive wrap */}
-        <div className="flex flex-wrap gap-2">
+        {/* Filter Buttons */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
           <Button
             variant={statusFilter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("all")}
             data-testid="filter-all"
-            className="text-xs lg:text-sm"
+            className="whitespace-nowrap text-xs"
           >
-            All
+            All ({tables.length})
           </Button>
           <Button
             variant={statusFilter === "reserved" ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter("reserved")}
             data-testid="filter-reserved"
-            className="text-xs lg:text-sm"
+            className="whitespace-nowrap text-xs"
           >
             Reserved ({statusCounts.reserved})
           </Button>
@@ -332,35 +306,38 @@ export default function TablesManagementPage() {
             size="sm"
             onClick={() => setStatusFilter("occupied")}
             data-testid="filter-occupied"
-            className="text-xs lg:text-sm"
+            className="whitespace-nowrap text-xs"
           >
             Checked-in ({statusCounts.occupied})
           </Button>
         </div>
 
-        {/* Status Legend - Stack on mobile */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 p-2 lg:p-3 bg-muted rounded-lg text-xs lg:text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 lg:w-4 lg:h-4 rounded border-2 border-green-500 bg-green-50" />
-            <span>Free: {statusCounts.free}</span>
+        {/* Status Summary */}
+        <div className="flex gap-2 text-xs">
+          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-200 rounded">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            Free: {statusCounts.free}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 lg:w-4 lg:h-4 rounded border-2 border-yellow-500 bg-yellow-50" />
-            <span>Reserved: {statusCounts.reserved}</span>
+          <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-200 rounded">
+            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            Reserved: {statusCounts.reserved}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 lg:w-4 lg:h-4 rounded border-2 border-orange-500 bg-orange-50" />
-            <span>Checked-in: {statusCounts.occupied}</span>
+          <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-200 rounded">
+            <div className="w-2 h-2 rounded-full bg-orange-500" />
+            Occupied: {statusCounts.occupied}
           </div>
         </div>
+      </div>
 
-        {/* Table Grid - Responsive */}
-        <div className="flex-1 overflow-auto">
-          {filteredTables.length > 0 ? (
-            <div className="grid gap-3 lg:gap-6 p-2 lg:p-4 bg-muted/30 rounded-lg auto-fit" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}>
+      {/* Table Grid - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        {filteredTables.length > 0 ? (
+          <div className="p-4 space-y-4">
+            {/* Responsive Grid - 3 cols on desktop, 2 on tablet, 2 on mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-fr">
               {filteredTables.map((table) => (
-                <div key={table.id} className="flex justify-center">
-                  <TableCardNew
+                <div key={table.id} className="min-h-24">
+                  <TableCard
                     table={table}
                     selected={selectedTable === table.id}
                     onSelect={() => {
@@ -371,20 +348,25 @@ export default function TablesManagementPage() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-48">
-              <p className="text-muted-foreground text-sm">No tables found</p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center space-y-2">
+              <AlertCircle className="w-8 h-8 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No tables found</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden lg:flex lg:w-80 border-l pl-6 py-4 flex-col gap-4 max-h-[calc(100vh-200px)] overflow-auto">
+      <div className="hidden lg:flex lg:absolute lg:right-0 lg:top-0 lg:bottom-0 lg:w-96 lg:border-l lg:bg-background lg:overflow-y-auto">
         {selectedTableData ? (
-          <TableDetailsContent />
+          <div className="w-full p-4">
+            <TableDetailsContent />
+          </div>
         ) : (
-          <div className="text-center text-muted-foreground">
+          <div className="w-full p-4 text-center text-muted-foreground">
             <p className="text-sm">Select a table to view details</p>
           </div>
         )}
@@ -392,18 +374,12 @@ export default function TablesManagementPage() {
 
       {/* Mobile Bottom Sheet */}
       <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>
-        <SheetContent side="bottom" className="h-[80vh] overflow-auto">
+        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader className="mb-4">
             <SheetTitle>Table Details</SheetTitle>
           </SheetHeader>
-          <div className="space-y-4 pb-6">
-            {selectedTableData ? (
-              <TableDetailsContent />
-            ) : (
-              <div className="text-center text-muted-foreground">
-                <p className="text-sm">Select a table to view details</p>
-              </div>
-            )}
+          <div className="pb-6">
+            <TableDetailsContent />
           </div>
         </SheetContent>
       </Sheet>
