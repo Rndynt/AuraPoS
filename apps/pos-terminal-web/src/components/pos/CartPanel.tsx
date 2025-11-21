@@ -174,7 +174,7 @@ export function CartPanel({
       </div>
 
       {/* Scrollable content area - ONLY THIS SECTION SCROLLS */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: 'calc(100vh - 450px)', minHeight: '200px' }}>
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-3">
         {items.length === 0 ? (
           <div className="py-16 text-center space-y-3">
             <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />

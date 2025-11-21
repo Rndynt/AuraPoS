@@ -260,22 +260,23 @@ Whenever you finish implementing a task or sub-task:
 - `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` line 143: Product grid `overflow-y-auto` prevented by parent constraint
 - `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` line 177: Hardcoded `maxHeight: calc(100vh - 450px)` too large for tablet, hiding action buttons
 
-**Implementation:**
-- [ ] Fix POS page layout overflow control (pos.tsx line 344)
-  - [ ] Change root container from `overflow-hidden` to enable child scroll
-  - [ ] Use `flex-1 min-h-0` on container children
-- [ ] Fix ProductArea scroll (ProductArea.tsx line 143)
-  - [ ] Ensure product grid wrapper has `min-h-0 flex-1 overflow-y-auto`
-  - [ ] Verify sticky headers (order type tabs, category tabs) remain fixed during scroll
-- [ ] Fix CartPanel scroll (CartPanel.tsx line 177)
-  - [ ] Replace hardcoded `maxHeight: calc(100vh - 450px)` with responsive approach
-  - [ ] Use `flex-1 min-h-0 overflow-y-auto` for cart items area
-  - [ ] Use CSS variables for adaptive height: `--cart-header-height`, `--cart-footer-height`
-  - [ ] Ensure action buttons (Charge, Partial Payment, Kitchen Ticket) always visible at bottom
-- [ ] Test across all breakpoints:
-  - [ ] Mobile (375px - cart in drawer, not affected)
-  - [ ] Tablet (768-1024px - verify cart panel actions visible)
-  - [ ] Desktop (1280px+ - verify both product area and cart panel scroll independently)
+**Implementation: COMPLETED**
+- [x] Fix POS page layout overflow control (pos.tsx line 347)
+  - [x] Removed `overflow-hidden` from parent container
+  - [x] Moved overflow control to CartPanel container for proper scroll isolation
+  - [x] Parent now uses `flex flex-1 min-h-0` to enable children scroll independently
+- [x] Fix ProductArea scroll (ProductArea.tsx line 143)
+  - [x] Already has `min-h-0 flex-1 overflow-y-auto` - no change needed
+  - [x] Sticky headers remain fixed during scroll at z-20 and z-10
+- [x] Fix CartPanel scroll (CartPanel.tsx line 177)
+  - [x] Removed hardcoded `maxHeight: calc(100vh - 450px)` inline style
+  - [x] Changed to `flex-1 overflow-y-auto min-h-0` for responsive flex layout
+  - [x] Cart items area now scales responsively based on header/footer height
+  - [x] Action buttons always visible as flex-shrink-0 footer (Charge, Partial Payment, Kitchen Ticket)
+- [x] Test across all breakpoints:
+  - [x] Mobile (375px - cart in drawer, unaffected by fix)
+  - [x] Tablet (768-1024px - cart panel actions now visible with responsive layout)
+  - [x] Desktop (1280px+ - both product area and cart panel scroll independently)
 
 ### 12.2 [P1-FOUNDATION] Cart State Refactoring
 
