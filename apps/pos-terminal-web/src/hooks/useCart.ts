@@ -247,7 +247,7 @@ export function useCart() {
     setSelectedOrderTypeId(null);
   };
 
-  const loadOrder = (order: any) => {
+  const loadOrder = (order: any): string => {
     setTableNumber(order.table_number || "");
     setCustomerName(order.customer_name || "");
     
@@ -266,6 +266,7 @@ export function useCart() {
     }));
     
     setItems(cartItems);
+    return order.id;
   };
 
   /**

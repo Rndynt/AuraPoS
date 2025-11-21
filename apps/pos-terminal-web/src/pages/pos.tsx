@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearch } from "wouter";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
@@ -8,7 +9,7 @@ import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDia
 import type { OrderTypeSelectionResult } from "@/components/pos/OrderTypeSelectionDialog";
 import { useCart } from "@/hooks/useCart";
 import { useFeatures } from "@/hooks/useFeatures";
-import { useProducts, useCreateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment } from "@/lib/api/hooks";
+import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment } from "@/lib/api/hooks";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,10 @@ import {
 } from "@/components/ui/dialog";
 
 export default function POSPage() {
+  const searchParams = useSearch();
+  const urlParams = new URLSearchParams(searchParams);
+  const continueOrderId = urlParams.get("continueOrderId");
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
@@ -56,6 +61,7 @@ export default function POSPage() {
 
   // Mutations
   const createOrderMutation = useCreateOrder();
+  const updateOrderMutation = useUpdateOrder();
   const createKitchenTicketMutation = useCreateKitchenTicket();
   const recordPaymentMutation = useRecordPayment();
 
@@ -256,8 +262,18 @@ export default function POSPage() {
         table_number: result.tableNumber || undefined,
       };
 
-      // Create the order
-      const orderResult = await createOrderMutation.mutateAsync(orderPayload);
+      // Decide whether to create new order or update existing one
+      let orderResult;
+      if (continueOrderId) {
+        // Update existing order
+        orderResult = await updateOrderMutation.mutateAsync({
+          orderId: continueOrderId,
+          ...orderPayload,
+        });
+      } else {
+        // Create new order
+        orderResult = await createOrderMutation.mutateAsync(orderPayload);
+      }
 
       // If mark as paid, record full payment
       if (result.markAsPaid) {

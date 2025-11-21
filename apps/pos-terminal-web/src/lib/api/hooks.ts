@@ -242,6 +242,49 @@ export function useCreateKitchenTicket() {
 }
 
 /**
+ * Update existing order with new items (for continuing unpaid orders)
+ */
+export type UpdateOrderInput = {
+  items: Array<{
+    product_id: string;
+    product_name: string;
+    base_price: number;
+    quantity: number;
+    variant_id?: string;
+    variant_name?: string;
+    variant_price_delta?: number;
+    selected_options?: SelectedOption[];
+    notes?: string;
+  }>;
+  customer_name?: string;
+  tax_rate?: number;
+  service_charge_rate?: number;
+};
+
+export type UpdateOrderVariables = UpdateOrderInput & { orderId: string };
+
+export type UpdateOrderResponse = {
+  order: Order;
+  pricing: {
+    subtotal: number;
+    tax_amount: number;
+    service_charge_amount: number;
+    total_amount: number;
+  };
+};
+
+export function useUpdateOrder() {
+  return useMutation<UpdateOrderResponse, Error, UpdateOrderVariables>({
+    mutationFn: ({ orderId, ...payload }) =>
+      mutateWithTenantHeader("PATCH", `/api/orders/${orderId}`, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
+    },
+  });
+}
+
+/**
  * Fetch order types for tenant
  */
 export function useOrderTypes() {

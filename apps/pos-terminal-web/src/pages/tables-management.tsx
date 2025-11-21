@@ -1,9 +1,12 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useTables, useOpenOrders } from "@/lib/api/tableHooks";
+import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertCircle, Check, ShoppingCart, Clock } from "lucide-react";
+import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Table } from "@shared/schema";
 
 const getStatusColor = (status: string) => {
@@ -88,6 +91,9 @@ function TableCardNew({ table, selected, onSelect }: { table: Table; selected: b
 }
 
 export default function TablesManagementPage() {
+  const [, setLocation] = useLocation();
+  const cart = useCart();
+  const { toast } = useToast();
   const { data: tablesData, isLoading } = useTables();
   const { data: ordersData } = useOpenOrders();
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,6 +102,23 @@ export default function TablesManagementPage() {
 
   const tables = tablesData?.tables || [];
   const orders = ordersData?.orders || [];
+
+  const handleContinueOrder = (order: any) => {
+    try {
+      const orderId = cart.loadOrder(order);
+      toast({
+        title: "Order loaded",
+        description: `Order #${order.order_number} loaded into cart. Continue editing and add more items if needed.`,
+      });
+      setLocation(`/pos?continueOrderId=${orderId}`);
+    } catch (error) {
+      toast({
+        title: "Error loading order",
+        description: "Failed to load order into cart",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredTables = useMemo(() => {
     return tables.filter((table) => {
@@ -274,6 +297,18 @@ export default function TablesManagementPage() {
                           <div className="text-xs text-muted-foreground italic">+{order.order_items.length - 3} more items</div>
                         )}
                       </div>
+                    )}
+                    {order.payment_status !== "paid" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-2"
+                        onClick={() => handleContinueOrder(order)}
+                        data-testid={`button-continue-order-${order.id}`}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Continue Order
+                      </Button>
                     )}
                   </div>
                 ))}
