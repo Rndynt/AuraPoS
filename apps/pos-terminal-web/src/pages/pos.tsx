@@ -54,7 +54,7 @@ export default function POSPage() {
 
   // Load order into cart if continueOrderId is provided
   useEffect(() => {
-    if (continueOrderId && cart.items.length === 0) {
+    if (continueOrderId) {
       const loadOrderIntoCart = async () => {
         try {
           const tenantId = localStorage.getItem("tenantId") || "demo-tenant";
@@ -68,11 +68,22 @@ export default function POSPage() {
           const json = await response.json();
           const fullOrder = json.data;
           
-          // Load order into cart
+          // Clear cart first to remove any stale data
+          cart.clearCart();
+          
+          // Load order into cart with fresh state
           cart.loadOrder(fullOrder);
+          
+          console.log("Order loaded:", {
+            orderNumber: fullOrder.orderNumber,
+            tableNumber: fullOrder.tableNumber,
+            customerName: fullOrder.customerName,
+            itemCount: fullOrder.items?.length || 0,
+          });
+          
           toast({
             title: "Order loaded",
-            description: `Order #${fullOrder.orderNumber} loaded. Continue editing and submit to save changes.`,
+            description: `Order #${fullOrder.orderNumber} for Table ${fullOrder.tableNumber} loaded. Continue editing and submit to save changes.`,
           });
         } catch (error) {
           console.error("Error loading order:", error);
