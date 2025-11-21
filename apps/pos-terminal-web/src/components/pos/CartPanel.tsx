@@ -43,6 +43,7 @@ type CartPanelProps = {
   setTableNumber?: (table: string) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
+  continueOrderId?: string | null;
 };
 
 export function CartPanel({
@@ -70,6 +71,7 @@ export function CartPanel({
   setTableNumber,
   paymentMethod,
   setPaymentMethod,
+  continueOrderId,
 }: CartPanelProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
@@ -270,13 +272,15 @@ export function CartPanel({
               className="w-full h-12 text-base font-semibold"
               onClick={onCharge}
               disabled={isProcessing}
-              data-testid="button-place-order"
+              data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
             >
               {isProcessing ? (
                 <>
                   <Printer className="w-4 h-4 mr-2 animate-spin" />
                   Processing...
                 </>
+              ) : continueOrderId ? (
+                "Update Order"
               ) : (
                 "Place Order"
               )}

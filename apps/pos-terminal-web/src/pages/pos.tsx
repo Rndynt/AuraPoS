@@ -200,14 +200,66 @@ export default function POSPage() {
     });
   };
 
+  const handleUpdateContinueOrder = async () => {
+    if (!ensureCartHasItems()) return;
+    
+    try {
+      setIsProcessingQuickCharge(true);
+      
+      const orderPayload = {
+        items: cart.toBackendOrderItems(),
+        tax_rate: cart.taxRate,
+        service_charge_rate: cart.serviceChargeRate,
+        order_type_id: cart.selectedOrderTypeId,
+        customer_name: cart.customerName || undefined,
+        table_number: cart.tableNumber || undefined,
+      };
+      
+      // Update the existing order
+      const orderResult = await updateOrderMutation.mutateAsync({
+        orderId: continueOrderId!,
+        ...orderPayload,
+      });
+      
+      setTimeout(() => {
+        setIsProcessingQuickCharge(false);
+        toast({
+          title: "Order updated",
+          description: `Order #${orderResult.order.order_number} has been updated successfully`,
+        });
+      }, 500);
+      
+      cart.clearCart();
+      setMobileCartOpen(false);
+    } catch (error) {
+      let errorMessage = "Failed to update order";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      const apiError = error as any;
+      if (apiError?.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError?.body?.message) {
+        errorMessage = apiError.body.message;
+      }
+      
+      console.error("Update order error:", error);
+      
+      setIsProcessingQuickCharge(false);
+      toast({
+        title: "Update failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+  
   const handleCharge = async () => {
     if (!ensureCartHasItems()) return;
     
-    // If continuing an order, don't do quick charge - need to update not create
-    // Go through the full dialog flow
+    // If continuing an order, update it directly without dialog
     if (continueOrderId) {
-      setOrderTypeSelectionDialogOpen(true);
-      setMobileCartOpen(false);
+      handleUpdateContinueOrder();
       return;
     }
     
@@ -530,6 +582,7 @@ export default function POSPage() {
           setTableNumber={cart.setTableNumber}
           paymentMethod={cart.paymentMethod}
           setPaymentMethod={cart.setPaymentMethod}
+          continueOrderId={continueOrderId}
         />
       </div>
 
