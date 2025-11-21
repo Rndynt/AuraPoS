@@ -866,6 +866,14 @@ async function seedOpenOrders(tenantId: string) {
         }
       }
 
+      // Update table status to occupied
+      await db.update(tables)
+        .set({ status: 'occupied' })
+        .where((t, { eq, and }) => and(
+          eq(t.tableNumber, testOrder.tableNumber),
+          eq(t.tenantId, tenantId)
+        ));
+
       console.log(`   ✓ Order for table ${testOrder.tableNumber} (${testOrder.customerName}): Rp ${total.toLocaleString('id-ID')}`);
     }
 
