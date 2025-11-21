@@ -67,20 +67,20 @@ function TableCard({ table, selected, onSelect }: { table: Table; selected: bool
     <button
       onClick={onSelect}
       disabled={isDisabled}
-      className={`relative w-full h-20 sm:h-24 rounded-lg border-2 flex flex-col items-center justify-center font-bold transition cursor-pointer disabled:cursor-not-allowed hover:shadow-md ${getStatusColor(table.status)} ${
+      className={`relative w-full h-10 sm:h-12 md:h-14 rounded-lg border-2 flex flex-col items-center justify-center font-bold transition cursor-pointer disabled:cursor-not-allowed hover:shadow-md ${getStatusColor(table.status)} ${
         selected ? "ring-2 ring-offset-2 ring-blue-500 shadow-lg" : ""
       }`}
       data-testid={`table-select-${table.tableNumber}`}
     >
-      <div className="text-center space-y-0.5">
-        <div className="text-base sm:text-lg font-bold">{table.tableNumber}</div>
-        <div className="text-[9px] sm:text-[10px] opacity-75">
+      <div className="text-center space-y-0">
+        <div className="text-xs sm:text-sm font-bold">{table.tableNumber}</div>
+        <div className="text-[7px] sm:text-[8px] opacity-75 leading-none">
           {table.status === "occupied" && "Occupied"}
           {table.status === "reserved" && "Reserved"}
           {table.status === "available" && "Free"}
           {table.status === "maintenance" && "Maint."}
         </div>
-        {table.capacity && <div className="text-[8px] sm:text-[9px] opacity-60">{table.capacity}p</div>}
+        {table.capacity && <div className="text-[6px] sm:text-[7px] opacity-60 leading-none">{table.capacity}p</div>}
       </div>
     </button>
   );
@@ -223,14 +223,20 @@ export default function TablesManagementPage() {
                   {/* Order Items */}
                   {order.orderItems && order.orderItems.length > 0 && (
                     <div className="bg-muted p-1.5 sm:p-2 rounded text-[10px] sm:text-xs space-y-0.5 border border-muted-foreground/10">
-                      {order.orderItems.slice(0, 3).map((item: any, idx: number) => (
+                      {order.orderItems.slice(0, expandedOrders.has(order.id) ? order.orderItems.length : 3).map((item: any, idx: number) => (
                         <div key={idx} className="flex justify-between items-start gap-1">
                           <span className="text-muted-foreground font-medium truncate text-[10px] sm:text-xs">{item.productName || item.product_name}</span>
                           <span className="font-medium whitespace-nowrap text-[10px] sm:text-xs">×{item.quantity}</span>
                         </div>
                       ))}
                       {order.orderItems.length > 3 && (
-                        <p className="text-[10px] text-muted-foreground italic pt-0.5">+{order.orderItems.length - 3} more</p>
+                        <button
+                          onClick={() => toggleOrderExpand(order.id)}
+                          className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline pt-0.5 block"
+                          data-testid={`button-expand-items-${order.id}`}
+                        >
+                          {expandedOrders.has(order.id) ? "Show less" : `+${order.orderItems.length - 3} more`}
+                        </button>
                       )}
                     </div>
                   )}
@@ -344,7 +350,7 @@ export default function TablesManagementPage() {
       <div className="flex-1 overflow-y-auto">
         {filteredTables.length > 0 ? (
           <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2 auto-rows-max">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1 sm:gap-1.5 auto-rows-max">
               {filteredTables.map((table) => (
                 <div key={table.id}>
                   <TableCard
