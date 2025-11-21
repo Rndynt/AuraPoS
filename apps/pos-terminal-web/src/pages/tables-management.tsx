@@ -301,11 +301,11 @@ export default function TablesManagementPage() {
                     </div>
                     
                     {/* Order Items */}
-                    {order.items && order.items.length > 0 && (
+                    {order.orderItems && order.orderItems.length > 0 && (
                       <div className="bg-background p-2 rounded text-xs space-y-1 border border-muted-foreground/10">
-                        {order.items.map((item: any, idx: number) => (
+                        {order.orderItems.map((item: any, idx: number) => (
                           <div key={idx} className="flex justify-between items-start gap-1">
-                            <span className="text-muted-foreground">{item.productName || item.product_name}</span>
+                            <span className="text-muted-foreground">{item.productName}</span>
                             <span className="font-medium text-xs">×{item.quantity}</span>
                           </div>
                         ))}
