@@ -789,19 +789,13 @@ async function seedOpenOrders(tenantId: string) {
       return;
     }
 
-    // Get order type (DINE_IN)
-    const dineInOrderType = await db.query.tenantOrderTypes.findFirst({
-      with: {
-        orderType: true,
-      },
-      where: (tot, { eq, and }) => and(
-        eq(tot.tenantId, tenantId),
-        eq(tot.orderType.code, 'DINE_IN')
-      ),
+    // Get first tenant order type (should be DINE_IN for demo)
+    const tenantOrderType = await db.query.tenantOrderTypes.findFirst({
+      where: (tot, { eq }) => eq(tot.tenantId, tenantId),
     });
 
-    if (!dineInOrderType) {
-      console.log('   ℹ️  DINE_IN order type not found, skipping open orders');
+    if (!tenantOrderType) {
+      console.log('   ℹ️  No order type found for tenant, skipping open orders');
       return;
     }
 
@@ -842,10 +836,10 @@ async function seedOpenOrders(tenantId: string) {
 
       const [order] = await db.insert(orders).values({
         tenantId,
-        orderTypeId: dineInOrderType.orderTypeId,
+        orderTypeId: tenantOrderType.orderTypeId,
         orderNumber: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        status: 'confirmed' as const,
-        paymentStatus: 'unpaid' as const,
+        status: 'confirmed',
+        paymentStatus: 'unpaid',
         tableNumber: testOrder.tableNumber,
         customerName: testOrder.customerName,
         subtotal: subtotal.toString(),
