@@ -103,15 +103,28 @@ export default function TablesManagementPage() {
   const tables = tablesData?.tables || [];
   const orders = ordersData?.orders || [];
 
-  const handleContinueOrder = (order: any) => {
+  const handleContinueOrder = async (order: any) => {
     try {
-      const orderId = cart.loadOrder(order);
+      // Fetch full order details with items from API
+      const response = await fetch(`/api/orders/${order.id}`, {
+        headers: {
+          "x-tenant-id": localStorage.getItem("tenantId") || "demo-tenant",
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch order details");
+      
+      const json = await response.json();
+      const fullOrder = json.data;
+      
+      // Load the full order (with items) into cart
+      const orderId = cart.loadOrder(fullOrder);
       toast({
         title: "Order loaded",
-        description: `Order #${order.order_number} loaded into cart. Continue editing and add more items if needed.`,
+        description: `Order #${order.orderNumber} loaded into cart. Continue editing and add more items if needed.`,
       });
       setLocation(`/pos?continueOrderId=${orderId}`);
     } catch (error) {
+      console.error("Error loading order:", error);
       toast({
         title: "Error loading order",
         description: "Failed to load order into cart",
