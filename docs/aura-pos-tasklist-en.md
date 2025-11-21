@@ -381,19 +381,23 @@ export const tables = sqliteTable('tables', {
 
 > **Fixes:** Section 3.5 POS UI implementation issues where cart metadata ignored during checkout  
 > **Required by:** P2, P3
+> **Status:** COMPLETED
 
 **Root Cause:** `selectedOrderTypeId` state duplicated between POSPage and cart; cart metadata (`tableNumber`, `paymentMethod`) exists but ignored; payment method hardcoded to "cash".
 
 **Files affected:**
-- `apps/pos-terminal-web/src/hooks/useCart.ts` lines 141-143
-- `apps/pos-terminal-web/src/pages/pos.tsx` lines 27, 174, 185
-- `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` lines 351-354
+- `apps/pos-terminal-web/src/hooks/useCart.ts` lines 141-143, 147, 250, 331-332
+- `apps/pos-terminal-web/src/pages/pos.tsx` lines 27, 48-51, 74-91, 102, 187, 202, 355-356
+- `apps/pos-terminal-web/src/components/pos/ProductArea.tsx` lines 355-356
 
-**Implementation:**
-- [ ] Move `selectedOrderTypeId` to cart state (useCart.ts) for single source of truth
-- [ ] Remove duplicate `selectedOrderTypeId` from POSPage component state
-- [ ] Pre-fill OrderTypeSelectionDialog with cart metadata (orderTypeId, tableNumber)
-- [ ] Use `cart.paymentMethod` instead of hardcoded "cash" in payment recording (pos.tsx line 185)
+**Implementation: COMPLETED**
+- [x] Moved `selectedOrderTypeId` to cart state (useCart.ts line 147) for single source of truth
+- [x] Removed duplicate `selectedOrderTypeId` from POSPage component state (was line 27)
+- [x] Updated all references to use `cart.selectedOrderTypeId` and `cart.setSelectedOrderTypeId`
+- [x] Changed payment method recording to use `cart.paymentMethod` instead of hardcoded "cash" (pos.tsx line 187)
+- [x] Updated clearCart() to reset selectedOrderTypeId (useCart.ts line 250)
+- [x] Fixed PaymentMethod type to match backend API ("cash" | "card" | "ewallet" | "other")
+- [x] Updated ProductArea props to use cart.selectedOrderTypeId (pos.tsx lines 355-356)
 
 ### 11.3 [P2-UX] Quick Charge Path
 

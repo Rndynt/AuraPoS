@@ -134,7 +134,7 @@ function createItemKey(
  *   customer_name: "John Doe"
  * };
  */
-export type PaymentMethod = "cash" | "card" | "scan";
+export type PaymentMethod = "cash" | "card" | "ewallet" | "other";
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
