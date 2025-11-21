@@ -773,6 +773,116 @@ async function seedTables(tenantId: string) {
 }
 
 /**
+ * Seed open (unpaid) orders for demo tables to test Continue Order feature
+ */
+async function seedOpenOrders(tenantId: string) {
+  console.log('🛒 Seeding demo open orders for Continue Order testing...');
+  
+  try {
+    // Get products
+    const productsData = await db.query.products.findMany({
+      where: (p, { eq }) => eq(p.tenantId, tenantId),
+    });
+    
+    if (productsData.length === 0) {
+      console.log('   ℹ️  No products found, skipping open orders');
+      return;
+    }
+
+    // Get order type (DINE_IN)
+    const dineInOrderType = await db.query.tenantOrderTypes.findFirst({
+      with: {
+        orderType: true,
+      },
+      where: (tot, { eq, and }) => and(
+        eq(tot.tenantId, tenantId),
+        eq(tot.orderType.code, 'DINE_IN')
+      ),
+    });
+
+    if (!dineInOrderType) {
+      console.log('   ℹ️  DINE_IN order type not found, skipping open orders');
+      return;
+    }
+
+    const testOrders = [
+      {
+        tableNumber: '1',
+        customerName: 'John Doe',
+        items: [
+          { productName: 'Classic Beef Burger', qty: 2, price: 45000 },
+          { productName: 'Cappuccino', qty: 1, price: 35000 },
+        ],
+      },
+      {
+        tableNumber: '2',
+        customerName: 'Jane Smith',
+        items: [
+          { productName: 'Chicken Rice Bowl', qty: 1, price: 55000 },
+          { productName: 'Iced Caramel Latte', qty: 2, price: 40000 },
+        ],
+      },
+      {
+        tableNumber: '3',
+        customerName: 'Bob Johnson',
+        items: [
+          { productName: 'Supreme Pizza', qty: 1, price: 85000 },
+          { productName: 'Fried Chicken Wings', qty: 1, price: 65000 },
+        ],
+      },
+    ];
+
+    for (const testOrder of testOrders) {
+      const subtotal = testOrder.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      const taxRate = 0.1;
+      const serviceChargeRate = 0.05;
+      const tax = subtotal * taxRate;
+      const serviceCharge = subtotal * serviceChargeRate;
+      const total = subtotal + tax + serviceCharge;
+
+      const [order] = await db.insert(orders).values({
+        tenantId,
+        orderTypeId: dineInOrderType.orderTypeId,
+        orderNumber: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'confirmed' as const,
+        paymentStatus: 'unpaid' as const,
+        tableNumber: testOrder.tableNumber,
+        customerName: testOrder.customerName,
+        subtotal: subtotal.toString(),
+        taxRate: (taxRate * 100).toString(),
+        taxAmount: tax.toString(),
+        serviceChargeRate: (serviceChargeRate * 100).toString(),
+        serviceChargeAmount: serviceCharge.toString(),
+        total: total.toString(),
+        notes: 'Test order for Continue Order feature',
+      }).returning();
+
+      // Add order items
+      for (const item of testOrder.items) {
+        const product = productsData.find(p => p.name === item.productName);
+        if (product) {
+          await db.insert(orderItems).values({
+            orderId: order.id,
+            productId: product.id,
+            productName: item.productName,
+            basePrice: item.price.toString(),
+            quantity: item.qty,
+            subtotal: (item.price * item.qty).toString(),
+          });
+        }
+      }
+
+      console.log(`   ✓ Order for table ${testOrder.tableNumber} (${testOrder.customerName}): Rp ${total.toLocaleString('id-ID')}`);
+    }
+
+    console.log(`✅ Created ${testOrders.length} demo open orders for testing`);
+  } catch (error) {
+    console.error('❌ Error seeding open orders:', error);
+    throw error;
+  }
+}
+
+/**
  * Seed tenant features for demo tenant
  */
 async function seedTenantFeatures(tenantId: string) {
@@ -824,6 +934,10 @@ async function seed() {
     
     // Seed demo tables for floor plan
     await seedTables(tenantId);
+    console.log('');
+    
+    // Seed open orders for Continue Order testing
+    await seedOpenOrders(tenantId);
     console.log('');
     
     // Seed tenant features
