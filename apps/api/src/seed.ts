@@ -835,6 +835,7 @@ async function seedOpenOrders(tenantId: string) {
       const total = subtotal + tax + serviceCharge;
 
       const [order] = await db.insert(orders).values({
+        tenantId,
         orderTypeId: tenantOrderType.orderTypeId,
         orderNumber: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         status: 'confirmed',
@@ -865,13 +866,17 @@ async function seedOpenOrders(tenantId: string) {
         }
       }
 
-      // Update table status to occupied
-      const { eq } = require('drizzle-orm');
-      await db.update(tables)
-        .set({ status: 'occupied' })
-        .where(eq(tables.tableNumber, testOrder.tableNumber));
-
       console.log(`   ✓ Order for table ${testOrder.tableNumber} (${testOrder.customerName}): Rp ${total.toLocaleString('id-ID')}`);
+    }
+
+    // Update table statuses to occupied for tables with orders
+    for (const testOrder of testOrders) {
+      const tableToUpdate = await db.query.tables.findFirst({
+        where: (t, { eq }) => eq(t.tableNumber, testOrder.tableNumber),
+      });
+      if (tableToUpdate) {
+        await db.update(tables).set({ status: 'occupied' }).where((t, { eq }) => eq(t.id, tableToUpdate.id));
+      }
     }
 
     console.log(`✅ Created ${testOrders.length} demo open orders for testing`);
