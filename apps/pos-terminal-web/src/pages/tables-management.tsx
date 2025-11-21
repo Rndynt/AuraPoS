@@ -67,20 +67,20 @@ function TableCard({ table, selected, onSelect }: { table: Table; selected: bool
     <button
       onClick={onSelect}
       disabled={isDisabled}
-      className={`relative w-full aspect-square rounded-lg border-2 flex flex-col items-center justify-center font-bold transition cursor-pointer disabled:cursor-not-allowed hover:shadow-md ${getStatusColor(table.status)} ${
+      className={`relative w-full h-20 sm:h-24 rounded-lg border-2 flex flex-col items-center justify-center font-bold transition cursor-pointer disabled:cursor-not-allowed hover:shadow-md ${getStatusColor(table.status)} ${
         selected ? "ring-2 ring-offset-2 ring-blue-500 shadow-lg" : ""
       }`}
       data-testid={`table-select-${table.tableNumber}`}
     >
       <div className="text-center space-y-0.5">
-        <div className="text-lg sm:text-2xl font-bold">{table.tableNumber}</div>
-        <div className="text-[10px] sm:text-xs opacity-75">
+        <div className="text-base sm:text-lg font-bold">{table.tableNumber}</div>
+        <div className="text-[9px] sm:text-[10px] opacity-75">
           {table.status === "occupied" && "Occupied"}
           {table.status === "reserved" && "Reserved"}
           {table.status === "available" && "Free"}
           {table.status === "maintenance" && "Maint."}
         </div>
-        {table.capacity && <div className="text-[9px] sm:text-xs opacity-60">{table.capacity}p</div>}
+        {table.capacity && <div className="text-[8px] sm:text-[9px] opacity-60">{table.capacity}p</div>}
       </div>
     </button>
   );
@@ -344,9 +344,9 @@ export default function TablesManagementPage() {
       <div className="flex-1 overflow-y-auto">
         {filteredTables.length > 0 ? (
           <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 auto-rows-fr">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2 auto-rows-max">
               {filteredTables.map((table) => (
-                <div key={table.id} className="min-h-20 sm:min-h-24">
+                <div key={table.id}>
                   <TableCard
                     table={table}
                     selected={selectedTable === table.id}
