@@ -52,6 +52,41 @@ export default function POSPage() {
     return orderTypes?.filter(ot => ot.isActive === true) || [];
   }, [orderTypes]);
 
+  // Load order into cart if continueOrderId is provided
+  useEffect(() => {
+    if (continueOrderId && cart.items.length === 0) {
+      const loadOrderIntoCart = async () => {
+        try {
+          const tenantId = localStorage.getItem("tenantId") || "demo-tenant";
+          const response = await fetch(`/api/orders/${continueOrderId}`, {
+            headers: {
+              "x-tenant-id": tenantId,
+            },
+          });
+          if (!response.ok) throw new Error("Failed to fetch order");
+          
+          const json = await response.json();
+          const fullOrder = json.data;
+          
+          // Load order into cart
+          cart.loadOrder(fullOrder);
+          toast({
+            title: "Order loaded",
+            description: `Order #${fullOrder.orderNumber} loaded. Continue editing and submit to save changes.`,
+          });
+        } catch (error) {
+          console.error("Error loading order:", error);
+          toast({
+            title: "Error loading order",
+            description: "Failed to load order into cart",
+            variant: "destructive",
+          });
+        }
+      };
+      loadOrderIntoCart();
+    }
+  }, [continueOrderId, cart, toast]);
+
   // Auto-select first ACTIVE order type when loaded (only if not already in cart)
   useEffect(() => {
     if (!orderTypesLoading && activeOrderTypes.length > 0 && !cart.selectedOrderTypeId) {
