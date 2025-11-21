@@ -32,6 +32,11 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    hmr: {
+      protocol: 'wss',
+      host: process.env.REPL_SLUG && process.env.REPL_OWNER ? `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.replit.dev` : 'localhost',
+      port: 443,
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],

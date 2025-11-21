@@ -404,17 +404,19 @@ export default function TablesManagementPage() {
         </div>
       </div>
 
-      {/* Mobile/Tablet Bottom Sheet - Only on md and below */}
-      <Sheet open={showDetailsMobile && window.innerWidth < 1024} onOpenChange={setShowDetailsMobile}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl px-3 py-3 sm:px-4 sm:py-4">
-          <SheetHeader className="mb-3">
-            <SheetTitle className="text-base sm:text-lg">Table Details</SheetTitle>
-          </SheetHeader>
-          <div className="pb-4">
-            <TableDetailsContent />
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Mobile/Tablet Bottom Sheet - Hidden on desktop */}
+      <div className="lg:hidden">
+        <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>
+          <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl px-3 py-3 sm:px-4 sm:py-4">
+            <SheetHeader className="mb-3">
+              <SheetTitle className="text-base sm:text-lg">Table Details</SheetTitle>
+            </SheetHeader>
+            <div className="pb-4">
+              <TableDetailsContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     </div>
   );
 }
