@@ -12,6 +12,7 @@ import {
   productOptionGroups, 
   productOptions,
   tenantFeatures,
+  tenantModuleConfigs,
   orders,
   orderItems,
   orderItemModifiers,
@@ -27,6 +28,7 @@ import type {
   InsertProductOptionGroup, 
   InsertProductOption,
   InsertTenantFeature,
+  InsertTenantModuleConfig,
   InsertOrderType,
   InsertTenantOrderType,
 } from '@shared/schema';
@@ -718,6 +720,33 @@ async function seedTenantOrderTypes(tenantId: string, createdOrderTypes: any[]) 
 }
 
 /**
+ * Seed tenant module configs (feature flags for UI modules)
+ */
+async function seedTenantModuleConfigs(tenantId: string) {
+  console.log('⚙️ Seeding tenant module configs...');
+  
+  const moduleConfigs: InsertTenantModuleConfig = {
+    tenantId,
+    enableTableManagement: true,
+    enableKitchenTicket: true,
+    enableLoyalty: false,
+    enableDelivery: false,
+    enableInventory: false,
+    enableAppointments: false,
+    enableMultiLocation: false,
+  };
+  
+  await db.insert(tenantModuleConfigs).values(moduleConfigs).onConflictDoUpdate({
+    target: tenantModuleConfigs.tenantId,
+    set: moduleConfigs,
+  });
+  
+  console.log(`✅ Module configs enabled for demo tenant:`);
+  console.log(`   - Table Management: ${moduleConfigs.enableTableManagement}`);
+  console.log(`   - Kitchen Ticket: ${moduleConfigs.enableKitchenTicket}`);
+}
+
+/**
  * Seed tenant features for demo tenant
  */
 async function seedTenantFeatures(tenantId: string) {
@@ -761,6 +790,10 @@ async function seed() {
     
     // Seed products with option groups
     await seedProducts(tenantId);
+    console.log('');
+    
+    // Seed tenant module configs (feature flags)
+    await seedTenantModuleConfigs(tenantId);
     console.log('');
     
     // Seed tenant features
