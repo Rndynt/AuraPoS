@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useTables, useOpenOrders } from "@/lib/api/tableHooks";
 import { useCart } from "@/hooks/useCart";
@@ -97,6 +97,15 @@ export default function TablesManagementPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "reserved" | "occupied">("all");
   const [showDetailsMobile, setShowDetailsMobile] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track mobile vs desktop for conditional rendering
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const toggleOrderExpand = (orderId: string) => {
     const newExpanded = new Set(expandedOrders);
@@ -404,8 +413,8 @@ export default function TablesManagementPage() {
         </div>
       </div>
 
-      {/* Mobile/Tablet Bottom Sheet - Hidden on desktop */}
-      <div className="lg:hidden">
+      {/* Mobile/Tablet Bottom Sheet - Only render on mobile */}
+      {isMobile && (
         <Sheet open={showDetailsMobile} onOpenChange={setShowDetailsMobile}>
           <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl px-3 py-3 sm:px-4 sm:py-4">
             <SheetHeader className="mb-3">
@@ -416,7 +425,7 @@ export default function TablesManagementPage() {
             </div>
           </SheetContent>
         </Sheet>
-      </div>
+      )}
     </div>
   );
 }
