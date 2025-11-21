@@ -5,7 +5,7 @@ import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit } from "lucide-react";
+import { Search, AlertCircle, Check, ShoppingCart, Clock, Edit, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Table } from "@shared/schema";
 import {
@@ -206,63 +206,65 @@ export default function TablesManagementPage() {
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {tableOrders.map((order) => (
                 <div key={order.id} className="border border-border rounded-lg overflow-hidden">
-                  {/* Order Summary - Always Visible */}
-                  <button
-                    onClick={() => toggleOrderExpand(order.id)}
-                    className="w-full bg-card hover:bg-muted/50 transition p-2 text-left flex items-center justify-between gap-2"
-                    data-testid={`button-toggle-order-${order.id}`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-muted-foreground font-medium">Order #{order.orderNumber}</p>
-                      <p className="text-sm font-semibold">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
-                      {order.customerName && <p className="text-[9px] text-muted-foreground truncate">{order.customerName}</p>}
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[9px] py-0 px-1 h-auto">
-                        {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
-                      </Badge>
-                      <span className="text-muted-foreground text-lg">{expandedOrders.has(order.id) ? "▼" : "►"}</span>
-                    </div>
-                  </button>
-
-                  {/* Order Items - Expandable */}
-                  {expandedOrders.has(order.id) && order.orderItems && order.orderItems.length > 0 && (
-                    <div className="border-t bg-muted/30 p-2 space-y-1 text-[9px]">
-                      {order.orderItems.map((item: any, idx: number) => (
-                        <div key={idx} className="space-y-0.5">
-                          <div className="flex justify-between gap-1">
-                            <span className="font-medium truncate">{item.productName || item.product_name}</span>
-                            <span className="whitespace-nowrap">×{item.quantity}</span>
-                          </div>
-                          {(item.variantName || item.variant_name) && (
-                            <div className="text-muted-foreground/80 ml-1 text-[8px]">
-                              • {item.variantName || item.variant_name}
-                            </div>
-                          )}
-                          {item.selectedOptions && item.selectedOptions.length > 0 && (
-                            <div className="text-muted-foreground/70 ml-1 text-[8px] space-y-0">
-                              {item.selectedOptions.map((opt: any, optIdx: number) => (
-                                <div key={optIdx}>• {opt.option_name || opt.optionName}</div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Continue Order Button */}
-                  {expandedOrders.has(order.id) && order.paymentStatus !== "paid" && (
-                    <Button
-                      size="sm"
-                      className="w-full text-[10px] py-1 h-auto rounded-none border-t"
-                      onClick={() => handleContinueOrder(order)}
-                      data-testid={`button-continue-order-${order.id}`}
+                  <div className="bg-card space-y-2 p-2">
+                    {/* Order Summary Header */}
+                    <button
+                      onClick={() => toggleOrderExpand(order.id)}
+                      className="w-full hover:bg-muted/50 transition p-1.5 text-left flex items-center justify-between gap-2 -m-1.5 -mb-0 px-1.5 py-1.5"
+                      data-testid={`button-toggle-order-${order.id}`}
                     >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Continue Order
-                    </Button>
-                  )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-muted-foreground font-medium">Order #{order.orderNumber}</p>
+                        <p className="text-sm font-semibold">Rp {parseFloat(order.total).toLocaleString("id-ID")}</p>
+                        {order.customerName && <p className="text-[9px] text-muted-foreground truncate">{order.customerName}</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Badge variant={order.paymentStatus === "paid" ? "default" : "secondary"} className="text-[9px] py-0 px-1 h-auto">
+                          {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                        </Badge>
+                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedOrders.has(order.id) ? "rotate-180" : ""}`} />
+                      </div>
+                    </button>
+
+                    {/* Order Items - Expandable */}
+                    {expandedOrders.has(order.id) && order.orderItems && order.orderItems.length > 0 && (
+                      <div className="bg-muted/30 p-1.5 rounded text-[9px] space-y-0.5 border border-border/50">
+                        {order.orderItems.map((item: any, idx: number) => (
+                          <div key={idx} className="space-y-0.5">
+                            <div className="flex justify-between gap-1">
+                              <span className="font-medium truncate">{item.productName || item.product_name}</span>
+                              <span className="whitespace-nowrap">×{item.quantity}</span>
+                            </div>
+                            {(item.variantName || item.variant_name) && (
+                              <div className="text-muted-foreground/80 ml-1 text-[8px]">
+                                • {item.variantName || item.variant_name}
+                              </div>
+                            )}
+                            {item.selectedOptions && item.selectedOptions.length > 0 && (
+                              <div className="text-muted-foreground/70 ml-1 text-[8px] space-y-0">
+                                {item.selectedOptions.map((opt: any, optIdx: number) => (
+                                  <div key={optIdx}>• {opt.option_name || opt.optionName}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Continue Order Button - Always Visible */}
+                    {order.paymentStatus !== "paid" && (
+                      <Button
+                        size="sm"
+                        className="w-full text-[10px] py-1 h-auto"
+                        onClick={() => handleContinueOrder(order)}
+                        data-testid={`button-continue-order-${order.id}`}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Continue Order
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
