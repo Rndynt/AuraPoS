@@ -30,13 +30,9 @@ const TablesManagementPageWithLayout = () => (
 );
 
 const HomePageWithLayout = () => (
-  <div className="flex h-screen bg-background w-full overflow-hidden">
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <main className="flex-1 overflow-hidden">
-        <HomePage />
-      </main>
-    </div>
-  </div>
+  <MainLayout>
+    <HomePage />
+  </MainLayout>
 );
 
 const NotFoundWithLayout = () => (
