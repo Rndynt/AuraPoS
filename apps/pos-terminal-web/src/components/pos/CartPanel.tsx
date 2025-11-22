@@ -2,7 +2,7 @@ import type { CartItem as CartItemType, PaymentMethod } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan, ChevronUp, ChefHat } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan, ChevronUp, ChefHat, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,103 +97,29 @@ export function CartPanel({
   };
 
   return (
-    <div className="w-full h-full bg-card border-l border-card-border flex flex-col">
-      {/* Header with Customer Info */}
-      <div className="p-4 border-b border-card-border flex-shrink-0 space-y-3">
-        {/* Customer Name and Order Number */}
-        <div className="bg-muted/50 rounded-md p-4 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            {isEditingCustomerName ? (
-              <Input
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                onBlur={() => setIsEditingCustomerName(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') setIsEditingCustomerName(false);
-                }}
-                placeholder="Customer's Name"
-                className="flex-1"
-                autoFocus
-                data-testid="input-customer-name-edit"
-              />
-            ) : (
-              <div className="flex items-center gap-2 flex-1">
-                <Receipt className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <h3 className="font-medium text-base">
-                  {customerName || "Customer's Name"}
-                </h3>
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 flex-shrink-0"
-              onClick={() => setIsEditingCustomerName(true)}
-              data-testid="button-edit-customer-name"
-            >
-              <Edit2 className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-sm text-muted-foreground">
-              Order Number: {orderNumber}
-            </p>
-            {showTableNumber && setTableNumber && (
-              <div className="flex items-center gap-2">
-                {isEditingTable ? (
-                  <Select 
-                    value={tableNumber} 
-                    onValueChange={(val) => {
-                      setTableNumber(val);
-                      setIsEditingTable(false);
-                    }}
-                    defaultOpen={true}
-                  >
-                    <SelectTrigger className="h-7 w-24 text-xs" data-testid="select-table">
-                      <SelectValue placeholder={tablesLoading ? "..." : "Table..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tablesLoading ? (
-                        <div className="p-2 text-xs text-muted-foreground">Loading...</div>
-                      ) : tablesData?.tables && tablesData.tables.length > 0 ? (
-                        tablesData.tables.map((table) => (
-                          <SelectItem key={table.id} value={table.tableNumber} data-testid={`option-table-${table.tableNumber}`}>
-                            {table.tableName || `Table ${table.tableNumber}`}
-                            {table.status !== "available" && ` (${table.status})`}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-2 text-xs text-muted-foreground">No tables</div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Badge 
-                    variant="secondary" 
-                    className="cursor-pointer hover-elevate active-elevate-2"
-                    onClick={() => setIsEditingTable(true)}
-                    data-testid="badge-table-number"
-                  >
-                    {tableNumber ? `Table ${tableNumber}` : "Set Table"}
-                  </Badge>
-                )}
-              </div>
-            )}
+    <div className="w-full h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col">
+      {/* Header with Order Number */}
+      <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Pesanan Baru</h2>
+          <div className="px-2 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-md">
+            {orderNumber}
           </div>
         </div>
       </div>
 
-      {/* Order Type Selection */}
-      <div className="px-4 pt-3 pb-2 border-b border-card-border flex-shrink-0">
-        <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-3 gap-1 mb-4">
+      {/* Order Type Selection & Customer Info */}
+      <div className="p-4 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+        {/* Order Type Selector */}
+        <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl grid grid-cols-3 gap-1 mb-4">
           {(['dine-in', 'take-away', 'delivery'] as const).map((type) => (
             <button
               key={type}
               onClick={() => setOrderType(type)}
               className={`text-[11px] font-bold py-2 rounded-lg capitalize flex items-center justify-center gap-1 ${
                 orderType === type
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-400'
+                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm'
+                  : 'text-slate-400 dark:text-slate-500'
               }`}
               data-testid={`button-order-type-${type}`}
             >
@@ -201,19 +127,88 @@ export function CartPanel({
             </button>
           ))}
         </div>
+
+        {/* Customer Name & Table Number Cards */}
+        <div className="flex gap-3">
+          {/* Customer Name Card */}
+          <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-2 flex items-center gap-3 hover:border-blue-300 dark:hover:border-blue-600 transition-colors group">
+            <div className="w-8 h-8 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-sm group-hover:text-blue-500 dark:group-hover:text-blue-400 flex-shrink-0">
+              <User size={16} />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold">
+                Pelanggan
+              </p>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="bg-transparent w-full text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none"
+                placeholder="Walk-in Guest"
+                data-testid="input-customer-name"
+              />
+            </div>
+            <Edit2
+              size={12}
+              className="text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 flex-shrink-0"
+            />
+          </div>
+
+          {/* Table Number Card (only for dine-in) */}
+          {orderType === 'dine-in' && showTableNumber && setTableNumber && (
+            <div className="w-20 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-2 flex flex-col items-center justify-center hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer group">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold text-center">
+                Meja
+              </p>
+              <div className="flex items-center gap-1">
+                <Select 
+                  value={tableNumber} 
+                  onValueChange={setTableNumber}
+                >
+                  <SelectTrigger className="border-0 h-auto p-0 focus:ring-0 w-auto bg-transparent" data-testid="select-table">
+                    <div className="flex items-center gap-1">
+                      <span className="text-lg font-black text-slate-700 dark:text-slate-200">
+                        {tableNumber || "-"}
+                      </span>
+                      <Edit2
+                        size={10}
+                        className="text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100"
+                      />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tablesLoading ? (
+                      <div className="p-2 text-xs text-slate-400">Loading...</div>
+                    ) : tablesData?.tables && tablesData.tables.length > 0 ? (
+                      tablesData.tables
+                        .filter(t => t.status !== 'maintenance')
+                        .map((table) => (
+                          <SelectItem key={table.id} value={table.tableNumber}>
+                            Table {table.tableNumber}
+                          </SelectItem>
+                        ))
+                    ) : (
+                      <div className="p-2 text-xs text-slate-400">No tables</div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Scrollable content area - ONLY THIS SECTION SCROLLS */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-3 bg-slate-50/50 dark:bg-slate-950/50">
         {items.length === 0 ? (
-          <div className="py-16 text-center space-y-3">
-            <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
-            <p className="text-muted-foreground" data-testid="text-empty-cart">
-              No Item Selected
+          <div className="h-40 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
+            <ShoppingCart size={48} className="mb-3 opacity-50" />
+            <p className="text-sm font-medium" data-testid="text-empty-cart">
+              Belum ada pesanan
             </p>
           </div>
         ) : (
-          <div className="space-y-0">
+          <div className="space-y-3">
             {items.map((item) => (
               <CartItem
                 key={item.id}
@@ -294,43 +289,23 @@ export function CartPanel({
             
             {/* Action Buttons */}
             <div className="grid grid-cols-[1.5fr_1fr] gap-3">
-              {hasKitchenTicket && onKitchenTicket ? (
-                <button
-                  onClick={onKitchenTicket}
-                  disabled={isProcessing}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
-                  data-testid="button-print"
-                >
-                  <div className="flex items-center gap-2 text-sm">
-                    <ChefHat size={18} />
-                    <span>Simpan</span>
-                  </div>
-                  <span className="text-[10px] opacity-80 font-normal">
-                    Ke Dapur
-                  </span>
-                </button>
-              ) : (
-                <button
-                  onClick={onCharge}
-                  disabled={isProcessing}
-                  className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-all"
-                  data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Printer className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Processing...</span>
-                    </>
-                  ) : continueOrderId ? (
-                    <span className="text-sm">Update Order</span>
-                  ) : (
-                    <span className="text-sm">Place Order</span>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={hasKitchenTicket && onKitchenTicket ? onKitchenTicket : onCharge}
+                disabled={isProcessing || items.length === 0}
+                className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
+                data-testid={hasKitchenTicket ? "button-kitchen-ticket" : "button-place-order"}
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <ChefHat size={18} />
+                  <span>Simpan</span>
+                </div>
+                <span className="text-[10px] opacity-80 font-normal">
+                  Ke Dapur
+                </span>
+              </button>
               <button
                 onClick={onCharge}
-                disabled={isProcessing}
+                disabled={isProcessing || items.length === 0}
                 className="bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-500 border border-green-200 dark:border-green-800 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
                 data-testid="button-complete-payment"
               >

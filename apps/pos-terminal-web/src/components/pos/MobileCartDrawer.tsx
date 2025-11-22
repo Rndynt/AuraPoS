@@ -331,46 +331,20 @@ export function MobileCartDrawer({
                 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-[1.5fr_1fr] gap-3">
-                  {hasKitchenTicket && onKitchenTicket ? (
-                    <button
-                      onClick={onKitchenTicket}
-                      disabled={isProcessing || items.length === 0}
-                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
-                      data-testid="button-print"
-                    >
-                      <div className="flex items-center gap-2 text-sm">
-                        <ChefHat size={18} />
-                        <span>Simpan</span>
-                      </div>
-                      <span className="text-[10px] opacity-80 font-normal">
-                        Ke Dapur
-                      </span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={onCharge}
-                      disabled={isProcessing || items.length === 0}
-                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
-                      data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Printer className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">Processing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-2 text-sm">
-                            <ChefHat size={18} />
-                            <span>Simpan</span>
-                          </div>
-                          <span className="text-[10px] opacity-80 font-normal">
-                            Ke Dapur
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={hasKitchenTicket && onKitchenTicket ? onKitchenTicket : onCharge}
+                    disabled={isProcessing || items.length === 0}
+                    className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
+                    data-testid={hasKitchenTicket ? "button-kitchen-ticket" : "button-place-order"}
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <ChefHat size={18} />
+                      <span>Simpan</span>
+                    </div>
+                    <span className="text-[10px] opacity-80 font-normal">
+                      Ke Dapur
+                    </span>
+                  </button>
                   <button
                     onClick={onCharge}
                     disabled={isProcessing || items.length === 0}
