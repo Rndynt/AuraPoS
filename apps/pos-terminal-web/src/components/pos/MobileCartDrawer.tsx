@@ -3,7 +3,7 @@ import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Drawer } from "vaul";
-import { ShoppingCart, CreditCard, Printer, X, Edit2, Receipt, Banknote, Scan, ChevronDown, ChevronUp, ChefHat, Trash2 } from "lucide-react";
+import { ShoppingBag, CreditCard, Printer, X, Edit2, User, Banknote, Scan, ChevronDown, ChevronUp, ChefHat, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ import {
 import { useTenant } from "@/context/TenantContext";
 import { useState } from "react";
 import { useTables } from "@/lib/api/tableHooks";
+
+type OrderType = 'dine-in' | 'take-away' | 'delivery';
 
 type MobileCartDrawerProps = {
   open: boolean;
@@ -47,6 +49,9 @@ type MobileCartDrawerProps = {
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
   continueOrderId?: string | null;
+  // Order type props (optional for backward compatibility)
+  orderType?: OrderType;
+  setOrderType?: (type: OrderType) => void;
 };
 
 export function MobileCartDrawer({
@@ -77,12 +82,16 @@ export function MobileCartDrawer({
   paymentMethod,
   setPaymentMethod,
   continueOrderId,
+  orderType: externalOrderType,
+  setOrderType: externalSetOrderType,
 }: MobileCartDrawerProps) {
   const { business_type, hasModule, isLoading } = useTenant();
-  const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
-  const [isEditingTable, setIsEditingTable] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const { data: tablesData, isLoading: tablesLoading } = useTables();
+  
+  const [internalOrderType, setInternalOrderType] = useState<OrderType>('dine-in');
+  const orderType = externalOrderType ?? internalOrderType;
+  const setOrderType = externalSetOrderType ?? setInternalOrderType;
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
 
@@ -138,53 +147,73 @@ export function MobileCartDrawer({
 
           {/* Content area with customer info and cart items */}
           <div className="flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative z-0">
-            {/* Customer Info Section */}
-            <div className="p-4 bg-white border-b border-slate-100 shadow-sm z-10 space-y-3">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  {isEditingCustomerName ? (
-                    <Input
+            {/* Order Type & Customer Info Section */}
+            <div className="p-4 bg-white border-b border-slate-100 shadow-sm z-10">
+              {/* Order Type Selector */}
+              <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-3 gap-1 mb-4">
+                {(['dine-in', 'take-away', 'delivery'] as OrderType[]).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setOrderType(type)}
+                    className={`text-[11px] font-bold py-2 rounded-lg capitalize flex items-center justify-center gap-1 ${
+                      orderType === type
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-400'
+                    }`}
+                    data-testid={`button-order-type-${type}`}
+                  >
+                    {type.replace('-', ' ')}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Customer Name & Table Number */}
+              <div className="flex gap-3">
+                {/* Customer Name Card */}
+                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2 flex items-center gap-3 hover:border-blue-300 transition-colors group">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-400 shadow-sm group-hover:text-blue-500 flex-shrink-0">
+                    <User size={16} />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">
+                      Pelanggan
+                    </p>
+                    <input
+                      type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      onBlur={() => setIsEditingCustomerName(false)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') setIsEditingCustomerName(false);
-                      }}
-                      placeholder="Customer's Name"
-                      className="flex-1 bg-white"
-                      autoFocus
-                      data-testid="input-customer-name-edit"
+                      className="bg-transparent w-full text-sm font-bold text-slate-700 focus:outline-none"
+                      placeholder="Walk-in Guest"
+                      data-testid="input-customer-name"
                     />
-                  ) : (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Receipt className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <span className="font-bold text-sm text-slate-700">
-                        {customerName || "Customer's Name"}
-                      </span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setIsEditingCustomerName(true)}
-                    className="p-1.5 text-slate-300 hover:text-slate-600 rounded-full"
-                    data-testid="button-edit-customer-name"
-                  >
-                    <Edit2 size={14} />
-                  </button>
+                  </div>
+                  <Edit2
+                    size={12}
+                    className="text-slate-300 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                  />
                 </div>
-                {showTableNumber && setTableNumber && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">Meja</span>
-                    {isEditingTable ? (
+                
+                {/* Table Number Card (only for dine-in) */}
+                {orderType === 'dine-in' && showTableNumber && setTableNumber && (
+                  <div className="w-20 bg-slate-50 border border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:border-blue-300 cursor-pointer group">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold text-center">
+                      Meja
+                    </p>
+                    <div className="flex items-center gap-1">
                       <Select 
                         value={tableNumber} 
-                        onValueChange={(val) => {
-                          setTableNumber(val);
-                          setIsEditingTable(false);
-                        }}
-                        defaultOpen={true}
+                        onValueChange={setTableNumber}
                       >
-                        <SelectTrigger className="h-7 w-24 text-xs bg-white" data-testid="select-table-mobile">
-                          <SelectValue placeholder={tablesLoading ? "..." : "Table..."} />
+                        <SelectTrigger className="border-0 h-auto p-0 focus:ring-0 w-auto bg-transparent" data-testid="select-table-mobile">
+                          <div className="flex items-center gap-1">
+                            <span className="text-lg font-black text-slate-700">
+                              {tableNumber || "-"}
+                            </span>
+                            <Edit2
+                              size={10}
+                              className="text-slate-300 opacity-0 group-hover:opacity-100"
+                            />
+                          </div>
                         </SelectTrigger>
                         <SelectContent>
                           {tablesLoading ? (
@@ -202,18 +231,7 @@ export function MobileCartDrawer({
                           )}
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditingTable(true)}
-                        className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg hover:border-slate-300"
-                        data-testid="badge-table-number"
-                      >
-                        <span className="text-lg font-black text-slate-700">
-                          {tableNumber || "-"}
-                        </span>
-                        <Edit2 size={10} className="text-slate-300" />
-                      </button>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -223,13 +241,13 @@ export function MobileCartDrawer({
             <div className="p-4 space-y-3 pb-40 md:pb-6 flex-1">
               {items.length === 0 ? (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-300">
-                  <ShoppingCart size={48} className="mb-3 opacity-50" />
+                  <ShoppingBag size={48} className="mb-3 opacity-50" />
                   <p className="text-sm font-medium" data-testid="text-empty-cart">
                     Belum ada pesanan
                   </p>
                 </div>
               ) : (
-                <div className="space-y-0">
+                <div className="space-y-3">
                   {items.map((item) => (
                     <CartItem
                       key={item.id}
