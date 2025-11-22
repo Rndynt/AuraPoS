@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { 
   ListFilter, 
   X, 
@@ -317,7 +318,7 @@ export default function OrdersPage() {
 
           {/* Order Cards */}
           <ScrollArea className="flex-1 overflow-auto">
-            <div className="p-4 md:p-6 space-y-3">
+            <div className="p-4 md:p-6 space-y-3 pb-20">
               {isLoading ? (
                 <div className="text-center py-16 text-muted-foreground">
                   Loading orders...
@@ -405,7 +406,7 @@ export default function OrdersPage() {
               </div>
 
               <ScrollArea className="flex-1 overflow-auto">
-                <div className="p-4 md:p-6 space-y-6">
+                <div className="p-4 md:p-6 space-y-6 pb-20">
                   {/* Customer Info */}
                   <div className="space-y-3">
                     <div>
@@ -519,6 +520,9 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav cartItemsCount={0} />
     </div>
   );
 }

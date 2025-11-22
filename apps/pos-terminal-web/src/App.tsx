@@ -29,6 +29,16 @@ const TablesManagementPageWithLayout = () => (
   </MainLayout>
 );
 
+const HomePageWithLayout = () => (
+  <div className="flex h-screen bg-background w-full overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 overflow-hidden">
+        <HomePage />
+      </main>
+    </div>
+  </div>
+);
+
 const NotFoundWithLayout = () => (
   <MainLayout>
     <NotFound />
@@ -38,7 +48,7 @@ const NotFoundWithLayout = () => (
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={HomePage} />
+      <Route path="/" component={HomePageWithLayout} />
       <Route path="/pos" component={POSPageWithLayout} />
       <Route path="/orders" component={OrdersPageWithLayout} />
       <Route path="/tables" component={TablesManagementPageWithLayout} />
