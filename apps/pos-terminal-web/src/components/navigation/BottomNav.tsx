@@ -1,6 +1,5 @@
 import { useLocation } from "wouter";
 import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface BottomNavProps {
   cartItemsCount?: number;
@@ -63,24 +62,20 @@ export function BottomNav({ cartItemsCount = 0 }: BottomNavProps) {
         );
       })}
 
-      {/* Floating Cart Button */}
-      <button
-        onClick={() => setLocation("/pos")}
-        className="-mt-8"
-        data-testid="nav-cart"
-      >
-        <div className="relative w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center">
-          <ShoppingBag className="text-white" size={24} />
+      <div className="relative -top-5">
+        <button
+          onClick={() => setLocation("/pos")}
+          className="bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-90 border-4 border-slate-50 transition-transform"
+          data-testid="nav-cart"
+        >
+          <ShoppingBag size={24} />
           {cartItemsCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center px-1.5 text-[10px] font-bold"
-            >
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800">
               {cartItemsCount}
-            </Badge>
+            </span>
           )}
-        </div>
-      </button>
+        </button>
+      </div>
 
       {navItems.slice(2).map((item) => {
         const Icon = item.icon;
