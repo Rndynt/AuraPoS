@@ -1,52 +1,20 @@
-import { useState } from "react";
-import { Sidebar, SidebarContent } from "@/components/pos/Sidebar";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { Sidebar } from "@/components/pos/Sidebar";
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  cartItemsCount?: number;
 }
 
-export function MainLayout({ children, cartItemsCount }: MainLayoutProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex h-screen bg-background w-full overflow-hidden">
-      {/* Desktop Sidebar - Fixed */}
+      {/* Desktop Sidebar */}
       <Sidebar />
-
-      {/* Mobile Menu Sheet */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-64 p-6">
-          <SidebarContent onItemClick={() => setMobileMenuOpen(false)} />
-        </SheetContent>
-      </Sheet>
-
-      {/* Main Content Area */}
+      
+      {/* Main Content Area - pages control their own mobile UI */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header with Hamburger Menu */}
-        <header className="md:hidden flex items-center gap-3 p-4 border-b border-border bg-card flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(true)}
-            data-testid="button-menu-toggle"
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">AuraPOS</h1>
-        </header>
-
-        {/* Page Content */}
         <main className="flex-1 overflow-hidden">
           {children}
         </main>
-
-        {/* Mobile Bottom Navigation */}
-        <BottomNav cartItemsCount={cartItemsCount} />
       </div>
     </div>
   );

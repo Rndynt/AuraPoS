@@ -20,6 +20,7 @@ import {
   Settings
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TablesBottomNav } from "@/components/navigation/TablesBottomNav";
 import type { Table } from "@shared/schema";
 
 const getStatusColor = (status: string) => {
@@ -406,6 +407,9 @@ export default function TablesManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <TablesBottomNav />
     </div>
   );
 }

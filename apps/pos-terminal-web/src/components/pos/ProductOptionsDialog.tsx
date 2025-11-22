@@ -121,7 +121,7 @@ export function ProductOptionsDialog({
 
   return (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
       onClick={onClose}
       data-testid="dialog-product-options"
     >
