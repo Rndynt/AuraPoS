@@ -1,7 +1,6 @@
 import type { CartItem as CartItemType } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 type CartItemProps = {
   item: CartItemType;
@@ -46,24 +45,17 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
           </span>
         </div>
         {(item.variant || (item.selectedOptions && item.selectedOptions.length > 0)) && (
-          <div className="flex flex-wrap gap-1 my-1">
+          <div className='text-[10px] text-slate-500 dark:text-slate-400 my-1 bg-slate-50 dark:bg-slate-800 p-1.5 rounded border border-slate-100 dark:border-slate-700 w-max max-w-full'>
             {item.variant && (
-              <Badge 
-                variant="secondary" 
-                className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-0 font-medium"
-              >
-                {item.variant.name}
-              </Badge>
+              <span className='block truncate'>
+                • {item.variant.name}
+              </span>
             )}
             {item.selectedOptions && item.selectedOptions.length > 0 && (
               item.selectedOptions.map((option, idx) => (
-                <Badge 
-                  key={idx} 
-                  variant="secondary"
-                  className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-0 font-medium"
-                >
-                  {option.option_name}
-                </Badge>
+                <span key={idx} className='block truncate'>
+                  • {option.option_name}
+                </span>
               ))
             )}
           </div>
