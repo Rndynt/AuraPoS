@@ -1,12 +1,9 @@
 import { useState, useMemo } from "react";
 import type { Product } from "@pos/domain/catalog/types";
-import type { OrderType } from "@pos/domain/orders/types";
 import { ProductCard } from "./ProductCardV2";
 import { ModernPOSHeader } from "./shared/ModernPOSHeader";
 import { CategoryChip } from "./shared/CategoryChip";
 import { getCategoryIcon } from "@/lib/design-tokens";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
@@ -17,10 +14,6 @@ type ProductAreaProps = {
   isLoading?: boolean;
   error?: Error | null;
   onAddToCart: (product: Product) => void;
-  orderTypes: OrderType[];
-  orderTypesLoading: boolean;
-  selectedOrderTypeId: string | null;
-  onSelectOrderType: (orderTypeId: string | null) => void;
 };
 
 // Extract unique categories from products
@@ -44,21 +37,12 @@ export function ProductArea({
   products, 
   isLoading, 
   error, 
-  onAddToCart,
-  orderTypes,
-  orderTypesLoading,
-  selectedOrderTypeId,
-  onSelectOrderType
+  onAddToCart
 }: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState("");
 
   const categories = useMemo(() => getCategories(products), [products]);
-
-  // Defensive filter - only show active order types
-  const activeOrderTypes = useMemo(() => {
-    return orderTypes.filter(ot => ot.isActive === true);
-  }, [orderTypes]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -79,36 +63,6 @@ export function ProductArea({
         onSearchChange={setSearchQuery}
         searchDisabled={isLoading}
       />
-
-      {/* Order Type Tabs */}
-      <div className="sticky top-[86px] sm:top-[62px] md:top-[74px] z-20 bg-background border-b">
-        <div className="px-3 md:px-4 py-2 md:py-3">
-          <ScrollArea className="w-full">
-            <div className="flex gap-2">
-              {orderTypesLoading ? (
-                <>
-                  <Skeleton className="h-8 md:h-9 w-24 md:w-28 rounded-full flex-shrink-0" />
-                  <Skeleton className="h-8 md:h-9 w-24 md:w-28 rounded-full flex-shrink-0" />
-                  <Skeleton className="h-8 md:h-9 w-20 md:w-24 rounded-full flex-shrink-0" />
-                </>
-              ) : activeOrderTypes.length > 0 ? (
-                activeOrderTypes.map((orderType) => (
-                  <Button
-                    key={orderType.id}
-                    variant={selectedOrderTypeId === orderType.id ? "default" : "ghost"}
-                    className="flex-shrink-0 rounded-full h-8 md:h-9 px-3 md:px-4 text-sm"
-                    onClick={() => onSelectOrderType(orderType.id)}
-                    data-testid={`button-order-type-${orderType.code.toLowerCase()}`}
-                  >
-                    {orderType.name}
-                  </Button>
-                ))
-              ) : null}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </div>
-      </div>
 
       {/* Category Chips */}
       <div className="px-4 md:px-8 py-4">

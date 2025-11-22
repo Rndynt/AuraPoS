@@ -581,10 +581,6 @@ export default function POSPage() {
         isLoading={productsLoading}
         error={productsError}
         onAddToCart={handleAddToCart}
-        orderTypes={activeOrderTypes}
-        orderTypesLoading={orderTypesLoading}
-        selectedOrderTypeId={cart.selectedOrderTypeId}
-        onSelectOrderType={cart.setSelectedOrderTypeId}
       />
 
       {/* Cart Panel - Hidden on mobile */}
@@ -614,6 +610,8 @@ export default function POSPage() {
           setTableNumber={cart.setTableNumber}
           paymentMethod={cart.paymentMethod}
           setPaymentMethod={cart.setPaymentMethod}
+          orderType={cart.orderType}
+          setOrderType={cart.setOrderType}
           continueOrderId={continueOrderId}
         />
       </div>
@@ -680,6 +678,8 @@ export default function POSPage() {
         setTableNumber={cart.setTableNumber}
         paymentMethod={cart.paymentMethod}
         setPaymentMethod={cart.setPaymentMethod}
+        orderType={cart.orderType}
+        setOrderType={cart.setOrderType}
         continueOrderId={continueOrderId}
       />
 
