@@ -3,12 +3,14 @@ import { Sidebar, SidebarContent } from "@/components/pos/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { BottomNav } from "@/components/navigation/BottomNav";
 
 interface MainLayoutProps {
   children: React.ReactNode;
+  cartItemsCount?: number;
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({ children, cartItemsCount }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -42,6 +44,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         <main className="flex-1 overflow-hidden">
           {children}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <BottomNav cartItemsCount={cartItemsCount} />
       </div>
     </div>
   );

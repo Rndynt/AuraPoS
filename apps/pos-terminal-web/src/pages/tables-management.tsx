@@ -406,42 +406,6 @@ export default function TablesManagementPage() {
           </div>
         )}
       </div>
-
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-2 flex justify-between items-center z-40 pb-safe h-[60px]">
-        <button
-          onClick={() => setLocation("/pos")}
-          className="flex flex-col items-center gap-0.5 text-slate-400"
-          data-testid="nav-menu"
-        >
-          <LayoutGrid size={20} />
-          <span className="text-[10px]">Menu</span>
-        </button>
-        <button
-          className="flex flex-col items-center gap-0.5 text-blue-600"
-          data-testid="nav-tables"
-        >
-          <Square size={20} />
-          <span className="text-[10px]">Meja</span>
-        </button>
-        <div className="w-14"></div>
-        <button
-          onClick={() => setLocation("/orders")}
-          className="flex flex-col items-center gap-0.5 text-slate-400"
-          data-testid="nav-bill"
-        >
-          <CreditCard size={20} />
-          <span className="text-[10px]">Bill</span>
-        </button>
-        <button
-          onClick={() => setLocation("/")}
-          className="flex flex-col items-center gap-0.5 text-slate-400"
-          data-testid="nav-settings"
-        >
-          <Settings size={20} />
-          <span className="text-[10px]">Set</span>
-        </button>
-      </div>
     </div>
   );
 }

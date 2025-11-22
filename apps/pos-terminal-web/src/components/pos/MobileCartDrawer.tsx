@@ -1,4 +1,4 @@
-import type { CartItem as CartItemType, PaymentMethod } from "@/hooks/useCart";
+import type { CartItem as CartItemType, PaymentMethod, OrderType } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -17,8 +17,6 @@ import {
 import { useTenant } from "@/context/TenantContext";
 import { useState } from "react";
 import { useTables } from "@/lib/api/tableHooks";
-
-type OrderType = 'dine-in' | 'take-away' | 'delivery';
 
 type MobileCartDrawerProps = {
   open: boolean;
@@ -48,10 +46,9 @@ type MobileCartDrawerProps = {
   setTableNumber?: (table: string) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
+  orderType: OrderType;
+  setOrderType: (type: OrderType) => void;
   continueOrderId?: string | null;
-  // Order type props (optional for backward compatibility)
-  orderType?: OrderType;
-  setOrderType?: (type: OrderType) => void;
 };
 
 export function MobileCartDrawer({

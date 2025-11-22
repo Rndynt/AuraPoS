@@ -1,4 +1,4 @@
-import type { CartItem as CartItemType, PaymentMethod } from "@/hooks/useCart";
+import type { CartItem as CartItemType, PaymentMethod, OrderType } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -43,6 +43,8 @@ type CartPanelProps = {
   setTableNumber?: (table: string) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
+  orderType: OrderType;
+  setOrderType: (type: OrderType) => void;
   continueOrderId?: string | null;
 };
 
@@ -71,13 +73,14 @@ export function CartPanel({
   setTableNumber,
   paymentMethod,
   setPaymentMethod,
+  orderType,
+  setOrderType,
   continueOrderId,
 }: CartPanelProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
   const [isEditingTable, setIsEditingTable] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-  const [orderType, setOrderType] = useState<'dine-in' | 'take-away' | 'delivery'>('dine-in');
   const { data: tablesData, isLoading: tablesLoading } = useTables();
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');

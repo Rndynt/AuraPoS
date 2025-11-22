@@ -135,6 +135,7 @@ function createItemKey(
  * };
  */
 export type PaymentMethod = "cash" | "card" | "ewallet" | "other";
+export type OrderType = "dine-in" | "take-away" | "delivery";
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -142,6 +143,7 @@ export function useCart() {
   const [tableNumber, setTableNumber] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [selectedOrderTypeId, setSelectedOrderTypeId] = useState<string | null>(null);
+  const [orderType, setOrderType] = useState<OrderType>("dine-in");
   
   // Generate temporary order number for display (will be replaced by backend)
   const [orderNumber] = useState<string>(() => {
@@ -245,6 +247,7 @@ export function useCart() {
     setTableNumber("");
     setPaymentMethod("cash");
     setSelectedOrderTypeId(null);
+    setOrderType("dine-in");
   };
 
   const loadOrder = (order: any): string => {
@@ -366,6 +369,8 @@ export function useCart() {
     setPaymentMethod,
     selectedOrderTypeId,
     setSelectedOrderTypeId,
+    orderType,
+    setOrderType,
     orderNumber,
   };
 }
