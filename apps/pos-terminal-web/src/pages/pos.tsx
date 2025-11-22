@@ -13,7 +13,7 @@ import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, us
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Loader2 } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getActiveTenantId } from "@/lib/tenant";
@@ -621,23 +621,30 @@ export default function POSPage() {
       {/* Mobile Cart Button - Shows on mobile/tablet when cart panel is hidden */}
       {cart.itemCount > 0 && (
         <div
-          className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+          className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-6"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
         >
           <Button
-            size="lg"
-            className="h-12 md:h-14 px-4 md:px-6 gap-2 md:gap-3 shadow-lg w-full text-sm md:text-base"
             onClick={() => setMobileCartOpen(true)}
+            className="w-full bg-slate-800 hover:bg-slate-900 text-white py-7 rounded-2xl font-bold shadow-2xl h-auto px-6"
             data-testid="button-view-cart-mobile"
           >
-            <ShoppingCart className="w-4 md:w-5 h-4 md:h-5" />
-            <span className="hidden sm:inline">View Cart</span>
-            <Badge variant="secondary" className="ml-1">
-              {cart.itemCount}
-            </Badge>
-            <span className="ml-auto font-semibold">
-              Rp {cart.total.toLocaleString("id-ID")}
-            </span>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <ShoppingBag className="w-5 h-5" />
+                  {cart.itemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800">
+                      {cart.itemCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm">Lihat Pesanan</span>
+              </div>
+              <span className="text-lg font-black">
+                Rp {(cart.total / 1000).toFixed(0)}k
+              </span>
+            </div>
           </Button>
         </div>
       )}
