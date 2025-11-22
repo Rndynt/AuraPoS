@@ -2,7 +2,7 @@ import type { CartItem as CartItemType, PaymentMethod } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan, ChevronUp, ChefHat } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,6 +76,7 @@ export function CartPanel({
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
   const [isEditingTable, setIsEditingTable] = useState(false);
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const { data: tablesData, isLoading: tablesLoading } = useTables();
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
@@ -207,96 +208,120 @@ export function CartPanel({
 
       {/* Footer with totals and actions */}
       {items.length > 0 && (
-        <div className="p-4 border-t border-card-border space-y-4 flex-shrink-0 bg-card">
-          {/* Payment Summary */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-base">Payment Summary</h3>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="tabular-nums" data-testid="text-subtotal">
-                {formatPrice(subtotal)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax</span>
-              <span className="tabular-nums" data-testid="text-tax">
-                {formatPrice(tax)}
-              </span>
-            </div>
-            <Separator />
-            <div className="flex justify-between text-lg font-semibold pt-1">
-              <span>Total Payable</span>
-              <span className="tabular-nums" data-testid="text-total">
-                {formatPrice(total)}
-              </span>
-            </div>
-          </div>
-
-          {/* Payment Method Selection */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Payment Method</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                variant={paymentMethod === "cash" ? "default" : "outline"}
-                className="flex-col h-auto py-3 gap-1"
-                onClick={() => setPaymentMethod("cash")}
-                data-testid="button-payment-cash"
-              >
-                <Banknote className="w-5 h-5" />
-                <span className="text-xs">Cash</span>
-              </Button>
-              <Button
-                variant={paymentMethod === "card" ? "default" : "outline"}
-                className="flex-col h-auto py-3 gap-1"
-                onClick={() => setPaymentMethod("card")}
-                data-testid="button-payment-card"
-              >
-                <CreditCard className="w-5 h-5" />
-                <span className="text-xs">Card</span>
-              </Button>
-              <Button
-                variant={paymentMethod === "ewallet" ? "default" : "outline"}
-                className="flex-col h-auto py-3 gap-1"
-                onClick={() => setPaymentMethod("ewallet")}
-                data-testid="button-payment-ewallet"
-              >
-                <Scan className="w-5 h-5" />
-                <span className="text-xs">E-Wallet</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            <Button
-              className="w-full h-12 text-base font-semibold"
-              onClick={onCharge}
-              disabled={isProcessing}
-              data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
-            >
-              {isProcessing ? (
-                <>
-                  <Printer className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : continueOrderId ? (
-                "Update Order"
-              ) : (
-                "Place Order"
+        <div className="relative flex-shrink-0">
+          {/* Expandable Summary Section - Slides UP from bottom */}
+          <div
+            className={`absolute bottom-full left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
+              isSummaryExpanded
+                ? 'translate-y-4 opacity-100 visible pb-6'
+                : 'translate-y-full opacity-0 invisible'
+            }`}
+          >
+            <div className="space-y-3 pb-2">
+              <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                <span>Subtotal</span>
+                <span data-testid="text-subtotal">{formatPrice(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                <span>Pajak ({formatRateLabel(taxRate)})</span>
+                <span data-testid="text-tax">{formatPrice(tax)}</span>
+              </div>
+              {serviceCharge > 0 && (
+                <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                  <span>Service ({formatRateLabel(serviceChargeRate)})</span>
+                  <span data-testid="text-service">{formatPrice(serviceCharge)}</span>
+                </div>
               )}
-            </Button>
-
-            {hasKitchenTicket && onKitchenTicket && (
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={onKitchenTicket}
-                data-testid="button-print"
+            </div>
+          </div>
+          
+          {/* Main Footer - ALWAYS VISIBLE */}
+          <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-5 pb-6 shadow-[0_-5px_25px_rgba(0,0,0,0.1)] relative z-20">
+            {/* Toggle Button */}
+            <div
+              onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+              className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 w-12 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform"
+              data-testid="button-toggle-pricing-details"
+            >
+              <ChevronUp
+                size={16}
+                className={`transition-transform duration-300 ${
+                  isSummaryExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+            
+            {/* Total Section */}
+            <div className="flex items-center justify-between mb-4">
+              <div
+                onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                className="cursor-pointer group"
               >
-                <Printer className="w-4 h-4" />
-                Print
-              </Button>
-            )}
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Total Tagihan
+                </p>
+                <div className="flex items-center gap-1">
+                  <span className="text-2xl font-black text-slate-800 dark:text-slate-100" data-testid="text-total">
+                    {formatPrice(total)}
+                  </span>
+                  <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 md:hidden">
+                    Detail
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="grid grid-cols-[1.5fr_1fr] gap-3">
+              {hasKitchenTicket && onKitchenTicket ? (
+                <button
+                  onClick={onKitchenTicket}
+                  disabled={isProcessing}
+                  className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
+                  data-testid="button-print"
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <ChefHat size={18} />
+                    <span>Simpan</span>
+                  </div>
+                  <span className="text-[10px] opacity-80 font-normal">
+                    Ke Dapur
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={onCharge}
+                  disabled={isProcessing}
+                  className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 dark:shadow-blue-900/30 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-all"
+                  data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Printer className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Processing...</span>
+                    </>
+                  ) : continueOrderId ? (
+                    <span className="text-sm">Update Order</span>
+                  ) : (
+                    <span className="text-sm">Place Order</span>
+                  )}
+                </button>
+              )}
+              <button
+                onClick={onCharge}
+                disabled={isProcessing}
+                className="bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-500 border border-green-200 dark:border-green-800 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
+                data-testid="button-complete-payment"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <Banknote size={18} />
+                  <span>Bayar</span>
+                </div>
+                <span className="text-[10px] opacity-80 font-normal">
+                  Tutup Bill
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

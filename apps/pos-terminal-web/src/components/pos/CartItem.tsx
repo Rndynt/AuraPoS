@@ -23,76 +23,77 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
   const totalPrice = itemPrice * item.quantity;
 
   return (
-    <div className="py-3 border-b last:border-b-0" data-testid={`cart-item-${item.id}`}>
-      <div className="flex gap-3">
-        <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-          {item.product.image_url && (
-            <img
-              src={item.product.image_url}
-              alt={item.product.name}
-              className="w-full h-full object-cover"
-            />
-          )}
+    <div 
+      className="flex gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm relative mb-2 last:mb-0" 
+      data-testid={`cart-item-${item.id}`}
+    >
+      <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
+        {item.product.image_url && (
+          <img
+            src={item.product.image_url}
+            alt={item.product.name}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+      <div className="flex-1 flex flex-col justify-between min-w-0">
+        <div className="flex justify-between items-start">
+          <h4 className="font-bold text-slate-700 dark:text-slate-300 text-sm truncate pr-4" data-testid={`text-cart-product-${item.id}`}>
+            {item.product.name}
+          </h4>
+          <span className="text-blue-600 dark:text-blue-400 font-bold text-sm whitespace-nowrap" data-testid={`text-item-total-${item.id}`}>
+            {formatPrice(totalPrice)}
+          </span>
         </div>
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-sm line-clamp-1" data-testid={`text-cart-product-${item.id}`}>
-                {item.product.name}
-              </h4>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {item.variant && (
-                  <Badge variant="secondary" className="text-xs">
-                    {item.variant.name}
-                  </Badge>
-                )}
-                {item.selectedOptions && item.selectedOptions.length > 0 && (
-                  item.selectedOptions.map((option, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {option.option_name}
-                    </Badge>
-                  ))
-                )}
-              </div>
-            </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="w-6 h-6 flex-shrink-0"
-              onClick={() => onRemove(item.id)}
-              data-testid={`button-remove-${item.id}`}
-            >
-              <Trash2 className="w-3 h-3" />
-            </Button>
+        {(item.variant || (item.selectedOptions && item.selectedOptions.length > 0)) && (
+          <div className="flex flex-wrap gap-1 my-1">
+            {item.variant && (
+              <Badge 
+                variant="secondary" 
+                className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-0 font-medium"
+              >
+                {item.variant.name}
+              </Badge>
+            )}
+            {item.selectedOptions && item.selectedOptions.length > 0 && (
+              item.selectedOptions.map((option, idx) => (
+                <Badge 
+                  key={idx} 
+                  variant="secondary"
+                  className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-0 font-medium"
+                >
+                  {option.option_name}
+                </Badge>
+              ))
+            )}
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-semibold tabular-nums" data-testid={`text-item-total-${item.id}`}>
-              {formatPrice(totalPrice)}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                className="w-6 h-6"
-                onClick={() => onUpdateQty(item.id, item.quantity - 1)}
-                data-testid={`button-qty-minus-${item.id}`}
-              >
-                <Minus className="w-3 h-3" />
-              </Button>
-              <div className="w-8 text-center text-sm font-medium tabular-nums" data-testid={`text-qty-${item.id}`}>
-                {item.quantity}
-              </div>
-              <Button
-                size="icon"
-                variant="outline"
-                className="w-6 h-6"
-                onClick={() => onUpdateQty(item.id, item.quantity + 1)}
-                data-testid={`button-qty-plus-${item.id}`}
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
-            </div>
-            
+        )}
+        <div className="flex items-center justify-between mt-2">
+          <button
+            onClick={() => onRemove(item.id)}
+            className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+            data-testid={`button-remove-${item.id}`}
+          >
+            <Trash2 size={14} />
+          </button>
+          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-100 dark:border-slate-700">
+            <button
+              onClick={() => onUpdateQty(item.id, item.quantity - 1)}
+              className="w-6 h-6 bg-white dark:bg-slate-900 rounded shadow-sm flex items-center justify-center hover-elevate active-elevate-2"
+              data-testid={`button-qty-minus-${item.id}`}
+            >
+              <Minus size={12} />
+            </button>
+            <span className="text-xs font-bold w-4 text-center" data-testid={`text-qty-${item.id}`}>
+              {item.quantity}
+            </span>
+            <button
+              onClick={() => onUpdateQty(item.id, item.quantity + 1)}
+              className="w-6 h-6 bg-white dark:bg-slate-900 rounded shadow-sm flex items-center justify-center hover-elevate active-elevate-2"
+              data-testid={`button-qty-plus-${item.id}`}
+            >
+              <Plus size={12} />
+            </button>
           </div>
         </div>
       </div>

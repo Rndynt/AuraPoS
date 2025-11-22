@@ -43,33 +43,72 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-function TableCard({ table, selected, onSelect }: { table: Table; selected: boolean; onSelect: () => void }) {
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "available":
+      return "bg-blue-600 text-white shadow-blue-200";
+    case "occupied":
+      return "bg-slate-200 text-slate-600";
+    case "reserved":
+      return "bg-orange-100 text-orange-600 border-orange-200 border";
+    case "maintenance":
+      return "bg-red-600 text-white shadow-red-200";
+    default:
+      return "bg-slate-100 text-slate-400";
+  }
+};
+
+const getTableCardBg = (status: string) => {
+  switch (status) {
+    case "available":
+      return "bg-white border-slate-200 hover:border-blue-300";
+    case "occupied":
+      return "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700";
+    case "maintenance":
+      return "bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900";
+    case "reserved":
+      return "bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900";
+    default:
+      return "bg-white border-slate-200";
+  }
+};
+
+function TableCard({ table, selected, onSelect, hasActiveOrders }: { table: Table; selected: boolean; onSelect: () => void; hasActiveOrders?: boolean }) {
   const isDisabled = table.status === "maintenance";
 
   return (
     <button
       onClick={onSelect}
       disabled={isDisabled}
-      className={`relative w-full h-24 md:h-28 rounded-md border-2 bg-card flex flex-col items-center justify-center font-semibold transition cursor-pointer disabled:cursor-not-allowed hover-elevate ${
-        selected ? "ring-2 ring-primary" : ""
-      }`}
+      className={`relative aspect-video md:aspect-[4/3] rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all active:scale-95 group border border-transparent ${
+        selected ? "ring-4 ring-blue-500/20 border-blue-500 z-10" : ""
+      } ${getTableCardBg(table.status)} disabled:cursor-not-allowed disabled:opacity-60`}
       data-testid={`table-select-${table.tableNumber}`}
     >
-      <Badge 
-        variant={getStatusVariant(table.status)} 
-        className="absolute top-1 right-1 text-xs"
+      <div
+        className={`absolute top-3 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${getStatusColor(
+          table.status
+        )}`}
       >
         {getStatusLabel(table.status)}
-      </Badge>
-      <div className="text-center space-y-1">
-        <div className="text-base md:text-lg font-bold">{table.tableNumber}</div>
-        {table.capacity && (
-          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-            <Users className="w-4 h-4" />
-            {table.capacity}
-          </div>
-        )}
       </div>
+      <span className="text-3xl font-black text-slate-800 dark:text-slate-100 mt-4">
+        {table.tableNumber}
+      </span>
+      {table.capacity && (
+        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-xs font-medium">
+          <Users size={14} />
+          <span>{table.capacity}</span>
+        </div>
+      )}
+      {hasActiveOrders && (
+        <div className="absolute bottom-3 flex items-center gap-1 bg-white dark:bg-slate-900 px-2 py-1 rounded-full shadow-sm border border-slate-100 dark:border-slate-800">
+          <Clock size={12} className="text-orange-500" />
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+            Active
+          </span>
+        </div>
+      )}
     </button>
   );
 }
@@ -249,14 +288,23 @@ export default function TablesManagementPage() {
             <div className="p-4 md:p-6">
               {filteredTables.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                  {filteredTables.map((table) => (
-                    <TableCard
-                      key={table.id}
-                      table={table}
-                      selected={selectedTable === table.id}
-                      onSelect={() => setSelectedTable(table.id)}
-                    />
-                  ))}
+                  {filteredTables.map((table) => {
+                    const hasActiveOrders = orders.some(
+                      (order) => 
+                        order.tableNumber === table.tableNumber && 
+                        order.status !== "completed" && 
+                        order.status !== "cancelled"
+                    );
+                    return (
+                      <TableCard
+                        key={table.id}
+                        table={table}
+                        selected={selectedTable === table.id}
+                        onSelect={() => setSelectedTable(table.id)}
+                        hasActiveOrders={hasActiveOrders}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-16 text-muted-foreground">
