@@ -3,7 +3,7 @@ import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Drawer } from "vaul";
-import { ShoppingCart, CreditCard, Printer, X, Edit2, Receipt, Banknote, Scan, ChevronDown, ChevronUp, ChefHat } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, X, Edit2, Receipt, Banknote, Scan, ChevronDown, ChevronUp, ChefHat, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,67 +103,77 @@ export function MobileCartDrawer({
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" />
+        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55] md:hidden" />
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 bg-card border-t border-card-border rounded-t-xl z-50 flex flex-col overflow-hidden"
-          style={{ maxHeight: "calc(92vh - env(safe-area-inset-bottom, 0px))" }}
+          className={`fixed md:relative top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl md:shadow-none transition-transform duration-300 w-full md:w-[380px] h-[95vh] mt-[5vh] md:mt-0 md:h-auto ${
+            open ? 'translate-y-0' : 'translate-y-full md:translate-y-0'
+          } rounded-t-[2rem] md:rounded-none`}
           data-testid="drawer-mobile-cart"
         >
-          {/* Header with Customer Info */}
-          <div className="p-4 border-b border-card-border flex-shrink-0 space-y-3">
-            <Drawer.Handle className="mx-auto w-12 h-1 bg-muted-foreground/30 rounded-full mb-4" />
-            
-            {/*<div className="flex items-center justify-end">
-              <Button
-                variant="ghost"
-                size="icon"
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white rounded-t-[2rem] md:rounded-none relative z-40">
+            <div className="flex items-center gap-3">
+              <button
                 onClick={() => onOpenChange(false)}
+                className="md:hidden p-1 bg-slate-100 rounded-full"
                 data-testid="button-close-drawer"
               >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>*/}
-
-            {/* Customer Name and Order Number */}
-            <div className="bg-muted/50 rounded-md p-4 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                {isEditingCustomerName ? (
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    onBlur={() => setIsEditingCustomerName(false)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') setIsEditingCustomerName(false);
-                    }}
-                    placeholder="Customer's Name"
-                    className="flex-1"
-                    autoFocus
-                    data-testid="input-customer-name-edit"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 flex-1">
-                    <Receipt className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <h3 className="font-medium text-base">
-                      {customerName || "Customer's Name"}
-                    </h3>
-                  </div>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-8 h-8 flex-shrink-0"
-                  onClick={() => setIsEditingCustomerName(true)}
-                  data-testid="button-edit-customer-name"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </Button>
+                <ChevronDown size={20} />
+              </button>
+              <h2 className="text-lg font-bold text-slate-800">Pesanan Baru</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
+                {orderNumber}
               </div>
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <p className="text-sm text-muted-foreground">
-                  Order Number: {orderNumber}
-                </p>
+              <button
+                onClick={onClear}
+                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                data-testid="button-clear-cart"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Content area with customer info and cart items */}
+          <div className="flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative z-0">
+            {/* Customer Info Section */}
+            <div className="p-4 bg-white border-b border-slate-100 shadow-sm z-10 space-y-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  {isEditingCustomerName ? (
+                    <Input
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      onBlur={() => setIsEditingCustomerName(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setIsEditingCustomerName(false);
+                      }}
+                      placeholder="Customer's Name"
+                      className="flex-1 bg-white"
+                      autoFocus
+                      data-testid="input-customer-name-edit"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Receipt className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="font-bold text-sm text-slate-700">
+                        {customerName || "Customer's Name"}
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setIsEditingCustomerName(true)}
+                    className="p-1.5 text-slate-300 hover:text-slate-600 rounded-full"
+                    data-testid="button-edit-customer-name"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                </div>
                 {showTableNumber && setTableNumber && (
                   <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold">Meja</span>
                     {isEditingTable ? (
                       <Select 
                         value={tableNumber} 
@@ -173,12 +183,12 @@ export function MobileCartDrawer({
                         }}
                         defaultOpen={true}
                       >
-                        <SelectTrigger className="h-7 w-24 text-xs" data-testid="select-table-mobile">
+                        <SelectTrigger className="h-7 w-24 text-xs bg-white" data-testid="select-table-mobile">
                           <SelectValue placeholder={tablesLoading ? "..." : "Table..."} />
                         </SelectTrigger>
                         <SelectContent>
                           {tablesLoading ? (
-                            <div className="p-2 text-xs text-muted-foreground">Loading...</div>
+                            <div className="p-2 text-xs text-slate-400">Loading...</div>
                           ) : tablesData?.tables && tablesData.tables.length > 0 ? (
                             tablesData.tables
                               .filter(t => t.status !== 'maintenance')
@@ -188,33 +198,34 @@ export function MobileCartDrawer({
                                 </SelectItem>
                               ))
                           ) : (
-                            <div className="p-2 text-xs text-muted-foreground">No tables</div>
+                            <div className="p-2 text-xs text-slate-400">No tables</div>
                           )}
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge 
-                        variant="secondary" 
-                        className="cursor-pointer hover-elevate active-elevate-2"
+                      <button
                         onClick={() => setIsEditingTable(true)}
+                        className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg hover:border-slate-300"
                         data-testid="badge-table-number"
                       >
-                        {tableNumber ? `Table ${tableNumber}` : "Set Table"}
-                      </Badge>
+                        <span className="text-lg font-black text-slate-700">
+                          {tableNumber || "-"}
+                        </span>
+                        <Edit2 size={10} className="text-slate-300" />
+                      </button>
                     )}
                   </div>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Scrollable content area */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 pb-8 space-y-3">
+            {/* Cart Items */}
+            <div className="p-4 space-y-3 pb-40 md:pb-6 flex-1">
               {items.length === 0 ? (
-                <div className="py-16 text-center space-y-3">
-                  <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground" />
-                  <p className="text-muted-foreground" data-testid="text-empty-cart">
-                    No Item Selected
+                <div className="h-40 flex flex-col items-center justify-center text-slate-300">
+                  <ShoppingCart size={48} className="mb-3 opacity-50" />
+                  <p className="text-sm font-medium" data-testid="text-empty-cart">
+                    Belum ada pesanan
                   </p>
                 </div>
               ) : (
@@ -230,30 +241,31 @@ export function MobileCartDrawer({
                   ))}
                 </div>
               )}
+            </div>
           </div>
 
           {/* Footer with totals and actions */}
           {items.length > 0 && (
-            <div className="relative flex-shrink-0">
+            <div className="absolute md:relative bottom-0 left-0 right-0 z-30">
               {/* Expandable Summary Section - Slides UP from bottom */}
               <div
-                className={`absolute bottom-full left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
+                className={`absolute bottom-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
                   isSummaryExpanded
                     ? 'translate-y-4 opacity-100 visible pb-6'
                     : 'translate-y-full opacity-0 invisible'
                 }`}
               >
                 <div className="space-y-3 pb-2">
-                  <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                  <div className="flex justify-between text-sm text-slate-500">
                     <span>Subtotal</span>
                     <span data-testid="text-subtotal">{formatPrice(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                  <div className="flex justify-between text-sm text-slate-500">
                     <span>Pajak ({formatRateLabel(taxRate)})</span>
                     <span data-testid="text-tax">{formatPrice(tax)}</span>
                   </div>
                   {serviceCharge > 0 && (
-                    <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                    <div className="flex justify-between text-sm text-slate-500">
                       <span>Service ({formatRateLabel(serviceChargeRate)})</span>
                       <span data-testid="text-service">{formatPrice(serviceCharge)}</span>
                     </div>
@@ -263,13 +275,12 @@ export function MobileCartDrawer({
               
               {/* Main Footer - ALWAYS VISIBLE */}
               <div 
-                className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-5 shadow-[0_-5px_25px_rgba(0,0,0,0.1)] relative z-20"
-                style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
+                className="bg-white border-t border-slate-200 p-5 pb-6 shadow-[0_-5px_25px_rgba(0,0,0,0.1)] relative z-20"
               >
                 {/* Toggle Button */}
                 <div
                   onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 w-12 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform"
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white border border-slate-200 text-slate-400 w-12 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 active:scale-95"
                   data-testid="button-toggle-pricing-details"
                 >
                   <ChevronUp
@@ -286,14 +297,14 @@ export function MobileCartDrawer({
                     onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
                     className="cursor-pointer group"
                   >
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <p className="text-xs text-slate-400 font-medium group-hover:text-blue-600 transition-colors">
                       Total Tagihan
                     </p>
                     <div className="flex items-center gap-1">
-                      <span className="text-2xl font-black text-slate-800 dark:text-slate-100" data-testid="text-total">
+                      <span className="text-2xl font-black text-slate-800" data-testid="text-total">
                         {formatPrice(total)}
                       </span>
-                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                      <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 md:hidden">
                         Detail
                       </span>
                     </div>
@@ -305,8 +316,8 @@ export function MobileCartDrawer({
                   {hasKitchenTicket && onKitchenTicket ? (
                     <button
                       onClick={onKitchenTicket}
-                      disabled={isProcessing}
-                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
+                      disabled={isProcessing || items.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
                       data-testid="button-print"
                     >
                       <div className="flex items-center gap-2 text-sm">
@@ -320,8 +331,8 @@ export function MobileCartDrawer({
                   ) : (
                     <button
                       onClick={onCharge}
-                      disabled={isProcessing}
-                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-all"
+                      disabled={isProcessing || items.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
                       data-testid={continueOrderId ? "button-update-order" : "button-place-order"}
                     >
                       {isProcessing ? (
@@ -329,17 +340,23 @@ export function MobileCartDrawer({
                           <Printer className="w-4 h-4 animate-spin" />
                           <span className="text-sm">Processing...</span>
                         </>
-                      ) : continueOrderId ? (
-                        <span className="text-sm">Update Order</span>
                       ) : (
-                        <span className="text-sm">Place Order</span>
+                        <>
+                          <div className="flex items-center gap-2 text-sm">
+                            <ChefHat size={18} />
+                            <span>Simpan</span>
+                          </div>
+                          <span className="text-[10px] opacity-80 font-normal">
+                            Ke Dapur
+                          </span>
+                        </>
                       )}
                     </button>
                   )}
                   <button
                     onClick={onCharge}
-                    disabled={isProcessing}
-                    className="bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-500 border border-green-200 dark:border-green-800 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
+                    disabled={isProcessing || items.length === 0}
+                    className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
                     data-testid="button-complete-payment"
                   >
                     <div className="flex items-center gap-2 text-sm">

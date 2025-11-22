@@ -77,6 +77,7 @@ export function CartPanel({
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
   const [isEditingTable, setIsEditingTable] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
+  const [orderType, setOrderType] = useState<'dine-in' | 'take-away' | 'delivery'>('dine-in');
   const { data: tablesData, isLoading: tablesLoading } = useTables();
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
@@ -179,6 +180,26 @@ export function CartPanel({
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Order Type Selection */}
+      <div className="px-4 pt-3 pb-2 border-b border-card-border flex-shrink-0">
+        <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-3 gap-1 mb-4">
+          {(['dine-in', 'take-away', 'delivery'] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => setOrderType(type)}
+              className={`text-[11px] font-bold py-2 rounded-lg capitalize flex items-center justify-center gap-1 ${
+                orderType === type
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-400'
+              }`}
+              data-testid={`button-order-type-${type}`}
+            >
+              {type.replace('-', ' ')}
+            </button>
+          ))}
         </div>
       </div>
 
