@@ -1,8 +1,7 @@
 import { useState } from "react";
 import type { Product } from "@pos/domain/catalog/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Plus, Layers } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
+import { formatIDR } from "@/lib/design-tokens";
 
 type ProductCardProps = {
   product: Product;
@@ -11,77 +10,64 @@ type ProductCardProps = {
 
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price);
+
+  const hasVariants = product.has_variants || (product.option_groups && product.option_groups.length > 0);
 
   return (
-    <Card
-      className="hover-elevate min-h-[280px] flex flex-col"
+    <div
+      onClick={() => onAddToCart(product)}
+      className="group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-95 hover:shadow-md cursor-pointer relative h-full flex flex-col transition-all"
       data-testid={`card-product-${product.id}`}
     >
-      {/* Product Image with Variants Icon Overlay */}
-      <div className="relative aspect-[4/3] bg-muted rounded-t-md overflow-hidden">
+      {/* Product Image */}
+      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg mb-2 bg-slate-100">
         {product.image_url && !imageFailed ? (
           <img
             src={product.image_url}
             alt={product.name}
-            className="h-full w-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
             decoding="async"
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
-            No image
+          <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
+            No Image
           </div>
         )}
-        
-        {/* Variants Icon Overlay - Top Right */}
-        {product.has_variants && (
-          <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-md p-1.5 shadow-sm">
-            <Layers className="w-4 h-4 text-foreground" />
+
+        {/* Stock Badge - Top Left */}
+        {product.stock_tracking_enabled && product.stock_qty !== undefined && (
+          <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur text-white text-[10px] font-medium px-2 py-0.5 rounded">
+            {product.stock_qty} Stok
+          </div>
+        )}
+
+        {/* Variants Indicator - Bottom Right */}
+        {hasVariants && (
+          <div className="absolute bottom-1.5 right-1.5 bg-white/90 text-slate-800 p-1 rounded shadow-sm">
+            <SlidersHorizontal size={14} />
           </div>
         )}
       </div>
 
       {/* Product Info */}
-      <CardContent className="p-3 space-y-2 flex-1">
+      <div className="flex-1 flex flex-col">
         <h3
-          className="font-semibold text-sm line-clamp-2 min-h-[2.5rem]"
+          className="font-bold text-slate-700 text-sm leading-tight mb-1 line-clamp-2"
           data-testid={`text-product-name-${product.id}`}
         >
           {product.name}
         </h3>
-
-        <p
-          className="text-lg font-semibold tabular-nums"
-          data-testid={`text-price-${product.id}`}
-        >
-          {formatPrice(product.base_price)}
-        </p>
-
-        {product.stock_tracking_enabled && (
-          <p className="text-xs text-muted-foreground">
-            {product.stock_qty} Available
-          </p>
-        )}
-      </CardContent>
-
-      {/* Add to Cart Button */}
-      <CardFooter className="p-3 pt-0">
-        <Button
-          className="w-full gap-2"
-          onClick={() => onAddToCart(product)}
-          data-testid={`button-add-${product.id}`}
-        >
-          <Plus className="w-4 h-4" />
-          Add to Cart
-        </Button>
-      </CardFooter>
-    </Card>
+        <div className="mt-auto">
+          <span
+            className="text-blue-600 font-bold text-base"
+            data-testid={`text-price-${product.id}`}
+          >
+            {formatIDR(product.base_price).replace(',00', '')}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

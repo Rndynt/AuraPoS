@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import type { Product } from "@pos/domain/catalog/types";
 import type { OrderType } from "@pos/domain/orders/types";
 import { ProductCard } from "./ProductCardV2";
-import { POSHeader } from "./POSHeader";
+import { ModernPOSHeader } from "./shared/ModernPOSHeader";
+import { CategoryChip } from "./shared/CategoryChip";
+import { getCategoryIcon } from "@/lib/design-tokens";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,9 +72,9 @@ export function ProductArea({
   }, [products, selectedCategory, searchQuery]);
 
   return (
-    <div className="flex flex-col bg-muted/40 h-full min-h-0 overflow-x-hidden w-full max-w-full">
-      {/* Unified Header */}
-      <POSHeader 
+    <div className="flex flex-col bg-slate-50/50 h-full min-h-0 overflow-x-hidden w-full max-w-full">
+      {/* Modern POS Header */}
+      <ModernPOSHeader 
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchDisabled={isLoading}
@@ -108,73 +110,64 @@ export function ProductArea({
         </div>
       </div>
 
-      {/* Category Tabs */}
-      <div className="sticky top-[134px] sm:top-[110px] md:top-[122px] z-10 bg-background border-b">
-        <div className="px-3 md:px-4 py-2 md:py-3">
-          <ScrollArea className="w-full">
-            <div className="flex gap-2">
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-8 md:h-9 w-20 md:w-24 rounded-full flex-shrink-0" />
-                  <Skeleton className="h-8 md:h-9 w-16 md:w-20 rounded-full flex-shrink-0" />
-                  <Skeleton className="h-8 md:h-9 w-16 md:w-20 rounded-full flex-shrink-0" />
-                  <Skeleton className="h-8 md:h-9 w-20 md:w-24 rounded-full flex-shrink-0" />
-                </>
-              ) : (
-                categories.map((category) => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? "default" : "ghost"}
-                    className="flex-shrink-0 rounded-full h-8 md:h-9 px-3 md:px-4 text-sm"
-                    onClick={() => setSelectedCategory(category)}
-                    data-testid={`button-category-${category.toLowerCase()}`}
-                  >
-                    {category}
-                  </Button>
-                ))
-              )}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+      {/* Category Chips */}
+      <div className="px-4 md:px-8 py-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-9 w-24 rounded-full flex-shrink-0" />
+              <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
+              <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
+            </>
+          ) : (
+            categories.map((category) => (
+              <CategoryChip
+                key={category}
+                id={category}
+                name={category}
+                icon={getCategoryIcon(category)}
+                isActive={selectedCategory === category}
+                onClick={() => setSelectedCategory(category)}
+              />
+            ))
+          )}
         </div>
       </div>
 
       {/* Product Grid */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full">
-        <div className="p-2 md:p-3 lg:p-4 pb-28 md:pb-6 w-full max-w-full">
-          {error ? (
-            <div className="py-16 text-center">
-              <p className="text-destructive mb-2" data-testid="text-error">
-                Failed to load products
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {error.message}
-              </p>
-            </div>
-          ) : isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full max-w-full">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <ProductCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-muted-foreground" data-testid="text-no-products">
-                No products found
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4 w-full max-w-full">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={onAddToCart}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-32 md:pb-8">
+        {error ? (
+          <div className="py-16 text-center">
+            <p className="text-red-600 mb-2" data-testid="text-error">
+              Failed to load products
+            </p>
+            <p className="text-sm text-slate-500">
+              {error.message}
+            </p>
+          </div>
+        ) : isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-slate-400" data-testid="text-no-products">
+              No products found
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
