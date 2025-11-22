@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "packageManager": "pnpm@8.15.0",
   "scripts": {
     "dev": "NODE_ENV=development tsx apps/api/src/index.ts",
     "dev:turbo": "turbo run dev",
