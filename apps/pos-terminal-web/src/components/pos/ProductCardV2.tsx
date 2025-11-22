@@ -16,7 +16,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   return (
     <div
       onClick={() => onAddToCart(product)}
-      className="group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-95 hover:shadow-md cursor-pointer relative h-full flex flex-col transition-all"
+      className="group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-95 hover:shadow-md cursor-pointer relative h-full flex flex-col"
       data-testid={`card-product-${product.id}`}
     >
       {/* Product Image */}
