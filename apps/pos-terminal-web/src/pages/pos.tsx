@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
+import { MobileBottomNav } from "@/components/pos/MobileBottomNav";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
 import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDialog";
@@ -28,6 +29,7 @@ export default function POSPage() {
   const searchParams = useSearch();
   const urlParams = new URLSearchParams(searchParams);
   const continueOrderId = urlParams.get("continueOrderId");
+  const [, setLocation] = useLocation();
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
@@ -574,7 +576,7 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
+    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw] pb-[60px] md:pb-0">
       {/* Main Product Area */}
       <ProductArea 
         products={products}
@@ -615,37 +617,6 @@ export default function POSPage() {
           continueOrderId={continueOrderId}
         />
       </div>
-
-      {/* Mobile Cart Button - Shows on mobile/tablet when cart panel is hidden */}
-      {cart.itemCount > 0 && (
-        <div
-          className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-6"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
-        >
-          <Button
-            onClick={() => setMobileCartOpen(true)}
-            className="w-full bg-slate-800 hover:bg-slate-900 text-white py-7 rounded-2xl font-bold shadow-2xl h-auto px-6"
-            data-testid="button-view-cart-mobile"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <ShoppingBag className="w-5 h-5" />
-                  {cart.itemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800">
-                      {cart.itemCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm">Lihat Pesanan</span>
-              </div>
-              <span className="text-lg font-black">
-                Rp {(cart.total / 1000).toFixed(0)}k
-              </span>
-            </div>
-          </Button>
-        </div>
-      )}
 
       {/* Mobile Cart Drawer */}
       <MobileCartDrawer
@@ -728,6 +699,15 @@ export default function POSPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav
+        onCartClick={() => setMobileCartOpen(true)}
+        onTablesClick={() => setLocation("/tables")}
+        onSettingsClick={() => {}}
+        cartItemCount={cart.items.length}
+        activeTab="pos"
+      />
     </div>
   );
 }
