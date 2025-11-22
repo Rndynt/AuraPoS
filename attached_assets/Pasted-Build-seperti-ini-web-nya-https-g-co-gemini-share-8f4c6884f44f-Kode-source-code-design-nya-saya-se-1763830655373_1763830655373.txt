@@ -1,0 +1,18 @@
+Build seperti ini web nya https://g.co/gemini/share/8f4c6884f44f
+Kode source code design nya saya sertakan
+Tolong redesign ui keseluruhan menggunakan kode docs/base-design.md Itu file SFC (single file component), saya generate menggunakan gemini ai. Jadi anda harus memisah ui nya dengan logic didalamnya. Dan saat anda migrasi nya check logic didalam aplikasi kita dengan logic didalam sfc apakah bisa digunakan atau tidak. Analisi mendalam terkait struktur component nya dan codebase kita. Organize secara rapi saat digunakan. Analisa mendalam terkait migrasi ini. Usahakan aplikasi jika bisa gunakan design ini.
+Migrasi sudah dilakukan oleh agent replit sebelumnya tapi belum selesai semua Dan saya mau semua component/template design didalam file docs/base-design.md harus di implementasikan semua kedalam aplikasi, ganti tampilan aplikasi saat ini dengan yang baru sesuai file base-design.md itu.
+Agent sebelumnya tidak mengeksekusi semua base design itu, tapi bilang nya sudah complete, sedangkan yang saya liat, masih ada design lama yang muncul di halaman pos.
+
+Header lama juga masih ada pada mobile, order type juga masih ada di product area dinatas category, pokoknya design lama masih ada, dan desain base tidak dikerjakan semua sampai habis.
+
+Dan kerjakan bottom navigation nya seperti desain base dan source code, soalnya pada halaman table ada bottom navigation.
+Harusnya aplikasi kita ada main header, main layout, dan sebagainya, jadi content content hanya berganti saja. 
+
+Lanjutkan implementasi agent sebelumnya yang sempat terhenti. Saya sertakan ss nya
+ Di mobile juga masih ada component component lama, saya mau di replace semua component di semua breakpoint sesuai dokument base-design.md itu dan sesuai source code yang saya berikan pada file docs/base_design_code.jsx
+
+Tolong clone semua design di file itu dan sesuaikan logic aplikasi jika sudah ada, atau ubah seperti component base designnya sesuaikan logic base design.
+
+
+Gunakan subagent untuk efisiensi dengan cepat. Check history commit juga sebagai referensi.
