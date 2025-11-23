@@ -5,9 +5,10 @@ interface MainLayoutProps {
   children: React.ReactNode;
   cartCount?: number;
   onCartClick?: () => void;
+  hideBottomNav?: boolean;
 }
 
-export function MainLayout({ children, cartCount = 0, onCartClick }: MainLayoutProps) {
+export function MainLayout({ children, cartCount = 0, onCartClick, hideBottomNav }: MainLayoutProps) {
   return (
     <div className="flex h-screen bg-background w-full overflow-hidden">
       {/* Desktop Sidebar */}
@@ -21,7 +22,9 @@ export function MainLayout({ children, cartCount = 0, onCartClick }: MainLayoutP
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <UnifiedBottomNav cartCount={cartCount} onCartClick={onCartClick} />
+      {!hideBottomNav && (
+        <UnifiedBottomNav cartCount={cartCount} onCartClick={onCartClick} />
+      )}
     </div>
   );
 }

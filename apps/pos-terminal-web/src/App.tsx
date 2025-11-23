@@ -16,25 +16,25 @@ import { TenantProvider } from "@/context/TenantContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 
 const POSPageWithLayout = () => (
-  <MainLayout>
+  <MainLayout hideBottomNav>
     <POSPage />
   </MainLayout>
 );
 
 const OrdersPageWithLayout = () => (
-  <MainLayout>
+  <MainLayout hideBottomNav>
     <OrdersPage />
   </MainLayout>
 );
 
 const TablesManagementPageWithLayout = () => (
-  <MainLayout>
+  <MainLayout hideBottomNav>
     <TablesManagementPage />
   </MainLayout>
 );
 
 const HomePageWithLayout = () => (
-  <MainLayout>
+  <MainLayout hideBottomNav>
     <HomePage />
   </MainLayout>
 );
