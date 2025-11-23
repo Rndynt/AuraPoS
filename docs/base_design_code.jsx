@@ -40,10 +40,17 @@ import {
   ArrowDownRight,
   MoreHorizontal,
   MousePointerClick,
+  Layers,
+  Truck,
+  Grid,
+  ToggleLeft,
+  ToggleRight,
+  Save,
+  List,
 } from "lucide-react";
 
 // ==========================================
-// 1. MOCK DATA (DATA DUMMY)
+// 1. MOCK DATA UTAMA (POS & DASHBOARD)
 // ==========================================
 
 const CATEGORIES = [
@@ -53,6 +60,7 @@ const CATEGORIES = [
   { id: "pizza", name: "Pizza", icon: UtensilsCrossed },
 ];
 
+// Data Produk untuk POS
 const PRODUCTS = [
   {
     id: 1,
@@ -125,6 +133,7 @@ const PRODUCTS = [
   },
 ];
 
+// Data Meja
 const TABLES = [
   {
     id: "T1",
@@ -148,32 +157,31 @@ const TABLES = [
   { id: "T8", name: "Meja 8", capacity: 4, status: "available", orders: [] },
 ];
 
-// DATA DASHBOARD DINAMIS
-// Kita buat dataset berbeda untuk Harian vs Mingguan
+// Data Chart Dashboard
 const CHART_DATA_SETS = {
   today: [
     { label: "10:00", value: 450000, height: 30, transactions: 5 },
     { label: "11:00", value: 750000, height: 50, transactions: 8 },
-    { label: "12:00", value: 1500000, height: 100, transactions: 22 }, // Peak
+    { label: "12:00", value: 1500000, height: 100, transactions: 22 },
     { label: "13:00", value: 1200000, height: 80, transactions: 18 },
     { label: "14:00", value: 600000, height: 40, transactions: 7 },
     { label: "15:00", value: 450000, height: 30, transactions: 6 },
     { label: "16:00", value: 900000, height: 60, transactions: 12 },
   ],
   week: [
-    { label: "Senin", value: 3500000, height: 60, transactions: 45 },
-    { label: "Selasa", value: 3200000, height: 55, transactions: 42 },
-    { label: "Rabu", value: 4100000, height: 70, transactions: 50 },
-    { label: "Kamis", value: 3800000, height: 65, transactions: 48 },
-    { label: "Jumat", value: 5500000, height: 90, transactions: 75 },
-    { label: "Sabtu", value: 6200000, height: 100, transactions: 92 },
-    { label: "Minggu", value: 5800000, height: 95, transactions: 85 },
+    { label: "Sen", value: 3500000, height: 60, transactions: 45 },
+    { label: "Sel", value: 3200000, height: 55, transactions: 42 },
+    { label: "Rab", value: 4100000, height: 70, transactions: 50 },
+    { label: "Kam", value: 3800000, height: 65, transactions: 48 },
+    { label: "Jum", value: 5500000, height: 90, transactions: 75 },
+    { label: "Sab", value: 6200000, height: 100, transactions: 92 },
+    { label: "Min", value: 5800000, height: 95, transactions: 85 },
   ],
   month: [
     { label: "Minggu 1", value: 25000000, height: 80, transactions: 350 },
     { label: "Minggu 2", value: 22000000, height: 70, transactions: 310 },
     { label: "Minggu 3", value: 28000000, height: 90, transactions: 400 },
-    { label: "Minggu 4", value: 15000000, height: 40, transactions: 200 }, // Ongoing
+    { label: "Minggu 4", value: 15000000, height: 40, transactions: 200 },
   ],
 };
 
@@ -198,28 +206,525 @@ const TOP_PRODUCTS = [
   },
 ];
 
+// Data Marketplace Fitur (Tenant Features)
+const FEATURE_CATALOG = [
+  {
+    id: "module_table",
+    title: "Table Management",
+    description: "Denah meja digital & status meja.",
+    icon: Grid,
+    category: "Operasional",
+    enabled: true,
+    price: "Free",
+  },
+  {
+    id: "module_kitchen",
+    title: "Kitchen Display",
+    description: "Kirim pesanan ke layar dapur.",
+    icon: ChefHat,
+    category: "Operasional",
+    enabled: true,
+    price: "Rp 50.000/bln",
+  },
+  {
+    id: "order_delivery",
+    title: "Delivery Management",
+    description: "Pesanan pengiriman & alamat.",
+    icon: Truck,
+    category: "Tipe Pesanan",
+    enabled: false,
+    price: "Free",
+  },
+  {
+    id: "order_qris",
+    title: "QRIS Integration",
+    description: "Pembayaran QRIS otomatis.",
+    icon: CreditCard,
+    category: "Pembayaran",
+    enabled: true,
+    price: "Fee Transaksi",
+  },
+  {
+    id: "module_loyalty",
+    title: "Member Loyalty",
+    description: "Poin & database pelanggan.",
+    icon: Users,
+    category: "Marketing",
+    enabled: false,
+    price: "Rp 100.000/bln",
+  },
+];
+
 const formatIDR = (price) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
   }).format(price);
 
 // ==========================================
-// 2. DASHBOARD VIEW (INTERACTIVE UPGRADE)
+// 2. COMPONENTS BARU (PRODUCT & MARKETPLACE)
+// ==========================================
+
+// --- PRODUCT MANAGER (CRUD Produk dengan Varian Kompleks) ---
+const ProductManager = ({ onBack }) => {
+  const [viewState, setViewState] = useState("list"); // 'list' | 'form'
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "",
+    price: "",
+    stockTracking: false,
+    stockQty: 0,
+    sku: "",
+  });
+  // State untuk Varian (ProductOptionGroups & Options)
+  const [optionGroups, setOptionGroups] = useState([]);
+
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    // Mapping data mock ke form
+    setFormData({
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      stockTracking: product.stock && product.stock < 999, // asumsi logic stok
+      stockQty: product.stock || 0,
+      sku: "SKU-001",
+    });
+    // Simulasi mapping variants ke optionGroups
+    if (product.variants) {
+      const mappedGroups = product.variants.map((v, idx) => ({
+        id: idx,
+        name: v.name,
+        type: v.type === "radio" ? "single" : "multiple",
+        required: v.required,
+        options: v.options.map((o) => ({ name: o.name, price: o.price })),
+      }));
+      setOptionGroups(mappedGroups);
+    } else {
+      setOptionGroups([]);
+    }
+    setViewState("form");
+  };
+
+  const handleAddGroup = () => {
+    setOptionGroups([
+      ...optionGroups,
+      { id: Date.now(), name: "", type: "single", required: true, options: [] },
+    ]);
+  };
+
+  const handleAddOption = (groupId) => {
+    setOptionGroups((groups) =>
+      groups.map((g) =>
+        g.id === groupId
+          ? { ...g, options: [...g.options, { name: "", price: 0 }] }
+          : g
+      )
+    );
+  };
+
+  // VIEW FORM PRODUK
+  if (viewState === "form") {
+    return (
+      <div className="flex flex-col h-full bg-slate-50 animate-in fade-in">
+        <div className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setViewState("list")}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <h2 className="text-lg font-bold text-slate-800">
+              {editingProduct ? "Edit Produk" : "Tambah Produk"}
+            </h2>
+          </div>
+          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200">
+            <Save size={16} /> Simpan
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto w-full space-y-6">
+          {/* 1. Basic Info */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+              <Box size={18} /> Informasi Dasar
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500">
+                  Nama Produk
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500">
+                  Harga (Rp)
+                </label>
+                <input
+                  type="number"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500">SKU</label>
+                <input
+                  type="text"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={formData.sku}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sku: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500">
+                  Kategori
+                </label>
+                <select className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none">
+                  <option>Makanan</option>
+                  <option>Minuman</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-700">Lacak Stok?</p>
+                <p className="text-xs text-slate-400">
+                  Aktifkan jika stok terbatas.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {formData.stockTracking && (
+                  <input
+                    type="number"
+                    className="w-24 border border-slate-200 rounded-lg p-2 text-sm text-center"
+                    placeholder="Qty"
+                    value={formData.stockQty}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stockQty: e.target.value })
+                    }
+                  />
+                )}
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      stockTracking: !formData.stockTracking,
+                    })
+                  }
+                  className={`w-12 h-6 rounded-full p-1 transition-colors ${
+                    formData.stockTracking ? "bg-blue-600" : "bg-slate-300"
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
+                      formData.stockTracking ? "translate-x-6" : ""
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Complex Variants (Option Groups) */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                  <Layers size={18} /> Varian & Opsi
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Atur topping, ukuran, dll.
+                </p>
+              </div>
+              <button
+                onClick={handleAddGroup}
+                className="text-blue-600 text-xs font-bold border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50"
+              >
+                + Tambah Grup
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {optionGroups.map((group, idx) => (
+                <div
+                  key={group.id}
+                  className="border border-slate-200 rounded-xl overflow-hidden"
+                >
+                  <div className="bg-slate-50 p-3 flex flex-wrap gap-3 items-center border-b border-slate-200">
+                    <input
+                      type="text"
+                      placeholder="Nama Grup (mis: Ukuran)"
+                      className="bg-white border border-slate-300 rounded px-2 py-1 text-sm font-bold w-40"
+                      value={group.name}
+                      onChange={(e) => {
+                        const newG = [...optionGroups];
+                        newG[idx].name = e.target.value;
+                        setOptionGroups(newG);
+                      }}
+                    />
+                    <select
+                      className="bg-white border border-slate-300 rounded px-2 py-1 text-xs"
+                      value={group.type}
+                      onChange={(e) => {
+                        const newG = [...optionGroups];
+                        newG[idx].type = e.target.value;
+                        setOptionGroups(newG);
+                      }}
+                    >
+                      <option value="single">Pilih Satu (Radio)</option>
+                      <option value="multiple">Pilih Banyak (Checkbox)</option>
+                    </select>
+                    <button className="text-red-500 hover:bg-red-50 p-1 rounded ml-auto">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="p-3 bg-white space-y-2">
+                    {group.options.map((opt, optIdx) => (
+                      <div key={optIdx} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          placeholder="Opsi (mis: Pedas)"
+                          className="flex-1 border-b border-slate-200 py-1 text-sm outline-none"
+                          value={opt.name}
+                          onChange={() => {}}
+                        />
+                        <div className="flex items-center border border-slate-200 rounded px-2">
+                          <span className="text-xs text-slate-400">Rp</span>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            className="w-20 py-1 text-sm outline-none text-right"
+                            value={opt.price}
+                            onChange={() => {}}
+                          />
+                        </div>
+                        <button className="text-slate-300 hover:text-red-500">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => handleAddOption(group.id)}
+                      className="text-xs font-bold text-blue-600 mt-2 flex items-center gap-1"
+                    >
+                      <Plus size={12} /> Tambah Opsi
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {optionGroups.length === 0 && (
+                <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-100 rounded-xl">
+                  Belum ada varian.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // VIEW LIST PRODUK
+  return (
+    <div className="flex flex-col h-full bg-slate-50">
+      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-full"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-xl font-extrabold text-slate-800">Produk</h1>
+        </div>
+        <button
+          onClick={() => {
+            setEditingProduct(null);
+            setOptionGroups([]);
+            setViewState("form");
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200"
+        >
+          <Plus size={18} /> Tambah
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {PRODUCTS.map((product) => (
+          <div
+            key={product.id}
+            onClick={() => handleEdit(product)}
+            className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-300 cursor-pointer transition-all group"
+          >
+            <div className="w-14 h-14 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+              <img
+                src={product.image}
+                className="w-full h-full object-cover"
+                alt={product.name}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start">
+                <h4 className="font-bold text-slate-800 truncate">
+                  {product.name}
+                </h4>
+                <span className="font-bold text-blue-600 text-sm">
+                  {formatIDR(product.price)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-3">
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                    product.stock < 10
+                      ? "bg-red-100 text-red-600"
+                      : "bg-green-100 text-green-600"
+                  }`}
+                >
+                  Stok: {product.stock}
+                </span>
+                {product.variants && product.variants.length > 0 && (
+                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                    +Varian
+                  </span>
+                )}
+              </div>
+            </div>
+            <ChevronLeft
+              className="text-slate-300 rotate-180 group-hover:text-blue-500"
+              size={20}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- FEATURE MARKETPLACE (Halaman Beli Fitur) ---
+const FeatureMarketplace = ({ onBack }) => {
+  return (
+    <div className="flex flex-col h-full bg-slate-50">
+      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
+        <div className="flex items-center gap-3 mb-1">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-full"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-xl font-extrabold text-slate-800">App Market</h1>
+        </div>
+        <p className="text-sm text-slate-500 ml-11">
+          Kelola fitur aktif sesuai kebutuhan bisnis.
+        </p>
+      </header>
+      <div className="flex-1 overflow-y-auto p-4 pb-20">
+        {[...new Set(FEATURE_CATALOG.map((f) => f.category))].map((cat) => (
+          <div key={cat} className="mb-8">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider border-l-4 border-blue-600 pl-2">
+              {cat}
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {FEATURE_CATALOG.filter((f) => f.category === cat).map(
+                (feature) => (
+                  <div
+                    key={feature.id}
+                    className={`p-5 rounded-2xl border transition-all ${
+                      feature.enabled
+                        ? "bg-white border-blue-200 shadow-blue-100 shadow-sm"
+                        : "bg-slate-50 border-slate-200 opacity-70"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          feature.enabled
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-slate-200 text-slate-500"
+                        }`}
+                      >
+                        <feature.icon size={20} />
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <button
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            feature.enabled ? "bg-blue-600" : "bg-slate-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              feature.enabled
+                                ? "translate-x-6"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                        <span className="text-[10px] font-bold text-slate-400 mt-1">
+                          {feature.enabled ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                    </div>
+                    <h4 className="font-bold text-slate-800 text-lg mb-1">
+                      {feature.title}
+                    </h4>
+                    <p className="text-sm text-slate-500 mb-4 min-h-[40px]">
+                      {feature.description}
+                    </p>
+                    <div className="flex items-center justify-between pt-4 border-t border-dashed border-slate-200">
+                      <span
+                        className={`text-xs font-bold px-2 py-1 rounded ${
+                          feature.price === "Free"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-orange-50 text-orange-700"
+                        }`}
+                      >
+                        {feature.price}
+                      </span>
+                      <button className="text-xs font-bold text-blue-600 hover:underline">
+                        Konfigurasi
+                      </button>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// 3. DASHBOARD VIEW (FIXED & INTERACTIVE)
 // ==========================================
 const DashboardView = ({ onBack }) => {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
-  const [activeChartItem, setActiveChartItem] = useState(null); // Menyimpan item chart yang diklik
+  const [activeChartItem, setActiveChartItem] = useState(null);
 
-  // Dapatkan data berdasarkan periode yang dipilih
   const currentChartData =
     CHART_DATA_SETS[selectedPeriod] || CHART_DATA_SETS.today;
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-24 md:pb-8">
-      {/* Header Dashboard */}
+      {/* Header */}
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-20 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <button
@@ -235,47 +740,45 @@ const DashboardView = ({ onBack }) => {
             </p>
           </div>
         </div>
-
-        {/* 1. PERBAIKAN: PERIOD SELECTOR DROPDOWN */}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => {
-                setSelectedPeriod(e.target.value);
-                setActiveChartItem(null); // Reset detail saat periode ganti
-              }}
-              className="appearance-none bg-white border border-slate-200 pl-9 pr-8 py-2 rounded-xl text-xs font-bold text-slate-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer shadow-sm transition-all"
-            >
-              <option value="today">Hari Ini</option>
-              <option value="yesterday">Kemarin</option>
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-            </select>
-            <Calendar
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
-            />
-            <ChevronDown
-              size={14}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-          </div>
+        <div className="relative">
+          <select
+            value={selectedPeriod}
+            onChange={(e) => {
+              setSelectedPeriod(e.target.value);
+              setActiveChartItem(null);
+            }}
+            className="appearance-none bg-white border border-slate-200 pl-9 pr-8 py-2 rounded-xl text-xs font-bold text-slate-700 hover:border-blue-500 focus:outline-none shadow-sm cursor-pointer"
+          >
+            <option value="today">Hari Ini</option>
+            <option value="week">Minggu Ini</option>
+            <option value="month">Bulan Ini</option>
+          </select>
+          <Calendar
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+          />
+          <ChevronDown
+            size={14}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
         </div>
       </header>
 
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
-        {/* A. SUMMARY CARDS */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {/* Data dummy disesuaikan sedikit agar dinamis terlihat beda tiap periode */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-4 rounded-2xl shadow-lg shadow-blue-200/50 relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-4 rounded-2xl shadow-lg relative overflow-hidden group">
             <div className="relative z-10">
               <div className="flex items-center gap-2 text-blue-100 text-xs font-bold uppercase mb-2">
                 <Wallet size={14} />{" "}
                 {selectedPeriod === "today" ? "Omset Sales" : "Total Revenue"}
               </div>
               <div className="text-2xl md:text-3xl font-black tracking-tight">
-                {selectedPeriod === "today" ? "Rp 4.2jt" : "Rp 28.5jt"}
+                {selectedPeriod === "today"
+                  ? "Rp 4.2jt"
+                  : selectedPeriod === "week"
+                  ? "Rp 28.5jt"
+                  : "Rp 110.5jt"}
               </div>
               <div className="text-[10px] text-blue-50 font-medium flex items-center gap-1 mt-2 bg-white/20 w-fit px-2 py-0.5 rounded-full backdrop-blur-sm">
                 <TrendingUp size={10} /> +18% Trend
@@ -316,7 +819,7 @@ const DashboardView = ({ onBack }) => {
           </div>
         </div>
 
-        {/* B. INTERACTIVE CHART SECTION */}
+        {/* Interactive Chart */}
         <div className="grid md:grid-cols-[2fr_1fr] gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
             <div className="flex justify-between items-start mb-6">
@@ -330,16 +833,12 @@ const DashboardView = ({ onBack }) => {
                 </p>
               </div>
             </div>
-
-            {/* CHART AREA */}
             <div className="h-64 flex items-end justify-between gap-3 px-2 pb-2 relative">
-              {/* Grid Lines Background */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-full h-px bg-slate-50"></div>
                 ))}
               </div>
-
               {currentChartData.map((data, index) => {
                 const isActive = activeChartItem?.label === data.label;
                 return (
@@ -357,7 +856,6 @@ const DashboardView = ({ onBack }) => {
                         }`}
                         style={{ height: `${data.height}%` }}
                       >
-                        {/* Tooltip Hover (Desktop) */}
                         <div className="md:block hidden absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
                           {formatIDR(data.value)}
                         </div>
@@ -378,13 +876,12 @@ const DashboardView = ({ onBack }) => {
             </div>
           </div>
 
-          {/* 2. PERBAIKAN: DETAIL PANEL (MUNCUL SAAT KLIK) */}
+          {/* Detail Panel */}
           <div className="flex flex-col gap-4">
-            {/* Detail Penjualan Card (Dinamis) */}
             <div
               className={`flex-1 rounded-2xl p-5 border shadow-sm transition-all duration-300 ${
                 activeChartItem
-                  ? "bg-blue-600 text-white border-blue-500 ring-4 ring-blue-500/10"
+                  ? "bg-blue-600 text-white border-blue-500"
                   : "bg-white text-slate-800 border-slate-100"
               }`}
             >
@@ -419,13 +916,11 @@ const DashboardView = ({ onBack }) => {
                     Pilih Grafik
                   </p>
                   <p className="text-xs mt-1">
-                    Klik salah satu batang grafik untuk melihat rincian detail.
+                    Klik batang grafik untuk detail.
                   </p>
                 </div>
               )}
             </div>
-
-            {/* Top Product Mini */}
             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm h-fit">
               <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
                 <ChefHat size={14} /> Top Product
@@ -533,13 +1028,13 @@ const DashboardView = ({ onBack }) => {
 };
 
 // ==========================================
-// 3. POS VIEW
+// 4. POS VIEW (FIXED & STABLE)
 // ==========================================
 const POSView = ({ onGoToTables, onGoToSettings }) => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState([]);
-  const [orderType, setOrderType] = useState("dine-in");
+  const [orderType, setOrderType] = useState("dine-in"); // Added missing orderType state
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [customerName, setCustomerName] = useState("Walk-in Guest");
@@ -646,6 +1141,7 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
 
   return (
     <div className="flex flex-col md:flex-row h-full overflow-hidden relative">
+      {/* MODAL PRODUK - Z-Index 70 agar di atas segalanya */}
       {selectedProduct && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1141,7 +1637,7 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
 };
 
 // ==========================================
-// 4. TABLE VIEW (SAMA)
+// 5. TABLE VIEW (FIXED)
 // ==========================================
 const TableView = ({ onContinueOrder, onGoToPOS, onGoToSettings }) => {
   const [filterStatus, setFilterStatus] = useState("all");
@@ -1434,9 +1930,12 @@ const TableView = ({ onContinueOrder, onGoToPOS, onGoToSettings }) => {
 };
 
 // ==========================================
-// 5. MANAGEMENT HUB
+// 5. MANAGEMENT HUB (NEW - With Navigation)
 // ==========================================
 const ManagementHub = ({ onBack, onNavigate }) => {
+  // New State for Internal Navigation
+  const [internalRoute, setInternalRoute] = useState("menu");
+
   const MENU_ITEMS = [
     {
       id: "dashboard",
@@ -1449,6 +1948,14 @@ const ManagementHub = ({ onBack, onNavigate }) => {
       title: "Produk",
       icon: Box,
       color: "bg-orange-100 text-orange-600",
+      action: () => setInternalRoute("products"),
+    },
+    {
+      id: "features",
+      title: "App Store",
+      icon: Package,
+      color: "bg-purple-100 text-purple-600",
+      action: () => setInternalRoute("features"),
     },
     {
       id: "stock",
@@ -1476,6 +1983,12 @@ const ManagementHub = ({ onBack, onNavigate }) => {
     },
   ];
 
+  // Render Internal Routes
+  if (internalRoute === "products")
+    return <ProductManager onBack={() => setInternalRoute("menu")} />;
+  if (internalRoute === "features")
+    return <FeatureMarketplace onBack={() => setInternalRoute("menu")} />;
+
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-20">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
@@ -1502,7 +2015,7 @@ const ManagementHub = ({ onBack, onNavigate }) => {
         {MENU_ITEMS.map((item) => (
           <button
             key={item.id}
-            onClick={() => onNavigate(item.id)}
+            onClick={() => (item.action ? item.action() : onNavigate(item.id))}
             className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md active:scale-95 transition-all flex flex-col items-start gap-3"
           >
             <div
@@ -1537,7 +2050,7 @@ const ManagementHub = ({ onBack, onNavigate }) => {
 // 6. ROOT APP
 // ==========================================
 export default function App() {
-  const [activeView, setActiveView] = useState("pos");
+  const [activeView, setActiveView] = useState("pos"); // 'pos' | 'tables' | 'management' | 'dashboard'
   const [currentTable, setCurrentTable] = useState(null);
 
   const handleContinueOrder = (table) => {
@@ -1546,6 +2059,7 @@ export default function App() {
     alert(`Membuka pesanan untuk ${table.name}`);
   };
 
+  // Render Content Logic
   const renderContent = () => {
     switch (activeView) {
       case "pos":
@@ -1581,7 +2095,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
-      {/* Sidebar Desktop */}
+      {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex w-20 bg-white border-r border-slate-200 flex-col items-center py-6 flex-shrink-0 z-30">
         <div className="mb-8 p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
           <ShoppingBag className="text-white w-6 h-6" />
@@ -1632,9 +2146,10 @@ export default function App() {
         </button>
       </aside>
 
-      {/* Konten Utama */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex-1 min-w-0 h-full relative flex flex-col">
         {renderContent()}
+        {/* Navigasi Mobile sudah ada di dalam masing-masing view (POSView & TableView) */}
       </div>
     </div>
   );
