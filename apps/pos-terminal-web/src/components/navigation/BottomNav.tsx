@@ -57,7 +57,7 @@ export function BottomNav({ cartItemsCount = 0 }: BottomNavProps) {
             data-testid={item.testId}
           >
             <Icon size={20} />
-            <span className="text-[10px]">{item.label}</span>
+            <span className="text-[10px]">{item.label}zzz</span>
           </button>
         );
       })}

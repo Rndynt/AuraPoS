@@ -1,4 +1,4 @@
-import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings } from "lucide-react";
+import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings, Store, Grip } from "lucide-react";
 
 interface MobileBottomNavProps {
   onCartClick: () => void;
@@ -17,15 +17,15 @@ export function MobileBottomNav({
 }: MobileBottomNavProps) {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-2 flex justify-between items-center z-40 pb-safe h-[60px]">
-      {/* Menu Button */}
+      {/* PoS Button */}
       <button
         className={`flex flex-col items-center gap-0.5 ${
           activeTab === 'pos' ? 'text-blue-600' : 'text-slate-400'
         }`}
         data-testid="button-nav-menu"
       >
-        <LayoutGrid size={20} />
-        <span className="text-[10px]">Menu</span>
+        <Store size={20} />
+        <span className="text-[10px]">PoS</span>
       </button>
 
       {/* Tables Button */}
@@ -68,7 +68,7 @@ export function MobileBottomNav({
         <span className="text-[10px]">Bill</span>
       </button>
 
-      {/* Settings Button */}
+      {/* Menu More Button */}
       <button
         onClick={onSettingsClick}
         className={`flex flex-col items-center gap-0.5 ${
@@ -76,8 +76,8 @@ export function MobileBottomNav({
         }`}
         data-testid="button-nav-settings"
       >
-        <Settings size={20} />
-        <span className="text-[10px]">Set</span>
+        <Grip size={20} />
+        <span className="text-[10px]">More</span>
       </button>
     </div>
   );
