@@ -56,16 +56,26 @@ export default function HomePage() {
   ];
 
   const handleNavigate = (menuId: string) => {
-    if (menuId === 'dashboard') {
-      setLocation('/dashboard');
-    } else if (menuId === 'products') {
-      setLocation('/products');
-    } else {
-      toast({
-        title: "Fitur dalam pengembangan",
-        description: `Halaman ${MENU_ITEMS.find(m => m.id === menuId)?.title} sedang dalam pengembangan`,
-      });
+    const routes: Record<string, string> = {
+      dashboard: "/dashboard",
+      products: "/products",
+      stock: "/stock",
+      employees: "/employees",
+      reports: "/reports",
+      store: "/store-profile",
+    };
+
+    const route = routes[menuId];
+
+    if (route) {
+      setLocation(route);
+      return;
     }
+
+    toast({
+      title: "Fitur dalam pengembangan",
+      description: `Halaman ${MENU_ITEMS.find((m) => m.id === menuId)?.title} sedang dalam pengembangan`,
+    });
   };
 
   const handleLogout = () => {

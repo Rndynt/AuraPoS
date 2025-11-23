@@ -10,6 +10,8 @@ import TablesManagementPage from "@/pages/tables-management";
 import DashboardPage from "@/pages/dashboard";
 import ProductsPage from "@/pages/products";
 import ReportsPage from "@/pages/reports";
+import StockPage from "@/pages/stock";
+import EmployeesPage from "@/pages/employees";
 import StoreProfilePage from "@/pages/store-profile";
 import NotFound from "@/pages/not-found";
 import { TenantProvider } from "@/context/TenantContext";
@@ -51,6 +53,18 @@ const ProductsPageWithLayout = () => (
   </MainLayout>
 );
 
+const StockPageWithLayout = () => (
+  <MainLayout>
+    <StockPage />
+  </MainLayout>
+);
+
+const EmployeesPageWithLayout = () => (
+  <MainLayout>
+    <EmployeesPage />
+  </MainLayout>
+);
+
 const ReportsPageWithLayout = () => (
   <MainLayout>
     <ReportsPage />
@@ -78,6 +92,8 @@ function Router() {
       <Route path="/tables" component={TablesManagementPageWithLayout} />
       <Route path="/dashboard" component={DashboardPageWithLayout} />
       <Route path="/products" component={ProductsPageWithLayout} />
+      <Route path="/stock" component={StockPageWithLayout} />
+      <Route path="/employees" component={EmployeesPageWithLayout} />
       <Route path="/reports" component={ReportsPageWithLayout} />
       <Route path="/store-profile" component={StoreProfilePageWithLayout} />
       <Route component={NotFoundWithLayout} />
