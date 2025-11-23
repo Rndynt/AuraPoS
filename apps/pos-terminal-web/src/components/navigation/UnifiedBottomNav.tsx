@@ -47,16 +47,16 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
       </button>
 
       {/* Cart Button - Floating in Center */}
-      <div className="relative -top-5">
+      <div className="relative -top-5 z-50">
         <button
           onClick={onCartClick}
-          className="relative bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-90 border-4 border-slate-50 transition-transform"
+          className="relative bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-90 border-4 border-slate-50 transition-transform z-50"
           data-testid="nav-cart"
         >
           <ShoppingBag size={24} />
           {/* Badge Notification */}
           {cartCount > 0 && (
-            <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800 z-50">
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800">
               {cartCount}
             </span>
           )}
