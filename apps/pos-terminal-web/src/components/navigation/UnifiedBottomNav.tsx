@@ -50,7 +50,7 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
       <div className="relative -top-5">
         <button
           onClick={onCartClick}
-          className="bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-90 border-4 border-slate-50 transition-transform"
+          className="relative bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-90 border-4 border-slate-50 transition-transform"
           data-testid="nav-cart"
         >
           <ShoppingBag size={24} />

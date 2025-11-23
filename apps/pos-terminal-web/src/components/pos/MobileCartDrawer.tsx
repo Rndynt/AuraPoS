@@ -295,7 +295,7 @@ export function MobileCartDrawer({
                 {/* Toggle Button */}
                 <div
                   onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white border border-slate-200 text-slate-400 w-12 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 active:scale-95"
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white border border-slate-200 text-slate-400 w-12 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 active:scale-95 transition-transform"
                   data-testid="button-toggle-pricing-details"
                 >
                   <ChevronUp

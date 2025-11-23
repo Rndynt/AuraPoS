@@ -7,6 +7,7 @@ import HomePage from "@/pages/home";
 import POSPage from "@/pages/pos";
 import OrdersPage from "@/pages/orders";
 import TablesManagementPage from "@/pages/tables-management";
+import DashboardPage from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 import { TenantProvider } from "@/context/TenantContext";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -35,6 +36,12 @@ const HomePageWithLayout = () => (
   </MainLayout>
 );
 
+const DashboardPageWithLayout = () => (
+  <MainLayout>
+    <DashboardPage />
+  </MainLayout>
+);
+
 const NotFoundWithLayout = () => (
   <MainLayout>
     <NotFound />
@@ -48,6 +55,7 @@ function Router() {
       <Route path="/pos" component={POSPageWithLayout} />
       <Route path="/orders" component={OrdersPageWithLayout} />
       <Route path="/tables" component={TablesManagementPageWithLayout} />
+      <Route path="/dashboard" component={DashboardPageWithLayout} />
       <Route component={NotFoundWithLayout} />
     </Switch>
   );

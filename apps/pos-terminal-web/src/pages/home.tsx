@@ -56,10 +56,14 @@ export default function HomePage() {
   ];
 
   const handleNavigate = (menuId: string) => {
-    toast({
-      title: "Fitur dalam pengembangan",
-      description: `Halaman ${MENU_ITEMS.find(m => m.id === menuId)?.title} sedang dalam pengembangan`,
-    });
+    if (menuId === 'dashboard') {
+      setLocation('/dashboard');
+    } else {
+      toast({
+        title: "Fitur dalam pengembangan",
+        description: `Halaman ${MENU_ITEMS.find(m => m.id === menuId)?.title} sedang dalam pengembangan`,
+      });
+    }
   };
 
   const handleLogout = () => {
