@@ -237,17 +237,35 @@ export function ProductOptionsDialog({
                       data-testid={`option-${group.id}-${option.id}`}
                     >
                       <div className="flex items-center gap-3">
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                            isSelected
-                              ? 'border-blue-600 bg-blue-600'
-                              : 'border-slate-300'
-                          }`}
-                        >
-                          {isSelected && (
-                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                          )}
-                        </div>
+                        {group.selection_type === "single" ? (
+                          /* Radio Button - Single Selection */
+                          <div
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-600'
+                                : 'border-slate-300'
+                            }`}
+                          >
+                            {isSelected && (
+                              <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                            )}
+                          </div>
+                        ) : (
+                          /* Checkbox - Multiple Selection */
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-600'
+                                : 'border-slate-300'
+                            }`}
+                          >
+                            {isSelected && (
+                              <svg className="w-3 h-3 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="13 2 6 13 3 10" />
+                              </svg>
+                            )}
+                          </div>
+                        )}
                         <span
                           className={`text-sm ${
                             isSelected
