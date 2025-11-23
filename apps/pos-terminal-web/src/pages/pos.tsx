@@ -578,7 +578,7 @@ export default function POSPage() {
   return (
     <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
       {/* Main Product Area */}
-      <ProductArea 
+      <ProductArea
         products={products}
         isLoading={productsLoading}
         error={productsError}
@@ -619,9 +619,9 @@ export default function POSPage() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <UnifiedBottomNav 
-        cartCount={cart.items.length} 
-        onCartClick={() => setMobileCartOpen(true)} 
+      <UnifiedBottomNav
+        cartCount={cart.items.length}
+        onCartClick={() => setMobileCartOpen(true)}
       />
 
       {/* Mobile Cart Drawer */}
@@ -705,12 +705,6 @@ export default function POSPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Mobile Bottom Navigation */}
-      <UnifiedBottomNav
-        cartCount={cart.items.length}
-        onCartClick={() => setMobileCartOpen(prev => !prev)}
-      />
     </div>
   );
 }
