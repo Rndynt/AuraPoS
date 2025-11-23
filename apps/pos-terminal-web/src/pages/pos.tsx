@@ -3,7 +3,7 @@ import { useSearch, useLocation } from "wouter";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
-import { MobileBottomNav } from "@/components/pos/MobileBottomNav";
+import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
 import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDialog";
@@ -701,12 +701,9 @@ export default function POSPage() {
       </Dialog>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav
+      <UnifiedBottomNav
+        cartCount={cart.items.length}
         onCartClick={() => setMobileCartOpen(true)}
-        onTablesClick={() => setLocation("/tables")}
-        onSettingsClick={() => {}}
-        cartItemCount={cart.items.length}
-        activeTab="pos"
       />
     </div>
   );

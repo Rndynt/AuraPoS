@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { 
   ListFilter, 
   X, 
@@ -522,7 +522,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNav cartItemsCount={0} />
+      <UnifiedBottomNav cartCount={0} />
     </div>
   );
 }

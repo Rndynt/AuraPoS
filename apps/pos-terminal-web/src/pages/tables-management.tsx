@@ -20,7 +20,7 @@ import {
   Settings
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { TablesBottomNav } from "@/components/navigation/TablesBottomNav";
+import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import type { Table } from "@shared/schema";
 
 const getStatusColor = (status: string) => {
@@ -409,7 +409,7 @@ export default function TablesManagementPage() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <TablesBottomNav />
+      <UnifiedBottomNav cartCount={cart.items.length} />
     </div>
   );
 }

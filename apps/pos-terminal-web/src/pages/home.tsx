@@ -9,7 +9,7 @@ import {
   Edit2, 
   LogOut 
 } from "lucide-react";
-import { BottomNav } from "@/components/navigation/BottomNav";
+import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
@@ -145,7 +145,7 @@ export default function HomePage() {
       </div>
 
       {/* Mobile Navigation */}
-      <BottomNav />
+      <UnifiedBottomNav cartCount={0} />
     </div>
   );
 }
