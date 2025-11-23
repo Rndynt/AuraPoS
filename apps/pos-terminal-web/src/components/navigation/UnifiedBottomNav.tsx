@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings } from "lucide-react";
+import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings, Grip, Computer } from "lucide-react";
 
 interface UnifiedBottomNavProps {
   cartCount: number;
@@ -30,8 +30,8 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
         }`}
         data-testid="nav-menu"
       >
-        <LayoutGrid size={20} />
-        <span className="text-[10px]">Menu</span>
+        <Computer size={20} />
+        <span className="text-[10px]">PoS</span>
       </button>
 
       {/* Tables Button */}
@@ -81,8 +81,8 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
         }`}
         data-testid="nav-settings"
       >
-        <Settings size={20} />
-        <span className="text-[10px]">Set</span>
+        <Grip size={20} />
+        <span className="text-[10px]">Hub</span>
       </button>
     </div>
   );
