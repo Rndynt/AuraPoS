@@ -709,7 +709,7 @@ export default function POSPage() {
       {/* Mobile Bottom Navigation */}
       <UnifiedBottomNav
         cartCount={cart.items.length}
-        onCartClick={() => setMobileCartOpen(true)}
+        onCartClick={() => setMobileCartOpen(prev => !prev)}
       />
     </div>
   );
