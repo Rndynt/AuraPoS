@@ -2,7 +2,7 @@ import type { CartItem as CartItemType, PaymentMethod, OrderType } from "@/hooks
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan, ChevronUp, ChefHat, User, ShoppingBag } from "lucide-react";
+import { ShoppingCart, CreditCard, Printer, Edit2, Receipt, Banknote, Scan, ChevronUp, ChefHat, User, ShoppingBag, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,8 +105,17 @@ export function CartPanel({
       <div className="p-4 border-b border-slate-100 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-800">Pesanan Baru</h2>
-          <div className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
-            {orderNumber}
+          <div className="flex items-center gap-2">
+            <div className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
+              {orderNumber}
+            </div>
+            <button
+              onClick={onClear}
+              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              data-testid="button-clear-cart"
+            >
+              <Trash2 size={18} />
+            </button>
           </div>
         </div>
       </div>
@@ -149,7 +158,6 @@ export function CartPanel({
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className='bg-transparent w-full text-sm font-bold text-slate-700 focus:outline-none'
-                  placeholder="Walk-in Guest"
                   data-testid="input-customer-name"
                 />
               </div>
@@ -292,10 +300,10 @@ export function CartPanel({
             {/* Action Buttons */}
             <div className='grid grid-cols-[1.5fr_1fr] gap-3'>
               <button
-                onClick={hasKitchenTicket && onKitchenTicket ? onKitchenTicket : onCharge}
+                onClick={onKitchenTicket}
                 disabled={isProcessing || items.length === 0}
                 className='bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all'
-                data-testid={hasKitchenTicket ? "button-kitchen-ticket" : "button-place-order"}
+                data-testid="button-kitchen-ticket"
               >
                 <div className='flex items-center gap-2 text-sm'>
                   <ChefHat size={18} />
