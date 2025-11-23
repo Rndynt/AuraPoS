@@ -4,9 +4,10 @@ interface InputFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
+  "data-testid"?: string;
 }
 
-export const InputField = ({ label, value, onChange, placeholder, type = "text" }: InputFieldProps) => (
+export const InputField = ({ label, value, onChange, placeholder, type = "text", "data-testid": dataTestId }: InputFieldProps) => (
   <div className="space-y-1">
     <label className="text-xs font-bold text-slate-500">{label}</label>
     <input
@@ -15,6 +16,7 @@ export const InputField = ({ label, value, onChange, placeholder, type = "text" 
       placeholder={placeholder}
       value={value}
       onChange={onChange}
+      data-testid={dataTestId}
     />
   </div>
 );
