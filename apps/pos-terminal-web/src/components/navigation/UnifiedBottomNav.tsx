@@ -56,7 +56,7 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
           <ShoppingBag size={24} />
           {/* Badge Notification */}
           {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1 z-50 bg-red-500 text-white text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800">
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-800 z-50">
               {cartCount}
             </span>
           )}

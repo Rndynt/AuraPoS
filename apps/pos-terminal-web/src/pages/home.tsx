@@ -58,6 +58,8 @@ export default function HomePage() {
   const handleNavigate = (menuId: string) => {
     if (menuId === 'dashboard') {
       setLocation('/dashboard');
+    } else if (menuId === 'products') {
+      setLocation('/products');
     } else {
       toast({
         title: "Fitur dalam pengembangan",

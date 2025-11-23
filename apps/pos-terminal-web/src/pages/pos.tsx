@@ -576,7 +576,7 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw] pb-[60px] md:pb-0">
+    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
       {/* Main Product Area */}
       <ProductArea 
         products={products}
@@ -617,6 +617,12 @@ export default function POSPage() {
           continueOrderId={continueOrderId}
         />
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <UnifiedBottomNav 
+        cartCount={cart.items.length} 
+        onCartClick={() => setMobileCartOpen(true)} 
+      />
 
       {/* Mobile Cart Drawer */}
       <MobileCartDrawer

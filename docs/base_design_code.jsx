@@ -47,10 +47,18 @@ import {
   ToggleRight,
   Save,
   List,
+  History,
+  Shield,
+  Key,
+  Phone,
+  Download,
+  Filter,
+  Printer,
+  RefreshCcw,
 } from "lucide-react";
 
 // ==========================================
-// 1. MOCK DATA UTAMA (POS & DASHBOARD)
+// 1. MOCK DATA (DATA DUMMY)
 // ==========================================
 
 const CATEGORIES = [
@@ -60,7 +68,6 @@ const CATEGORIES = [
   { id: "pizza", name: "Pizza", icon: UtensilsCrossed },
 ];
 
-// Data Produk untuk POS
 const PRODUCTS = [
   {
     id: 1,
@@ -68,6 +75,8 @@ const PRODUCTS = [
     price: 45000,
     category: "burger",
     stock: 15,
+    stockTracking: true,
+    sku: "BG-001",
     image:
       "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=60",
     variants: [
@@ -97,6 +106,8 @@ const PRODUCTS = [
     price: 25000,
     category: "coffee",
     stock: 50,
+    stockTracking: false,
+    sku: "CP-002",
     image:
       "https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=500&q=60",
     variants: [
@@ -117,6 +128,8 @@ const PRODUCTS = [
     price: 18000,
     category: "snack",
     stock: 5,
+    stockTracking: true,
+    sku: "SN-003",
     image:
       "https://images.unsplash.com/photo-1541592103048-4e22ecc25e67?auto=format&fit=crop&w=500&q=60",
     variants: [],
@@ -127,13 +140,14 @@ const PRODUCTS = [
     price: 85000,
     category: "pizza",
     stock: 8,
+    stockTracking: true,
+    sku: "PZ-004",
     image:
       "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=500&q=60",
     variants: [],
   },
 ];
 
-// Data Meja
 const TABLES = [
   {
     id: "T1",
@@ -157,7 +171,6 @@ const TABLES = [
   { id: "T8", name: "Meja 8", capacity: 4, status: "available", orders: [] },
 ];
 
-// Data Chart Dashboard
 const CHART_DATA_SETS = {
   today: [
     { label: "10:00", value: 450000, height: 30, transactions: 5 },
@@ -206,7 +219,6 @@ const TOP_PRODUCTS = [
   },
 ];
 
-// Data Marketplace Fitur (Tenant Features)
 const FEATURE_CATALOG = [
   {
     id: "module_table",
@@ -255,46 +267,601 @@ const FEATURE_CATALOG = [
   },
 ];
 
+const MOCK_EMPLOYEES = [
+  { id: 1, name: "Andi Saputra", role: "Manager", status: "active" },
+  { id: 2, name: "Siti Aminah", role: "Kasir", status: "active" },
+  { id: 3, name: "Budi Santoso", role: "Waiter", status: "inactive" },
+];
+
+const STOCK_LOGS = [
+  {
+    id: 1,
+    item: "Classic Beef Burger",
+    change: -2,
+    type: "sale",
+    date: "10:30 AM",
+  },
+  {
+    id: 2,
+    item: "French Fries",
+    change: +50,
+    type: "restock",
+    date: "09:00 AM",
+  },
+];
+
+const TRANSACTION_HISTORY = [
+  {
+    id: "#TRX-001",
+    time: "14:30",
+    customer: "Walk-in",
+    total: 145000,
+    method: "QRIS",
+    status: "Lunas",
+  },
+  {
+    id: "#TRX-002",
+    time: "14:15",
+    customer: "Meja 4",
+    total: 250000,
+    method: "Tunai",
+    status: "Lunas",
+  },
+  {
+    id: "#TRX-003",
+    time: "13:45",
+    customer: "Gojek",
+    total: 85000,
+    method: "E-Wallet",
+    status: "Lunas",
+  },
+  {
+    id: "#TRX-004",
+    time: "13:20",
+    customer: "Meja 1",
+    total: 420000,
+    method: "Debit",
+    status: "Lunas",
+  },
+  {
+    id: "#TRX-005",
+    time: "12:55",
+    customer: "Batal",
+    total: 0,
+    method: "-",
+    status: "Batal",
+  },
+];
+
 const formatIDR = (price) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(price);
 
 // ==========================================
-// 2. COMPONENTS BARU (PRODUCT & MARKETPLACE)
+// 2. KOMPONEN UI HELPERS
 // ==========================================
 
-// --- PRODUCT MANAGER (CRUD Produk dengan Varian Kompleks) ---
-const ProductManager = ({ onBack }) => {
-  const [viewState, setViewState] = useState("list"); // 'list' | 'form'
-  const [editingProduct, setEditingProduct] = useState(null);
+const CustomSelect = ({ value, onChange, options, className = "" }) => (
+  <div className={`relative ${className}`}>
+    <select
+      value={value}
+      onChange={onChange}
+      className="appearance-none w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-3 pr-8 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+    >
+      {options.map((opt, idx) => (
+        <option key={idx} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+      <ChevronDown size={16} />
+    </div>
+  </div>
+);
 
-  // Form State
+const InputField = ({ label, value, onChange, placeholder, type = "text" }) => (
+  <div className="space-y-1">
+    <label className="text-xs font-bold text-slate-500">{label}</label>
+    <input
+      type={type}
+      className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+    />
+  </div>
+);
+
+// ==========================================
+// 3. MANAGEMENT VIEWS
+// ==========================================
+
+// --- 3F. REPORT VIEW (FIXED GRAPH & INTERACTIVE) ---
+const ReportView = ({ onBack }) => {
+  const [period, setPeriod] = useState("Hari Ini");
+  const [activeChartItem, setActiveChartItem] = useState(null); // State untuk interaksi klik grafik
+
+  const chartData = useMemo(() => {
+    if (period === "Minggu Ini") return CHART_DATA_SETS.week;
+    if (period === "Bulan Ini") return CHART_DATA_SETS.month;
+    return CHART_DATA_SETS.today;
+  }, [period]);
+
+  return (
+    <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">
+              Laporan Penjualan
+            </h1>
+            <p className="text-xs text-slate-500">Analisis detail transaksi</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none md:w-40">
+            <CustomSelect
+              value={period}
+              onChange={(e) => {
+                setPeriod(e.target.value);
+                setActiveChartItem(null);
+              }}
+              options={[
+                { value: "Hari Ini", label: "Hari Ini" },
+                { value: "Minggu Ini", label: "Minggu Ini" },
+                { value: "Bulan Ini", label: "Bulan Ini" },
+              ]}
+            />
+          </div>
+          <button className="bg-blue-50 text-blue-600 p-2.5 rounded-xl hover:bg-blue-100">
+            <Download size={18} />
+          </button>
+          <button className="bg-slate-100 text-slate-600 p-2.5 rounded-xl hover:bg-slate-200">
+            <Printer size={18} />
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* 1. Financial Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <p className="text-xs text-slate-500 font-bold uppercase mb-1">
+              Omset Kotor
+            </p>
+            <h3 className="text-2xl font-black text-slate-800">Rp 4.2jt</h3>
+            <span className="text-[10px] text-green-600 font-bold flex items-center gap-1 mt-1">
+              <TrendingUp size={10} /> +12%
+            </span>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <p className="text-xs text-slate-500 font-bold uppercase mb-1">
+              Laba Bersih
+            </p>
+            <h3 className="text-2xl font-black text-blue-600">Rp 1.8jt</h3>
+            <span className="text-[10px] text-slate-400 mt-1">
+              Estimasi 45% margin
+            </span>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <p className="text-xs text-slate-500 font-bold uppercase mb-1">
+              Total Transaksi
+            </p>
+            <h3 className="text-2xl font-black text-slate-800">64</h3>
+            <span className="text-[10px] text-slate-400 mt-1">
+              Pesanan selesai
+            </span>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <p className="text-xs text-slate-500 font-bold uppercase mb-1">
+              Rata-rata Order
+            </p>
+            <h3 className="text-2xl font-black text-slate-800">Rp 65rb</h3>
+            <span className="text-[10px] text-slate-400 mt-1">
+              Per pelanggan
+            </span>
+          </div>
+        </div>
+
+        {/* 2. Interactive Chart & Detail Grid */}
+        <div className="grid md:grid-cols-[2fr_1fr] gap-4">
+          {/* Chart Section */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+            <h3 className="font-bold text-slate-800 mb-6 text-sm">
+              Grafik Tren Penjualan ({period})
+            </h3>
+            <div className="h-48 flex items-end justify-between gap-3 px-2 relative">
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-full h-px bg-slate-50"></div>
+                ))}
+              </div>
+              {chartData.map((d, i) => {
+                const isActive = activeChartItem?.label === d.label;
+                return (
+                  <div
+                    key={i}
+                    onClick={() => setActiveChartItem(d)}
+                    className="flex-1 flex flex-col justify-end gap-2 group cursor-pointer h-full z-10"
+                  >
+                    <div className="relative w-full rounded-t-lg h-full flex items-end group-hover:bg-slate-50 transition-colors p-0.5">
+                      <div
+                        className={`w-full rounded-t-lg transition-all relative ${
+                          isActive
+                            ? "bg-blue-600 shadow-lg"
+                            : "bg-blue-400 group-hover:bg-blue-500"
+                        }`}
+                        style={{ height: `${d.height}%` }}
+                      >
+                        <div className="hidden md:block absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                          {formatIDR(d.value)}
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] text-center font-bold transition-colors ${
+                        isActive ? "text-blue-600 scale-110" : "text-slate-400"
+                      }`}
+                    >
+                      {d.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Detail Panel (Seragam dengan Dashboard) */}
+          <div
+            className={`rounded-xl p-5 border shadow-sm transition-all duration-300 ${
+              activeChartItem
+                ? "bg-blue-600 text-white border-blue-500"
+                : "bg-white text-slate-800 border-slate-100"
+            }`}
+          >
+            {activeChartItem ? (
+              <div className="h-full flex flex-col justify-center animate-in fade-in">
+                <div className="flex items-center gap-2 text-blue-200 text-xs font-bold uppercase mb-1">
+                  <MousePointerClick size={14} /> Detail Data
+                </div>
+                <h2 className="text-3xl font-black mb-1">
+                  {activeChartItem.label}
+                </h2>
+                <div className="w-full h-px bg-white/20 my-4"></div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-blue-200 mb-1">Pendapatan</p>
+                    <p className="text-2xl font-bold">
+                      {formatIDR(activeChartItem.value)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-200 mb-1">
+                      Total Transaksi
+                    </p>
+                    <p className="text-xl font-bold">
+                      {activeChartItem.transactions} Order
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
+                <BarChart3 size={48} className="mb-3 opacity-20" />
+                <p className="text-sm font-bold">Pilih Grafik</p>
+                <p className="text-xs mt-1">
+                  Klik batang grafik untuk melihat detail spesifik.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 3. Transaction History Table */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <List size={16} /> Riwayat Transaksi
+            </h3>
+            <button className="text-blue-600 text-xs font-bold hover:underline">
+              Lihat Semua
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-slate-500 font-bold border-b border-slate-200 bg-white">
+                <tr>
+                  <th className="p-4">ID Order</th>
+                  <th className="p-4">Waktu</th>
+                  <th className="p-4">Pelanggan</th>
+                  <th className="p-4">Metode</th>
+                  <th className="p-4 text-right">Total</th>
+                  <th className="p-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {TRANSACTION_HISTORY.map((trx, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4 font-bold text-blue-600">{trx.id}</td>
+                    <td className="p-4 text-slate-500">{trx.time}</td>
+                    <td className="p-4 font-medium text-slate-700">
+                      {trx.customer}
+                    </td>
+                    <td className="p-4">
+                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">
+                        {trx.method}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right font-bold text-slate-800">
+                      {formatIDR(trx.total)}
+                    </td>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-bold ${
+                          trx.status === "Lunas"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {trx.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- STOCK MANAGER ---
+const StockManager = ({ onBack }) => {
+  return (
+    <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
+      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">
+              Stok & Inventaris
+            </h1>
+            <p className="text-xs text-slate-500">Kelola ketersediaan produk</p>
+          </div>
+        </div>
+        <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-100">
+          <History size={16} /> Riwayat
+        </button>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase mb-1">
+              <Package size={14} /> Total Item
+            </div>
+            <div className="text-2xl font-black text-slate-800">
+              {PRODUCTS.length}
+            </div>
+          </div>
+          <div className="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
+            <div className="flex items-center gap-2 text-red-400 text-xs font-bold uppercase mb-1">
+              <AlertCircle size={14} /> Stok Kritis
+            </div>
+            <div className="text-2xl font-black text-red-600">
+              {PRODUCTS.filter((p) => p.stock < 10).length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+              <tr>
+                <th className="p-4">Produk</th>
+                <th className="p-4 text-center">Sisa Stok</th>
+                <th className="p-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {PRODUCTS.map((product) => (
+                <tr
+                  key={product.id}
+                  className="hover:bg-slate-50 transition-colors"
+                >
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden">
+                        <img
+                          src={product.image}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-700">
+                          {product.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          SKU: {product.sku}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <span
+                      className={`px-2 py-1 rounded font-bold text-xs ${
+                        product.stock < 10
+                          ? "bg-red-100 text-red-600"
+                          : "bg-green-100 text-green-600"
+                      }`}
+                    >
+                      {product.stock} Unit
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button className="text-blue-600 font-bold text-xs hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                      Adjust
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- EMPLOYEE MANAGER ---
+const EmployeeManager = ({ onBack }) => {
+  return (
+    <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
+      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-full"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-xl font-extrabold text-slate-800">Karyawan</h1>
+        </div>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700">
+          <Plus size={16} /> Baru
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="grid gap-3">
+          {MOCK_EMPLOYEES.map((emp) => (
+            <div
+              key={emp.id}
+              className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-blue-300 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-lg border border-slate-200">
+                  {emp.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">{emp.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded uppercase font-bold text-slate-500">
+                      {emp.role}
+                    </span>
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        emp.status === "active"
+                          ? "bg-green-500"
+                          : "bg-slate-300"
+                      }`}
+                    ></span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                  <Key size={18} />
+                </button>
+                <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- STORE PROFILE ---
+const StoreProfile = ({ onBack }) => {
+  return (
+    <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
+      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-100 rounded-full"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-lg font-bold text-slate-800">Profil Toko</h1>
+        </div>
+        <button className="text-blue-600 font-bold text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg">
+          Simpan
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full space-y-6">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center text-center">
+          <div className="w-20 h-20 bg-slate-100 rounded-full mb-4 flex items-center justify-center border-4 border-white shadow-lg">
+            <Store size={32} className="text-slate-400" />
+          </div>
+          <h2 className="text-xl font-black text-slate-800">Aura Pos Resto</h2>
+          <p className="text-sm text-slate-500">ID: TENANT-88291</p>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h3 className="font-bold text-slate-800 mb-2 border-b pb-2">
+            Informasi
+          </h3>
+          <InputField label="Nama Usaha" value="Aura Pos Resto" />
+          <InputField label="Telepon" value="+62 812-3456-7890" />
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-500">Alamat</label>
+            <textarea
+              className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              defaultValue="Jl. Sudirman No. 45"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- PRODUCT MANAGER (FIXED UI SELECT) ---
+const ProductManager = ({ onBack }) => {
+  const [viewState, setViewState] = useState("list");
+  const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
+    category: "Makanan",
     price: "",
     stockTracking: false,
     stockQty: 0,
     sku: "",
   });
-  // State untuk Varian (ProductOptionGroups & Options)
   const [optionGroups, setOptionGroups] = useState([]);
 
   const handleEdit = (product) => {
     setEditingProduct(product);
-    // Mapping data mock ke form
     setFormData({
       name: product.name,
-      category: product.category,
+      category: product.category || "Makanan",
       price: product.price,
-      stockTracking: product.stock && product.stock < 999, // asumsi logic stok
+      stockTracking: product.stock && product.stock < 999,
       stockQty: product.stock || 0,
-      sku: "SKU-001",
+      sku: product.sku || "",
     });
-    // Simulasi mapping variants ke optionGroups
     if (product.variants) {
       const mappedGroups = product.variants.map((v, idx) => ({
         id: idx,
@@ -327,7 +894,6 @@ const ProductManager = ({ onBack }) => {
     );
   };
 
-  // VIEW FORM PRODUK
   if (viewState === "form") {
     return (
       <div className="flex flex-col h-full bg-slate-50 animate-in fade-in">
@@ -349,57 +915,48 @@ const ProductManager = ({ onBack }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto w-full space-y-6">
-          {/* 1. Basic Info */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
               <Box size={18} /> Informasi Dasar
             </h3>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">
-                  Nama Produk
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">
-                  Harga (Rp)
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">SKU</label>
-                <input
-                  type="text"
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.sku}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sku: e.target.value })
-                  }
-                />
-              </div>
+              <InputField
+                label="Nama Produk"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+              />
+              <InputField
+                label="Harga (Rp)"
+                type="number"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: e.target.value })
+                }
+              />
+              <InputField
+                label="SKU"
+                value={formData.sku}
+                onChange={(e) =>
+                  setFormData({ ...formData, sku: e.target.value })
+                }
+              />
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500">
                   Kategori
                 </label>
-                <select className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none">
-                  <option>Makanan</option>
-                  <option>Minuman</option>
-                </select>
+                <CustomSelect
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                  options={[
+                    { value: "Makanan", label: "Makanan" },
+                    { value: "Minuman", label: "Minuman" },
+                    { value: "Snack", label: "Snack" },
+                  ]}
+                />
               </div>
             </div>
 
@@ -443,16 +1000,12 @@ const ProductManager = ({ onBack }) => {
             </div>
           </div>
 
-          {/* 2. Complex Variants (Option Groups) */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="font-bold text-slate-700 flex items-center gap-2">
                   <Layers size={18} /> Varian & Opsi
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Atur topping, ukuran, dll.
-                </p>
               </div>
               <button
                 onClick={handleAddGroup}
@@ -461,18 +1014,17 @@ const ProductManager = ({ onBack }) => {
                 + Tambah Grup
               </button>
             </div>
-
-            <div className="space-y-4">
+            <div className="space-y-6">
               {optionGroups.map((group, idx) => (
                 <div
                   key={group.id}
-                  className="border border-slate-200 rounded-xl overflow-hidden"
+                  className="border border-slate-200 rounded-xl overflow-hidden shadow-sm"
                 >
-                  <div className="bg-slate-50 p-3 flex flex-wrap gap-3 items-center border-b border-slate-200">
+                  <div className="bg-slate-50 p-4 flex flex-col md:flex-row gap-3 md:items-center border-b border-slate-200">
                     <input
                       type="text"
                       placeholder="Nama Grup (mis: Ukuran)"
-                      className="bg-white border border-slate-300 rounded px-2 py-1 text-sm font-bold w-40"
+                      className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500/20 outline-none"
                       value={group.name}
                       onChange={(e) => {
                         const newG = [...optionGroups];
@@ -480,59 +1032,66 @@ const ProductManager = ({ onBack }) => {
                         setOptionGroups(newG);
                       }}
                     />
-                    <select
-                      className="bg-white border border-slate-300 rounded px-2 py-1 text-xs"
-                      value={group.type}
-                      onChange={(e) => {
-                        const newG = [...optionGroups];
-                        newG[idx].type = e.target.value;
-                        setOptionGroups(newG);
-                      }}
-                    >
-                      <option value="single">Pilih Satu (Radio)</option>
-                      <option value="multiple">Pilih Banyak (Checkbox)</option>
-                    </select>
-                    <button className="text-red-500 hover:bg-red-50 p-1 rounded ml-auto">
-                      <Trash2 size={14} />
+                    <div className="w-full md:w-48">
+                      <CustomSelect
+                        value={group.type}
+                        onChange={(e) => {
+                          const newG = [...optionGroups];
+                          newG[idx].type = e.target.value;
+                          setOptionGroups(newG);
+                        }}
+                        options={[
+                          { value: "single", label: "Pilih Satu (Radio)" },
+                          { value: "multiple", label: "Pilih Banyak (Check)" },
+                        ]}
+                      />
+                    </div>
+                    <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg ml-auto transition-colors">
+                      <Trash2 size={16} />
                     </button>
                   </div>
-                  <div className="p-3 bg-white space-y-2">
+                  <div className="p-4 bg-white space-y-3">
                     {group.options.map((opt, optIdx) => (
-                      <div key={optIdx} className="flex gap-2 items-center">
-                        <input
-                          type="text"
-                          placeholder="Opsi (mis: Pedas)"
-                          className="flex-1 border-b border-slate-200 py-1 text-sm outline-none"
-                          value={opt.name}
-                          onChange={() => {}}
-                        />
-                        <div className="flex items-center border border-slate-200 rounded px-2">
-                          <span className="text-xs text-slate-400">Rp</span>
+                      <div key={optIdx} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            placeholder="Nama Opsi (mis: Pedas)"
+                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            value={opt.name}
+                            onChange={() => {}}
+                          />
+                        </div>
+                        <div className="relative w-32">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">
+                            Rp
+                          </div>
                           <input
                             type="number"
                             placeholder="0"
-                            className="w-20 py-1 text-sm outline-none text-right"
+                            className="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm text-right focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                             value={opt.price}
                             onChange={() => {}}
                           />
                         </div>
-                        <button className="text-slate-300 hover:text-red-500">
-                          <X size={14} />
+                        <button className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                          <X size={16} />
                         </button>
                       </div>
                     ))}
                     <button
                       onClick={() => handleAddOption(group.id)}
-                      className="text-xs font-bold text-blue-600 mt-2 flex items-center gap-1"
+                      className="text-xs font-bold text-blue-600 mt-2 flex items-center gap-1 px-2 py-1 hover:bg-blue-50 rounded transition-colors"
                     >
-                      <Plus size={12} /> Tambah Opsi
+                      <Plus size={14} /> Tambah Opsi
                     </button>
                   </div>
                 </div>
               ))}
               {optionGroups.length === 0 && (
-                <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-100 rounded-xl">
-                  Belum ada varian.
+                <div className="text-center py-8 text-slate-400 text-sm border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center gap-2">
+                  <Layers size={32} className="opacity-20" />
+                  <p>Belum ada varian.</p>
                 </div>
               )}
             </div>
@@ -542,7 +1101,6 @@ const ProductManager = ({ onBack }) => {
     );
   }
 
-  // VIEW LIST PRODUK
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
@@ -599,11 +1157,9 @@ const ProductManager = ({ onBack }) => {
                 >
                   Stok: {product.stock}
                 </span>
-                {product.variants && product.variants.length > 0 && (
-                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                    +Varian
-                  </span>
-                )}
+                <span className="text-[10px] text-slate-400 border border-slate-200 px-1.5 rounded">
+                  SKU: {product.sku}
+                </span>
               </div>
             </div>
             <ChevronLeft
@@ -617,10 +1173,10 @@ const ProductManager = ({ onBack }) => {
   );
 };
 
-// --- FEATURE MARKETPLACE (Halaman Beli Fitur) ---
+// --- FEATURE MARKETPLACE ---
 const FeatureMarketplace = ({ onBack }) => {
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
         <div className="flex items-center gap-3 mb-1">
           <button
@@ -649,7 +1205,7 @@ const FeatureMarketplace = ({ onBack }) => {
                     className={`p-5 rounded-2xl border transition-all ${
                       feature.enabled
                         ? "bg-white border-blue-200 shadow-blue-100 shadow-sm"
-                        : "bg-slate-50 border-slate-200 opacity-70"
+                        : "bg-slate-50 border-slate-200 opacity-70 hover:opacity-100 hover:bg-white hover:shadow-sm"
                     }`}
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -684,7 +1240,7 @@ const FeatureMarketplace = ({ onBack }) => {
                     <h4 className="font-bold text-slate-800 text-lg mb-1">
                       {feature.title}
                     </h4>
-                    <p className="text-sm text-slate-500 mb-4 min-h-[40px]">
+                    <p className="text-sm text-slate-500 mb-4 min-h-[40px] line-clamp-2">
                       {feature.description}
                     </p>
                     <div className="flex items-center justify-between pt-4 border-t border-dashed border-slate-200">
@@ -713,7 +1269,7 @@ const FeatureMarketplace = ({ onBack }) => {
 };
 
 // ==========================================
-// 3. DASHBOARD VIEW (FIXED & INTERACTIVE)
+// 3. DASHBOARD VIEW (FIXED PRO VERSION)
 // ==========================================
 const DashboardView = ({ onBack }) => {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
@@ -1028,13 +1584,13 @@ const DashboardView = ({ onBack }) => {
 };
 
 // ==========================================
-// 4. POS VIEW (FIXED & STABLE)
+// 4. POS VIEW (FIXED - TIDAK DIUBAH)
 // ==========================================
 const POSView = ({ onGoToTables, onGoToSettings }) => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState([]);
-  const [orderType, setOrderType] = useState("dine-in"); // Added missing orderType state
+  const [orderType, setOrderType] = useState("dine-in");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [customerName, setCustomerName] = useState("Walk-in Guest");
@@ -1637,7 +2193,7 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
 };
 
 // ==========================================
-// 5. TABLE VIEW (FIXED)
+// 5. TABLE VIEW (FIXED - TIDAK DIUBAH)
 // ==========================================
 const TableView = ({ onContinueOrder, onGoToPOS, onGoToSettings }) => {
   const [filterStatus, setFilterStatus] = useState("all");
@@ -1930,10 +2486,9 @@ const TableView = ({ onContinueOrder, onGoToPOS, onGoToSettings }) => {
 };
 
 // ==========================================
-// 5. MANAGEMENT HUB (NEW - With Navigation)
+// 6. MANAGEMENT HUB (GATEWAY)
 // ==========================================
 const ManagementHub = ({ onBack, onNavigate }) => {
-  // New State for Internal Navigation
   const [internalRoute, setInternalRoute] = useState("menu");
 
   const MENU_ITEMS = [
@@ -1961,33 +2516,44 @@ const ManagementHub = ({ onBack, onNavigate }) => {
       id: "stock",
       title: "Stok",
       icon: Package,
-      color: "bg-purple-100 text-purple-600",
+      color: "bg-yellow-100 text-yellow-600",
+      action: () => setInternalRoute("stock"),
     },
     {
       id: "employees",
       title: "Karyawan",
       icon: Users2,
       color: "bg-green-100 text-green-600",
+      action: () => setInternalRoute("employees"),
     },
     {
       id: "reports",
       title: "Laporan",
       icon: FileText,
       color: "bg-pink-100 text-pink-600",
-    },
+      action: () => setInternalRoute("reports"),
+    }, // NEW ACTION
     {
       id: "store",
       title: "Profil Toko",
       icon: Store,
       color: "bg-slate-100 text-slate-600",
+      action: () => setInternalRoute("store"),
     },
   ];
 
-  // Render Internal Routes
   if (internalRoute === "products")
     return <ProductManager onBack={() => setInternalRoute("menu")} />;
   if (internalRoute === "features")
     return <FeatureMarketplace onBack={() => setInternalRoute("menu")} />;
+  if (internalRoute === "stock")
+    return <StockManager onBack={() => setInternalRoute("menu")} />;
+  if (internalRoute === "employees")
+    return <EmployeeManager onBack={() => setInternalRoute("menu")} />;
+  if (internalRoute === "store")
+    return <StoreProfile onBack={() => setInternalRoute("menu")} />;
+  if (internalRoute === "reports")
+    return <ReportView onBack={() => setInternalRoute("menu")} />; // NEW ROUTE
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-20">
@@ -2047,10 +2613,10 @@ const ManagementHub = ({ onBack, onNavigate }) => {
 };
 
 // ==========================================
-// 6. ROOT APP
+// 7. APP ROOT
 // ==========================================
 export default function App() {
-  const [activeView, setActiveView] = useState("pos"); // 'pos' | 'tables' | 'management' | 'dashboard'
+  const [activeView, setActiveView] = useState("pos");
   const [currentTable, setCurrentTable] = useState(null);
 
   const handleContinueOrder = (table) => {
@@ -2059,7 +2625,6 @@ export default function App() {
     alert(`Membuka pesanan untuk ${table.name}`);
   };
 
-  // Render Content Logic
   const renderContent = () => {
     switch (activeView) {
       case "pos":
@@ -2095,7 +2660,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
-      {/* DESKTOP SIDEBAR */}
+      {/* Sidebar Desktop */}
       <aside className="hidden md:flex w-20 bg-white border-r border-slate-200 flex-col items-center py-6 flex-shrink-0 z-30">
         <div className="mb-8 p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
           <ShoppingBag className="text-white w-6 h-6" />
@@ -2146,10 +2711,9 @@ export default function App() {
         </button>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
+      {/* Konten Utama */}
       <div className="flex-1 min-w-0 h-full relative flex flex-col">
         {renderContent()}
-        {/* Navigasi Mobile sudah ada di dalam masing-masing view (POSView & TableView) */}
       </div>
     </div>
   );
