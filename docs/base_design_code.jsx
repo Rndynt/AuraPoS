@@ -1,4 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  createContext,
+  useContext,
+} from "react";
 import {
   LayoutGrid,
   Coffee,
@@ -55,7 +61,89 @@ import {
   Filter,
   Printer,
   RefreshCcw,
+  Info,
 } from "lucide-react";
+
+// ==========================================
+// 0. SYSTEM TOAST (NEW COMPONENT)
+// ==========================================
+
+// Context untuk memanggil toast dari mana saja
+const ToastContext = createContext();
+
+const useToast = () => useContext(ToastContext);
+
+const ToastProvider = ({ children }) => {
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = (message, type = "success") => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      removeToast(id);
+    }, 3000);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  return (
+    <ToastContext.Provider value={{ addToast }}>
+      {children}
+      {/* Toast Container */}
+      <div className="fixed z-[100] top-4 left-4 right-4 md:top-auto md:bottom-8 md:left-auto md:right-8 flex flex-col gap-2 pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="pointer-events-auto flex items-center gap-3 bg-white border border-slate-100 p-4 rounded-xl shadow-xl shadow-slate-200/50 animate-in slide-in-from-top-2 md:slide-in-from-bottom-2 fade-in duration-300 max-w-sm w-full ml-auto"
+          >
+            {/* Icon Based on Type */}
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                toast.type === "success"
+                  ? "bg-green-50 text-green-600"
+                  : toast.type === "error"
+                  ? "bg-red-50 text-red-600"
+                  : "bg-blue-50 text-blue-600"
+              }`}
+            >
+              {toast.type === "success" ? (
+                <CheckCircle size={16} strokeWidth={3} />
+              ) : toast.type === "error" ? (
+                <AlertTriangle size={16} strokeWidth={3} />
+              ) : (
+                <Info size={16} strokeWidth={3} />
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800 leading-tight mb-0.5">
+                {toast.type === "success"
+                  ? "Berhasil"
+                  : toast.type === "error"
+                  ? "Gagal"
+                  : "Info"}
+              </p>
+              <p className="text-xs text-slate-500 truncate">{toast.message}</p>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+};
 
 // ==========================================
 // 1. MOCK DATA (DATA DUMMY)
@@ -381,11 +469,9 @@ const InputField = ({ label, value, onChange, placeholder, type = "text" }) => (
 // 3. MANAGEMENT VIEWS
 // ==========================================
 
-// --- 3F. REPORT VIEW (FIXED GRAPH & INTERACTIVE) ---
 const ReportView = ({ onBack }) => {
   const [period, setPeriod] = useState("Hari Ini");
-  const [activeChartItem, setActiveChartItem] = useState(null); // State untuk interaksi klik grafik
-
+  const [activeChartItem, setActiveChartItem] = useState(null);
   const chartData = useMemo(() => {
     if (period === "Minggu Ini") return CHART_DATA_SETS.week;
     if (period === "Bulan Ini") return CHART_DATA_SETS.month;
@@ -394,7 +480,6 @@ const ReportView = ({ onBack }) => {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
         <div className="flex items-center gap-3">
           <button
@@ -433,9 +518,7 @@ const ReportView = ({ onBack }) => {
           </button>
         </div>
       </header>
-
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* 1. Financial Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <p className="text-xs text-slate-500 font-bold uppercase mb-1">
@@ -474,10 +557,7 @@ const ReportView = ({ onBack }) => {
             </span>
           </div>
         </div>
-
-        {/* 2. Interactive Chart & Detail Grid */}
         <div className="grid md:grid-cols-[2fr_1fr] gap-4">
-          {/* Chart Section */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
             <h3 className="font-bold text-slate-800 mb-6 text-sm">
               Grafik Tren Penjualan ({period})
@@ -522,8 +602,6 @@ const ReportView = ({ onBack }) => {
               })}
             </div>
           </div>
-
-          {/* Detail Panel (Seragam dengan Dashboard) */}
           <div
             className={`rounded-xl p-5 border shadow-sm transition-all duration-300 ${
               activeChartItem
@@ -562,14 +640,12 @@ const ReportView = ({ onBack }) => {
                 <BarChart3 size={48} className="mb-3 opacity-20" />
                 <p className="text-sm font-bold">Pilih Grafik</p>
                 <p className="text-xs mt-1">
-                  Klik batang grafik untuk melihat detail spesifik.
+                  Klik batang grafik untuk melihat detail.
                 </p>
               </div>
             )}
           </div>
         </div>
-
-        {/* 3. Transaction History Table */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -629,8 +705,10 @@ const ReportView = ({ onBack }) => {
   );
 };
 
-// --- STOCK MANAGER ---
 const StockManager = ({ onBack }) => {
+  const { addToast } = useToast();
+  const handleAdjust = () => addToast("Stok berhasil disesuaikan", "success");
+
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
@@ -652,7 +730,6 @@ const StockManager = ({ onBack }) => {
           <History size={16} /> Riwayat
         </button>
       </header>
-
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -672,7 +749,6 @@ const StockManager = ({ onBack }) => {
             </div>
           </div>
         </div>
-
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
@@ -718,7 +794,10 @@ const StockManager = ({ onBack }) => {
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    <button className="text-blue-600 font-bold text-xs hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                    <button
+                      onClick={handleAdjust}
+                      className="text-blue-600 font-bold text-xs hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200"
+                    >
                       Adjust
                     </button>
                   </td>
@@ -732,8 +811,11 @@ const StockManager = ({ onBack }) => {
   );
 };
 
-// --- EMPLOYEE MANAGER ---
 const EmployeeManager = ({ onBack }) => {
+  const { addToast } = useToast();
+  const handleAdd = () =>
+    addToast("Fitur tambah karyawan akan segera hadir", "info");
+
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
@@ -746,7 +828,10 @@ const EmployeeManager = ({ onBack }) => {
           </button>
           <h1 className="text-xl font-extrabold text-slate-800">Karyawan</h1>
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700">
+        <button
+          onClick={handleAdd}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700"
+        >
           <Plus size={16} /> Baru
         </button>
       </header>
@@ -793,8 +878,10 @@ const EmployeeManager = ({ onBack }) => {
   );
 };
 
-// --- STORE PROFILE ---
 const StoreProfile = ({ onBack }) => {
+  const { addToast } = useToast();
+  const handleSave = () => addToast("Profil toko berhasil disimpan", "success");
+
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
@@ -807,7 +894,10 @@ const StoreProfile = ({ onBack }) => {
           </button>
           <h1 className="text-lg font-bold text-slate-800">Profil Toko</h1>
         </div>
-        <button className="text-blue-600 font-bold text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg">
+        <button
+          onClick={handleSave}
+          className="text-blue-600 font-bold text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg"
+        >
           Simpan
         </button>
       </header>
@@ -838,8 +928,8 @@ const StoreProfile = ({ onBack }) => {
   );
 };
 
-// --- PRODUCT MANAGER (FIXED UI SELECT) ---
 const ProductManager = ({ onBack }) => {
+  const { addToast } = useToast();
   const [viewState, setViewState] = useState("list");
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
@@ -877,6 +967,16 @@ const ProductManager = ({ onBack }) => {
     setViewState("form");
   };
 
+  const handleSaveProduct = () => {
+    addToast(
+      editingProduct
+        ? "Produk berhasil diperbarui"
+        : "Produk berhasil ditambahkan",
+      "success"
+    );
+    setViewState("list");
+  };
+
   const handleAddGroup = () => {
     setOptionGroups([
       ...optionGroups,
@@ -909,7 +1009,10 @@ const ProductManager = ({ onBack }) => {
               {editingProduct ? "Edit Produk" : "Tambah Produk"}
             </h2>
           </div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200">
+          <button
+            onClick={handleSaveProduct}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200"
+          >
             <Save size={16} /> Simpan
           </button>
         </div>
@@ -1173,7 +1276,6 @@ const ProductManager = ({ onBack }) => {
   );
 };
 
-// --- FEATURE MARKETPLACE ---
 const FeatureMarketplace = ({ onBack }) => {
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
@@ -1268,19 +1370,14 @@ const FeatureMarketplace = ({ onBack }) => {
   );
 };
 
-// ==========================================
-// 3. DASHBOARD VIEW (FIXED PRO VERSION)
-// ==========================================
 const DashboardView = ({ onBack }) => {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
   const [activeChartItem, setActiveChartItem] = useState(null);
-
   const currentChartData =
     CHART_DATA_SETS[selectedPeriod] || CHART_DATA_SETS.today;
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-24 md:pb-8">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-20 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <button
@@ -1319,9 +1416,7 @@ const DashboardView = ({ onBack }) => {
           />
         </div>
       </header>
-
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
-        {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-4 rounded-2xl shadow-lg relative overflow-hidden group">
             <div className="relative z-10">
@@ -1374,8 +1469,6 @@ const DashboardView = ({ onBack }) => {
             <div className="absolute right-0 top-0 bottom-0 w-1 bg-red-500"></div>
           </div>
         </div>
-
-        {/* Interactive Chart */}
         <div className="grid md:grid-cols-[2fr_1fr] gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
             <div className="flex justify-between items-start mb-6">
@@ -1431,8 +1524,6 @@ const DashboardView = ({ onBack }) => {
               })}
             </div>
           </div>
-
-          {/* Detail Panel */}
           <div className="flex flex-col gap-4">
             <div
               className={`flex-1 rounded-2xl p-5 border shadow-sm transition-all duration-300 ${
@@ -1500,92 +1591,11 @@ const DashboardView = ({ onBack }) => {
             </div>
           </div>
         </div>
-
-        {/* C. PAYMENT METHODS & ALERTS */}
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Payment Methods */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4 text-sm">
-              Metode Pembayaran
-            </h3>
-            <div className="flex h-4 rounded-full overflow-hidden mb-4 bg-slate-100">
-              <div
-                className="bg-green-500 h-full"
-                style={{ width: "45%" }}
-              ></div>
-              <div
-                className="bg-blue-500 h-full"
-                style={{ width: "35%" }}
-              ></div>
-              <div
-                className="bg-purple-500 h-full"
-                style={{ width: "20%" }}
-              ></div>
-            </div>
-            <div className="flex justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <span className="text-xs font-bold text-slate-600">
-                  Tunai (45%)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <span className="text-xs font-bold text-slate-600">
-                  QRIS (35%)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                <span className="text-xs font-bold text-slate-600">
-                  Kartu (20%)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Alert List */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
-                <AlertTriangle size={16} className="text-red-500" /> Peringatan
-                Sistem
-              </h3>
-            </div>
-            <div className="p-2">
-              {PRODUCTS.filter((p) => p.stock < 10).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 border-b border-slate-50 last:border-none"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-100 rounded-lg overflow-hidden">
-                      <img
-                        src={item.image}
-                        className="w-full h-full object-cover"
-                        alt=""
-                      />
-                    </div>
-                    <p className="text-sm font-bold text-slate-700">
-                      {item.name}
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">
-                    Sisa {item.stock}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
 };
 
-// ==========================================
-// 4. POS VIEW (FIXED - TIDAK DIUBAH)
-// ==========================================
 const POSView = ({ onGoToTables, onGoToSettings }) => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1598,6 +1608,7 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalOptions, setModalOptions] = useState({});
   const [modalQty, setModalQty] = useState(1);
+  const { addToast } = useToast();
 
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter((product) => {
@@ -1623,6 +1634,7 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
       setModalOptions(defaultOptions);
     } else {
       addToCart(product, [], 1);
+      addToast(`${product.name} ditambahkan`, "success");
     }
   };
 
@@ -1677,6 +1689,14 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
       value: modalOptions[key],
     }));
     addToCart(selectedProduct, variantsArray, modalQty);
+    addToast(`${selectedProduct.name} ditambahkan`, "success");
+  };
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    addToast("Pesanan berhasil disimpan!", "success");
+    setCart([]);
+    setIsCartOpen(false);
   };
 
   const calculateModalTotal = () => {
@@ -1697,7 +1717,6 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
 
   return (
     <div className="flex flex-col md:flex-row h-full overflow-hidden relative">
-      {/* MODAL PRODUK - Z-Index 70 agar di atas segalanya */}
       {selectedProduct && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -2137,6 +2156,7 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
               </button>
               <button
                 disabled={cart.length === 0}
+                onClick={handleCheckout}
                 className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all"
               >
                 <div className="flex items-center gap-2 text-sm">
@@ -2192,9 +2212,6 @@ const POSView = ({ onGoToTables, onGoToSettings }) => {
   );
 };
 
-// ==========================================
-// 5. TABLE VIEW (FIXED - TIDAK DIUBAH)
-// ==========================================
 const TableView = ({ onContinueOrder, onGoToPOS, onGoToSettings }) => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedTable, setSelectedTable] = useState(null);
@@ -2485,9 +2502,6 @@ const TableView = ({ onContinueOrder, onGoToPOS, onGoToSettings }) => {
   );
 };
 
-// ==========================================
-// 6. MANAGEMENT HUB (GATEWAY)
-// ==========================================
 const ManagementHub = ({ onBack, onNavigate }) => {
   const [internalRoute, setInternalRoute] = useState("menu");
 
@@ -2532,7 +2546,7 @@ const ManagementHub = ({ onBack, onNavigate }) => {
       icon: FileText,
       color: "bg-pink-100 text-pink-600",
       action: () => setInternalRoute("reports"),
-    }, // NEW ACTION
+    },
     {
       id: "store",
       title: "Profil Toko",
@@ -2553,7 +2567,7 @@ const ManagementHub = ({ onBack, onNavigate }) => {
   if (internalRoute === "store")
     return <StoreProfile onBack={() => setInternalRoute("menu")} />;
   if (internalRoute === "reports")
-    return <ReportView onBack={() => setInternalRoute("menu")} />; // NEW ROUTE
+    return <ReportView onBack={() => setInternalRoute("menu")} />;
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-20">
@@ -2605,16 +2619,13 @@ const ManagementHub = ({ onBack, onNavigate }) => {
           Keluar Aplikasi
         </button>
         <p className="text-center text-[10px] text-slate-400 mt-4">
-          AuraPOS v1.0.2 • Build 20231122
+          AuraPOS v1.0.3 • Build 20231123
         </p>
       </div>
     </div>
   );
 };
 
-// ==========================================
-// 7. APP ROOT
-// ==========================================
 export default function App() {
   const [activeView, setActiveView] = useState("pos");
   const [currentTable, setCurrentTable] = useState(null);
@@ -2622,7 +2633,6 @@ export default function App() {
   const handleContinueOrder = (table) => {
     setCurrentTable(table);
     setActiveView("pos");
-    alert(`Membuka pesanan untuk ${table.name}`);
   };
 
   const renderContent = () => {
@@ -2659,62 +2669,62 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
-      {/* Sidebar Desktop */}
-      <aside className="hidden md:flex w-20 bg-white border-r border-slate-200 flex-col items-center py-6 flex-shrink-0 z-30">
-        <div className="mb-8 p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
-          <ShoppingBag className="text-white w-6 h-6" />
-        </div>
-        <nav className="flex-1 w-full flex flex-col gap-4 px-2">
-          <button
-            onClick={() => setActiveView("pos")}
-            className={`p-3 rounded-xl transition-all flex justify-center group relative ${
-              activeView === "pos"
-                ? "bg-blue-50 text-blue-600"
-                : "text-slate-400 hover:bg-slate-50"
-            }`}
-          >
-            <LayoutGrid size={22} />
-            <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-              POS Menu
-            </span>
+    <ToastProvider>
+      <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
+        <aside className="hidden md:flex w-20 bg-white border-r border-slate-200 flex-col items-center py-6 flex-shrink-0 z-30">
+          <div className="mb-8 p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
+            <ShoppingBag className="text-white w-6 h-6" />
+          </div>
+          <nav className="flex-1 w-full flex flex-col gap-4 px-2">
+            <button
+              onClick={() => setActiveView("pos")}
+              className={`p-3 rounded-xl transition-all flex justify-center group relative ${
+                activeView === "pos"
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-slate-400 hover:bg-slate-50"
+              }`}
+            >
+              <LayoutGrid size={22} />
+              <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                POS Menu
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveView("tables")}
+              className={`p-3 rounded-xl transition-all flex justify-center group relative ${
+                activeView === "tables"
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-slate-400 hover:bg-slate-50"
+              }`}
+            >
+              <Square size={22} />
+              <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                Tables
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveView("management")}
+              className={`p-3 rounded-xl transition-all flex justify-center group relative ${
+                ["management", "dashboard"].includes(activeView)
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-slate-400 hover:bg-slate-50"
+              }`}
+            >
+              <Settings size={22} />
+              <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                Management
+              </span>
+            </button>
+          </nav>
+          <button className="p-3 text-slate-400 hover:text-red-500">
+            <LogOut size={22} />
           </button>
-          <button
-            onClick={() => setActiveView("tables")}
-            className={`p-3 rounded-xl transition-all flex justify-center group relative ${
-              activeView === "tables"
-                ? "bg-blue-50 text-blue-600"
-                : "text-slate-400 hover:bg-slate-50"
-            }`}
-          >
-            <Square size={22} />
-            <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-              Tables
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveView("management")}
-            className={`p-3 rounded-xl transition-all flex justify-center group relative ${
-              ["management", "dashboard"].includes(activeView)
-                ? "bg-blue-50 text-blue-600"
-                : "text-slate-400 hover:bg-slate-50"
-            }`}
-          >
-            <Settings size={22} />
-            <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-              Management
-            </span>
-          </button>
-        </nav>
-        <button className="p-3 text-slate-400 hover:text-red-500">
-          <LogOut size={22} />
-        </button>
-      </aside>
+        </aside>
 
-      {/* Konten Utama */}
-      <div className="flex-1 min-w-0 h-full relative flex flex-col">
-        {renderContent()}
+        <div className="flex-1 min-w-0 h-full relative flex flex-col">
+          {renderContent()}
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }
