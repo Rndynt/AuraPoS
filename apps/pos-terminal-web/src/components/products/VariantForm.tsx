@@ -312,7 +312,7 @@ export default function VariantForm({
                 <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase bg-slate-50 sticky top-0">
                   {cat}
                 </div>
-                {prods.map((p) => {
+                {(prods as any[]).map((p: any) => {
                   const isChecked = formData.linkedProducts.includes(p.id);
                   const price = p.base_price || p.basePrice || 0;
                   return (

@@ -47,7 +47,7 @@ export function useVariantsLibrary() {
               required: group.is_required || false,
               options: (group.options || []).map((opt: any) => ({
                 name: opt.name,
-                price: parseFloat(opt.price_delta || "0"),
+                price: Number(opt.price_delta || 0),
               })),
             });
           }
@@ -118,11 +118,11 @@ export function useCreateOrUpdateVariant() {
           updateProduct.mutateAsync({
             product_id: product.id,
             name: product.name,
-            base_price: parseFloat(product.base_price || product.basePrice),
+            base_price: Number(product.base_price || product.basePrice || 0),
             category: product.category,
             image_url: product.image_url || product.imageUrl,
             stock_tracking_enabled: product.stock_tracking_enabled || product.stockTrackingEnabled,
-            stock_qty: product.stock_qty || product.stockQty,
+            stock_qty: Number(product.stock_qty || product.stockQty || 0),
             sku: product.sku,
             option_groups: newGroups.map((g: any) => ({
               name: g.name,
@@ -132,7 +132,7 @@ export function useCreateOrUpdateVariant() {
               is_required: g.is_required ?? g.isRequired ?? false,
               options: (g.options || []).map((o: any) => ({
                 name: o.name,
-                price_delta: parseFloat(o.price_delta || o.priceDelta || "0"),
+                price_delta: Number(o.price_delta || o.priceDelta || 0),
               })),
             })),
           })
