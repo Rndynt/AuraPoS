@@ -1,178 +1,172 @@
-import { Home, LayoutDashboard, ShoppingCart, Receipt, Settings, LogOut, Table, Truck, Gift } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTenant } from "@/context/TenantContext";
+import { ShoppingBag, LayoutGrid, Square, Settings, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
+import { useTenant } from "@/context/TenantContext";
 
-type SidebarItem = {
-  icon: typeof Home;
+type NavItemProps = {
+  icon: typeof LayoutGrid;
   label: string;
   route?: string;
-  disabled?: boolean;
+  isActive?: boolean;
+  onClick?: () => void;
+  testId?: string;
+  className?: string;
 };
 
+function NavItem({ 
+  icon: Icon, 
+  label, 
+  isActive = false, 
+  onClick,
+  testId,
+  className = ""
+}: NavItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      data-testid={testId}
+      className={`p-3 rounded-xl transition-all flex justify-center group relative ${
+        isActive
+          ? "bg-blue-50 text-blue-600"
+          : "text-slate-400 hover:bg-slate-50"
+      } ${className}`}
+    >
+      <Icon size={22} />
+      <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export function Sidebar() {
-  const { hasModule, isLoading } = useTenant();
   const [location, setLocation] = useLocation();
+  const { hasModule, isLoading } = useTenant();
 
-  const baseSidebarItems: SidebarItem[] = [
-    { icon: Home, label: "Home", route: "/pos" },
-    { icon: LayoutDashboard, label: "Dashboard", disabled: true },
-    { icon: ShoppingCart, label: "Orders", route: "/orders" },
-    { icon: Receipt, label: "Bills", disabled: true },
-  ];
-
-  const conditionalItems: SidebarItem[] = [];
-  if (!isLoading && hasModule('enable_table_management')) {
-    conditionalItems.push({ icon: Table, label: "Tables", route: "/tables" });
-  }
-  if (!isLoading && hasModule('enable_delivery')) {
-    conditionalItems.push({ icon: Truck, label: "Delivery", disabled: true });
-  }
-  if (!isLoading && hasModule('enable_loyalty')) {
-    conditionalItems.push({ icon: Gift, label: "Loyalty", disabled: true });
-  }
-
-  const sidebarItems = [
-    ...baseSidebarItems,
-    ...conditionalItems,
-    { icon: Settings, label: "Settings", disabled: true },
-  ];
-
-  const handleNavigation = (item: SidebarItem) => {
-    if (item.disabled) {
-      return;
-    }
-    if (item.route) {
-      setLocation(item.route);
-    }
+  const handleNavigation = (route: string) => {
+    setLocation(route);
   };
 
+  const isPOSActive = location === "/pos" || location === "/";
+  const isTablesActive = location === "/tables";
+  const isManagementActive = ["/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].includes(location);
+
+  const showTables = !isLoading && hasModule('enable_table_management');
+
   return (
-    <div className="hidden md:flex w-20 bg-card border-r border-card-border flex-col items-center py-6 gap-4">
-      {sidebarItems.map((item, index) => {
-        const Icon = item.icon;
-        const isActive = !item.disabled && item.route === location;
-        const button = (
-          <Button
-            key={index}
-            size="icon"
-            variant={isActive ? "default" : "ghost"}
-            data-testid={`button-nav-${item.label.toLowerCase()}`}
-            onClick={() => handleNavigation(item)}
-            disabled={item.disabled}
-          >
-            <Icon className="w-6 h-6" />
-          </Button>
-        );
+    <aside className="hidden md:flex w-20 bg-white border-r border-slate-200 flex-col items-center py-6 flex-shrink-0 z-30">
+      {/* Logo */}
+      <div className="mb-8 p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
+        <ShoppingBag className="text-white w-6 h-6" />
+      </div>
 
-        if (item.disabled) {
-          return (
-            <Tooltip key={index}>
-              <TooltipTrigger asChild>
-                {button}
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{item.label} - Coming Soon</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        }
+      {/* Navigation Items */}
+      <nav className="flex-1 w-full flex flex-col gap-4 px-2">
+        <NavItem
+          icon={LayoutGrid}
+          label="POS Menu"
+          isActive={isPOSActive}
+          onClick={() => handleNavigation("/pos")}
+          testId="button-nav-pos"
+        />
 
-        return button;
-      })}
-      <div className="flex-1" />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            size="icon"
-            variant="ghost"
-            data-testid="button-nav-logout"
-            disabled
-          >
-            <LogOut className="w-6 h-6" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p>Logout - Coming Soon</p>
-        </TooltipContent>
-      </Tooltip>
-    </div>
+        {showTables && (
+          <NavItem
+            icon={Square}
+            label="Tables"
+            isActive={isTablesActive}
+            onClick={() => handleNavigation("/tables")}
+            testId="button-nav-tables"
+          />
+        )}
+
+        <NavItem
+          icon={Settings}
+          label="Management"
+          isActive={isManagementActive}
+          onClick={() => handleNavigation("/dashboard")}
+          testId="button-nav-management"
+        />
+      </nav>
+
+      {/* Logout Button */}
+      <button 
+        className="p-3 text-slate-400 hover:text-red-500 transition-colors"
+        data-testid="button-nav-logout"
+      >
+        <LogOut size={22} />
+      </button>
+    </aside>
   );
 }
 
 export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
-  const { hasModule, isLoading } = useTenant();
   const [location, setLocation] = useLocation();
+  const { hasModule, isLoading } = useTenant();
 
-  const baseSidebarItems: SidebarItem[] = [
-    { icon: Home, label: "Home", route: "/pos" },
-    { icon: LayoutDashboard, label: "Dashboard", disabled: true },
-    { icon: ShoppingCart, label: "Orders", route: "/orders" },
-    { icon: Receipt, label: "Bills", disabled: true },
-  ];
-
-  const conditionalItems: SidebarItem[] = [];
-  if (!isLoading && hasModule('enable_table_management')) {
-    conditionalItems.push({ icon: Table, label: "Tables", route: "/tables" });
-  }
-  if (!isLoading && hasModule('enable_delivery')) {
-    conditionalItems.push({ icon: Truck, label: "Delivery", disabled: true });
-  }
-  if (!isLoading && hasModule('enable_loyalty')) {
-    conditionalItems.push({ icon: Gift, label: "Loyalty", disabled: true });
-  }
-
-  const sidebarItems = [
-    ...baseSidebarItems,
-    ...conditionalItems,
-    { icon: Settings, label: "Settings", disabled: true },
-  ];
-
-  const handleNavigation = (item: SidebarItem) => {
-    if (item.disabled) {
-      return;
-    }
-    if (item.route) {
-      setLocation(item.route);
-      onItemClick?.();
-    }
+  const handleNavigation = (route: string) => {
+    setLocation(route);
+    onItemClick?.();
   };
+
+  const isPOSActive = location === "/pos" || location === "/";
+  const isTablesActive = location === "/tables";
+  const isManagementActive = ["/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].includes(location);
+
+  const showTables = !isLoading && hasModule('enable_table_management');
 
   return (
     <div className="flex flex-col gap-2 mt-8">
-      {sidebarItems.map((item, index) => {
-        const Icon = item.icon;
-        const isActive = !item.disabled && item.route === location;
-        return (
-          <Button
-            key={index}
-            variant={isActive ? "default" : "ghost"}
-            className="w-full justify-start gap-3 h-12"
-            data-testid={`button-nav-mobile-${item.label.toLowerCase()}`}
-            onClick={() => handleNavigation(item)}
-            disabled={item.disabled}
-          >
-            <Icon className="w-5 h-5" />
-            <span>{item.label}</span>
-            {item.disabled && <span className="ml-auto text-xs text-muted-foreground">Soon</span>}
-          </Button>
-        );
-      })}
-      <div className="flex-1 min-h-8" />
-      <Button
-        variant="ghost"
-        className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive"
-        data-testid="button-nav-mobile-logout"
-        disabled
-        onClick={() => {
-          onItemClick?.();
-        }}
+      <button
+        onClick={() => handleNavigation("/pos")}
+        data-testid="button-nav-mobile-pos"
+        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+          isPOSActive
+            ? "bg-blue-50 text-blue-600"
+            : "text-slate-600 hover:bg-slate-50"
+        }`}
       >
-        <LogOut className="w-5 h-5" />
-        <span>Logout</span>
-        <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-      </Button>
+        <LayoutGrid size={20} />
+        <span className="font-medium">POS Menu</span>
+      </button>
+
+      {showTables && (
+        <button
+          onClick={() => handleNavigation("/tables")}
+          data-testid="button-nav-mobile-tables"
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+            isTablesActive
+              ? "bg-blue-50 text-blue-600"
+              : "text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <Square size={20} />
+          <span className="font-medium">Tables</span>
+        </button>
+      )}
+
+      <button
+        onClick={() => handleNavigation("/dashboard")}
+        data-testid="button-nav-mobile-management"
+        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+          isManagementActive
+            ? "bg-blue-50 text-blue-600"
+            : "text-slate-600 hover:bg-slate-50"
+        }`}
+      >
+        <Settings size={20} />
+        <span className="font-medium">Management</span>
+      </button>
+
+      <div className="flex-1 min-h-8" />
+
+      <button
+        onClick={() => onItemClick?.()}
+        data-testid="button-nav-mobile-logout"
+        className="w-full flex items-center gap-3 p-3 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+      >
+        <LogOut size={20} />
+        <span className="font-medium">Logout</span>
+      </button>
     </div>
   );
 }
