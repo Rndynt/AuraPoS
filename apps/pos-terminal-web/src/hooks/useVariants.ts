@@ -1,0 +1,149 @@
+import { useMemo } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useProducts, useUpdateProduct, type CreateProductInput } from "@/hooks/api/useProducts";
+import { queryClient } from "@/lib/queryClient";
+import type { Product } from "@pos/domain/catalog/types";
+
+export interface VariantOption {
+  name: string;
+  price: number;
+}
+
+export interface Variant {
+  id: string;
+  name: string;
+  type: "radio" | "checkbox";
+  required: boolean;
+  options: VariantOption[];
+}
+
+export interface VariantFormData {
+  name: string;
+  type: "single" | "multiple";
+  required: boolean;
+  options: Array<{
+    name: string;
+    price_delta: number;
+  }>;
+  linkedProducts: string[];
+}
+
+export function useVariantsLibrary() {
+  const { data: products, isLoading, error } = useProducts();
+
+  const variants = useMemo(() => {
+    if (!products) return [];
+
+    const variantsMap = new Map<string, Variant>();
+
+    products.forEach((product: any) => {
+      if (product.option_groups && Array.isArray(product.option_groups)) {
+        product.option_groups.forEach((group: any) => {
+          if (!variantsMap.has(group.name)) {
+            variantsMap.set(group.name, {
+              id: group.id || group.name,
+              name: group.name,
+              type: group.selection_type === "single" ? "radio" : "checkbox",
+              required: group.is_required || false,
+              options: (group.options || []).map((opt: any) => ({
+                name: opt.name,
+                price: parseFloat(opt.price_delta || "0"),
+              })),
+            });
+          }
+        });
+      }
+    });
+
+    return Array.from(variantsMap.values());
+  }, [products]);
+
+  return { data: variants, isLoading, error };
+}
+
+export function useCreateOrUpdateVariant() {
+  const updateProduct = useUpdateProduct();
+  const { data: products } = useProducts();
+
+  return useMutation({
+    mutationFn: async (variantData: VariantFormData & { isEditing?: boolean; oldName?: string }) => {
+      if (!products) throw new Error("Products not loaded");
+
+      const { linkedProducts, name, type, required, options, isEditing, oldName } = variantData;
+
+      const optionGroup = {
+        name,
+        selection_type: type,
+        min_selections: required ? 1 : 0,
+        max_selections: type === "single" ? 1 : options.length,
+        is_required: required,
+        display_order: 0,
+        options: options.map((opt, idx) => ({
+          name: opt.name,
+          price_delta: opt.price_delta,
+          display_order: idx,
+        })),
+      };
+
+      const updates: Promise<any>[] = [];
+
+      products.forEach((product: any) => {
+        const shouldHave = linkedProducts.includes(product.id);
+        const existingGroups = product.option_groups || [];
+        
+        const nameToMatch = isEditing && oldName ? oldName : name;
+        const hasVariant = existingGroups.some(
+          (g: any) => g.name === nameToMatch
+        );
+
+        let newGroups = [...existingGroups];
+
+        if (shouldHave) {
+          const existingIdx = newGroups.findIndex(
+            (g: any) => g.name === nameToMatch
+          );
+
+          if (existingIdx >= 0) {
+            newGroups[existingIdx] = optionGroup;
+          } else {
+            newGroups.push(optionGroup);
+          }
+        } else if (hasVariant) {
+          newGroups = newGroups.filter((g: any) => g.name !== nameToMatch);
+        } else {
+          return;
+        }
+
+        updates.push(
+          updateProduct.mutateAsync({
+            product_id: product.id,
+            name: product.name,
+            base_price: parseFloat(product.base_price || product.basePrice),
+            category: product.category,
+            image_url: product.image_url || product.imageUrl,
+            stock_tracking_enabled: product.stock_tracking_enabled || product.stockTrackingEnabled,
+            stock_qty: product.stock_qty || product.stockQty,
+            sku: product.sku,
+            option_groups: newGroups.map((g: any) => ({
+              name: g.name,
+              selection_type: g.selection_type || g.selectionType,
+              min_selections: g.min_selections || g.minSelections || 0,
+              max_selections: g.max_selections || g.maxSelections || 1,
+              is_required: g.is_required ?? g.isRequired ?? false,
+              options: (g.options || []).map((o: any) => ({
+                name: o.name,
+                price_delta: parseFloat(o.price_delta || o.priceDelta || "0"),
+              })),
+            })),
+          })
+        );
+      });
+
+      await Promise.all(updates);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
+    },
+  });
+}

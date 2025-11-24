@@ -74,6 +74,66 @@ export const getProductById = asyncHandler(async (req: Request, res: Response) =
 });
 
 /**
+ * POST /api/catalog/products - Create new product
+ * PUT /api/catalog/products/:id - Update existing product
+ */
+export const createOrUpdateProduct = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const productId = req.params.id;
+
+  // Validate request body
+  const optionInputSchema = z.object({
+    name: z.string(),
+    price_delta: z.number(),
+    inventory_sku: z.string().optional(),
+    is_available: z.boolean().optional(),
+    display_order: z.number().optional(),
+  });
+
+  const optionGroupInputSchema = z.object({
+    name: z.string(),
+    selection_type: z.enum(['single', 'multiple']),
+    min_selections: z.number().default(0),
+    max_selections: z.number().default(1),
+    is_required: z.boolean(),
+    display_order: z.number().optional(),
+    options: z.array(optionInputSchema),
+  });
+
+  const bodySchema = z.object({
+    name: z.string().optional(),
+    description: z.string().optional(),
+    base_price: z.number().optional(),
+    category: z.string().optional(),
+    image_url: z.string().optional(),
+    metadata: z.record(z.any()).optional(),
+    has_variants: z.boolean().optional(),
+    stock_tracking_enabled: z.boolean().optional(),
+    stock_qty: z.number().optional(),
+    sku: z.string().optional(),
+    is_active: z.boolean().optional(),
+    option_groups: z.array(optionGroupInputSchema).optional(),
+  });
+
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  // Execute use case
+  const result = await container.createOrUpdateProduct.execute({
+    tenant_id: tenantId,
+    product_id: productId,
+    ...parsed.data,
+  });
+
+  res.status(result.isNew ? 201 : 200).json({
+    success: true,
+    data: result.product,
+  });
+});
+
+/**
  * POST /api/catalog/products/:id/availability
  * Check stock availability
  */
