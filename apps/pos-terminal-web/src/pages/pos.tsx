@@ -170,7 +170,6 @@ export default function POSPage() {
       toast({
         title: "Produk tidak tersedia",
         description: `${product.name} sedang tidak tersedia`,
-        variant: "destructive",
       });
       return;
     }

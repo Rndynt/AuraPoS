@@ -17,7 +17,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   return (
     <div
       onClick={() => onAddToCart(product)}
-      className={`group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-95 hover:shadow-md relative h-full flex flex-col ${
+      className={`group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-98 hover:shadow-md relative h-full flex flex-col transition-transform duration-150 ${
         isUnavailable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       }`}
       data-testid={`card-product-${product.id}`}
