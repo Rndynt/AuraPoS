@@ -269,10 +269,6 @@ export default function ProductsPage() {
           isEditing: true,
           oldName: variant.name,
         });
-        
-        // Mark cache as stale so it refetches when accessed, but don't force immediate refetch
-        // This prevents UI bounce-back that causes freezing
-        await queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
       } catch (innerError) {
         // Mutation error caught here, will be handled by outer catch
         throw innerError;
