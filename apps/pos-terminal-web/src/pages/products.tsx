@@ -182,6 +182,9 @@ export default function ProductsPage() {
     optionIndex: number,
     newStatus: boolean
   ) => {
+    // Get current products from cache for optimistic update
+    const currentProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
+    
     try {
       const variant = variants.find((v) => v.id === variantId);
       if (!variant) return;
@@ -192,6 +195,34 @@ export default function ProductsPage() {
 
       const variantType: "single" | "multiple" = variant.type === "radio" ? "single" : "multiple";
       
+      // Optimistically update cache - update products with new variant options
+      if (currentProducts) {
+        const updatedProducts = currentProducts.map((p) => {
+          const optGroups = p.option_groups || [];
+          const hasThisVariant = optGroups.some((g: any) => g.name === variant.name);
+          
+          if (hasThisVariant) {
+            return {
+              ...p,
+              option_groups: optGroups.map((g: any) => 
+                g.name === variant.name 
+                  ? {
+                      ...g,
+                      options: (g.options || []).map((opt: any, idx: number) =>
+                        idx === optionIndex 
+                          ? { ...opt, available: newStatus }
+                          : opt
+                      ),
+                    }
+                  : g
+              ),
+            };
+          }
+          return p;
+        });
+        queryClient.setQueryData(["/api/catalog/products"], updatedProducts);
+      }
+
       await createOrUpdateVariant.mutateAsync({
         name: variant.name,
         type: variantType,
@@ -215,6 +246,10 @@ export default function ProductsPage() {
         newStatus ? "success" : "info"
       );
     } catch (error) {
+      // Revert to previous state on error
+      if (currentProducts) {
+        queryClient.setQueryData(["/api/catalog/products"], currentProducts);
+      }
       addToast("Gagal mengubah status opsi", "error");
     }
   };
