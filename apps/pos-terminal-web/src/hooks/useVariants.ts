@@ -84,7 +84,7 @@ export function useCreateOrUpdateVariant() {
         options: options.map((opt, idx) => ({
           name: opt.name,
           price_delta: opt.price_delta,
-          available: opt.available !== false, // Include available status
+          is_available: opt.available !== false, // Include available status
           display_order: idx,
         })),
       };

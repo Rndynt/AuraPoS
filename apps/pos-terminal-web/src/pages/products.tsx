@@ -250,7 +250,7 @@ export default function ProductsPage() {
           options: updatedOptions.map((opt) => ({
             name: opt.name,
             price_delta: opt.price,
-            available: opt.available,
+            is_available: opt.available,
           })),
           linkedProducts: products
             .filter((p) =>
