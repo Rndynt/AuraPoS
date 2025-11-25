@@ -8,6 +8,7 @@ import { getCategoryIcon } from "@/lib/design-tokens";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
+import { useTenant } from "@/context/TenantContext";
 
 const DEFAULT_CATEGORY = "All";
 
@@ -47,6 +48,8 @@ export function ProductArea({
 }: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState("");
+  const { hasModule } = useTenant();
+  const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
 
   const categories = useMemo(() => getCategories(products), [products]);
 
@@ -70,8 +73,8 @@ export function ProductArea({
         searchDisabled={isLoading}
       />
 
-      {/* Order Queue - shown when there are active orders (above categories) */}
-      {orders.length > 0 && onUpdateOrderStatus && (
+      {/* Order Queue - shown when kitchen display is enabled AND there are active orders */}
+      {isKitchenDisplayEnabled && orders.length > 0 && onUpdateOrderStatus && (
         <div className="border-b border-slate-200 bg-white flex-shrink-0">
           <OrderQueue
             orders={orders}

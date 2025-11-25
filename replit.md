@@ -68,6 +68,7 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - **KitchenDisplay Page**: Full-screen kitchen display system at `/kitchen` with responsive grid layout (1-4 columns)
   - **Kitchen Ticket Component**: Individual order cards with status-based borders (orange/yellow/green)
   - **OrderQueue Component**: Horizontal scrollable queue showing active orders - INTEGRATED INSIDE ProductArea!
+  - **Feature Flag**: OrderQueue only appears when `enable_kitchen_ticket` module is enabled (feature entitlement)
   - **POS Page Integration**: OrderQueue appears ABOVE categories inside ProductArea when orders exist (3-column layout preserved)
   - **Kitchen Display Page**: Dedicated full-screen view for kitchen staff with ticket grid  
   - **Status Workflow**: confirmed → preparing → ready → completed
@@ -81,6 +82,7 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - **Zero TypeScript Errors**: All components properly typed
   - **Layout Integrity**: POS page 3-column layout preserved (ProductArea left | CartPanel right)
   - **OrderQueue Positioning**: Header → OrderQueue → Categories → Products (clean visual hierarchy)
+  - **Type Safety**: Proper Order type imports from `@pos/domain/orders/types`
 
 ## User Preferences
 - Language: Indonesian (Bahasa Indonesia)
