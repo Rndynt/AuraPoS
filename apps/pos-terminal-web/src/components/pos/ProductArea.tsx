@@ -63,16 +63,6 @@ export function ProductArea({
 
   return (
     <div className="flex flex-col bg-slate-50/50 h-full min-h-0 overflow-x-hidden w-full max-w-full">
-      {/* Order Queue - shown when there are active orders */}
-      {orders.length > 0 && onUpdateOrderStatus && (
-        <div className="border-b border-slate-200 bg-white flex-shrink-0">
-          <OrderQueue
-            orders={orders}
-            onUpdateStatus={onUpdateOrderStatus}
-          />
-        </div>
-      )}
-
       {/* Modern POS Header */}
       <ModernPOSHeader 
         searchQuery={searchQuery}
@@ -103,6 +93,16 @@ export function ProductArea({
           )}
         </div>
       </div>
+
+      {/* Order Queue - shown when there are active orders (below header and categories) */}
+      {orders.length > 0 && onUpdateOrderStatus && (
+        <div className="border-b border-slate-200 bg-white flex-shrink-0">
+          <OrderQueue
+            orders={orders}
+            onUpdateStatus={onUpdateOrderStatus}
+          />
+        </div>
+      )}
 
       {/* Product Grid */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-32 md:pb-8">
