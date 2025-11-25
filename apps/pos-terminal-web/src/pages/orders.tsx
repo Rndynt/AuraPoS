@@ -6,20 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { 
-  ListFilter, 
   X, 
   Clock, 
   CheckCircle2, 
   XCircle, 
   ChefHat,
   CheckCircle,
-  Utensils,
-  ShoppingBag,
-  CreditCard
 } from "lucide-react";
 import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
 
@@ -38,7 +33,7 @@ const PAYMENT_STATUS_CONFIG = {
   unpaid: { label: "Unpaid", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
 };
 
-type OrderViewTab = "all" | "dine-in" | "takeaway" | "ready-payment" | "completed";
+type OrderStatusFilter = "all" | "confirmed" | "preparing" | "ready" | "completed";
 
 type NormalizedMoneyFields = {
   subtotal: number;
@@ -115,16 +110,12 @@ const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
 };
 
 export default function OrdersPage() {
-  const [activeTab, setActiveTab] = useState<OrderViewTab>("all");
+  const [filterStatus, setFilterStatus] = useState<OrderStatusFilter>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch all orders without filtering by status on the API level
-  // We'll filter on the client side to avoid double filtering issues
   const { data, isLoading, error } = useOrders();
-
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
-  
   const recordPaymentMutation = useRecordPayment();
 
   const normalizedOrders = useMemo(
@@ -132,34 +123,17 @@ export default function OrdersPage() {
     [data]
   );
 
-  // Filter orders based on active tab
+  // Filter orders based on status filter
   const filteredOrders = useMemo(() => {
-    if (activeTab === "all") {
-      return normalizedOrders.filter(o => 
-        ["draft", "confirmed", "preparing", "ready"].includes(o.status)
-      );
+    const activeOrders = normalizedOrders.filter(o => 
+      ["draft", "confirmed", "preparing", "ready"].includes(o.status)
+    );
+    
+    if (filterStatus === "all") {
+      return activeOrders;
     }
-    if (activeTab === "dine-in") {
-      return normalizedOrders.filter(o => 
-        o.status === "draft" && o.table_number
-      );
-    }
-    if (activeTab === "takeaway") {
-      return normalizedOrders.filter(o => 
-        o.status === "draft" && !o.table_number
-      );
-    }
-    if (activeTab === "ready-payment") {
-      return normalizedOrders.filter(o => 
-        ["confirmed", "preparing", "ready"].includes(o.status) && 
-        o.payment_status !== "paid"
-      );
-    }
-    if (activeTab === "completed") {
-      return normalizedOrders.filter(o => o.status === "completed");
-    }
-    return normalizedOrders;
-  }, [normalizedOrders, activeTab]);
+    return activeOrders.filter(o => o.status === filterStatus);
+  }, [normalizedOrders, filterStatus]);
 
   const selectedOrder = useMemo(() => {
     if (selectedOrderResponse) return normalizeOrder(selectedOrderResponse);
@@ -190,21 +164,18 @@ export default function OrdersPage() {
     }).format(parsedDate);
   };
 
-  const getTabCounts = () => {
-    const allOrders = normalizedOrders;
-    return {
-      all: allOrders.filter(o => ["draft", "confirmed", "preparing", "ready"].includes(o.status)).length,
-      dineIn: allOrders.filter(o => o.status === "draft" && o.table_number).length,
-      takeaway: allOrders.filter(o => o.status === "draft" && !o.table_number).length,
-      readyPayment: allOrders.filter(o => 
-        ["confirmed", "preparing", "ready"].includes(o.status) && 
-        o.payment_status !== "paid"
-      ).length,
-      completed: allOrders.filter(o => o.status === "completed").length,
-    };
+  // Calculate filter counts
+  const activeOrders = normalizedOrders.filter(o => 
+    ["draft", "confirmed", "preparing", "ready"].includes(o.status)
+  );
+  
+  const filterCounts = {
+    all: activeOrders.length,
+    confirmed: activeOrders.filter(o => o.status === "confirmed").length,
+    preparing: activeOrders.filter(o => o.status === "preparing").length,
+    ready: activeOrders.filter(o => o.status === "ready").length,
+    completed: normalizedOrders.filter(o => o.status === "completed").length,
   };
-
-  const counts = getTabCounts();
 
   const handleProcessTransaction = async () => {
     if (!selectedOrder) return;
@@ -245,87 +216,48 @@ export default function OrdersPage() {
     <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Header */}
       <header className="border-b border-border bg-card px-4 md:px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl md:text-2xl font-semibold truncate" data-testid="heading-orders">
-              Order List
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">
-              Manage and track all your orders
-            </p>
-          </div>
-          <Button variant="outline" size="sm" className="flex-shrink-0" data-testid="button-see-all">
-            See All
-          </Button>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-800" data-testid="heading-orders">
+          Pesanan
+        </h1>
+        <p className="text-sm text-slate-600 mt-1">
+          Kelola dan pantau semua pesanan Anda
+        </p>
       </header>
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Orders List */}
-        <div className="flex-1 flex flex-col md:border-r border-border overflow-hidden">
-          {/* Tabs Filter */}
-          <div className="px-4 md:px-6 py-3 border-b border-border flex-shrink-0 overflow-x-auto">
-            <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as OrderViewTab)}>
-              <TabsList className="w-full h-auto inline-flex md:grid md:grid-cols-5 gap-1 md:gap-2 p-1">
-                <TabsTrigger 
-                  value="all" 
-                  data-testid="tab-all" 
-                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
+        <div className="flex-1 flex flex-col overflow-hidden md:border-r border-border">
+          {/* Filter Tabs */}
+          <div className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0 overflow-x-auto">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar w-fit md:w-full">
+              {(["all", "confirmed", "preparing", "ready", "completed"] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${
+                    filterStatus === status
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                  data-testid={`filter-${status}`}
                 >
-                  <ListFilter className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="text-xs md:text-sm">All</span>
-                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.all}</Badge>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="dine-in" 
-                  data-testid="tab-dine-in" 
-                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
-                >
-                  <Utensils className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="text-xs md:text-sm">Dine-In</span>
-                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.dineIn}</Badge>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="takeaway" 
-                  data-testid="tab-takeaway" 
-                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
-                >
-                  <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="text-xs md:text-sm">Takeaway</span>
-                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.takeaway}</Badge>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="ready-payment" 
-                  data-testid="tab-ready-payment" 
-                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
-                >
-                  <CreditCard className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="text-xs md:text-sm">Payment</span>
-                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.readyPayment}</Badge>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="completed" 
-                  data-testid="tab-completed" 
-                  className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3"
-                >
-                  <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4" />
-                  <span className="text-xs md:text-sm">Done</span>
-                  <Badge variant="secondary" className="text-xs px-1 h-4 md:h-5">{counts.completed}</Badge>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+                  {status === "all" ? "Semua" : status}
+                  {` (${filterCounts[status]})`}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Order Cards */}
           <ScrollArea className="flex-1 overflow-auto">
             <div className="p-4 md:p-6 space-y-3 pb-20">
               {isLoading ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  Loading orders...
+                <div className="text-center py-16 text-slate-500">
+                  Memuat pesanan...
                 </div>
               ) : filteredOrders.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  No orders found
+                <div className="text-center py-16 text-slate-500">
+                  Tidak ada pesanan
                 </div>
               ) : (
                 filteredOrders.map((order) => {
@@ -336,50 +268,47 @@ export default function OrdersPage() {
                   return (
                     <Card
                       key={order.id}
-                      className={`cursor-pointer hover-elevate ${
-                        selectedOrder?.id === order.id ? "ring-2 ring-primary" : ""
+                      className={`cursor-pointer hover-elevate transition-all ${
+                        selectedOrder?.id === order.id ? "ring-2 ring-blue-600" : ""
                       }`}
                       onClick={() => setSelectedOrderId(order.id)}
                       data-testid={`order-card-${order.id}`}
                     >
                       <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <CardTitle className="text-base">
-                              {order.customer_name || "Customer"}
+                              {order.customer_name || "Pelanggan"}
                             </CardTitle>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-slate-500 mt-1">
                               #{order.order_number}
                             </p>
                           </div>
-                          <Badge variant={statusConfig.variant}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {statusConfig.label}
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <StatusIcon className={`w-4 h-4 ${statusConfig.color}`} />
+                            <Badge variant={statusConfig.variant} className="text-xs">
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="pt-0 space-y-2">
+                      <CardContent className="pt-0 space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
+                          <span className="text-slate-600">
                             {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? "s" : ""}
                           </span>
-                          <Badge className={paymentConfig.className}>
+                          <Badge className={paymentConfig.className} variant="outline">
                             {paymentConfig.label}
                           </Badge>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                          <span className="text-sm text-slate-600">
                             {formatDate(order.created_at)}
                           </span>
-                          <span className="font-semibold">
+                          <span className="font-bold text-slate-800">
                             {formatPrice(order.total_amount)}
                           </span>
                         </div>
-                        {order.table_number && (
-                          <div className="text-sm text-muted-foreground">
-                            Table: {order.table_number}
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                   );
@@ -390,11 +319,11 @@ export default function OrdersPage() {
         </div>
 
         {/* Order Details Panel */}
-        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l overflow-hidden">
+        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l border-border overflow-hidden">
           {selectedOrder ? (
             <>
               <div className="p-4 md:p-6 border-b border-border flex items-center justify-between flex-shrink-0">
-                <h2 className="text-lg font-semibold">Customer Information</h2>
+                <h2 className="text-lg font-semibold">Detail Pesanan</h2>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -410,15 +339,15 @@ export default function OrdersPage() {
                   {/* Customer Info */}
                   <div className="space-y-3">
                     <div>
-                      <Label className="text-sm text-muted-foreground">Customer Name</Label>
-                      <p className="font-medium">
-                        {selectedOrder.customer_name || "Customer"}
+                      <Label className="text-sm text-slate-600">Nama Pelanggan</Label>
+                      <p className="font-medium mt-1">
+                        {selectedOrder.customer_name || "Pelanggan"}
                       </p>
                     </div>
                     {selectedOrder.table_number && (
                       <div>
-                        <Label className="text-sm text-muted-foreground">Table</Label>
-                        <p className="font-medium">{selectedOrder.table_number}</p>
+                        <Label className="text-sm text-slate-600">Meja</Label>
+                        <p className="font-medium mt-1">{selectedOrder.table_number}</p>
                       </div>
                     )}
                   </div>
@@ -427,15 +356,15 @@ export default function OrdersPage() {
 
                   {/* Order Details */}
                   <div>
-                    <h3 className="font-semibold mb-3">Order Details</h3>
+                    <h3 className="font-semibold mb-3">Item Pesanan</h3>
                     <div className="space-y-3">
                       {selectedOrder.items?.length ? (
                         selectedOrder.items.map((item, idx) => (
-                          <div key={idx} className="flex gap-3">
+                          <div key={idx} className="flex gap-3 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm">{item.product_name}</p>
                               {item.variant_name && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-slate-600 mt-0.5">
                                   {item.variant_name}
                                 </p>
                               )}
@@ -449,7 +378,7 @@ export default function OrdersPage() {
                                 </div>
                               )}
                               <div className="flex items-center justify-between mt-1">
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-slate-600">
                                   x{item.quantity}
                                 </span>
                                 <span className="font-medium text-sm">
@@ -460,7 +389,7 @@ export default function OrdersPage() {
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted-foreground">No items for this order.</p>
+                        <p className="text-sm text-slate-600">Tidak ada item untuk pesanan ini.</p>
                       )}
                     </div>
                   </div>
@@ -469,28 +398,28 @@ export default function OrdersPage() {
 
                   {/* Order Summary */}
                   <div>
-                    <h3 className="font-semibold mb-3">Order Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
+                    <h3 className="font-semibold mb-3">Ringkasan Pesanan</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Subtotal</span>
                         <span>{formatPrice(selectedOrder.subtotal)}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tax</span>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Pajak</span>
                         <span>{formatPrice(selectedOrder.tax_amount)}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Service</span>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Biaya Layanan</span>
                         <span>{formatPrice(selectedOrder.service_charge_amount)}</span>
                       </div>
                       {selectedOrder.discount_amount > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Discount</span>
+                        <div className="flex justify-between text-green-600">
+                          <span>Diskon</span>
                           <span>-{formatPrice(selectedOrder.discount_amount)}</span>
                         </div>
                       )}
-                      <Separator />
-                      <div className="flex justify-between font-semibold text-base pt-1">
+                      <Separator className="my-2" />
+                      <div className="flex justify-between font-bold text-base pt-2">
                         <span>Total</span>
                         <span>{formatPrice(selectedOrder.total_amount)}</span>
                       </div>
@@ -506,15 +435,15 @@ export default function OrdersPage() {
                   onClick={handleProcessTransaction}
                   disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
                 >
-                  {recordPaymentMutation.isPending ? "Processing..." : "Process Transaction"}
+                  {recordPaymentMutation.isPending ? "Memproses..." : "Proses Transaksi"}
                 </Button>
               </div>
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-muted-foreground space-y-2">
-                <ChefHat className="w-16 h-16 mx-auto opacity-50" />
-                <p>Select an order to view details</p>
+              <div className="text-center text-slate-600 space-y-2">
+                <ChefHat className="w-16 h-16 mx-auto opacity-30" />
+                <p>Pilih pesanan untuk melihat detail</p>
               </div>
             </div>
           )}
