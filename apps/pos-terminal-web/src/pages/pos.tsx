@@ -3,6 +3,7 @@ import { useSearch, useLocation } from "wouter";
 import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
+import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
@@ -10,9 +11,9 @@ import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDia
 import type { OrderTypeSelectionResult } from "@/components/pos/OrderTypeSelectionDialog";
 import { useCart } from "@/hooks/useCart";
 import { useFeatures } from "@/hooks/useFeatures";
-import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment } from "@/lib/api/hooks";
+import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment, useOrders } from "@/lib/api/hooks";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
-import type { SelectedOption } from "@pos/domain/orders/types";
+import type { SelectedOption, Order } from "@pos/domain/orders/types";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,10 @@ export default function POSPage() {
   // Fetch products from backend
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts({ isActive: true });
   const products = productsData?.products || [];
+
+  // Fetch orders for queue display
+  const { data: ordersData, refetch: refetchOrders } = useOrders();
+  const orders: Order[] = ordersData?.orders || [];
 
   // Fetch order types for tenant
   const { data: orderTypes, isLoading: orderTypesLoading } = useOrderTypes();
@@ -473,6 +478,35 @@ export default function POSPage() {
     setMobileCartOpen(false);
   };
 
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const tenantId = getActiveTenantId();
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
+        },
+        body: JSON.stringify({ status: newStatus }),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update order status");
+      }
+
+      // Refetch orders to update queue
+      await refetchOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Gagal",
+        description: "Gagal memperbarui status order",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePartialPaymentSubmit = async (
     amount: number,
     paymentMethod: "cash" | "card" | "ewallet" | "other",
@@ -576,46 +610,59 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
-      {/* Main Product Area */}
-      <ProductArea
-        products={products}
-        isLoading={productsLoading}
-        error={productsError}
-        onAddToCart={handleAddToCart}
-      />
+    <div className="flex flex-col h-full w-full">
+      {/* Order Queue - Top Section */}
+      {orders.length > 0 && (
+        <div className="border-b border-slate-200 bg-white flex-shrink-0">
+          <OrderQueue
+            orders={orders}
+            onUpdateStatus={handleUpdateOrderStatus}
+          />
+        </div>
+      )}
 
-      {/* Cart Panel - Hidden on mobile */}
-      <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden">
-        <CartPanel
-          items={cart.items}
-          onUpdateQty={cart.updateQuantity}
-          onRemove={cart.removeItem}
-          onClear={cart.clearCart}
-          getItemPrice={cart.getItemPrice}
-          subtotal={cart.subtotal}
-          taxRate={cart.taxRate}
-          tax={cart.tax}
-          serviceChargeRate={cart.serviceChargeRate}
-          serviceCharge={cart.serviceCharge}
-          total={cart.total}
-          onCharge={handleCharge}
-          onPartialPayment={handlePartialPayment}
-          onKitchenTicket={handleKitchenTicket}
-          hasPartialPayment={hasPartialPayment}
-          hasKitchenTicket={hasKitchenTicket}
-          isProcessing={isProcessingQuickCharge}
-          customerName={cart.customerName}
-          setCustomerName={cart.setCustomerName}
-          orderNumber={cart.orderNumber}
-          tableNumber={cart.tableNumber}
-          setTableNumber={cart.setTableNumber}
-          paymentMethod={cart.paymentMethod}
-          setPaymentMethod={cart.setPaymentMethod}
-          orderType={cart.orderType}
-          setOrderType={cart.setOrderType}
-          continueOrderId={continueOrderId}
+      {/* Main Content Area */}
+      <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
+        {/* Main Product Area */}
+        <ProductArea
+          products={products}
+          isLoading={productsLoading}
+          error={productsError}
+          onAddToCart={handleAddToCart}
         />
+
+        {/* Cart Panel - Hidden on mobile */}
+        <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden">
+          <CartPanel
+            items={cart.items}
+            onUpdateQty={cart.updateQuantity}
+            onRemove={cart.removeItem}
+            onClear={cart.clearCart}
+            getItemPrice={cart.getItemPrice}
+            subtotal={cart.subtotal}
+            taxRate={cart.taxRate}
+            tax={cart.tax}
+            serviceChargeRate={cart.serviceChargeRate}
+            serviceCharge={cart.serviceCharge}
+            total={cart.total}
+            onCharge={handleCharge}
+            onPartialPayment={handlePartialPayment}
+            onKitchenTicket={handleKitchenTicket}
+            hasPartialPayment={hasPartialPayment}
+            hasKitchenTicket={hasKitchenTicket}
+            isProcessing={isProcessingQuickCharge}
+            customerName={cart.customerName}
+            setCustomerName={cart.setCustomerName}
+            orderNumber={cart.orderNumber}
+            tableNumber={cart.tableNumber}
+            setTableNumber={cart.setTableNumber}
+            paymentMethod={cart.paymentMethod}
+            setPaymentMethod={cart.setPaymentMethod}
+            orderType={cart.orderType}
+            setOrderType={cart.setOrderType}
+            continueOrderId={continueOrderId}
+          />
+        </div>
       </div>
 
       {/* Mobile Bottom Navigation */}

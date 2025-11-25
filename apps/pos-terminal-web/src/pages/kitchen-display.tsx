@@ -123,14 +123,6 @@ export default function KitchenDisplayPage() {
         </span>
       </div>
 
-      {/* Order Queue */}
-      {activeOrders.length > 0 && (
-        <OrderQueue
-          orders={activeOrders}
-          onUpdateStatus={handleUpdateStatus}
-        />
-      )}
-
       {/* Ticket Grid */}
       <div className="flex-1 overflow-y-auto p-6">
         {isLoading ? (
