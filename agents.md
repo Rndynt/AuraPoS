@@ -319,3 +319,10 @@ When adding project-specific rules:
 - If they intentionally override a general rule, state it clearly so agents and contributors understand the exception.
 
 ---
+
+## Project-Specific Rules: AuraPoS
+- Gunakan **pnpm** sebagai package manager utama dan Turbo untuk orkestrasi workspace; hindari mencampur `npm`/`yarn` untuk menghindari inkonsistensi lockfile.
+- Ikuti pedoman desain pada `design_guidelines.md` saat mengubah UI/UX di aplikasi POS, terutama komponen kasir.
+- Fitur autentikasi/login/register tidak menjadi fokus tugas umum; jangan ubah kecuali ada instruksi eksplisit.
+- POS terminal menggunakan wouter + React Query; pertahankan pola layout `MainLayout` dan `UnifiedBottomNav` untuk konsistensi lintas halaman.
+- Ketika menambah/menyentuh logika order atau pembayaran, pastikan tetap menghormati flag fitur (mis. `partial_payment`, `kitchen_ticket`) dan validasi jenis order sebelum membuat/menyimpan transaksi.
