@@ -168,7 +168,6 @@ export default function POSPage() {
     // Block adding unavailable products to cart
     if (!product.is_active) {
       toast({
-        title: "Produk tidak tersedia",
         description: `${product.name} sedang tidak tersedia`,
       });
       return;
