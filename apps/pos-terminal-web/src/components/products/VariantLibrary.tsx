@@ -9,7 +9,6 @@ interface VariantLibraryProps {
   onVariantClick: (variant: Variant) => void;
   onCreateNew: () => void;
   onToggleVariantOption?: (variantId: string, optionIndex: number, newStatus: boolean) => void;
-  onDeleteVariant?: (variantId: string) => void;
 }
 
 export default function VariantLibrary({
@@ -18,7 +17,6 @@ export default function VariantLibrary({
   onVariantClick,
   onCreateNew,
   onToggleVariantOption,
-  onDeleteVariant,
 }: VariantLibraryProps) {
   const getLinkedProductsCount = (variantName: string) => {
     return products.filter((p) =>
@@ -52,24 +50,8 @@ export default function VariantLibrary({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                  <Box size={12} /> {linkedCount} Produk
-                </div>
-                {onDeleteVariant && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteVariant(variant.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
-                    data-testid={`button-delete-variant-${variant.id}`}
-                  >
-                    <Trash2 size={18} />
-                  </Button>
-                )}
+              <div className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                <Box size={12} /> {linkedCount} Produk
               </div>
             </div>
 

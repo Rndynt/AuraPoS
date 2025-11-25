@@ -37,13 +37,14 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - Delete button only visible when editing existing product
   - Red background with delete confirmation dialog
 
-- ✅ **Variant Delete Feature COMPLETE**
-  - Added trash icon (Trash2) to VariantLibrary component
-  - Icon appears on hover with opacity transition (hidden → visible)
+- ✅ **Variant Delete Feature - RELOCATED TO FORM HEADER COMPLETE**
+  - Trash icon (Trash2) moved from VariantLibrary cards to VariantForm header
+  - Delete button only visible when editing existing variant
+  - Red background styling matching ProductForm delete button
   - Delete confirmation dialog before permanent deletion
-  - `onDeleteVariant` prop properly wired and integrated
-  - Consistent with product delete functionality
+  - Consistent UI pattern: Delete actions in form headers (edit mode only)
   - Toast notification on success/failure
+  - VariantLibrary now clean - only shows variant info and toggle options
 
 - ✅ **Type Safety COMPLETE**
   - Fixed VariantOption type to include optional `available` field

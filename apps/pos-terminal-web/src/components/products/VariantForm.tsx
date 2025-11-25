@@ -15,6 +15,7 @@ interface VariantFormProps {
   onSave: (data: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  onDelete?: () => void;
 }
 
 const CustomSelect = ({
@@ -87,6 +88,7 @@ export default function VariantForm({
   onSave,
   onCancel,
   isLoading,
+  onDelete,
 }: VariantFormProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -179,7 +181,7 @@ export default function VariantForm({
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="p-2 hover:bg-slate-100 rounded-full"
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
             data-testid="button-back-variant"
           >
             <ChevronLeft size={20} />
@@ -188,14 +190,26 @@ export default function VariantForm({
             {variant ? "Edit Varian" : "Buat Varian Baru"}
           </h2>
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50"
-          data-testid="button-save-variant"
-        >
-          <Save size={16} /> {isLoading ? "Menyimpan..." : "Simpan"}
-        </button>
+        <div className="flex items-center gap-2">
+          {variant && onDelete && (
+            <button
+              onClick={onDelete}
+              className="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-100 transition-colors"
+              data-testid="button-delete-variant"
+              type="button"
+            >
+              <Trash2 size={20} />
+            </button>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50"
+            data-testid="button-save-variant"
+          >
+            <Save size={16} /> {isLoading ? "Menyimpan..." : "Simpan"}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto w-full grid md:grid-cols-[1.2fr_1fr] gap-6">

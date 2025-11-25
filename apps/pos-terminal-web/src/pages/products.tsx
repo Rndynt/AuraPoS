@@ -254,6 +254,7 @@ export default function ProductsPage() {
         onSave={handleSaveVariant}
         onCancel={handleCancelForm}
         isLoading={createOrUpdateVariant.isPending}
+        onDelete={editingVariant ? () => handleDeleteVariant(editingVariant.id) : undefined}
       />
     );
   }
@@ -469,7 +470,6 @@ export default function ProductsPage() {
                 onVariantClick={handleEditVariant}
                 onCreateNew={handleCreateVariant}
                 onToggleVariantOption={handleToggleVariantOptionAvailability}
-                onDeleteVariant={handleDeleteVariant}
               />
             )}
           </>
