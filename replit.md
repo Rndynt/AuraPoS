@@ -68,18 +68,24 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
     - Modified `handleToggleProductAvailability` to maintain order post-refetch
     - Modified `handleToggleVariantOptionAvailability` to maintain order post-refetch
 
-- **Problem 2 - Variant Option Toggle Freeze**: Variant option toggle was not responding instantly, causing UI freeze. While product toggle worked, variant option remained stuck.
+- **Problem 2 - Variant Option Toggle Freeze & Revert**: Variant option toggle was not responding instantly (freeze), and after toggling OFF, it would revert back ON by itself after a few seconds.
   - **Root Cause**: 
-    1. Optimistic update correctly changed `products` cache with `available` field
-    2. BUT `useVariantsLibrary` didn't extract `available` field from options when building variants data
-    3. Variant data lacked available field, so toggle state wasn't reflected in UI
+    1. `useVariantsLibrary` didn't extract `available` field → caused freeze on UI
+    2. `useCreateOrUpdateVariant` mutation didn't send `available` field to backend → caused data loss
+    3. VariantFormData type didn't accept `available` field → type error
+    4. When mutation sent without available, backend returned without available status
+    5. Cache refetch brought back default (available: true), toggle reverted
   - **Solution**: 
     - Updated `useVariantsLibrary` to include `available` field when mapping options
-    - When products cache updates with available status, variants memoization recalculates and includes the field
-    - UI now instantly reflects toggle state change
+    - Updated `VariantFormData` interface to accept `available?: boolean` in options
+    - Updated optionGroup mapping to include `available: opt.available !== false`
+    - Updated backend send to include available status in all option mappings
   - **Implementation**:
     - Modified `useVariantsLibrary` useMemo to extract: `available: opt.available !== false`
-    - Now when toggle happens: cache updates → useMemo recalculates → UI updates instantly
+    - Modified `VariantFormData` type: added `available?: boolean` to options
+    - Modified optionGroup building: included `available` field in options mapping
+    - Modified backend payload: included `available` in all option mappings
+    - Now when toggle happens: cache updates → mutation sends available → backend stores → UI persists
 
 - **Result**: 
   - Product cards stay in alphabetical order when toggled
