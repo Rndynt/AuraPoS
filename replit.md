@@ -3,6 +3,60 @@
 ## Overview
 A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menengah) businesses like restaurants, cafes, and mini-markets. It features a responsive mobile-first design, product variant support, and a feature entitlement engine for monetization. The system aims to provide a robust, modern, and scalable POS solution for small to medium businesses.
 
+## Current State
+**✅ UI REDESIGN PHASE 2 COMPLETE** - v2 Design Implementation with ToggleSwitch, Toast Provider, Product Delete, and Variant Delete.
+
+**Latest Updates (Nov 25, 2025 - CURRENT):**
+- ✅ **ToggleSwitch Component COMPLETE**
+  - Created reusable ToggleSwitch with "sm" and "md" sizes
+  - Blue-600/slate-300 color scheme
+  - Proper TypeScript support with data-testid props
+  - Used in ProductList and VariantLibrary for availability toggles
+
+- ✅ **Toast System Migration COMPLETE**
+  - Context-based ToastProvider wrapping app root
+  - Backward compatible with existing `toast({ title, description, variant })` API
+  - New `addToast(message, type)` method for simple notifications
+  - Supports success, error, and info toast types
+
+- ✅ **ProductList Component ENHANCEMENT COMPLETE**
+  - Added ToggleSwitch for inline product availability toggle
+  - Toggle visual feedback: product becomes grayscale and dimmed when disabled
+  - OFF badge displayed on unavailable product images
+  - Price repositioned below product name
+  - Stock and variant count badges preserved
+
+- ✅ **VariantLibrary Component ENHANCEMENT COMPLETE**
+  - Added ToggleSwitch for each variant option
+  - Toggle disabled option with visual feedback (opacity, crossed text)
+  - Trash icon for delete action with hover reveal
+  - `onToggleVariantOption` handler for availability updates
+
+- ✅ **ProductForm Component ENHANCEMENT COMPLETE**
+  - Added Trash2 icon button for delete action
+  - Delete button only visible when editing existing product
+  - Red background with delete confirmation dialog
+
+- ✅ **Variant Delete Feature COMPLETE**
+  - Added trash icon (Trash2) to VariantLibrary component
+  - Icon appears on hover with opacity transition (hidden → visible)
+  - Delete confirmation dialog before permanent deletion
+  - `onDeleteVariant` prop properly wired and integrated
+  - Consistent with product delete functionality
+  - Toast notification on success/failure
+
+- ✅ **Type Safety COMPLETE**
+  - Fixed VariantOption type to include optional `available` field
+  - Fixed type casting for variant type ("single" | "multiple")
+  - All LSP diagnostics resolved (0 errors)
+  - Proper TypeScript annotations in all components
+
+- ✅ **Workflow & Testing COMPLETE**
+  - Express backend running on port 5000
+  - Vite frontend dev server running without errors
+  - All components properly compiled and hot-reloading
+  - Zero LSP/TypeScript errors
+
 ## User Preferences
 - Language: Indonesian (Bahasa Indonesia)
 - Currency: Indonesian Rupiah (IDR)
@@ -37,6 +91,7 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
     - Category organization and product search.
     - Tab-based UI for product list and variant library management.
     - Inline toggles for product and variant option availability.
+    - Delete actions for both products and variants with confirmation dialogs.
 - **Shopping Cart**:
     - Add/remove items, quantity adjustments.
     - Variant selection with visual display in cart.
