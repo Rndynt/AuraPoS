@@ -240,9 +240,6 @@ export default function ProductsPage() {
       }
 
       try {
-        // Disable refetch by temporarily preventing onSuccess invalidation
-        const originalUnsubscribe = queryClient.getQueryCache().subscribe?.(() => {});
-        
         await createOrUpdateVariant.mutateAsync({
           name: variant.name,
           type: variantType,
@@ -261,13 +258,8 @@ export default function ProductsPage() {
           oldName: variant.name,
         });
         
-        // Cancel any pending refetch to preserve optimistic state
-        await queryClient.cancelQueries({ queryKey: ["/api/catalog/products"] });
-        
-        // Keep optimistic state - mutation succeeded, no need to refetch
-        if (updatedProducts) {
-          queryClient.setQueryData(["/api/catalog/products"], updatedProducts);
-        }
+        // Mutation succeeded, now refetch to get fresh data from backend with updated is_available state
+        await queryClient.refetchQueries({ queryKey: ["/api/catalog/products"] });
       } catch (innerError) {
         // Mutation error caught here, will be handled by outer catch
         throw innerError;

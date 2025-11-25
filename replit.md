@@ -87,9 +87,27 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
     - Modified backend payload: included `available` in all option mappings
     - Now when toggle happens: cache updates → mutation sends available → backend stores → UI persists
 
+- **Problem 3 - Variant Option Toggle Not Persisting (Nov 25, 2025 - Final Fix)**: After toggling option OFF and refreshing page, toggle reverted back to ON.
+  - **Root Cause**: 
+    1. Frontend sent field name `available` but backend expected `is_available` (snake_case)
+    2. `useVariantsLibrary` read `opt.available` from API but API returned `opt.is_available`
+    3. Code called `queryClient.cancelQueries` to prevent refetch, keeping only optimistic state in cache
+    4. When user refreshed page, fresh data fetched from server showed original state (toggle never saved)
+  - **Solution**: 
+    - Fixed field name consistency: Frontend now sends `is_available` (matching backend)
+    - Fixed read mapping: `useVariantsLibrary` now reads `opt.is_available` from API response
+    - Fixed data persistence: Changed from `cancelQueries` (prevents refetch) to `refetchQueries` (ensures fresh data from server)
+    - This ensures: optimistic update → mutation sent → backend saved → fresh data refetched → persistent on page refresh
+  - **Implementation**:
+    - Modified `products.tsx` line 253: `is_available: opt.available` (was `available`)
+    - Modified `useVariants.ts` line 56: read from `opt.is_available` (was `opt.available`)
+    - Modified `useVariants.ts` line 87: send `is_available: opt.available !== false` (was `available`)
+    - Modified `products.tsx` line 265: Changed `cancelQueries` → `refetchQueries` to enable backend sync
+  
 - **Result**: 
   - Product cards stay in alphabetical order when toggled
   - Variant option toggle responds instantly without freeze
-  - Both product and variant toggles use optimistic cache updates
+  - Variant option state persists after page refresh (data saved to database and synced)
+  - Both product and variant toggles use optimistic cache updates with backend persistence
   - UI reflects state changes immediately with toast feedback
   - API mutations happen in background with auto-revert on error
