@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Product } from "@pos/domain/catalog/types";
-import type { Order } from "@pos/domain/order/types";
+import type { Order } from "@pos/domain/orders/types";
 import { ProductCard } from "./ProductCardV2";
 import { ModernPOSHeader } from "./shared/ModernPOSHeader";
 import { CategoryChip } from "./shared/CategoryChip";
@@ -70,6 +70,16 @@ export function ProductArea({
         searchDisabled={isLoading}
       />
 
+      {/* Order Queue - shown when there are active orders (above categories) */}
+      {orders.length > 0 && onUpdateOrderStatus && (
+        <div className="border-b border-slate-200 bg-white flex-shrink-0">
+          <OrderQueue
+            orders={orders}
+            onUpdateStatus={onUpdateOrderStatus}
+          />
+        </div>
+      )}
+
       {/* Category Chips */}
       <div className="px-4 md:px-8 py-4">
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
@@ -93,16 +103,6 @@ export function ProductArea({
           )}
         </div>
       </div>
-
-      {/* Order Queue - shown when there are active orders (below header and categories) */}
-      {orders.length > 0 && onUpdateOrderStatus && (
-        <div className="border-b border-slate-200 bg-white flex-shrink-0">
-          <OrderQueue
-            orders={orders}
-            onUpdateStatus={onUpdateOrderStatus}
-          />
-        </div>
-      )}
 
       {/* Product Grid */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-32 md:pb-8">
