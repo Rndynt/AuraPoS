@@ -87,22 +87,28 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
     - Modified backend payload: included `available` in all option mappings
     - Now when toggle happens: cache updates → mutation sends available → backend stores → UI persists
 
-- **Problem 3 - Variant Option Toggle Not Persisting (Nov 25, 2025 - Final Fix)**: After toggling option OFF and refreshing page, toggle reverted back to ON.
+- **Problem 3 - Variant Option Toggle Not Persisting & Freezing (Nov 25, 2025 - Final Fix)**: After toggling option OFF, UI froze and toggle would revert after page refresh.
   - **Root Cause**: 
     1. Frontend sent field name `available` but backend expected `is_available` (snake_case)
     2. `useVariantsLibrary` read `opt.available` from API but API returned `opt.is_available`
-    3. Code called `queryClient.cancelQueries` to prevent refetch, keeping only optimistic state in cache
-    4. When user refreshed page, fresh data fetched from server showed original state (toggle never saved)
+    3. First attempt: Used `refetchQueries` immediately after mutation
+    4. `refetchQueries` pulled server data before backend mutation completed
+    5. Optimistic state (`available`) was overwritten by server data (`is_available`)
+    6. UI bounced back, appeared frozen
+    7. Page refresh showed original data because mutation never persisted
   - **Solution**: 
-    - Fixed field name consistency: Frontend now sends `is_available` (matching backend)
+    - Fixed field name consistency: Frontend now sends AND uses `is_available` (matching API)
     - Fixed read mapping: `useVariantsLibrary` now reads `opt.is_available` from API response
-    - Fixed data persistence: Changed from `cancelQueries` (prevents refetch) to `refetchQueries` (ensures fresh data from server)
-    - This ensures: optimistic update → mutation sent → backend saved → fresh data refetched → persistent on page refresh
+    - Fixed data persistence: Changed from `refetchQueries` (blocks UI) to `invalidateQueries` (non-blocking)
+    - `invalidateQueries` marks cache as stale but doesn't force immediate refetch
+    - Next access (refresh/navigation) automatically refetches fresh data from server
+    - This ensures: optimistic update → smooth toggle → mutation sent → cache invalidated → data persists on refresh
   - **Implementation**:
     - Modified `products.tsx` line 253: `is_available: opt.available` (was `available`)
-    - Modified `useVariants.ts` line 56: read from `opt.is_available` (was `opt.available`)
-    - Modified `useVariants.ts` line 87: send `is_available: opt.available !== false` (was `available`)
-    - Modified `products.tsx` line 265: Changed `cancelQueries` → `refetchQueries` to enable backend sync
+    - Modified `products.tsx` line 233: Optimistic update uses `is_available: newStatus` (was `available`)
+    - Modified `useVariants.ts` line 56: Read from `opt.is_available` (was `opt.available`)
+    - Modified `useVariants.ts` line 87: Send `is_available: opt.available !== false` (was `available`)
+    - Modified `products.tsx` line 267: Changed `refetchQueries` → `invalidateQueries` for non-blocking persistence
   
 - **Result**: 
   - Product cards stay in alphabetical order when toggled

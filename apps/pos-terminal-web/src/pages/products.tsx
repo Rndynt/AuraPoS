@@ -212,6 +212,7 @@ export default function ProductsPage() {
       const variantType: "single" | "multiple" = variant.type === "radio" ? "single" : "multiple";
       
       // Optimistically update cache - update products with new variant options
+      // Use is_available to match API response format
       if (currentProducts) {
         updatedProducts = currentProducts.map((p) => {
           const optGroups = p.option_groups || [];
@@ -226,7 +227,7 @@ export default function ProductsPage() {
                       ...g,
                       options: (g.options || []).map((opt: any, idx: number) =>
                         idx === optionIndex 
-                          ? { ...opt, available: newStatus }
+                          ? { ...opt, is_available: newStatus }
                           : opt
                       ),
                     }
@@ -258,8 +259,9 @@ export default function ProductsPage() {
           oldName: variant.name,
         });
         
-        // Mutation succeeded, now refetch to get fresh data from backend with updated is_available state
-        await queryClient.refetchQueries({ queryKey: ["/api/catalog/products"] });
+        // Mark cache as stale so it refetches when accessed, but don't force immediate refetch
+        // This prevents UI bounce-back that causes freezing
+        await queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
       } catch (innerError) {
         // Mutation error caught here, will be handled by outer catch
         throw innerError;
