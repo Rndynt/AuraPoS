@@ -610,59 +610,58 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full">
-      {/* Order Queue - Top Section */}
-      {orders.length > 0 && (
-        <div className="border-b border-slate-200 bg-white flex-shrink-0">
-          <OrderQueue
-            orders={orders}
-            onUpdateStatus={handleUpdateOrderStatus}
-          />
-        </div>
-      )}
+    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
+      {/* Main Product Area with Order Queue */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Order Queue inside ProductArea */}
+        {orders.length > 0 && (
+          <div className="border-b border-slate-200 bg-white flex-shrink-0">
+            <OrderQueue
+              orders={orders}
+              onUpdateStatus={handleUpdateOrderStatus}
+            />
+          </div>
+        )}
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
-        {/* Main Product Area */}
         <ProductArea
           products={products}
           isLoading={productsLoading}
           error={productsError}
           onAddToCart={handleAddToCart}
         />
+      </div>
 
-        {/* Cart Panel - Hidden on mobile */}
-        <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden">
-          <CartPanel
-            items={cart.items}
-            onUpdateQty={cart.updateQuantity}
-            onRemove={cart.removeItem}
-            onClear={cart.clearCart}
-            getItemPrice={cart.getItemPrice}
-            subtotal={cart.subtotal}
-            taxRate={cart.taxRate}
-            tax={cart.tax}
-            serviceChargeRate={cart.serviceChargeRate}
-            serviceCharge={cart.serviceCharge}
-            total={cart.total}
-            onCharge={handleCharge}
-            onPartialPayment={handlePartialPayment}
-            onKitchenTicket={handleKitchenTicket}
-            hasPartialPayment={hasPartialPayment}
-            hasKitchenTicket={hasKitchenTicket}
-            isProcessing={isProcessingQuickCharge}
-            customerName={cart.customerName}
-            setCustomerName={cart.setCustomerName}
-            orderNumber={cart.orderNumber}
-            tableNumber={cart.tableNumber}
-            setTableNumber={cart.setTableNumber}
-            paymentMethod={cart.paymentMethod}
-            setPaymentMethod={cart.setPaymentMethod}
-            orderType={cart.orderType}
-            setOrderType={cart.setOrderType}
-            continueOrderId={continueOrderId}
-          />
-        </div>
+      {/* Cart Panel - Hidden on mobile */}
+      <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden">
+        <CartPanel
+          items={cart.items}
+          onUpdateQty={cart.updateQuantity}
+          onRemove={cart.removeItem}
+          onClear={cart.clearCart}
+          getItemPrice={cart.getItemPrice}
+          subtotal={cart.subtotal}
+          taxRate={cart.taxRate}
+          tax={cart.tax}
+          serviceChargeRate={cart.serviceChargeRate}
+          serviceCharge={cart.serviceCharge}
+          total={cart.total}
+          onCharge={handleCharge}
+          onPartialPayment={handlePartialPayment}
+          onKitchenTicket={handleKitchenTicket}
+          hasPartialPayment={hasPartialPayment}
+          hasKitchenTicket={hasKitchenTicket}
+          isProcessing={isProcessingQuickCharge}
+          customerName={cart.customerName}
+          setCustomerName={cart.setCustomerName}
+          orderNumber={cart.orderNumber}
+          tableNumber={cart.tableNumber}
+          setTableNumber={cart.setTableNumber}
+          paymentMethod={cart.paymentMethod}
+          setPaymentMethod={cart.setPaymentMethod}
+          orderType={cart.orderType}
+          setOrderType={cart.setOrderType}
+          continueOrderId={continueOrderId}
+        />
       </div>
 
       {/* Mobile Bottom Navigation */}
