@@ -150,20 +150,35 @@ export default function ProductsPage() {
   const handleToggleProductAvailability = async (productId: string, newStatus: boolean) => {
     // Get current products from cache
     const currentProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
+    let updatedProducts: any[] | undefined;
     
     // Optimistically update the cache
     if (currentProducts) {
-      const updatedProducts = currentProducts.map((p) =>
+      updatedProducts = currentProducts.map((p) =>
         p.id === productId ? { ...p, is_active: newStatus } : p
       );
       queryClient.setQueryData(["/api/catalog/products"], updatedProducts);
     }
 
     try {
+      // Call mutation directly without waiting for cache invalidation
       await updateProduct.mutateAsync({
         product_id: productId,
         is_active: newStatus,
       } as any);
+      
+      // After mutation succeeds, keep the optimistic state to maintain order
+      // Don't let auto-refetch reorder the products
+      if (currentProducts && updatedProducts) {
+        const latestProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
+        if (latestProducts && latestProducts !== updatedProducts) {
+          // If data changed due to refetch, re-apply the sort to maintain order
+          const productMap = new Map(latestProducts.map((p) => [p.id, p]));
+          const sortedProducts = currentProducts.map((p) => productMap.get(p.id) || p);
+          queryClient.setQueryData(["/api/catalog/products"], sortedProducts);
+        }
+      }
+      
       addToast(
         newStatus ? "Produk diaktifkan" : "Produk dinonaktifkan",
         newStatus ? "success" : "info"
@@ -184,6 +199,7 @@ export default function ProductsPage() {
   ) => {
     // Get current products from cache for optimistic update
     const currentProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
+    let updatedProducts: any[] | undefined;
     
     try {
       const variant = variants.find((v) => v.id === variantId);
@@ -197,7 +213,7 @@ export default function ProductsPage() {
       
       // Optimistically update cache - update products with new variant options
       if (currentProducts) {
-        const updatedProducts = currentProducts.map((p) => {
+        updatedProducts = currentProducts.map((p) => {
           const optGroups = p.option_groups || [];
           const hasThisVariant = optGroups.some((g: any) => g.name === variant.name);
           
@@ -240,6 +256,16 @@ export default function ProductsPage() {
         isEditing: true,
         oldName: variant.name,
       });
+
+      // After mutation succeeds, maintain order
+      if (currentProducts && updatedProducts) {
+        const latestProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
+        if (latestProducts && latestProducts !== updatedProducts) {
+          const productMap = new Map(latestProducts.map((p) => [p.id, p]));
+          const sortedProducts = currentProducts.map((p) => productMap.get(p.id) || p);
+          queryClient.setQueryData(["/api/catalog/products"], sortedProducts);
+        }
+      }
 
       addToast(
         newStatus ? "Opsi diaktifkan" : "Opsi dinonaktifkan",

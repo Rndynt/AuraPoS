@@ -48,3 +48,24 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
 - **Build System**: TurboRepo.
 - **Package Manager**: pnpm.
 - **State Management**: TanStack Query.
+
+### Recent Fixes & Improvements (Nov 25, 2025)
+
+#### Product & Variant Toggle Optimization
+- **Problem**: Product cards were reordering when toggling availability. Products displayed alphabetically by name, but after toggle success, backend refetch would return data in database order (different sequence), causing cards to visually reorder.
+- **Root Cause**: 
+  1. Toggle operation triggered optimistic cache update
+  2. Mutation succeeded, `onSuccess` callback invalidated cache
+  3. React Query refetched products from backend
+  4. Backend returned products in database order (not alphabetical)
+  5. UI updated with new order, cards appeared to "sort"
+- **Solution**: 
+  - Save original product array order before toggle
+  - After mutation succeeds and cache is refetched, re-map product data using product ID mapping
+  - Restore original alphabetical order by matching product IDs
+  - Ensures product cards maintain stable position despite backend refetch
+- **Implementation**:
+  - Modified `handleToggleProductAvailability` to maintain order post-refetch
+  - Modified `handleToggleVariantOptionAvailability` to maintain order post-refetch
+  - Pattern: `const productMap = new Map(latestProducts.map(p => [p.id, p])); const sortedProducts = currentProducts.map(p => productMap.get(p.id) || p);`
+- **Result**: Product cards stay in same alphabetical order when toggled, instant feedback without visual reordering
