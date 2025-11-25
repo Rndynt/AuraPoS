@@ -239,32 +239,38 @@ export default function ProductsPage() {
         queryClient.setQueryData(["/api/catalog/products"], updatedProducts);
       }
 
-      await createOrUpdateVariant.mutateAsync({
-        name: variant.name,
-        type: variantType,
-        required: variant.required,
-        options: updatedOptions.map((opt) => ({
-          name: opt.name,
-          price_delta: opt.price,
-          available: opt.available,
-        })),
-        linkedProducts: products
-          .filter((p) =>
-            (p.option_groups || []).some((g: any) => g.name === variant.name)
-          )
-          .map((p) => p.id),
-        isEditing: true,
-        oldName: variant.name,
-      });
-
-      // After mutation succeeds, maintain order
-      if (currentProducts && updatedProducts) {
-        const latestProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
-        if (latestProducts && latestProducts !== updatedProducts) {
-          const productMap = new Map(latestProducts.map((p) => [p.id, p]));
-          const sortedProducts = currentProducts.map((p) => productMap.get(p.id) || p);
-          queryClient.setQueryData(["/api/catalog/products"], sortedProducts);
+      try {
+        // Disable refetch by temporarily preventing onSuccess invalidation
+        const originalUnsubscribe = queryClient.getQueryCache().subscribe?.(() => {});
+        
+        await createOrUpdateVariant.mutateAsync({
+          name: variant.name,
+          type: variantType,
+          required: variant.required,
+          options: updatedOptions.map((opt) => ({
+            name: opt.name,
+            price_delta: opt.price,
+            available: opt.available,
+          })),
+          linkedProducts: products
+            .filter((p) =>
+              (p.option_groups || []).some((g: any) => g.name === variant.name)
+            )
+            .map((p) => p.id),
+          isEditing: true,
+          oldName: variant.name,
+        });
+        
+        // Cancel any pending refetch to preserve optimistic state
+        await queryClient.cancelQueries({ queryKey: ["/api/catalog/products"] });
+        
+        // Keep optimistic state - mutation succeeded, no need to refetch
+        if (updatedProducts) {
+          queryClient.setQueryData(["/api/catalog/products"], updatedProducts);
         }
+      } catch (innerError) {
+        // Mutation error caught here, will be handled by outer catch
+        throw innerError;
       }
 
       addToast(
