@@ -88,34 +88,62 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - **OrderQueue Positioning**: Header → OrderQueue → Categories → Products (clean visual hierarchy)
   - **Type Safety**: Proper Order type imports from `@pos/domain/orders/types`
 
-- ✅ **ORDER LIST PAGE REDESIGN - COMPLETE!** (Nov 25, 2025 - NEW)
-  - **Header Design**: Exactly matches table page design for consistency
+- ✅ **ORDER LIST PAGE COMPLETE REDESIGN - EXACT TABLE PAGE STYLING!** (Nov 25, 2025 - NEW)
+  - **Header Design**: Exactly matches table page design
     - Title + subtitle on top-left
-    - Status badges (Confirmed, Prep count) on top-right
+    - Status badges (Confirmed, Prep count) on top-right  
     - Search input below title (left side, width: md:w-96)
     - Filter tabs below search (right side, responsive)
-  - **Filter Tabs Redesign**: Changed from complex Tabs component to simple button-based filter (table page pattern)
+  - **Filter Tabs**: Simple button-based filter (table page pattern)
     - Status-based filtering: All, Confirmed, Preparing, Ready, Completed
     - Clean filter bar: bg-slate-100 with rounded-xl and p-1
     - Active filter: bg-white text-slate-800 with shadow-sm
-    - Inactive filter: text-slate-500 with hover effect
     - Count badges showing number of orders per status
   - **Search Functionality**: Real-time search by customer name, order number, or table number
-  - **Order Card Design**: 
-    - Cleaner layout with better visual hierarchy
-    - Status badge with icon on top right (not mixed with content)
-    - Payment status badge clearly displayed
-    - Simplified spacing and typography
-    - Consistent with application's design language
-  - **Layout & Spacing**:
-    - Two-column layout (left: orders list, right: details panel)
-    - Proper padding and spacing throughout
-    - Mobile responsive with single-column on small screens
-    - Full responsiveness with md breakpoints
-  - **Indonesian Translations**: All labels and messages in Indonesian (Pesanan, Cari, etc.)
-  - **Design Consistency**: EXACTLY matches table page design - clean, modern, consistent
+  - **Order Cards Redesign**: Changed from shadcn Card component to button-based cards (table page pattern)
+    - bg-white, rounded-xl, border border-slate-200, shadow-sm
+    - Order number badge (blue bg) at top
+    - Customer name, status badge, payment info in clean layout
+    - Item preview (shows 2 items, +N more if exceeds)
+    - Date and total price at bottom with border separator
+    - Ring-2 ring-blue-500 when selected
+    - Hover effects and transitions
+  - **Detail Panel**: Exact table page styling
+    - Fixed positioning on mobile (fixed inset-x-0 bottom-0)
+    - Rounded-t-3xl with shadow-2xl on mobile
+    - Relative positioning on desktop (md:)
+    - Panel header with title, customer name, close button
+    - bg-slate-50/50 for content area (not white)
+  - **Order Items Display**: Clean card-based layout
+    - bg-white, rounded-xl, border border-slate-200, shadow-sm
+    - Each item shows product name, quantity, unit price
+    - Variant info displayed
+    - White card with proper spacing and borders
+  - **Summary Section**: Card-based design
+    - bg-white card with border and shadow
+    - Shows subtotal, tax, service charge, discount
+    - Total prominently displayed with border separator
+  - **Panel Footer**: White background with action button
+    - "Proses Transaksi" button (blue-600, hover blue-700)
+    - Full width with rounded-lg
+  - **Mobile Features**:
+    - Mobile overlay (bg-black/20 backdrop-blur) when panel is open
+    - Touch-friendly cards with proper spacing
+    - Smooth transitions and animations
+    - responsive scrolling behavior
+  - **Color Scheme**: Exact consistency with table page
+    - Status badges: blue/orange/emerald/green colors
+    - Payment badges: green/amber/gray colors
+    - Proper slate color hierarchy (slate-800/700/600/500/400)
+  - **Typography & Spacing**: Consistent throughout
+    - Font sizes and weights match table page
+    - Padding: p-4 md:p-6 on main areas
+    - Card padding: p-4
+    - Proper gap spacing (gap-2, gap-3, gap-4)
+  - **Indonesian Translations**: All text in Indonesian (Pesanan, Cari, Detail Pesanan, etc.)
+  - **Design Consistency**: 100% matches table page - borders, shadows, colors, spacing, interactions
   - **Zero TypeScript Errors**: All components properly typed and linted
-  - **Mobile Support**: Responsive layout, proper touch targets, pb-safe for bottom nav
+  - **Accessibility**: data-testid on all interactive elements for testing
 
 ## User Preferences
 - Language: Indonesian (Bahasa Indonesia)
