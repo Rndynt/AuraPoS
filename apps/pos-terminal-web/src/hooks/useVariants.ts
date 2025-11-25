@@ -25,7 +25,7 @@ export interface VariantFormData {
   options: Array<{
     name: string;
     price_delta: number;
-    available?: boolean;
+    is_available?: boolean;
   }>;
   linkedProducts: string[];
 }
@@ -84,7 +84,7 @@ export function useCreateOrUpdateVariant() {
         options: options.map((opt, idx) => ({
           name: opt.name,
           price_delta: opt.price_delta,
-          is_available: opt.available !== false, // Include available status
+          is_available: opt.is_available !== false, // Read from is_available, not available
           display_order: idx,
         })),
       };
@@ -137,7 +137,7 @@ export function useCreateOrUpdateVariant() {
               options: (g.options || []).map((o: any) => ({
                 name: o.name,
                 price_delta: Number(o.price_delta || o.priceDelta || 0),
-                is_available: o.available !== false, // Include available status
+                is_available: o.is_available !== false, // Read from is_available, not available
               })),
             })),
           })

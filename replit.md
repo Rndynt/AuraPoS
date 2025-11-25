@@ -87,27 +87,26 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
     - Modified backend payload: included `available` in all option mappings
     - Now when toggle happens: cache updates → mutation sends available → backend stores → UI persists
 
-- **Problem 3 - Variant Option Toggle Not Persisting & Reverting (Nov 25, 2025 - Final Fix)**: Toggle OFF → reverts to ON automatically. Data not saved to database.
-  - **Root Cause**: 
-    1. Database has column `is_available` (snake_case)
-    2. Backend Zod schema expects field name: `is_available`
-    3. Frontend was sending field name: `available` (WRONG!)
-    4. When `available` was sent as `undefined`, backend code did: `o.available !== false`
-    5. Since `undefined !== false` = `true`, always set `is_available: true`
-    6. Data never persisted to database with correct value
-    7. When cache refetched, data came back with original ON state
-    8. Toggle appeared to revert automatically
+- **Problem 3 - Variant Option Toggle Not Persisting & Reverting (Nov 25, 2025 - FINAL FIX)**: Toggle OFF → reverts to ON automatically within seconds. Data not saved to database.
+  - **Root Cause (3-layer bug)**:
+    1. **Type Mismatch**: `VariantFormData` interface had `available?: boolean` but backend sends/expects `is_available`
+    2. **Frontend Mutation**: `products.tsx` sent `is_available: opt.available` (correct field name)
+    3. **Backend Processing**: `useVariants.ts` tried to read `opt.available` but received `opt.is_available`
+       - When reading: `opt.available !== false` where `opt.available = undefined`
+       - Result: `undefined !== false = true` → ALWAYS set `is_available: true`!
+    4. **Data Loss**: Data never persisted to database with correct value
+    5. **Cache Refetch**: When page accessed, fresh data from server showed original ON state
+    6. **Revert Effect**: Toggle appeared to revert to ON by itself
   - **Solution**: 
-    - Fixed field name consistency: Frontend now sends `is_available` (matching backend schema)
-    - Backend receives correct field name → correctly validates with Zod schema
-    - Mutation processes correctly → database saves with proper value
-    - Cache gets invalidated (non-blocking) → data persists
-    - Page refresh shows saved value from database
+    - Fixed type definition: `VariantFormData` options now have `is_available?: boolean`
+    - Fixed mutation read: Backend now reads `opt.is_available` (not `opt.available`)
+    - Entire flow now consistent: send `is_available` → receive `is_available` → persist correctly
   - **Implementation**:
-    - Modified `products.tsx` line 254: Send `is_available: opt.available` (was `available`)
-    - Modified `useVariants.ts` line 143: Send `is_available: o.available !== false` (was `available`)
-    - Optimistic cache update still uses `is_available: newStatus` to match API format
-    - Kept `invalidateQueries` (non-blocking) instead of `refetchQueries` (blocking)
+    - Modified `useVariants.ts` line 31: Type definition from `available` → `is_available`
+    - Modified `useVariants.ts` line 90: Read `opt.is_available !== false` (was `opt.available`)
+    - Modified `useVariants.ts` line 143: Read `o.is_available !== false` (was `o.available`)
+    - Modified `products.tsx` line 254: Send `is_available: opt.available` (correct)
+    - Kept `invalidateQueries` (non-blocking) for smooth UI
   
 - **Result**: 
   - Product cards stay in alphabetical order when toggled
