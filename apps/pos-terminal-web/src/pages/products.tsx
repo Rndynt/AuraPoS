@@ -164,9 +164,23 @@ export default function ProductsPage() {
         idx === optionIndex ? { ...opt, available: newStatus } : opt
       );
 
+      const variantType: "single" | "multiple" = variant.type === "radio" ? "single" : "multiple";
+      
       await createOrUpdateVariant.mutateAsync({
-        ...variant,
-        options: updatedOptions,
+        name: variant.name,
+        type: variantType,
+        required: variant.required,
+        options: updatedOptions.map((opt) => ({
+          name: opt.name,
+          price_delta: opt.price,
+        })),
+        linkedProducts: products
+          .filter((p) =>
+            (p.option_groups || []).some((g: any) => g.name === variant.name)
+          )
+          .map((p) => p.id),
+        isEditing: true,
+        oldName: variant.name,
       });
 
       addToast(
@@ -178,6 +192,23 @@ export default function ProductsPage() {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!editingProduct) return;
+    if (confirm(`Hapus produk "${editingProduct.name}"?`)) {
+      try {
+        await updateProduct.mutateAsync({
+          product_id: editingProduct.id,
+          is_deleted: true,
+        } as any);
+        addToast("Produk telah dihapus", "success");
+        setViewState("list");
+        setEditingProduct(null);
+      } catch (error) {
+        addToast("Gagal menghapus produk", "error");
+      }
+    }
+  };
+
   if (viewState === "form_product") {
     return (
       <ProductForm
@@ -186,6 +217,7 @@ export default function ProductsPage() {
         onCancel={handleCancelForm}
         isLoading={updateProduct.isPending || createProduct.isPending}
         onNavigateToVariants={handleNavigateToVariants}
+        onDelete={editingProduct ? handleDeleteProduct : undefined}
       />
     );
   }
@@ -221,7 +253,7 @@ export default function ProductsPage() {
           {activeTab === "products" ? (
             <button
               onClick={handleCreateProduct}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
               data-testid="button-add-product"
             >
               <Plus size={18} /> Produk

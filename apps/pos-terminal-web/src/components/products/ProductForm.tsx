@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, Layers, Save, ChevronLeft, ChevronDown } from "lucide-react";
+import { Box, Layers, Save, ChevronLeft, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProductFormProps {
@@ -8,6 +8,7 @@ interface ProductFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   onNavigateToVariants?: () => void;
+  onDelete?: () => void;
 }
 
 const CustomSelect = ({
@@ -70,6 +71,7 @@ export default function ProductForm({
   onCancel,
   isLoading,
   onNavigateToVariants,
+  onDelete,
 }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -124,14 +126,26 @@ export default function ProductForm({
             {product ? "Edit Produk" : "Tambah Produk"}
           </h2>
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={isLoading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50"
-          data-testid="button-save-product"
-        >
-          <Save size={16} /> {isLoading ? "Menyimpan..." : "Simpan"}
-        </button>
+        <div className="flex items-center gap-2">
+          {product && onDelete && (
+            <button
+              onClick={onDelete}
+              className="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-100 transition-colors"
+              data-testid="button-delete-product"
+              type="button"
+            >
+              <Trash2 size={20} />
+            </button>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50"
+            data-testid="button-save-product"
+          >
+            <Save size={16} /> {isLoading ? "Menyimpan..." : "Simpan"}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto w-full space-y-6">

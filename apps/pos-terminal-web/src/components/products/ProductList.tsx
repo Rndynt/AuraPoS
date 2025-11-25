@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, Trash2 } from "lucide-react";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
 interface ProductListProps {
   products: any[];
   onProductClick: (product: any) => void;
+  onToggleProduct?: (productId: string, newStatus: boolean) => void;
 }
 
 const formatIDR = (price: number | string) => {
@@ -16,7 +18,11 @@ const formatIDR = (price: number | string) => {
   }).format(numPrice);
 };
 
-export default function ProductList({ products, onProductClick }: ProductListProps) {
+export default function ProductList({ 
+  products, 
+  onProductClick,
+  onToggleProduct 
+}: ProductListProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   const toggleCategory = (category: string) => {
@@ -26,16 +32,16 @@ export default function ProductList({ products, onProductClick }: ProductListPro
     }));
   };
 
-  const groupedProducts = products.reduce((acc, product) => {
+  const groupedProducts = products.reduce((acc: Record<string, any[]>, product: any) => {
     const cat = product.category || "Uncategorized";
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(product);
     return acc;
-  }, {} as Record<string, any[]>);
+  }, {});
 
   return (
     <div className="space-y-4">
-      {Object.entries(groupedProducts).map(([category, items]) => {
+      {Object.entries(groupedProducts).map(([category, items]: [string, any[]]) => {
         const isCollapsed = collapsedCategories[category];
         return (
           <div
@@ -65,58 +71,82 @@ export default function ProductList({ products, onProductClick }: ProductListPro
 
             {!isCollapsed && (
               <div className="divide-y divide-slate-100 animate-in slide-in-from-top-2">
-                {items.map((product) => {
+                {items.map((product: any) => {
                   const price = product.base_price || product.basePrice || 0;
                   const stock = product.stock_qty ?? product.stockQty ?? 0;
                   const variantsCount = product.option_groups?.length || 0;
                   const imageUrl = product.image_url || product.imageUrl || "";
+                  const isAvailable = product.is_active !== false;
 
                   return (
                     <div
                       key={product.id}
-                      onClick={() => onProductClick(product)}
-                      className="p-3 flex items-center gap-4 hover:bg-blue-50 cursor-pointer transition-colors group"
+                      className={`p-3 flex items-center gap-4 transition-colors group ${
+                        isAvailable ? "hover:bg-blue-50" : "bg-slate-50 opacity-70"
+                      }`}
                       data-testid={`product-card-${product.id}`}
                     >
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {imageUrl && (
-                          <img
-                            src={imageUrl}
-                            className="w-full h-full object-cover"
-                            alt={product.name}
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-bold text-slate-800 truncate">
-                            {product.name}
-                          </h4>
-                          <span className="font-bold text-blue-600 text-sm">
-                            {formatIDR(price)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                              stock < 10
-                                ? "bg-red-100 text-red-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            Stok: {stock}
-                          </span>
-                          {variantsCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                              <Layers size={10} /> {variantsCount} Varian
-                            </span>
+                      <div 
+                        onClick={() => onProductClick(product)}
+                        className="flex-1 min-w-0 flex items-center gap-4 cursor-pointer"
+                      >
+                        <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+                          {imageUrl && (
+                            <img
+                              src={imageUrl}
+                              className={`w-full h-full object-cover ${!isAvailable ? "grayscale" : ""}`}
+                              alt={product.name}
+                            />
+                          )}
+                          {!isAvailable && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                              <span className="bg-slate-800 text-white text-[8px] font-bold px-1 rounded">
+                                OFF
+                              </span>
+                            </div>
                           )}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-bold text-slate-800 truncate">
+                              {product.name}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="font-bold text-blue-600 text-xs">
+                              {formatIDR(price)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                                stock < 10
+                                  ? "bg-red-100 text-red-600"
+                                  : "bg-green-100 text-green-600"
+                              }`}
+                            >
+                              Stok: {stock}
+                            </span>
+                            {variantsCount > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                <Layers size={10} /> {variantsCount} Varian
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <ChevronRight
-                        className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                        size={16}
-                      />
+
+                      <div className="pl-4 border-l border-slate-100 flex flex-col items-center gap-1">
+                        <ToggleSwitch
+                          checked={isAvailable}
+                          onChange={(val) => {
+                            if (onToggleProduct) {
+                              onToggleProduct(product.id, val);
+                            }
+                          }}
+                          data-testid={`toggle-product-${product.id}`}
+                        />
+                      </div>
                     </div>
                   );
                 })}

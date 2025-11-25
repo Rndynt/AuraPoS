@@ -7,6 +7,7 @@ import type { Product } from "@pos/domain/catalog/types";
 export interface VariantOption {
   name: string;
   price: number;
+  available?: boolean;
 }
 
 export interface Variant {
