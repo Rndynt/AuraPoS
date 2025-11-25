@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ChefHat, ChevronLeft, RefreshCcw } from "lucide-react";
+import { ChefHat, ChevronLeft, RefreshCcw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/lib/api/hooks";
 import { KitchenTicket } from "@/components/kitchen-display/KitchenTicket";
 import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
+import { useTenant } from "@/context/TenantContext";
 import type { Order } from "@pos/domain/orders/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
@@ -20,6 +21,34 @@ const formatIDR = (price: number | string) =>
 export default function KitchenDisplayPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { hasModule } = useTenant();
+  const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
+
+  // If Kitchen Display is not enabled, show not available message
+  if (!isKitchenDisplayEnabled) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-50 items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4 text-center max-w-md">
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100">
+            <AlertCircle size={32} className="text-slate-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">
+            Kitchen Display Not Available
+          </h1>
+          <p className="text-slate-600">
+            This feature is not enabled for your account. Please contact your administrator to enable Kitchen Display.
+          </p>
+          <Button
+            onClick={() => setLocation("/")}
+            variant="default"
+            className="mt-4"
+          >
+            Go Back to POS
+          </Button>
+        </div>
+      </div>
+    );
+  }
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Fetch all orders - will filter on client side

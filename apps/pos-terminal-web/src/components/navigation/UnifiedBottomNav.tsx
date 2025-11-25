@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings, Grip, Computer, ChefHat } from "lucide-react";
+import { useTenant } from "@/context/TenantContext";
 
 interface UnifiedBottomNavProps {
   cartCount: number;
@@ -8,6 +9,8 @@ interface UnifiedBottomNavProps {
 
 export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavProps) {
   const [location, setLocation] = useLocation();
+  const { hasModule } = useTenant();
+  const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -61,17 +64,19 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
         )}
       </button>
 
-      {/* Kitchen Display Button */}
-      <button
-        onClick={() => handleNavClick("/kitchen")}
-        className={`flex flex-col items-center gap-0.5 ${
-          isActive("/kitchen") ? "text-blue-600" : "text-slate-400"
-        }`}
-        data-testid="nav-kitchen"
-      >
-        <ChefHat size={20} />
-        <span className="text-[10px]">Kitchen</span>
-      </button>
+      {/* Kitchen Display Button - Only show if feature is enabled */}
+      {isKitchenDisplayEnabled && (
+        <button
+          onClick={() => handleNavClick("/kitchen")}
+          className={`flex flex-col items-center gap-0.5 ${
+            isActive("/kitchen") ? "text-blue-600" : "text-slate-400"
+          }`}
+          data-testid="nav-kitchen"
+        >
+          <ChefHat size={20} />
+          <span className="text-[10px]">Kitchen</span>
+        </button>
+      )}
 
       {/* Bills Button */}
       <button

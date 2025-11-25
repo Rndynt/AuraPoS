@@ -68,13 +68,17 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - **KitchenDisplay Page**: Full-screen kitchen display system at `/kitchen` with responsive grid layout (1-4 columns)
   - **Kitchen Ticket Component**: Individual order cards with status-based borders (orange/yellow/green)
   - **OrderQueue Component**: Horizontal scrollable queue showing active orders - INTEGRATED INSIDE ProductArea!
-  - **Feature Flag**: OrderQueue only appears when `enable_kitchen_ticket` module is enabled (feature entitlement)
+  - **Feature Flag Protection**: 
+    - OrderQueue only appears when `enable_kitchen_ticket` module is enabled (ProductArea)
+    - Kitchen button in bottom nav only appears when `enable_kitchen_ticket` is enabled
+    - `/kitchen` route shows "Not Available" message if feature not enabled
+    - Same pattern as table management feature entitlement
   - **POS Page Integration**: OrderQueue appears ABOVE categories inside ProductArea when orders exist (3-column layout preserved)
   - **Kitchen Display Page**: Dedicated full-screen view for kitchen staff with ticket grid  
   - **Status Workflow**: confirmed → preparing → ready → completed
   - **Quick Actions**: One-click status updates directly from tickets (both POS queue and Kitchen display)
   - **Real-time Updates**: Order list refreshes after status changes
-  - **Navigation**: Kitchen menu button added to bottom nav (ChefHat icon)
+  - **Navigation**: Kitchen menu button added to bottom nav (ChefHat icon) - feature flagged
   - **Responsive Design**: OrderQueue horizontal scroll on all devices, ticket grid 1-4 columns
   - **Empty States**: Shows "All Caught Up!" when no active orders
   - **Toast Notifications**: Confirms each status change
