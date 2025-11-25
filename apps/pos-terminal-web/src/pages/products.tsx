@@ -33,6 +33,8 @@ export default function ProductsPage() {
   const [viewState, setViewState] = useState<"list" | "form_product" | "form_variant">("list");
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
+  const [loadingProductToggles, setLoadingProductToggles] = useState<Set<string>>(new Set());
+  const [loadingVariantToggles, setLoadingVariantToggles] = useState<Set<string>>(new Set());
 
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const { data: variants = [], isLoading: isLoadingVariants } = useVariantsLibrary();
@@ -148,6 +150,7 @@ export default function ProductsPage() {
   };
 
   const handleToggleProductAvailability = async (productId: string, newStatus: boolean) => {
+    setLoadingProductToggles((prev) => new Set(prev).add(productId));
     // Get current products from cache
     const currentProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
     let updatedProducts: any[] | undefined;
@@ -189,6 +192,12 @@ export default function ProductsPage() {
         queryClient.setQueryData(["/api/catalog/products"], currentProducts);
       }
       addToast("Gagal mengubah status produk", "error");
+    } finally {
+      setLoadingProductToggles((prev) => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
     }
   };
 
@@ -197,6 +206,8 @@ export default function ProductsPage() {
     optionIndex: number,
     newStatus: boolean
   ) => {
+    const toggleKey = `${variantId}-${optionIndex}`;
+    setLoadingVariantToggles((prev) => new Set(prev).add(toggleKey));
     // Get current products from cache for optimistic update
     const currentProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
     let updatedProducts: any[] | undefined;
@@ -277,6 +288,13 @@ export default function ProductsPage() {
         queryClient.setQueryData(["/api/catalog/products"], currentProducts);
       }
       addToast("Gagal mengubah status opsi", "error");
+    } finally {
+      const toggleKey = `${variantId}-${optionIndex}`;
+      setLoadingVariantToggles((prev) => {
+        const next = new Set(prev);
+        next.delete(toggleKey);
+        return next;
+      });
     }
   };
 
@@ -530,6 +548,7 @@ export default function ProductsPage() {
                                   onChange={(val) =>
                                     handleToggleProductAvailability(product.id, val)
                                   }
+                                  isLoading={loadingProductToggles.has(product.id)}
                                   data-testid={`toggle-product-${product.id}`}
                                 />
                               </div>
@@ -558,6 +577,7 @@ export default function ProductsPage() {
                 onVariantClick={handleEditVariant}
                 onCreateNew={handleCreateVariant}
                 onToggleVariantOption={handleToggleVariantOptionAvailability}
+                loadingVariantToggles={loadingVariantToggles}
               />
             )}
           </>

@@ -9,6 +9,7 @@ interface VariantLibraryProps {
   onVariantClick: (variant: Variant) => void;
   onCreateNew: () => void;
   onToggleVariantOption?: (variantId: string, optionIndex: number, newStatus: boolean) => void;
+  loadingVariantToggles?: Set<string>;
 }
 
 export default function VariantLibrary({
@@ -17,6 +18,7 @@ export default function VariantLibrary({
   onVariantClick,
   onCreateNew,
   onToggleVariantOption,
+  loadingVariantToggles = new Set(),
 }: VariantLibraryProps) {
   const getLinkedProductsCount = (variantName: string) => {
     return products.filter((p) =>
@@ -99,6 +101,7 @@ export default function VariantLibrary({
                             onToggleVariantOption(variant.id, i, val);
                           }
                         }}
+                        isLoading={loadingVariantToggles.has(`${variant.id}-${i}`)}
                         data-testid={`toggle-option-${variant.id}-${i}`}
                       />
                     </div>
