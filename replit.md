@@ -4,9 +4,55 @@
 A web-based Point of Sale (POS) system designed for UMKM (Usaha Mikro, Kecil, dan Menengah) businesses such as restaurants, cafes, and mini-markets. The system features a fully responsive mobile-first design, product variant support, and a feature entitlement engine for monetization.
 
 ## Current State
-**✅ PRODUCT MANAGEMENT UI REDESIGN COMPLETE** - Tab-based product and variant management interface matching reference design.
+**✅ UI REDESIGN PHASE 2 COMPLETE** - v2 Design Implementation with ToggleSwitch, Toast Provider, and Enhanced Product Management.
 
-**Latest Updates (Nov 24, 2025):**
+**Latest Updates (Nov 25, 2025 - CURRENT):**
+- ✅ **ToggleSwitch Component COMPLETE**
+  - Created reusable ToggleSwitch with "sm" and "md" sizes
+  - Blue-600/slate-300 color scheme
+  - Proper TypeScript support with data-testid props
+  - Used in ProductList and VariantLibrary for availability toggles
+
+- ✅ **Toast System Migration COMPLETE**
+  - Context-based ToastProvider wrapping app root
+  - Backward compatible with existing `toast({ title, description, variant })` API
+  - New `addToast(message, type)` method for simple notifications
+  - Supports success, error, and info toast types
+
+- ✅ **ProductList Component ENHANCEMENT COMPLETE**
+  - Added ToggleSwitch for inline product availability toggle
+  - Toggle visual feedback: product becomes grayscale and dimmed when disabled
+  - OFF badge displayed on unavailable product images
+  - Price repositioned below product name
+  - Stock and variant count badges preserved
+  - `onToggleProduct` handler for availability updates
+
+- ✅ **VariantLibrary Component ENHANCEMENT COMPLETE**
+  - Added ToggleSwitch for each variant option
+  - Toggle disabled option with visual feedback (opacity, crossed text)
+  - `onToggleVariantOption` handler properly connected
+  - VariantOption type extended with optional `available` field
+
+- ✅ **ProductForm Component ENHANCEMENT COMPLETE**
+  - Added Trash2 icon button for delete action
+  - Delete button only visible when editing existing product
+  - Red background with delete confirmation dialog
+  - `onDelete` handler for product deletion
+
+- ✅ **Product Management Page OPTIMIZATION COMPLETE**
+  - Tab-based interface: "Daftar Produk" and "Perpustakaan Varian"
+  - Inline ToggleSwitch integration for product availability
+  - VariantLibrary with option-level toggles
+  - All handlers properly wired for mutations and updates
+  - Toast notifications for success/error feedback
+
+- ✅ **Type Safety COMPLETE**
+  - Fixed VariantOption type to include optional `available` field
+  - Fixed type casting for variant type ("single" | "multiple")
+  - All LSP diagnostics resolved (0 errors)
+  - Proper TypeScript annotations in ProductList
+
+**Previous Latest Updates (Nov 24, 2025):**
 - ✅ **Product Management UI Redesign COMPLETE**
   - Implemented tab-based interface matching reference design (docs/base_design_management_product_code.jsx)
   - Two tabs: "Daftar Produk" (product list) and "Perpustakaan Varian" (variant library)
