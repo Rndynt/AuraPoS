@@ -64,6 +64,22 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - Applied to: ProductsPage, ProductForm, VariantForm
   - Users can now scroll to see all content fully
 
+- ✅ **TOGGLE SWITCH & PRODUCT LIST FIXES - COMPLETE!** (Nov 25, 2025 - NEW)
+  - **ToggleSwitch Animation Enhancement**:
+    - Increased duration from 200ms to 300ms for smoother visual
+    - Changed from `transition-colors` to `transition-all` for smooth property changes
+    - Smooth movement of toggle circle + background color transition
+    - Both size variants (sm, md) animate smoothly
+  - **Product List Stable Sorting**:
+    - Added alphabetical sorting within each category
+    - Sort by product name (case-insensitive) for consistent ordering
+    - Prevents product cards from shuffling when toggle is clicked
+    - Order remains stable during data updates and refreshes
+  - **Result**: 
+    - Toggle animation now visibly smooth when clicked
+    - Product list maintains consistent order even after updates
+    - No more unexpected product card re-ordering
+
 - ✅ **FULL KITCHEN DISPLAY IMPLEMENTATION - COMPLETE!** (Nov 25, 2025)
   - **KitchenDisplay Page**: Full-screen kitchen display system at `/kitchen` with responsive grid layout (1-4 columns)
   - **Kitchen Ticket Component**: Individual order cards with status-based borders (orange/yellow/green)

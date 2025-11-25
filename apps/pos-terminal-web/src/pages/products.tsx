@@ -48,6 +48,16 @@ export default function ProductsPage() {
       }
       groups[category].push(product);
     });
+    
+    // Sort items within each category by name for stable ordering
+    Object.keys(groups).forEach((category) => {
+      groups[category].sort((a, b) => {
+        const nameA = (a.name || "").toLowerCase();
+        const nameB = (b.name || "").toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+    });
+    
     return groups;
   }, [products]);
 
