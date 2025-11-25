@@ -87,28 +87,27 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
     - Modified backend payload: included `available` in all option mappings
     - Now when toggle happens: cache updates → mutation sends available → backend stores → UI persists
 
-- **Problem 3 - Variant Option Toggle Not Persisting & Freezing (Nov 25, 2025 - Final Fix)**: After toggling option OFF, UI froze and toggle would revert after page refresh.
+- **Problem 3 - Variant Option Toggle Not Persisting & Reverting (Nov 25, 2025 - Final Fix)**: Toggle OFF → reverts to ON automatically. Data not saved to database.
   - **Root Cause**: 
-    1. Frontend sent field name `available` but backend expected `is_available` (snake_case)
-    2. `useVariantsLibrary` read `opt.available` from API but API returned `opt.is_available`
-    3. First attempt: Used `refetchQueries` immediately after mutation
-    4. `refetchQueries` pulled server data before backend mutation completed
-    5. Optimistic state (`available`) was overwritten by server data (`is_available`)
-    6. UI bounced back, appeared frozen
-    7. Page refresh showed original data because mutation never persisted
+    1. Database has column `is_available` (snake_case)
+    2. Backend Zod schema expects field name: `is_available`
+    3. Frontend was sending field name: `available` (WRONG!)
+    4. When `available` was sent as `undefined`, backend code did: `o.available !== false`
+    5. Since `undefined !== false` = `true`, always set `is_available: true`
+    6. Data never persisted to database with correct value
+    7. When cache refetched, data came back with original ON state
+    8. Toggle appeared to revert automatically
   - **Solution**: 
-    - Fixed field name consistency: Frontend now sends AND uses `is_available` (matching API)
-    - Fixed read mapping: `useVariantsLibrary` now reads `opt.is_available` from API response
-    - Fixed data persistence: Changed from `refetchQueries` (blocks UI) to `invalidateQueries` (non-blocking)
-    - `invalidateQueries` marks cache as stale but doesn't force immediate refetch
-    - Next access (refresh/navigation) automatically refetches fresh data from server
-    - This ensures: optimistic update → smooth toggle → mutation sent → cache invalidated → data persists on refresh
+    - Fixed field name consistency: Frontend now sends `is_available` (matching backend schema)
+    - Backend receives correct field name → correctly validates with Zod schema
+    - Mutation processes correctly → database saves with proper value
+    - Cache gets invalidated (non-blocking) → data persists
+    - Page refresh shows saved value from database
   - **Implementation**:
-    - Modified `products.tsx` line 253: `is_available: opt.available` (was `available`)
-    - Modified `products.tsx` line 233: Optimistic update uses `is_available: newStatus` (was `available`)
-    - Modified `useVariants.ts` line 56: Read from `opt.is_available` (was `opt.available`)
-    - Modified `useVariants.ts` line 87: Send `is_available: opt.available !== false` (was `available`)
-    - Modified `products.tsx` line 267: Changed `refetchQueries` → `invalidateQueries` for non-blocking persistence
+    - Modified `products.tsx` line 254: Send `is_available: opt.available` (was `available`)
+    - Modified `useVariants.ts` line 143: Send `is_available: o.available !== false` (was `available`)
+    - Optimistic cache update still uses `is_available: newStatus` to match API format
+    - Kept `invalidateQueries` (non-blocking) instead of `refetchQueries` (blocking)
   
 - **Result**: 
   - Product cards stay in alphabetical order when toggled

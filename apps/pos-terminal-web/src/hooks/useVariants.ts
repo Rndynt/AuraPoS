@@ -137,7 +137,7 @@ export function useCreateOrUpdateVariant() {
               options: (g.options || []).map((o: any) => ({
                 name: o.name,
                 price_delta: Number(o.price_delta || o.priceDelta || 0),
-                available: o.available !== false, // Include available status
+                is_available: o.available !== false, // Include available status
               })),
             })),
           })
