@@ -209,6 +209,30 @@ export default function ProductsPage() {
     }
   };
 
+  const handleDeleteVariant = async (variantId: string) => {
+    const variant = variants.find((v) => v.id === variantId);
+    if (!variant) return;
+    
+    if (confirm(`Hapus varian "${variant.name}"?`)) {
+      try {
+        // Delete variant by updating with empty options
+        await createOrUpdateVariant.mutateAsync({
+          name: variant.name,
+          type: variant.type === "radio" ? "single" : "multiple",
+          required: variant.required,
+          options: [],
+          linkedProducts: [],
+          isEditing: true,
+          oldName: variant.name,
+          isDeleting: true,
+        } as any);
+        addToast("Varian telah dihapus", "success");
+      } catch (error) {
+        addToast("Gagal menghapus varian", "error");
+      }
+    }
+  };
+
   if (viewState === "form_product") {
     return (
       <ProductForm
@@ -445,6 +469,7 @@ export default function ProductsPage() {
                 onVariantClick={handleEditVariant}
                 onCreateNew={handleCreateVariant}
                 onToggleVariantOption={handleToggleVariantOptionAvailability}
+                onDeleteVariant={handleDeleteVariant}
               />
             )}
           </>

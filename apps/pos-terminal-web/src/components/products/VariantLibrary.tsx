@@ -1,6 +1,7 @@
-import { Box, SlidersHorizontal, Plus } from "lucide-react";
+import { Box, SlidersHorizontal, Plus, Trash2 } from "lucide-react";
 import { type Variant } from "@/hooks/useVariants";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { Button } from "@/components/ui/button";
 
 interface VariantLibraryProps {
   variants: Variant[];
@@ -8,6 +9,7 @@ interface VariantLibraryProps {
   onVariantClick: (variant: Variant) => void;
   onCreateNew: () => void;
   onToggleVariantOption?: (variantId: string, optionIndex: number, newStatus: boolean) => void;
+  onDeleteVariant?: (variantId: string) => void;
 }
 
 export default function VariantLibrary({
@@ -16,6 +18,7 @@ export default function VariantLibrary({
   onVariantClick,
   onCreateNew,
   onToggleVariantOption,
+  onDeleteVariant,
 }: VariantLibraryProps) {
   const getLinkedProductsCount = (variantName: string) => {
     return products.filter((p) =>
@@ -35,7 +38,7 @@ export default function VariantLibrary({
           >
             <div
               onClick={() => onVariantClick(variant)}
-              className="p-5 flex justify-between items-start cursor-pointer hover:bg-slate-50 transition-colors border-b border-slate-50"
+              className="p-5 flex justify-between items-start cursor-pointer hover:bg-slate-50 transition-colors border-b border-slate-50 group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
@@ -49,8 +52,24 @@ export default function VariantLibrary({
                   </p>
                 </div>
               </div>
-              <div className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                <Box size={12} /> {linkedCount} Produk
+              <div className="flex items-center gap-2">
+                <div className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                  <Box size={12} /> {linkedCount} Produk
+                </div>
+                {onDeleteVariant && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteVariant(variant.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
+                    data-testid={`button-delete-variant-${variant.id}`}
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                )}
               </div>
             </div>
 
