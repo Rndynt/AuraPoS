@@ -12,7 +12,7 @@ interface ToastContextValue {
   toasts: Toast[];
   addToast: (message: string, type?: ToastType) => void;
   removeToast: (id: string) => void;
-  toast: (props: { title?: string; description?: string; variant?: "default" | "destructive" }) => void;
+  toast: (props: { title?: string; description?: string; variant?: "default" | "destructive" | "info" }) => void;
 }
 
 export const ToastContext = React.createContext<ToastContextValue | undefined>(undefined);
@@ -42,9 +42,12 @@ export function useToastState() {
   }, []);
 
   const toast = React.useCallback(
-    (props: { title?: string; description?: string; variant?: "default" | "destructive" }) => {
+    (props: { title?: string; description?: string; variant?: "default" | "destructive" | "info" }) => {
       const message = props.description || props.title || "";
-      const type: ToastType = props.variant === "destructive" ? "error" : "success";
+      const type: ToastType = 
+        props.variant === "destructive" ? "error" : 
+        props.variant === "info" ? "info" : 
+        "success";
       addToast(message, type);
     },
     [addToast]

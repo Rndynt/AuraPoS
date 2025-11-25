@@ -169,6 +169,7 @@ export default function POSPage() {
     if (!product.is_active) {
       toast({
         description: `${product.name} sedang tidak tersedia`,
+        variant: "info",
       });
       return;
     }
