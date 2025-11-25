@@ -49,6 +49,7 @@ export function useVariantsLibrary() {
               options: (group.options || []).map((opt: any) => ({
                 name: opt.name,
                 price: Number(opt.price_delta || 0),
+                available: opt.available !== false, // Include available status
               })),
             });
           }

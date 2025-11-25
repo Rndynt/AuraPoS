@@ -52,20 +52,38 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
 ### Recent Fixes & Improvements (Nov 25, 2025)
 
 #### Product & Variant Toggle Optimization
-- **Problem**: Product cards were reordering when toggling availability. Products displayed alphabetically by name, but after toggle success, backend refetch would return data in database order (different sequence), causing cards to visually reorder.
-- **Root Cause**: 
-  1. Toggle operation triggered optimistic cache update
-  2. Mutation succeeded, `onSuccess` callback invalidated cache
-  3. React Query refetched products from backend
-  4. Backend returned products in database order (not alphabetical)
-  5. UI updated with new order, cards appeared to "sort"
-- **Solution**: 
-  - Save original product array order before toggle
-  - After mutation succeeds and cache is refetched, re-map product data using product ID mapping
-  - Restore original alphabetical order by matching product IDs
-  - Ensures product cards maintain stable position despite backend refetch
-- **Implementation**:
-  - Modified `handleToggleProductAvailability` to maintain order post-refetch
-  - Modified `handleToggleVariantOptionAvailability` to maintain order post-refetch
-  - Pattern: `const productMap = new Map(latestProducts.map(p => [p.id, p])); const sortedProducts = currentProducts.map(p => productMap.get(p.id) || p);`
-- **Result**: Product cards stay in same alphabetical order when toggled, instant feedback without visual reordering
+- **Problem 1 - Product Card Reordering**: Product cards were reordering when toggling availability. Products displayed alphabetically by name, but after toggle success, backend refetch would return data in database order (different sequence), causing cards to visually reorder.
+  - **Root Cause**: 
+    1. Toggle operation triggered optimistic cache update
+    2. Mutation succeeded, `onSuccess` callback invalidated cache
+    3. React Query refetched products from backend
+    4. Backend returned products in database order (not alphabetical)
+    5. UI updated with new order, cards appeared to "sort"
+  - **Solution**: 
+    - Save original product array order before toggle
+    - After mutation succeeds and cache is refetched, re-map product data using product ID mapping
+    - Restore original alphabetical order by matching product IDs
+    - Ensures product cards maintain stable position despite backend refetch
+  - **Implementation**:
+    - Modified `handleToggleProductAvailability` to maintain order post-refetch
+    - Modified `handleToggleVariantOptionAvailability` to maintain order post-refetch
+
+- **Problem 2 - Variant Option Toggle Freeze**: Variant option toggle was not responding instantly, causing UI freeze. While product toggle worked, variant option remained stuck.
+  - **Root Cause**: 
+    1. Optimistic update correctly changed `products` cache with `available` field
+    2. BUT `useVariantsLibrary` didn't extract `available` field from options when building variants data
+    3. Variant data lacked available field, so toggle state wasn't reflected in UI
+  - **Solution**: 
+    - Updated `useVariantsLibrary` to include `available` field when mapping options
+    - When products cache updates with available status, variants memoization recalculates and includes the field
+    - UI now instantly reflects toggle state change
+  - **Implementation**:
+    - Modified `useVariantsLibrary` useMemo to extract: `available: opt.available !== false`
+    - Now when toggle happens: cache updates → useMemo recalculates → UI updates instantly
+
+- **Result**: 
+  - Product cards stay in alphabetical order when toggled
+  - Variant option toggle responds instantly without freeze
+  - Both product and variant toggles use optimistic cache updates
+  - UI reflects state changes immediately with toast feedback
+  - API mutations happen in background with auto-revert on error
