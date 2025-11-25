@@ -13,6 +13,7 @@ import ProductForm from "@/components/products/ProductForm";
 import VariantForm from "@/components/products/VariantForm";
 import VariantLibrary from "@/components/products/VariantLibrary";
 import { useToast } from "@/hooks/use-toast";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
 const formatIDR = (price: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -24,7 +25,7 @@ const formatIDR = (price: number) =>
 
 export default function ProductsPage() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const { toast, addToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"products" | "variants">("products");
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
@@ -133,6 +134,48 @@ export default function ProductsPage() {
   const handleNavigateToVariants = () => {
     setActiveTab("variants");
     setViewState("list");
+  };
+
+  const handleToggleProductAvailability = async (productId: string, newStatus: boolean) => {
+    try {
+      await updateProduct.mutateAsync({
+        product_id: productId,
+        is_active: newStatus,
+      } as any);
+      addToast(
+        newStatus ? "Produk diaktifkan" : "Produk dinonaktifkan",
+        newStatus ? "success" : "info"
+      );
+    } catch (error) {
+      addToast("Gagal mengubah status produk", "error");
+    }
+  };
+
+  const handleToggleVariantOptionAvailability = async (
+    variantId: string,
+    optionIndex: number,
+    newStatus: boolean
+  ) => {
+    try {
+      const variant = variants.find((v) => v.id === variantId);
+      if (!variant) return;
+
+      const updatedOptions = variant.options.map((opt, idx) =>
+        idx === optionIndex ? { ...opt, available: newStatus } : opt
+      );
+
+      await createOrUpdateVariant.mutateAsync({
+        ...variant,
+        options: updatedOptions,
+      });
+
+      addToast(
+        newStatus ? "Opsi diaktifkan" : "Opsi dinonaktifkan",
+        newStatus ? "success" : "info"
+      );
+    } catch (error) {
+      addToast("Gagal mengubah status opsi", "error");
+    }
   };
 
   if (viewState === "form_product") {
@@ -270,63 +313,81 @@ export default function ProductsPage() {
                           const stockQty = product.stock_qty ?? product.stockQty ?? 0;
                           const imageUrl = product.image_url || product.imageUrl || "";
                           const basePrice = product.base_price || product.basePrice || 0;
+                          const isActive = product.is_active !== false;
 
                           return (
                             <div
                               key={product.id}
-                              onClick={() => handleEditProduct(product)}
-                              className="p-3 flex items-center gap-4 hover:bg-blue-50 cursor-pointer transition-colors group"
+                              className={`p-3 flex items-center gap-4 transition-colors group ${
+                                !isActive
+                                  ? "bg-slate-50 opacity-70"
+                                  : "hover:bg-blue-50"
+                              }`}
                               data-testid={`product-card-${product.id}`}
                             >
-                              <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                                {imageUrl ? (
-                                  <img
-                                    src={imageUrl}
-                                    className="w-full h-full object-cover"
-                                    alt={product.name}
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                    <Plus size={20} />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start">
+                              <div
+                                onClick={() => handleEditProduct(product)}
+                                className="flex-1 flex items-center gap-4 cursor-pointer min-w-0"
+                              >
+                                <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+                                  {imageUrl ? (
+                                    <img
+                                      src={imageUrl}
+                                      className={`w-full h-full object-cover transition-all ${
+                                        !isActive ? "grayscale" : ""
+                                      }`}
+                                      alt={product.name}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                      <Plus size={20} />
+                                    </div>
+                                  )}
+                                  {!isActive && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                      <span className="bg-slate-800 text-white text-[8px] font-bold px-1 rounded">
+                                        OFF
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
                                   <h4 className="font-bold text-slate-800 truncate">
                                     {product.name}
                                   </h4>
-                                  <span className="font-bold text-blue-600 text-sm">
-                                    {formatIDR(basePrice)}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3 mt-1">
-                                  {product.stock_tracking_enabled || product.stockTrackingEnabled ? (
-                                    <span
-                                      className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                                        stockQty < 10
-                                          ? "bg-red-100 text-red-600"
-                                          : "bg-green-100 text-green-600"
-                                      }`}
-                                    >
-                                      Stok: {stockQty}
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <span className="font-bold text-blue-600 text-xs">
+                                      {formatIDR(basePrice)}
                                     </span>
-                                  ) : (
-                                    <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-100 text-slate-500">
-                                      Tanpa Stok
-                                    </span>
-                                  )}
-                                  {variantsCount > 0 && (
-                                    <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                      <Layers size={10} /> {variantsCount} Varian
-                                    </span>
-                                  )}
+                                    {product.stock_tracking_enabled || product.stockTrackingEnabled ? (
+                                      <span
+                                        className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                                          stockQty < 10
+                                            ? "bg-red-100 text-red-600"
+                                            : "bg-green-100 text-green-600"
+                                        }`}
+                                      >
+                                        Stok: {stockQty}
+                                      </span>
+                                    ) : null}
+                                    {variantsCount > 0 && (
+                                      <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                        <Layers size={10} /> {variantsCount} Varian
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                              <ChevronRight
-                                className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                                size={16}
-                              />
+
+                              <div className="pl-4 border-l border-slate-100 flex flex-col items-center gap-1">
+                                <ToggleSwitch
+                                  checked={isActive}
+                                  onChange={(val) =>
+                                    handleToggleProductAvailability(product.id, val)
+                                  }
+                                  data-testid={`toggle-product-${product.id}`}
+                                />
+                              </div>
                             </div>
                           );
                         })}
@@ -351,6 +412,7 @@ export default function ProductsPage() {
                 products={products}
                 onVariantClick={handleEditVariant}
                 onCreateNew={handleCreateVariant}
+                onToggleVariantOption={handleToggleVariantOptionAvailability}
               />
             )}
           </>
