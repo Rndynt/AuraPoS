@@ -212,7 +212,7 @@ export default function VariantForm({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto w-full grid md:grid-cols-[1.2fr_1fr] gap-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-5xl mx-auto w-full grid md:grid-cols-[1.2fr_1fr] gap-6 pb-20">
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
