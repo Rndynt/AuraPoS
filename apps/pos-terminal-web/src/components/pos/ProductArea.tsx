@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import type { Product } from "@pos/domain/catalog/types";
+import type { Order } from "@pos/domain/order/types";
 import { ProductCard } from "./ProductCardV2";
 import { ModernPOSHeader } from "./shared/ModernPOSHeader";
 import { CategoryChip } from "./shared/CategoryChip";
 import { getCategoryIcon } from "@/lib/design-tokens";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
 
 const DEFAULT_CATEGORY = "All";
 
@@ -14,6 +16,8 @@ type ProductAreaProps = {
   isLoading?: boolean;
   error?: Error | null;
   onAddToCart: (product: Product) => void;
+  orders?: Order[];
+  onUpdateOrderStatus?: (orderId: string, status: string) => Promise<void>;
 };
 
 // Extract unique categories from products
@@ -37,7 +41,9 @@ export function ProductArea({
   products, 
   isLoading, 
   error, 
-  onAddToCart
+  onAddToCart,
+  orders = [],
+  onUpdateOrderStatus
 }: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,6 +63,16 @@ export function ProductArea({
 
   return (
     <div className="flex flex-col bg-slate-50/50 h-full min-h-0 overflow-x-hidden w-full max-w-full">
+      {/* Order Queue - shown when there are active orders */}
+      {orders.length > 0 && onUpdateOrderStatus && (
+        <div className="border-b border-slate-200 bg-white flex-shrink-0">
+          <OrderQueue
+            orders={orders}
+            onUpdateStatus={onUpdateOrderStatus}
+          />
+        </div>
+      )}
+
       {/* Modern POS Header */}
       <ModernPOSHeader 
         searchQuery={searchQuery}

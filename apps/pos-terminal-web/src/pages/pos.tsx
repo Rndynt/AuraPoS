@@ -611,25 +611,15 @@ export default function POSPage() {
 
   return (
     <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
-      {/* Main Product Area with Order Queue */}
-      <div className="flex flex-col flex-1 min-h-0">
-        {/* Order Queue inside ProductArea */}
-        {orders.length > 0 && (
-          <div className="border-b border-slate-200 bg-white flex-shrink-0">
-            <OrderQueue
-              orders={orders}
-              onUpdateStatus={handleUpdateOrderStatus}
-            />
-          </div>
-        )}
-
-        <ProductArea
-          products={products}
-          isLoading={productsLoading}
-          error={productsError}
-          onAddToCart={handleAddToCart}
-        />
-      </div>
+      {/* Main Product Area */}
+      <ProductArea
+        products={products}
+        isLoading={productsLoading}
+        error={productsError}
+        onAddToCart={handleAddToCart}
+        orders={orders}
+        onUpdateOrderStatus={handleUpdateOrderStatus}
+      />
 
       {/* Cart Panel - Hidden on mobile */}
       <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden">

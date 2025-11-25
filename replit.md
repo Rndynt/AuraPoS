@@ -67,9 +67,9 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
 - ✅ **FULL KITCHEN DISPLAY IMPLEMENTATION - COMPLETE!** (Nov 25, 2025 - NEW)
   - **KitchenDisplay Page**: Full-screen kitchen display system at `/kitchen` with responsive grid layout (1-4 columns)
   - **Kitchen Ticket Component**: Individual order cards with status-based borders (orange/yellow/green)
-  - **OrderQueue Component**: Horizontal scrollable queue showing active orders - INTEGRATED ON POS PAGE!
-  - **POS Page Integration**: OrderQueue displayed at top of POS page for real-time order monitoring
-  - **Kitchen Display Page**: Dedicated full-screen view for kitchen staff with ticket grid
+  - **OrderQueue Component**: Horizontal scrollable queue showing active orders - INTEGRATED INSIDE ProductArea!
+  - **POS Page Integration**: OrderQueue appears BELOW header inside ProductArea when orders exist (3-column layout preserved)
+  - **Kitchen Display Page**: Dedicated full-screen view for kitchen staff with ticket grid  
   - **Status Workflow**: confirmed → preparing → ready → completed
   - **Quick Actions**: One-click status updates directly from tickets (both POS queue and Kitchen display)
   - **Real-time Updates**: Order list refreshes after status changes
@@ -79,6 +79,7 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - **Toast Notifications**: Confirms each status change
   - **Design**: Follows design specification from docs/base_design_kitchen_display_order_queue_code.jsx
   - **Zero TypeScript Errors**: All components properly typed
+  - **Layout Integrity**: POS page 3-column layout preserved (ProductArea left | CartPanel right)
 
 ## User Preferences
 - Language: Indonesian (Bahasa Indonesia)
