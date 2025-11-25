@@ -38,7 +38,10 @@ export function ProductOptionsDialog({
     }).format(price);
   };
 
-  const handleOptionToggle = (group: ProductOptionGroup, optionId: string, optionName: string, priceDelta: number) => {
+  const handleOptionToggle = (group: ProductOptionGroup, optionId: string, optionName: string, priceDelta: number, isAvailable: boolean) => {
+    // Don't allow toggling disabled options
+    if (!isAvailable) return;
+
     const currentSelections = selectedOptionsByGroup.get(group.id) || [];
     const isSelected = currentSelections.some(opt => opt.option_id === optionId);
 
@@ -207,7 +210,7 @@ export function ProductOptionsDialog({
 
           {sortedOptionGroups.map((group, idx) => {
             const selections = selectedOptionsByGroup.get(group.id) || [];
-            const availableOptions = group.options.filter(opt => opt.is_available !== false);
+            const allOptions = group.options || [];
 
             return (
               <div key={group.id} className="space-y-2">
@@ -221,7 +224,8 @@ export function ProductOptionsDialog({
                     </span>
                   )}
                 </div>
-                {availableOptions.map((option) => {
+                {allOptions.map((option) => {
+                  const isAvailable = option.is_available !== false;
                   const isSelected = group.selection_type === "single"
                     ? selections[0]?.option_id === option.id
                     : selections.some(sel => sel.option_id === option.id);
@@ -229,10 +233,12 @@ export function ProductOptionsDialog({
                   return (
                     <label
                       key={option.id}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
-                          : 'border-slate-200 hover:bg-slate-50'
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                        !isAvailable
+                          ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-50'
+                          : isSelected
+                          ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200 cursor-pointer'
+                          : 'border-slate-200 hover:bg-slate-50 cursor-pointer'
                       }`}
                       data-testid={`option-${group.id}-${option.id}`}
                     >
@@ -240,44 +246,55 @@ export function ProductOptionsDialog({
                         {group.selection_type === "single" ? (
                           /* Radio Button - Single Selection */
                           <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                              isSelected
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                              !isAvailable
+                                ? 'border-slate-200'
+                                : isSelected
                                 ? 'border-blue-600 bg-blue-600'
                                 : 'border-slate-300'
                             }`}
                           >
-                            {isSelected && (
+                            {isSelected && !isAvailable === false && (
                               <div className="w-1.5 h-1.5 bg-white rounded-full" />
                             )}
                           </div>
                         ) : (
                           /* Checkbox - Multiple Selection */
                           <div
-                            className={`w-4 h-4 rounded border flex items-center justify-center ${
-                              isSelected
+                            className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                              !isAvailable
+                                ? 'border-slate-200'
+                                : isSelected
                                 ? 'border-blue-600 bg-blue-600'
                                 : 'border-slate-300'
                             }`}
                           >
-                            {isSelected && (
+                            {isSelected && !isAvailable === false && (
                               <svg className="w-3 h-3 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                                 <polyline points="13 2 6 13 3 10" />
                               </svg>
                             )}
                           </div>
                         )}
-                        <span
-                          className={`text-sm ${
-                            isSelected
-                              ? 'font-semibold text-blue-900'
-                              : 'text-slate-600'
-                          }`}
-                        >
-                          {option.name}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span
+                            className={`text-sm ${
+                              !isAvailable
+                                ? 'text-slate-400'
+                                : isSelected
+                                ? 'font-semibold text-blue-900'
+                                : 'text-slate-600'
+                            }`}
+                          >
+                            {option.name}
+                          </span>
+                          {!isAvailable && (
+                            <span className="text-[10px] text-slate-400">Tidak tersedia</span>
+                          )}
+                        </div>
                       </div>
                       {option.price_delta !== 0 && option.price_delta > 0 && (
-                        <span className="text-xs font-medium text-slate-500">
+                        <span className={`text-xs font-medium ${!isAvailable ? 'text-slate-300' : 'text-slate-500'}`}>
                           +{formatPrice(option.price_delta)}
                         </span>
                       )}
@@ -285,8 +302,9 @@ export function ProductOptionsDialog({
                         type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
                         className="hidden"
                         checked={isSelected}
+                        disabled={!isAvailable}
                         onChange={() => {
-                          handleOptionToggle(group, option.id, option.name, option.price_delta);
+                          handleOptionToggle(group, option.id, option.name, option.price_delta, isAvailable);
                         }}
                       />
                     </label>
