@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings, Grip, Computer } from "lucide-react";
+import { LayoutGrid, Square, ShoppingBag, CreditCard, Settings, Grip, Computer, ChefHat } from "lucide-react";
 
 interface UnifiedBottomNavProps {
   cartCount: number;
@@ -59,6 +59,18 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
             {cartCount}
           </span>
         )}
+      </button>
+
+      {/* Kitchen Display Button */}
+      <button
+        onClick={() => handleNavClick("/kitchen")}
+        className={`flex flex-col items-center gap-0.5 ${
+          isActive("/kitchen") ? "text-blue-600" : "text-slate-400"
+        }`}
+        data-testid="nav-kitchen"
+      >
+        <ChefHat size={20} />
+        <span className="text-[10px]">Kitchen</span>
       </button>
 
       {/* Bills Button */}

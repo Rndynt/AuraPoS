@@ -13,6 +13,7 @@ import ReportsPage from "@/pages/reports";
 import StockPage from "@/pages/stock";
 import EmployeesPage from "@/pages/employees";
 import StoreProfilePage from "@/pages/store-profile";
+import KitchenDisplayPage from "@/pages/kitchen-display";
 import NotFound from "@/pages/not-found";
 import { TenantProvider } from "@/context/TenantContext";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -77,6 +78,12 @@ const StoreProfilePageWithLayout = () => (
   </MainLayout>
 );
 
+const KitchenDisplayPageWithLayout = () => (
+  <MainLayout hideBottomNav>
+    <KitchenDisplayPage />
+  </MainLayout>
+);
+
 const NotFoundWithLayout = () => (
   <MainLayout>
     <NotFound />
@@ -89,6 +96,7 @@ function Router() {
       <Route path="/" component={HomePageWithLayout} />
       <Route path="/pos" component={POSPageWithLayout} />
       <Route path="/orders" component={OrdersPageWithLayout} />
+      <Route path="/kitchen" component={KitchenDisplayPageWithLayout} />
       <Route path="/tables" component={TablesManagementPageWithLayout} />
       <Route path="/dashboard" component={DashboardPageWithLayout} />
       <Route path="/products" component={ProductsPageWithLayout} />
