@@ -120,15 +120,33 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
 - **Implementation**: Added smooth loading feedback during toggle operations
   - Added `isLoading` prop to `ToggleSwitch` component
   - Track loading state per toggle (product toggles and variant option toggles independently)
-  - Loading animation: gentle pulse effect + reduced opacity on circle (50%)
+  - Loading animation: smooth animated dots (. .. ... repeat) instead of pulse
   - Disabled state: button shows not-allowed cursor during processing
   - Animation clears on completion or error
 - **Files Modified**: 
-  - `toggle-switch.tsx` - Added loading state and pulse animation
+  - `toggle-switch.tsx` - Added loading state and dots animation using useEffect/interval
   - `products.tsx` - Track loading state with Set for product and variant toggles
   - `VariantLibrary.tsx` - Pass loading state to variant option toggles
 - **User Experience**: 
   - Clear visual feedback that toggle is processing
-  - Professional pulse animation (not spinner icon)
+  - Professional smooth dots animation (not jerky pulse)
   - Prevents accidental double-clicks during mutation
   - Toast notification confirms success/error
+
+#### POS Unavailable Products Display (Nov 25, 2025)
+- **Problem**: Unavailable products (toggled OFF in Product Hub) were hidden from POS interface, preventing visibility of inventory status
+- **Solution**: Display unavailable products with visual overlay and disable add-to-cart functionality
+- **Implementation**:
+  - Modified `pos.tsx` line 47: Changed `useProducts({ isActive: true })` to `useProducts()` to fetch ALL products
+  - Added `handleAddToCart` check: Block unavailable products with error toast
+  - Modified `ProductCardV2.tsx`: 
+    - Added `isUnavailable` check based on `product.is_active`
+    - Added `opacity-50 cursor-not-allowed` styling for unavailable cards
+    - Added overlay with "Tidak Tersedia" text centered on product image
+    - Disabled hover effects for unavailable products
+- **User Experience**:
+  - Unavailable products visible in POS with 50% opacity
+  - Clear "Tidak Tersedia" overlay label on image
+  - Clicking unavailable product shows error toast: "Produk tidak tersedia"
+  - Visual distinction allows staff to see what's out of stock
+  - Prevents accidental orders of unavailable items

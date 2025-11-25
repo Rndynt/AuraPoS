@@ -43,8 +43,8 @@ export default function POSPage() {
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
 
-  // Fetch products from backend
-  const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts({ isActive: true });
+  // Fetch products from backend (including inactive products to show with overlay)
+  const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts();
   const products = productsData?.products || [];
 
   // Fetch orders for queue display
@@ -165,6 +165,16 @@ export default function POSPage() {
   });
 
   const handleAddToCart = (product: Product) => {
+    // Block adding unavailable products to cart
+    if (!product.is_active) {
+      toast({
+        title: "Produk tidak tersedia",
+        description: `${product.name} sedang tidak tersedia`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if product has variants or option_groups that require selection
     const hasVariants = product.has_variants && product.variants && product.variants.length > 0;
     const hasOptionGroups = product.option_groups && product.option_groups.length > 0;

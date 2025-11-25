@@ -12,11 +12,14 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
   const hasVariants = product.has_variants || (product.option_groups && product.option_groups.length > 0);
+  const isUnavailable = !product.is_active;
 
   return (
     <div
       onClick={() => onAddToCart(product)}
-      className="group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-95 hover:shadow-md cursor-pointer relative h-full flex flex-col"
+      className={`group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-95 hover:shadow-md relative h-full flex flex-col ${
+        isUnavailable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      }`}
       data-testid={`card-product-${product.id}`}
     >
       {/* Product Image */}
@@ -25,7 +28,9 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className={`w-full h-full object-cover transition-transform duration-500 ${
+              isUnavailable ? "" : "group-hover:scale-105"
+            }`}
             loading="lazy"
             decoding="async"
             onError={() => setImageFailed(true)}
@@ -40,6 +45,13 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         {product.stock_tracking_enabled && product.stock_qty !== undefined && (
           <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur text-white text-[10px] font-medium px-2 py-0.5 rounded">
             {product.stock_qty} Stok
+          </div>
+        )}
+
+        {/* Unavailable Overlay */}
+        {isUnavailable && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">Tidak Tersedia</span>
           </div>
         )}
 
