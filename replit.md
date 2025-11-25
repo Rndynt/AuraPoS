@@ -115,3 +115,20 @@ This project is a web-based Point of Sale (POS) system designed for UMKM (Usaha 
   - Both product and variant toggles use optimistic cache updates with backend persistence
   - UI reflects state changes immediately with toast feedback
   - API mutations happen in background with auto-revert on error
+
+#### Loading Animation Enhancement (Nov 25, 2025)
+- **Implementation**: Added smooth loading feedback during toggle operations
+  - Added `isLoading` prop to `ToggleSwitch` component
+  - Track loading state per toggle (product toggles and variant option toggles independently)
+  - Loading animation: gentle pulse effect + reduced opacity on circle (50%)
+  - Disabled state: button shows not-allowed cursor during processing
+  - Animation clears on completion or error
+- **Files Modified**: 
+  - `toggle-switch.tsx` - Added loading state and pulse animation
+  - `products.tsx` - Track loading state with Set for product and variant toggles
+  - `VariantLibrary.tsx` - Pass loading state to variant option toggles
+- **User Experience**: 
+  - Clear visual feedback that toggle is processing
+  - Professional pulse animation (not spinner icon)
+  - Prevents accidental double-clicks during mutation
+  - Toast notification confirms success/error

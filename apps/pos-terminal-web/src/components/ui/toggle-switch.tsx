@@ -1,5 +1,3 @@
-import { Loader2 } from "lucide-react";
-
 interface ToggleSwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -36,29 +34,24 @@ export function ToggleSwitch({
       disabled={isLoading || disabled}
       className={`
         ${containerClass} 
-        rounded-full transition-all duration-300 ease-in-out focus:outline-none flex-shrink-0 relative
+        rounded-full transition-all duration-300 ease-in-out focus:outline-none flex-shrink-0 relative overflow-hidden
         ${checked ? "bg-blue-600" : "bg-slate-300"}
-        ${isLoading || disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+        ${isLoading ? "animate-pulse" : ""}
+        ${isLoading || disabled ? "cursor-not-allowed" : "cursor-pointer"}
       `}
       role="switch"
       aria-checked={checked}
     >
-      {isLoading ? (
-        <Loader2
-          size={isSmall ? 10 : 14}
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-white`}
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          className={`
-            ${circleClass}
-            pointer-events-none inline-block rounded-full bg-white shadow-sm ring-0 transition-all duration-300 ease-in-out absolute top-1/2 -translate-y-1/2
-            ${startPos}
-            ${checked ? translateClass : "translate-x-0"}
-          `}
-        />
-      )}
+      <span
+        aria-hidden="true"
+        className={`
+          ${circleClass}
+          pointer-events-none inline-block rounded-full bg-white shadow-sm ring-0 transition-all duration-300 ease-in-out absolute top-1/2 -translate-y-1/2
+          ${startPos}
+          ${checked ? translateClass : "translate-x-0"}
+          ${isLoading ? "opacity-50" : "opacity-100"}
+        `}
+      />
     </button>
   );
 }
