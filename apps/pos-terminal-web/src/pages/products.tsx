@@ -14,6 +14,7 @@ import VariantForm from "@/components/products/VariantForm";
 import VariantLibrary from "@/components/products/VariantLibrary";
 import { useToast } from "@/hooks/use-toast";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { queryClient } from "@/lib/queryClient";
 
 const formatIDR = (price: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -147,6 +148,17 @@ export default function ProductsPage() {
   };
 
   const handleToggleProductAvailability = async (productId: string, newStatus: boolean) => {
+    // Get current products from cache
+    const currentProducts = queryClient.getQueryData(["/api/catalog/products"]) as any[] | undefined;
+    
+    // Optimistically update the cache
+    if (currentProducts) {
+      const updatedProducts = currentProducts.map((p) =>
+        p.id === productId ? { ...p, is_active: newStatus } : p
+      );
+      queryClient.setQueryData(["/api/catalog/products"], updatedProducts);
+    }
+
     try {
       await updateProduct.mutateAsync({
         product_id: productId,
@@ -157,6 +169,10 @@ export default function ProductsPage() {
         newStatus ? "success" : "info"
       );
     } catch (error) {
+      // Revert to previous state on error
+      if (currentProducts) {
+        queryClient.setQueryData(["/api/catalog/products"], currentProducts);
+      }
       addToast("Gagal mengubah status produk", "error");
     }
   };
