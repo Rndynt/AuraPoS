@@ -15,6 +15,7 @@ import {
   XCircle, 
   ChefHat,
   CheckCircle,
+  Search,
 } from "lucide-react";
 import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
 
@@ -111,6 +112,7 @@ const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
 
 export default function OrdersPage() {
   const [filterStatus, setFilterStatus] = useState<OrderStatusFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -123,17 +125,29 @@ export default function OrdersPage() {
     [data]
   );
 
-  // Filter orders based on status filter
+  // Filter orders based on status filter AND search query
   const filteredOrders = useMemo(() => {
     const activeOrders = normalizedOrders.filter(o => 
       ["draft", "confirmed", "preparing", "ready"].includes(o.status)
     );
     
-    if (filterStatus === "all") {
-      return activeOrders;
+    let result = activeOrders;
+    
+    if (filterStatus !== "all") {
+      result = result.filter(o => o.status === filterStatus);
     }
-    return activeOrders.filter(o => o.status === filterStatus);
-  }, [normalizedOrders, filterStatus]);
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(o =>
+        o.customer_name?.toLowerCase().includes(query) ||
+        o.order_number?.toLowerCase().includes(query) ||
+        o.table_number?.toString().includes(query)
+      );
+    }
+    
+    return result;
+  }, [normalizedOrders, filterStatus, searchQuery]);
 
   const selectedOrder = useMemo(() => {
     if (selectedOrderResponse) return normalizeOrder(selectedOrderResponse);
@@ -213,23 +227,48 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-4 md:px-6 py-4 flex-shrink-0">
-        <h1 className="text-2xl font-bold text-slate-800" data-testid="heading-orders">
-          Pesanan
-        </h1>
-        <p className="text-sm text-slate-600 mt-1">
-          Kelola dan pantau semua pesanan Anda
-        </p>
-      </header>
+    <div className="flex h-full overflow-hidden bg-slate-50 relative">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 h-full relative pb-[60px] md:pb-0">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200 p-4 md:p-6">
+          {/* Title Section */}
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800" data-testid="heading-orders">
+                Pesanan
+              </h1>
+              <p className="text-slate-500 text-sm">
+                Kelola dan pantau semua pesanan Anda
+              </p>
+            </div>
+            <div className="flex gap-2 text-xs font-bold">
+              <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg">
+                {filterCounts.confirmed} Confirmed
+              </div>
+              <div className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">
+                {filterCounts.preparing} Prep
+              </div>
+            </div>
+          </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Orders List */}
-        <div className="flex-1 flex flex-col overflow-hidden md:border-r border-border">
-          {/* Filter Tabs */}
-          <div className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0 overflow-x-auto">
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar w-fit md:w-full">
+          {/* Search & Filter Section */}
+          <div className="flex flex-col md:flex-row gap-4 justify-between">
+            {/* Search Input */}
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Cari pesanan..."
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                data-testid="input-search-orders"
+              />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
               {(["all", "confirmed", "preparing", "ready", "completed"] as const).map((status) => (
                 <button
                   key={status}
@@ -247,206 +286,212 @@ export default function OrdersPage() {
               ))}
             </div>
           </div>
-
-          {/* Order Cards */}
-          <ScrollArea className="flex-1 overflow-auto">
-            <div className="p-4 md:p-6 space-y-3 pb-20">
-              {isLoading ? (
-                <div className="text-center py-16 text-slate-500">
-                  Memuat pesanan...
-                </div>
-              ) : filteredOrders.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">
-                  Tidak ada pesanan
-                </div>
-              ) : (
-                filteredOrders.map((order) => {
-                  const statusConfig = ORDER_STATUS_CONFIG[order.status];
-                  const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status] || PAYMENT_STATUS_CONFIG["unpaid"];
-                  const StatusIcon = statusConfig.icon;
-
-                  return (
-                    <Card
-                      key={order.id}
-                      className={`cursor-pointer hover-elevate transition-all ${
-                        selectedOrder?.id === order.id ? "ring-2 ring-blue-600" : ""
-                      }`}
-                      onClick={() => setSelectedOrderId(order.id)}
-                      data-testid={`order-card-${order.id}`}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-base">
-                              {order.customer_name || "Pelanggan"}
-                            </CardTitle>
-                            <p className="text-sm text-slate-500 mt-1">
-                              #{order.order_number}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <StatusIcon className={`w-4 h-4 ${statusConfig.color}`} />
-                            <Badge variant={statusConfig.variant} className="text-xs">
-                              {statusConfig.label}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">
-                            {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? "s" : ""}
-                          </span>
-                          <Badge className={paymentConfig.className} variant="outline">
-                            {paymentConfig.label}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                          <span className="text-sm text-slate-600">
-                            {formatDate(order.created_at)}
-                          </span>
-                          <span className="font-bold text-slate-800">
-                            {formatPrice(order.total_amount)}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
         </div>
 
-        {/* Order Details Panel */}
-        <div className="w-full md:w-96 bg-card flex flex-col border-t md:border-t-0 md:border-l border-border overflow-hidden">
-          {selectedOrder ? (
-            <>
-              <div className="p-4 md:p-6 border-b border-border flex items-center justify-between flex-shrink-0">
-                <h2 className="text-lg font-semibold">Detail Pesanan</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedOrderId(null)}
-                  data-testid="button-close-details"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <ScrollArea className="flex-1 overflow-auto">
-                <div className="p-4 md:p-6 space-y-6 pb-20">
-                  {/* Customer Info */}
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm text-slate-600">Nama Pelanggan</Label>
-                      <p className="font-medium mt-1">
-                        {selectedOrder.customer_name || "Pelanggan"}
-                      </p>
-                    </div>
-                    {selectedOrder.table_number && (
-                      <div>
-                        <Label className="text-sm text-slate-600">Meja</Label>
-                        <p className="font-medium mt-1">{selectedOrder.table_number}</p>
-                      </div>
-                    )}
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* Orders List */}
+          <div className="flex-1 flex flex-col overflow-hidden md:border-r border-slate-200">
+            {/* Order Cards */}
+            <ScrollArea className="flex-1 overflow-auto">
+              <div className="p-4 md:p-6 space-y-3">
+                {isLoading ? (
+                  <div className="text-center py-16 text-slate-500">
+                    Memuat pesanan...
                   </div>
+                ) : filteredOrders.length === 0 ? (
+                  <div className="text-center py-16 text-slate-500">
+                    Tidak ada pesanan
+                  </div>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const statusConfig = ORDER_STATUS_CONFIG[order.status];
+                    const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status] || PAYMENT_STATUS_CONFIG["unpaid"];
+                    const StatusIcon = statusConfig.icon;
 
-                  <Separator />
-
-                  {/* Order Details */}
-                  <div>
-                    <h3 className="font-semibold mb-3">Item Pesanan</h3>
-                    <div className="space-y-3">
-                      {selectedOrder.items?.length ? (
-                        selectedOrder.items.map((item, idx) => (
-                          <div key={idx} className="flex gap-3 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                    return (
+                      <Card
+                        key={order.id}
+                        className={`cursor-pointer hover-elevate transition-all ${
+                          selectedOrder?.id === order.id ? "ring-2 ring-blue-600" : ""
+                        }`}
+                        onClick={() => setSelectedOrderId(order.id)}
+                        data-testid={`order-card-${order.id}`}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm">{item.product_name}</p>
-                              {item.variant_name && (
-                                <p className="text-xs text-slate-600 mt-0.5">
-                                  {item.variant_name}
-                                </p>
-                              )}
-                              {item.selected_options && item.selected_options.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {item.selected_options.map((opt, optIdx) => (
-                                    <Badge key={optIdx} variant="outline" className="text-xs">
-                                      {opt.option_name}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="text-sm text-slate-600">
-                                  x{item.quantity}
-                                </span>
-                                <span className="font-medium text-sm">
-                                  {formatPrice(item.item_subtotal)}
-                                </span>
-                              </div>
+                              <CardTitle className="text-base">
+                                {order.customer_name || "Pelanggan"}
+                              </CardTitle>
+                              <p className="text-sm text-slate-500 mt-1">
+                                #{order.order_number}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <StatusIcon className={`w-4 h-4 ${statusConfig.color}`} />
+                              <Badge variant={statusConfig.variant} className="text-xs">
+                                {statusConfig.label}
+                              </Badge>
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-slate-600">Tidak ada item untuk pesanan ini.</p>
-                      )}
-                    </div>
-                  </div>
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600">
+                              {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? "s" : ""}
+                            </span>
+                            <Badge className={paymentConfig.className} variant="outline">
+                              {paymentConfig.label}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <span className="text-sm text-slate-600">
+                              {formatDate(order.created_at)}
+                            </span>
+                            <span className="font-bold text-slate-800">
+                              {formatPrice(order.total_amount)}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            </ScrollArea>
+          </div>
 
-                  <Separator />
+          {/* Order Details Panel */}
+          <div className="w-full md:w-96 bg-white flex flex-col border-t md:border-t-0 md:border-l border-slate-200 overflow-hidden">
+            {selectedOrder ? (
+              <>
+                <div className="p-4 md:p-6 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+                  <h2 className="text-lg font-semibold text-slate-800">Detail Pesanan</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedOrderId(null)}
+                    data-testid="button-close-details"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
 
-                  {/* Order Summary */}
-                  <div>
-                    <h3 className="font-semibold mb-3">Ringkasan Pesanan</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Subtotal</span>
-                        <span>{formatPrice(selectedOrder.subtotal)}</span>
+                <ScrollArea className="flex-1 overflow-auto">
+                  <div className="p-4 md:p-6 space-y-6 pb-20">
+                    {/* Customer Info */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm text-slate-600">Nama Pelanggan</Label>
+                        <p className="font-medium mt-1">
+                          {selectedOrder.customer_name || "Pelanggan"}
+                        </p>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Pajak</span>
-                        <span>{formatPrice(selectedOrder.tax_amount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Biaya Layanan</span>
-                        <span>{formatPrice(selectedOrder.service_charge_amount)}</span>
-                      </div>
-                      {selectedOrder.discount_amount > 0 && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Diskon</span>
-                          <span>-{formatPrice(selectedOrder.discount_amount)}</span>
+                      {selectedOrder.table_number && (
+                        <div>
+                          <Label className="text-sm text-slate-600">Meja</Label>
+                          <p className="font-medium mt-1">{selectedOrder.table_number}</p>
                         </div>
                       )}
-                      <Separator className="my-2" />
-                      <div className="flex justify-between font-bold text-base pt-2">
-                        <span>Total</span>
-                        <span>{formatPrice(selectedOrder.total_amount)}</span>
+                    </div>
+
+                    <Separator />
+
+                    {/* Order Details */}
+                    <div>
+                      <h3 className="font-semibold mb-3 text-slate-800">Item Pesanan</h3>
+                      <div className="space-y-3">
+                        {selectedOrder.items?.length ? (
+                          selectedOrder.items.map((item, idx) => (
+                            <div key={idx} className="flex gap-3 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm">{item.product_name}</p>
+                                {item.variant_name && (
+                                  <p className="text-xs text-slate-600 mt-0.5">
+                                    {item.variant_name}
+                                  </p>
+                                )}
+                                {item.selected_options && item.selected_options.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {item.selected_options.map((opt, optIdx) => (
+                                      <Badge key={optIdx} variant="outline" className="text-xs">
+                                        {opt.option_name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-sm text-slate-600">
+                                    x{item.quantity}
+                                  </span>
+                                  <span className="font-medium text-sm">
+                                    {formatPrice(item.item_subtotal)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-600">Tidak ada item untuk pesanan ini.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Order Summary */}
+                    <div>
+                      <h3 className="font-semibold mb-3 text-slate-800">Ringkasan Pesanan</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Subtotal</span>
+                          <span>{formatPrice(selectedOrder.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Pajak</span>
+                          <span>{formatPrice(selectedOrder.tax_amount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Biaya Layanan</span>
+                          <span>{formatPrice(selectedOrder.service_charge_amount)}</span>
+                        </div>
+                        {selectedOrder.discount_amount > 0 && (
+                          <div className="flex justify-between text-green-600">
+                            <span>Diskon</span>
+                            <span>-{formatPrice(selectedOrder.discount_amount)}</span>
+                          </div>
+                        )}
+                        <Separator className="my-2" />
+                        <div className="flex justify-between font-bold text-base pt-2">
+                          <span>Total</span>
+                          <span>{formatPrice(selectedOrder.total_amount)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </ScrollArea>
+                </ScrollArea>
 
-              <div className="p-4 md:p-6 border-t border-border flex-shrink-0">
-                <Button 
-                  className="w-full" 
-                  data-testid="button-process-transaction"
-                  onClick={handleProcessTransaction}
-                  disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
-                >
-                  {recordPaymentMutation.isPending ? "Memproses..." : "Proses Transaksi"}
-                </Button>
+                <div className="p-4 md:p-6 border-t border-slate-200 flex-shrink-0">
+                  <Button 
+                    className="w-full" 
+                    data-testid="button-process-transaction"
+                    onClick={handleProcessTransaction}
+                    disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
+                  >
+                    {recordPaymentMutation.isPending ? "Memproses..." : "Proses Transaksi"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-slate-600 space-y-2">
+                  <ChefHat className="w-16 h-16 mx-auto opacity-30" />
+                  <p>Pilih pesanan untuk melihat detail</p>
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-slate-600 space-y-2">
-                <ChefHat className="w-16 h-16 mx-auto opacity-30" />
-                <p>Pilih pesanan untuk melihat detail</p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

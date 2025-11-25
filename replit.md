@@ -89,13 +89,18 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
   - **Type Safety**: Proper Order type imports from `@pos/domain/orders/types`
 
 - ✅ **ORDER LIST PAGE REDESIGN - COMPLETE!** (Nov 25, 2025 - NEW)
-  - **Filter Tabs Redesign**: Changed from complex Tabs component to simpler button-based filter like table page
-  - **Status-based Filtering**: All, Confirmed, Preparing, Ready, Completed (focus on order status)
-  - **Filter Tab Styling**: 
-    - Clean filter bar: bg-slate-100 with rounded-xl and p-1 (matches table page design)
+  - **Header Design**: Exactly matches table page design for consistency
+    - Title + subtitle on top-left
+    - Status badges (Confirmed, Prep count) on top-right
+    - Search input below title (left side, width: md:w-96)
+    - Filter tabs below search (right side, responsive)
+  - **Filter Tabs Redesign**: Changed from complex Tabs component to simple button-based filter (table page pattern)
+    - Status-based filtering: All, Confirmed, Preparing, Ready, Completed
+    - Clean filter bar: bg-slate-100 with rounded-xl and p-1
     - Active filter: bg-white text-slate-800 with shadow-sm
     - Inactive filter: text-slate-500 with hover effect
     - Count badges showing number of orders per status
+  - **Search Functionality**: Real-time search by customer name, order number, or table number
   - **Order Card Design**: 
     - Cleaner layout with better visual hierarchy
     - Status badge with icon on top right (not mixed with content)
@@ -103,14 +108,14 @@ A web-based Point of Sale (POS) system for UMKM (Usaha Mikro, Kecil, dan Menenga
     - Simplified spacing and typography
     - Consistent with application's design language
   - **Layout & Spacing**:
-    - Two-column layout preserved (left: orders list, right: details panel)
+    - Two-column layout (left: orders list, right: details panel)
     - Proper padding and spacing throughout
     - Mobile responsive with single-column on small screens
-    - pb-20 padding on content areas for bottom nav
-  - **Indonesian Translations**: All labels and messages in Indonesian (Pesanan, Kelola, etc.)
-  - **Design Consistency**: Matches other pages (Pesanan, tables, POS) with cleaner, less rigid appearance
+    - Full responsiveness with md breakpoints
+  - **Indonesian Translations**: All labels and messages in Indonesian (Pesanan, Cari, etc.)
+  - **Design Consistency**: EXACTLY matches table page design - clean, modern, consistent
   - **Zero TypeScript Errors**: All components properly typed and linted
-  - **Mobile Support**: Responsive tabs (scrollable on small screens), proper touch targets
+  - **Mobile Support**: Responsive layout, proper touch targets, pb-safe for bottom nav
 
 ## User Preferences
 - Language: Indonesian (Bahasa Indonesia)
