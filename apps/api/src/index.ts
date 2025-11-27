@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import '../register-paths.ts';
 import express, { type Request, Response, NextFunction } from "express";
 import { setupVite, serveStatic, log } from "./vite";
 
