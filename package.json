@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "shared"
+  ],
   "scripts": {
     "dev": "NODE_ENV=development tsx apps/api/src/index.ts",
     "dev:turbo": "turbo run dev",
