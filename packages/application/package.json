@@ -2,6 +2,7 @@
   "name": "@pos/application",
   "version": "1.0.0",
   "description": "Application layer use cases for multi-variant POS system",
+  "type": "module",
   "main": "index.ts",
   "types": "index.ts",
   "exports": {
