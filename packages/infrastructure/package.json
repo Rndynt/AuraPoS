@@ -2,6 +2,7 @@
   "name": "@pos/infrastructure",
   "version": "1.0.0",
   "description": "Infrastructure layer for multi-variant POS system",
+  "type": "module",
   "main": "index.ts",
   "types": "index.ts",
   "exports": {
