@@ -4,6 +4,18 @@
   "description": "Infrastructure layer for multi-variant POS system",
   "main": "index.ts",
   "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./database": "./database.ts",
+    "./repositories": "./repositories/index.ts",
+    "./repositories/*": "./repositories/*.ts",
+    "./repositories/catalog/*": "./repositories/catalog/*.ts",
+    "./repositories/orders/*": "./repositories/orders/*.ts",
+    "./repositories/seating/*": "./repositories/seating/*.ts",
+    "./repositories/tenants/*": "./repositories/tenants/*.ts",
+    "./seeders": "./seeders/index.ts",
+    "./seeders/*": "./seeders/*.ts"
+  },
   "scripts": {},
   "keywords": ["infrastructure", "repositories", "pos"],
   "author": "",

@@ -4,6 +4,16 @@
   "description": "Application layer use cases for multi-variant POS system",
   "main": "index.ts",
   "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./catalog": "./catalog/index.ts",
+    "./catalog/*": "./catalog/*.ts",
+    "./orders": "./orders/index.ts",
+    "./orders/*": "./orders/*.ts",
+    "./seating/*": "./seating/*.ts",
+    "./tenants": "./tenants/index.ts",
+    "./tenants/*": "./tenants/*.ts"
+  },
   "scripts": {},
   "keywords": ["application", "use-cases", "pos"],
   "author": "",
