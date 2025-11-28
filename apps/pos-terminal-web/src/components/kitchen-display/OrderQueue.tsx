@@ -5,6 +5,7 @@ import type { Order } from "@pos/domain/orders/types";
 interface OrderQueueProps {
   orders: Order[];
   onUpdateStatus: (orderId: string, status: string) => void;
+  onExpandChange?: (isExpanded: boolean) => void;
 }
 
 const getStatusBgColor = (status: string) => {
@@ -52,7 +53,7 @@ const formatTime = (date: Date | string | undefined) => {
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 };
 
-export function OrderQueue({ orders, onUpdateStatus }: OrderQueueProps) {
+export function OrderQueue({ orders, onUpdateStatus, onExpandChange }: OrderQueueProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   const activeOrders = orders.filter((o) =>
@@ -74,7 +75,10 @@ export function OrderQueue({ orders, onUpdateStatus }: OrderQueueProps) {
     return (
       <div className="px-4 md:px-8 py-2.5">
         <button
-          onClick={() => setIsVisible(true)}
+          onClick={() => {
+            setIsVisible(true);
+            onExpandChange?.(true);
+          }}
           className="flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
           data-testid="button-show-queue"
         >
@@ -86,7 +90,7 @@ export function OrderQueue({ orders, onUpdateStatus }: OrderQueueProps) {
 
   return (
     <div
-      className="px-4 md:px-8 py-4 md:py-5 animate-in slide-in-from-top-2"
+      className="px-4 md:px-8 py-4 md:py-5 animate-in slide-in-from-top-2 transition-all duration-300 ease-in-out"
       data-testid="order-queue"
     >
       <div className="flex justify-between items-center mb-3">
@@ -97,7 +101,10 @@ export function OrderQueue({ orders, onUpdateStatus }: OrderQueueProps) {
           </span>
         </h3>
         <button
-          onClick={() => setIsVisible(false)}
+          onClick={() => {
+            setIsVisible(false);
+            onExpandChange?.(false);
+          }}
           className="text-slate-400 hover:text-slate-600"
           data-testid="button-hide-queue"
         >

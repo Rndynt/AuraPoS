@@ -48,6 +48,7 @@ export function ProductArea({
 }: ProductAreaProps) {
   const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isOrderQueueExpanded, setIsOrderQueueExpanded] = useState(false);
   const { hasModule } = useTenant();
   const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
 
@@ -79,12 +80,13 @@ export function ProductArea({
           <OrderQueue
             orders={orders}
             onUpdateStatus={onUpdateOrderStatus}
+            onExpandChange={setIsOrderQueueExpanded}
           />
         </div>
       )}
 
-      {/* Category Chips */}
-      <div className="px-4 md:px-8 py-4">
+      {/* Category Chips - with smooth slide animation */}
+      <div className={`px-4 md:px-8 py-4 transition-all duration-300 ease-in-out ${isOrderQueueExpanded ? 'translate-y-0' : 'translate-y-0'}`}>
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
           {isLoading ? (
             <>
