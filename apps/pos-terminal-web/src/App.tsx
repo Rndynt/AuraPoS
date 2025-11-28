@@ -93,7 +93,8 @@ const NotFoundWithLayout = () => (
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={HomePageWithLayout} />
+      <Route path="/" component={POSPageWithLayout} />
+      <Route path="/hub" component={HomePageWithLayout} />
       <Route path="/pos" component={POSPageWithLayout} />
       <Route path="/orders" component={OrdersPageWithLayout} />
       <Route path="/kitchen" component={KitchenDisplayPageWithLayout} />
