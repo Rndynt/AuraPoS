@@ -298,114 +298,79 @@ export default function POSPage() {
   };
   
   const handleCharge = async () => {
-    console.log("🟡 [CHARGE] handleCharge called, continueOrderId:", continueOrderId);
+    if (!ensureCartHasItems()) return;
     
-    if (!ensureCartHasItems()) {
-      console.log("🟡 [CHARGE] No items - aborting");
-      return;
-    }
-    
-    // If continuing an order, update it directly without dialog
+    // If continuing an order, update it then show payment dialog
     if (continueOrderId) {
-      console.log("🟡 [CHARGE] Continuing existing order:", continueOrderId);
       await handleUpdateContinueOrder();
       return;
     }
     
-    console.log("🟡 [CHARGE] Creating new order");
-    
     // Check if order type is already selected
-    if (cart.selectedOrderTypeId) {
-      // Get the selected order type metadata
-      const selectedOrderType = activeOrderTypes.find(ot => ot.id === cart.selectedOrderTypeId);
-      
-      if (selectedOrderType) {
-        // Check if order type requires table number
-        const needsTable = selectedOrderType.needTableNumber === true;
-        
-        // If table is required but not set, open dialog for table entry
-        if (needsTable && !cart.tableNumber) {
-          setOrderTypeSelectionDialogOpen(true);
-          setMobileCartOpen(false);
-          return;
-        }
-        
-        // All metadata ready - create order then show payment method dialog
-        setIsProcessingQuickCharge(true);
-        try {
-          const orderPayload = {
-            items: cart.toBackendOrderItems(),
-            tax_rate: cart.taxRate,
-            service_charge_rate: cart.serviceChargeRate,
-            order_type_id: cart.selectedOrderTypeId,
-            customer_name: cart.customerName || undefined,
-            table_number: cart.tableNumber || undefined,
-          };
-          
-          // Create the order first
-          const orderResult = await createOrderMutation.mutateAsync(orderPayload);
-          
-          // Store pending order and show payment method dialog
-          setPendingOrderForPayment({
-            orderId: orderResult.order.id,
-            totalAmount: orderResult.pricing.total_amount,
-            orderNumber: orderResult.order.order_number,
-          });
-          setIsProcessingQuickCharge(false);
-          setPaymentMethodDialogOpen(true);
-          setMobileCartOpen(false);
-        } catch (error) {
-          let errorMessage = "Failed to process order";
-          if (error instanceof Error) {
-            errorMessage = error.message;
-          }
-          const apiError = error as any;
-          if (apiError?.response?.data?.message) {
-            errorMessage = apiError.response.data.message;
-          } else if (apiError?.body?.message) {
-            errorMessage = apiError.body.message;
-          }
-          
-          console.error("Quick charge error details:", error);
-          
-          setIsProcessingQuickCharge(false);
-          toast({
-            title: "Order failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
-        return;
-      }
+    if (!cart.selectedOrderTypeId) {
+      // No order type selected - open dialog for selection
+      setOrderTypeSelectionDialogOpen(true);
+      setMobileCartOpen(false);
+      return;
     }
     
-    // No order type selected - open dialog for selection
-    setOrderTypeSelectionDialogOpen(true);
+    // Get the selected order type metadata
+    const selectedOrderType = activeOrderTypes.find(ot => ot.id === cart.selectedOrderTypeId);
+    if (!selectedOrderType) return;
+    
+    // Check if order type requires table number
+    const needsTable = selectedOrderType.needTableNumber === true;
+    if (needsTable && !cart.tableNumber) {
+      setOrderTypeSelectionDialogOpen(true);
+      setMobileCartOpen(false);
+      return;
+    }
+    
+    // All metadata ready - open payment dialog WITHOUT creating order yet
+    // Order will be created AFTER payment is confirmed
+    setPaymentMethodDialogOpen(true);
     setMobileCartOpen(false);
   };
 
   // Handle payment method confirmation from dialog
   const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod) => {
-    if (!pendingOrderForPayment) return;
+    if (!ensureCartHasItems() || !cart.selectedOrderTypeId) return;
     
     setIsProcessingQuickCharge(true);
     try {
+      // Step 1: Create the order
+      const orderPayload = {
+        items: cart.toBackendOrderItems(),
+        tax_rate: cart.taxRate,
+        service_charge_rate: cart.serviceChargeRate,
+        order_type_id: cart.selectedOrderTypeId,
+        customer_name: cart.customerName || undefined,
+        table_number: cart.tableNumber || undefined,
+      };
+      
+      const orderResult = await createOrderMutation.mutateAsync(orderPayload);
+      const totalAmount = orderResult.pricing.total_amount;
+      const orderId = orderResult.order.id;
+      const orderNumber = orderResult.order.order_number;
+      
+      // Step 2: Record payment
       await recordPaymentMutation.mutateAsync({
-        orderId: pendingOrderForPayment.orderId,
-        amount: pendingOrderForPayment.totalAmount,
+        orderId,
+        amount: totalAmount,
         payment_method: paymentMethod,
       });
       
       toast({
-        title: "Order completed & paid",
-        description: `Order #${pendingOrderForPayment.orderNumber} - Total: Rp ${pendingOrderForPayment.totalAmount.toLocaleString("id-ID")} (Paid via ${paymentMethod})`,
+        title: "Pesanan berhasil dibuat & dibayar",
+        description: `Order #${orderNumber} - Total: Rp ${totalAmount.toLocaleString("id-ID")} (${paymentMethod})`,
       });
       
+      // Clear everything and close
       cart.clearCart();
       setPendingOrderForPayment(null);
       setPaymentMethodDialogOpen(false);
     } catch (error) {
-      let errorMessage = "Failed to record payment";
+      let errorMessage = "Gagal membuat pesanan dan mencatat pembayaran";
       if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -416,11 +381,14 @@ export default function POSPage() {
         errorMessage = apiError.body.message;
       }
       
+      console.error("Payment confirmation error:", error);
+      
       toast({
-        title: "Payment failed",
+        title: "Pembayaran gagal",
         description: errorMessage,
         variant: "destructive",
       });
+      setPaymentMethodDialogOpen(false);
     } finally {
       setIsProcessingQuickCharge(false);
     }

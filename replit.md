@@ -81,34 +81,36 @@ AuraPoS/
 
 ---
 
-## Critical Features Implemented (Nov 28, 2025)
+## Recent Updates (Nov 28, 2025 - Final Session)
 
-### P0: Scroll Regression Fix ✅
-- Fixed product area scrolling
-- Fixed cart panel scrolling  
-- Action buttons always visible
-- Works on all breakpoints
+### Payment Flow & UI Improvements ✅
+- **Fixed Payment Dialog Flow**: Dialog now appears FIRST (no order creation yet)
+  - Step 1: Click Bayar → Payment dialog opens (order not created)
+  - Step 2: Select payment method & amount in dialog
+  - Step 3: Click Proses → Order created + Payment recorded
+  - Step 4: Click Batal → Back to cart (NO order created)
+- **Dialog Positioning Fixed**: Payment dialog now displays full screen on mobile (h-screen)
+  - Desktop: Centered modal with rounded corners (md:rounded-2xl)
+  - Mobile: Full screen, no rounded corners (rounded-none)
+  - Removed conflicting fixed positioning CSS
 
-### P1: Cart State Refactoring ✅
-- Unified order type management
-- Single source of truth for cart metadata
-- Proper payment method handling
+### Simpan (Draft Save) Improvements ✅
+- **Simpan** button saves order as DRAFT (NO kitchen dependency)
+- Auto-selects first order type if not already selected
+- Always visible, works independently of features
+- No dialogs shown - direct draft save
 
-### P2: Quick Charge Express Path ✅
-- Skip order dialog when metadata pre-set
-- 1-click counter service
-- Auto-detect table requirements
+### Kitchen Ticket Separation ✅
+- `handleSendToKitchen()` - Separate function for future use
+- Kitchen ticket sending deferred to Order Queue/Details page
+- NO longer part of cart panel flow
+- Gracefully handles disabled kitchen feature
 
-### P3: Atomic Order+Payment ✅
-- `/api/orders/create-and-pay` endpoint
-- Prevents orphaned orders
-- Proper error handling with cart preservation
-
-### Sections 13-14: Documentation & Cleanup ✅
-- Comprehensive order lifecycle documentation
-- Sidebar cleanup (removed Bills button)
-- Order status helper utilities
-- Complete features checklist
+### Business Type Templates ✅
+- Created `docs/BUSINESS_TYPE_TEMPLATES.md` with 5 business types
+- Created `scripts/setup-business-type.sh` for quick setup
+- Supported types: Cafe/Restaurant, Retail, Laundry, Service, Digital/PPOB
+- Each with default order types, features, and module configuration
 
 ---
 

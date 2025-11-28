@@ -96,7 +96,7 @@ export function PaymentMethodDialog({
       }}
     >
       <DialogContent 
-        className="p-0 gap-0 max-w-2xl w-full md:rounded-2xl rounded-t-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] md:h-auto md:max-h-[90vh] fixed bottom-0 md:bottom-auto md:top-[50%] left-[50%] translate-x-[-50%] md:translate-y-[-50%] translate-y-0"
+        className="p-0 gap-0 w-full h-screen md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-2xl rounded-none overflow-hidden flex flex-col md:flex-row"
         data-testid="dialog-payment-method"
       >
         {/* Sidebar (Desktop Only) */}
