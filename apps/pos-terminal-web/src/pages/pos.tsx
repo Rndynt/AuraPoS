@@ -20,11 +20,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getActiveTenantId } from "@/lib/tenant";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogContent,
+} from "@/components/ui/alert-dialog";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -737,19 +735,17 @@ export default function POSPage() {
       />
 
       {/* Quick Charge Processing Dialog */}
-      <Dialog open={isProcessingQuickCharge} onOpenChange={setIsProcessingQuickCharge}>
-        <DialogContent className="sm:max-w-[300px]" data-testid="dialog-quick-charge-processing">
-          <DialogHeader>
-            <DialogTitle>Processing Order</DialogTitle>
-          </DialogHeader>
+      <AlertDialog open={isProcessingQuickCharge}>
+        <AlertDialogContent className="sm:max-w-[300px]" data-testid="dialog-quick-charge-processing">
           <div className="flex flex-col items-center justify-center py-8 gap-4">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <h2 className="text-lg font-semibold">Processing Order</h2>
             <p className="text-center text-sm text-muted-foreground">
               Creating order and recording payment...
             </p>
           </div>
-        </DialogContent>
-      </Dialog>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

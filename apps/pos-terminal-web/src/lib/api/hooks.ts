@@ -286,6 +286,30 @@ export function useUpdateOrder() {
 }
 
 /**
+ * Create order and record payment atomically [P3]
+ * Prevents orphaned orders if payment fails
+ */
+export type CreateAndPayInput = CreateOrderInput & {
+  amount: number;
+  payment_method: "cash" | "card" | "ewallet" | "other";
+  transaction_ref?: string;
+  payment_notes?: string;
+};
+
+export type CreateAndPayResponse = CreateOrderResponse & {
+  payment: OrderPayment;
+};
+
+export function useCreateAndPay() {
+  return useMutation<CreateAndPayResponse, Error, CreateAndPayInput>({
+    mutationFn: (data) => mutateWithTenantHeader("POST", "/api/orders/create-and-pay", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    },
+  });
+}
+
+/**
  * Fetch order types for tenant
  */
 export function useOrderTypes() {

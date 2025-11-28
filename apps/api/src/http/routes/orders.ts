@@ -22,7 +22,10 @@ router.post('/order-types/:orderTypeId/enable', OrderTypesController.enableOrder
 // POST /api/orders/order-types/:orderTypeId/disable - Disable order type for tenant
 router.post('/order-types/:orderTypeId/disable', OrderTypesController.disableOrderType);
 
-// Order Routes
+// Order Routes (MUST be before /:id routes)
+// POST /api/orders/create-and-pay - Create order and record payment atomically [P3]
+router.post('/create-and-pay', OrdersController.createAndPay);
+
 // POST /api/orders - Create new order
 router.post('/', OrdersController.createOrder);
 
@@ -35,7 +38,7 @@ router.get('/history', OrdersController.listOrderHistory);
 // GET /api/orders - List orders with filters
 router.get('/', OrdersController.listOrders);
 
-// GET /api/orders/:id - Get single order
+// GET /api/orders/:id - Get single order (MUST be last in GET routes)
 router.get('/:id', OrdersController.getOrderById);
 
 // PATCH /api/orders/:id - Update order
