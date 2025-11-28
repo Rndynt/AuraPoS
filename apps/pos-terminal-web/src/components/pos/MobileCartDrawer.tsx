@@ -238,7 +238,7 @@ export function MobileCartDrawer({
                             />
                           </div>
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[100]">
                           {tablesLoading ? (
                             <div className="p-2 text-xs text-slate-400">Loading...</div>
                           ) : tablesData?.tables && tablesData.tables.length > 0 ? (
