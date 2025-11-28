@@ -736,6 +736,7 @@ export default function POSPage() {
         cartTotal={cart.total}
         isSubmitting={isSubmittingOrder}
         initialSelectedOrderTypeId={cart.selectedOrderTypeId}
+        initialTableNumber={cart.tableNumber}
       />
 
       {/* Quick Charge Processing Overlay */}

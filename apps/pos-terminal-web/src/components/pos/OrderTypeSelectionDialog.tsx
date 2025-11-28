@@ -60,6 +60,7 @@ type OrderTypeSelectionDialogProps = {
   cartTotal: number;
   isSubmitting?: boolean;
   initialSelectedOrderTypeId?: string | null;
+  initialTableNumber?: string | null;
 };
 
 const getOrderTypeIcon = (code: string) => {
@@ -85,6 +86,7 @@ export function OrderTypeSelectionDialog({
   cartTotal,
   isSubmitting = false,
   initialSelectedOrderTypeId,
+  initialTableNumber,
 }: OrderTypeSelectionDialogProps) {
   const { hasModule } = useTenant();
   const hasTableManagement = hasModule("enable_table_management");
@@ -105,17 +107,32 @@ export function OrderTypeSelectionDialog({
     },
   });
 
-  // Reset form when dialog opens - use initialSelectedOrderTypeId if provided
+  // Reset form when dialog opens - pre-fill with cart values if provided
   useEffect(() => {
     if (open && activeOrderTypes.length > 0) {
       const defaultOrderTypeId = initialSelectedOrderTypeId || activeOrderTypes[0].id;
       form.reset({
         orderTypeId: defaultOrderTypeId,
-        tableNumber: "",
+        tableNumber: initialTableNumber || "",
         markAsPaid: false,
       });
     }
-  }, [open, activeOrderTypes, initialSelectedOrderTypeId, form]);
+  }, [open, activeOrderTypes, initialSelectedOrderTypeId, initialTableNumber, form]);
+
+  // Auto-submit if all metadata is already set
+  useEffect(() => {
+    if (open && initialSelectedOrderTypeId && initialTableNumber) {
+      // All metadata already set in cart - auto-confirm
+      setTimeout(() => {
+        onConfirm({
+          orderTypeId: initialSelectedOrderTypeId,
+          tableNumber: initialTableNumber,
+          markAsPaid: false,
+        });
+        onClose();
+      }, 100);
+    }
+  }, [open, initialSelectedOrderTypeId, initialTableNumber, onConfirm, onClose]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("id-ID", {
