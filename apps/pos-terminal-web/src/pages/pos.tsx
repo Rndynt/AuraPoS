@@ -4,6 +4,7 @@ import { ProductArea } from "@/components/pos/ProductArea";
 import { CartPanel } from "@/components/pos/CartPanel";
 import { MobileCartDrawer } from "@/components/pos/MobileCartDrawer";
 import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
+import { OrderQueuePanel } from "@/components/pos/OrderQueuePanel";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
@@ -625,8 +626,9 @@ export default function POSPage() {
       />
 
       {/* Cart Panel - Hidden on mobile */}
-      <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden">
-        <CartPanel
+      <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden flex-col">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <CartPanel
           items={cart.items}
           onUpdateQty={cart.updateQuantity}
           onRemove={cart.removeItem}
@@ -654,7 +656,13 @@ export default function POSPage() {
           orderType={cart.orderType}
           setOrderType={cart.setOrderType}
           continueOrderId={continueOrderId}
-        />
+          />
+        </div>
+        
+        {/* Order Queue Panel - Bottom of sidebar */}
+        <div className="border-t p-3 max-h-[200px] overflow-hidden">
+          <OrderQueuePanel compact={true} />
+        </div>
       </div>
 
       {/* Mobile Bottom Navigation */}
