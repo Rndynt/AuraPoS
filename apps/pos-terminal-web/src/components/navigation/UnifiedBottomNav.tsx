@@ -78,18 +78,6 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
         </button>
       )}
 
-      {/* Bills Button */}
-      <button
-        onClick={() => handleNavClick("/orders")}
-        className={`flex flex-col items-center gap-0.5 ${
-          isActive("/orders") ? "text-blue-600" : "text-slate-400"
-        }`}
-        data-testid="nav-bills"
-      >
-        <CreditCard size={20} />
-        <span className="text-[10px]">Bill</span>
-      </button>
-
       {/* Settings Button */}
       <button
         onClick={() => handleNavClick("/")}
