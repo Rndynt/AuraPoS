@@ -53,7 +53,7 @@ const formatTime = (date: Date | string | undefined) => {
 };
 
 export function OrderQueue({ orders, onUpdateStatus }: OrderQueueProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
   const activeOrders = orders.filter((o) =>
     ["confirmed", "preparing", "ready"].includes(o.status)
