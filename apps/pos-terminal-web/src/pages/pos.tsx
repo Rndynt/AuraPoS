@@ -19,10 +19,6 @@ import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getActiveTenantId } from "@/lib/tenant";
-import {
-  AlertDialog,
-  AlertDialogContent,
-} from "@/components/ui/alert-dialog";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -734,18 +730,18 @@ export default function POSPage() {
         initialSelectedOrderTypeId={cart.selectedOrderTypeId}
       />
 
-      {/* Quick Charge Processing Dialog */}
-      <AlertDialog open={isProcessingQuickCharge}>
-        <AlertDialogContent className="sm:max-w-[300px]" data-testid="dialog-quick-charge-processing">
-          <div className="flex flex-col items-center justify-center py-8 gap-4">
+      {/* Quick Charge Processing Overlay */}
+      {isProcessingQuickCharge && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="dialog-quick-charge-processing">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 max-w-xs">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
             <h2 className="text-lg font-semibold">Processing Order</h2>
             <p className="text-center text-sm text-muted-foreground">
               Creating order and recording payment...
             </p>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </div>
+      )}
     </div>
   );
 }
