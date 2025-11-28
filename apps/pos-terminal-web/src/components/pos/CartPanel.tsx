@@ -1,4 +1,5 @@
 import type { CartItem as CartItemType, PaymentMethod, OrderType } from "@/hooks/useCart";
+import type { OrderType as DomainOrderType } from "@pos/domain/orders/types";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -14,7 +15,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useTenant } from "@/context/TenantContext";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useTables } from "@/lib/api/tableHooks";
 
 type CartPanelProps = {
@@ -46,6 +47,8 @@ type CartPanelProps = {
   orderType: OrderType;
   setOrderType: (type: OrderType) => void;
   continueOrderId?: string | null;
+  activeOrderTypes?: DomainOrderType[];
+  setSelectedOrderTypeId?: (id: string | null) => void;
 };
 
 export function CartPanel({
@@ -76,6 +79,8 @@ export function CartPanel({
   orderType,
   setOrderType,
   continueOrderId,
+  activeOrderTypes = [],
+  setSelectedOrderTypeId,
 }: CartPanelProps) {
   const { business_type, hasModule, isLoading } = useTenant();
   const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
@@ -84,6 +89,26 @@ export function CartPanel({
   const { data: tablesData, isLoading: tablesLoading } = useTables();
 
   const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
+
+  const displayOrderTypes = activeOrderTypes.length > 0 
+    ? activeOrderTypes.map(ot => ({
+        code: ot.code.toLowerCase().replace(/_/g, '-') as OrderType,
+        id: ot.id,
+        name: ot.name
+      }))
+    : [
+        { code: 'dine-in' as OrderType, id: null, name: 'Dine In' },
+        { code: 'take-away' as OrderType, id: null, name: 'Take Away' },
+        { code: 'delivery' as OrderType, id: null, name: 'Delivery' }
+      ];
+
+  const handleOrderTypeSelect = useCallback((type: OrderType, orderTypeId: string | null) => {
+    setOrderType(type);
+    
+    if (setSelectedOrderTypeId && orderTypeId) {
+      setSelectedOrderTypeId(orderTypeId);
+    }
+  }, [setOrderType, setSelectedOrderTypeId]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -125,19 +150,19 @@ export function CartPanel({
         {/* Order Type Selection & Customer Info - Fixed at top of scroll area */}
         <div className='p-4 bg-white border-b border-slate-100 shadow-sm z-10'>
           {/* Order Type Selector */}
-          <div className='bg-slate-100 p-1 rounded-xl grid grid-cols-3 gap-1 mb-4'>
-            {(['dine-in', 'take-away', 'delivery'] as const).map((type) => (
+          <div className={`bg-slate-100 p-1 rounded-xl grid gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${Math.min(displayOrderTypes.length, 3)}, 1fr)` }}>
+            {displayOrderTypes.map((ot) => (
               <button
-                key={type}
-                onClick={() => setOrderType(type)}
+                key={ot.code}
+                onClick={() => handleOrderTypeSelect(ot.code, ot.id)}
                 className={`text-[11px] font-bold py-2 rounded-lg capitalize flex items-center justify-center gap-1 ${
-                  orderType === type
+                  orderType === ot.code
                     ? 'bg-white text-slate-800 shadow-sm'
                     : 'text-slate-400'
                 }`}
-                data-testid={`button-order-type-${type}`}
+                data-testid={`button-order-type-${ot.code}`}
               >
-                {type.replace('-', ' ')}
+                {ot.name || ot.code.replace('-', ' ')}
               </button>
             ))}
           </div>

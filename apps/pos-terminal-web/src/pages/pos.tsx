@@ -656,6 +656,8 @@ export default function POSPage() {
           orderType={cart.orderType}
           setOrderType={cart.setOrderType}
           continueOrderId={continueOrderId}
+          activeOrderTypes={activeOrderTypes}
+          setSelectedOrderTypeId={cart.setSelectedOrderTypeId}
           />
         </div>
         
@@ -705,6 +707,8 @@ export default function POSPage() {
         orderType={cart.orderType}
         setOrderType={cart.setOrderType}
         continueOrderId={continueOrderId}
+        activeOrderTypes={activeOrderTypes}
+        setSelectedOrderTypeId={cart.setSelectedOrderTypeId}
       />
 
       {/* Product Options Dialog */}
