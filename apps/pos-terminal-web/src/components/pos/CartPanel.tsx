@@ -33,9 +33,8 @@ type CartPanelProps = {
   total: number;
   onCharge: () => void;
   onPartialPayment?: () => void;
-  onKitchenTicket?: () => void;
+  onSaveDraft?: () => void;
   hasPartialPayment?: boolean;
-  hasKitchenTicket?: boolean;
   isProcessing?: boolean;
   // New metadata props
   customerName: string;
@@ -66,9 +65,8 @@ export function CartPanel({
   total,
   onCharge,
   onPartialPayment,
-  onKitchenTicket,
+  onSaveDraft,
   hasPartialPayment = false,
-  hasKitchenTicket = false,
   isProcessing = false,
   customerName,
   setCustomerName,
@@ -323,34 +321,36 @@ export function CartPanel({
               </div>
             </div>
             
-            {/* Action Buttons */}
-            <div className='grid grid-cols-[1.5fr_1fr] gap-3'>
+            {/* Action Buttons - Always 2 columns: Simpan + Bayar */}
+            <div className='grid grid-cols-2 gap-3'>
+              {/* Save Draft Button - Always visible, NO kitchen dependency */}
               <button
-                onClick={onKitchenTicket}
+                onClick={onSaveDraft}
                 disabled={isProcessing || items.length === 0}
-                className='bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all'
-                data-testid="button-kitchen-ticket"
+                className='bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-800 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all'
+                data-testid="button-save-draft"
               >
                 <div className='flex items-center gap-2 text-sm'>
-                  <ChefHat size={18} />
+                  <ShoppingBag size={18} />
                   <span>Simpan</span>
                 </div>
-                <span className='text-[10px] opacity-80 font-normal'>
-                  Ke Dapur
+                <span className='text-[9px] font-normal opacity-70'>
+                  Simpan Draft
                 </span>
               </button>
+              {/* Pay Button - Always visible */}
               <button
                 onClick={onCharge}
                 disabled={isProcessing || items.length === 0}
-                className='bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 active:scale-[0.98] transition-all'
+                className='bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all'
                 data-testid="button-complete-payment"
               >
                 <div className='flex items-center gap-2 text-sm'>
                   <Banknote size={18} />
                   <span>Bayar</span>
                 </div>
-                <span className='text-[10px] opacity-80 font-normal'>
-                  Tutup Bill
+                <span className='text-[9px] opacity-80 font-normal'>
+                  Proses Pembayaran
                 </span>
               </button>
             </div>

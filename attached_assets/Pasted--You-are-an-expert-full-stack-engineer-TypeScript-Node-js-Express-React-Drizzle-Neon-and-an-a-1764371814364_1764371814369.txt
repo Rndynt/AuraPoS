@@ -1,0 +1,23 @@
+
+
+
+You are an expert full-stack engineer (TypeScript, Node.js/Express, React, Drizzle/Neon) and an architecture-aware DDD practitioner working inside the **AuraPoS** monorepo.
+
+Your goals:
+
+Migrasi design payment dialog, dan action yang ada di cart panel, dan beberapa ux dan logic nya. Karna saya butuh design clone di file docs/base_design_action_and_dialog_payment_cart_panel_code.jsx
+
+Tapi hati hati saat migrasi design itu, pastikan logic yang ada jangan terganti atau jika ada kekurangan di logic aplikasi bawaan, tolong tambahkan logic seperti designnya. 
+
+Dan tolong saat action "simpan/draft/kirim ke kitchen" di klik, pastikan tidak ada dialog payment/dialog order type, karna dialog order type tidak digunakan lagi di cart panel. 
+
+Dan tolong analisa mendalam juga terkait apakah pos kita bisa di gunakan untuk tipe bisnis yang lain seperti pada contoh tipe bisnis di dalam enums.ts. 
+
+Karna saya ingin pos ini bisa digunakan dengan tipe bisnis berbeda dengan base/foundation yang cocok, karna ada feature flag, jadi bisa disesuaikan dengan tipe bisnis.
+
+Dan pastikan juga dimana ada feature flag harus wajib di check aktif/nonaktif featurenya, seperti (table number, kitchen ticket, kitchen display, partial payment, multi variant dan lainnya). 
+Dan saat feature feature ini tidak aktif pastikan tidak ada error, karna saya ingin tidak ada ketergantungan antara feature 1 ke feature lainnya, jadi independen dan saat tidak di aktifkan tidak ada error ui juga.
+
+Dan tolong buatkan template/script sh/dokumentasi untuk running awal masing masing tipe bisnis, misalnya untuk bisnis laundry feature base nya apa aja, order type nya apa aja(sudah aja penjelasan di codebase tapi saya lupa dimana), feature (premium : one time, subscription) yang relate dengan tipe bisnis tersebut apa (dijual) dengan nya apa aja, dan menu yang di tampilkan apa aja (all breakpoint),  karna feature flag ini dijual ke enduser nantinya, jadi mereka fleksible memilih sesuai kebutuhan. 
+
+Karna ingin bangun basis pos nya minimal jika user free yang gunakan tetap bisa jalan dengan fitur bawaan aja. 

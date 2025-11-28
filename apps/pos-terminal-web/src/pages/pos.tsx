@@ -627,9 +627,24 @@ export default function POSPage() {
     }
   };
 
-  const handleKitchenTicket = async () => {
+  // Save as Draft - NO kitchen ticket dependency
+  const handleSaveDraft = async () => {
     if (!ensureCartHasItems()) return;
-    if (!validateOrderType()) return;
+    
+    // Auto-select first order type if none selected (no dialog needed)
+    if (!cart.selectedOrderTypeId && activeOrderTypes.length > 0) {
+      cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
+    }
+    
+    // Still validate order type but now it should always pass
+    if (!cart.selectedOrderTypeId) {
+      toast({
+        title: "Tipe pesanan diperlukan",
+        description: "Tidak ada tipe pesanan tersedia. Hubungi administrator.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       let orderResult;
@@ -640,18 +655,19 @@ export default function POSPage() {
           orderId: continueOrderId,
           ...buildOrderPayload(),
         });
+        
+        toast({
+          title: "Pesanan diperbarui",
+          description: `Order #${orderResult.order.order_number} berhasil diperbarui`,
+        });
       } else {
         orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+        
+        toast({
+          title: "Pesanan disimpan",
+          description: `Order #${orderResult.order.order_number} berhasil disimpan sebagai draft`,
+        });
       }
-
-      await createKitchenTicketMutation.mutateAsync({
-        orderId: orderResult.order.id,
-      });
-
-      toast({
-        title: "Kitchen ticket sent",
-        description: `Order #${orderResult.order.order_number} sent to kitchen`,
-      });
 
       cart.clearCart();
       setMobileCartOpen(false);
@@ -662,8 +678,40 @@ export default function POSPage() {
       }
     } catch (error) {
       toast({
-        title: "Failed to send kitchen ticket",
-        description: error instanceof Error ? error.message : "Failed to create kitchen ticket",
+        title: "Gagal menyimpan pesanan",
+        description: error instanceof Error ? error.message : "Gagal membuat pesanan",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Send to Kitchen - Separate action, only available when kitchen feature is enabled
+  const handleSendToKitchen = async (orderId: string) => {
+    if (!hasKitchenTicket) {
+      toast({
+        title: "Fitur tidak tersedia",
+        description: "Kitchen ticket tidak aktif untuk tenant ini",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await createKitchenTicketMutation.mutateAsync({
+        orderId,
+      });
+
+      toast({
+        title: "Dikirim ke Dapur",
+        description: "Pesanan berhasil dikirim ke dapur",
+      });
+      
+      // Refresh orders list
+      await refetchOrders();
+    } catch (error) {
+      toast({
+        title: "Gagal mengirim ke dapur",
+        description: error instanceof Error ? error.message : "Gagal membuat kitchen ticket",
         variant: "destructive",
       });
     }
@@ -698,9 +746,8 @@ export default function POSPage() {
           total={cart.total}
           onCharge={handleCharge}
           onPartialPayment={handlePartialPayment}
-          onKitchenTicket={handleKitchenTicket}
+          onSaveDraft={handleSaveDraft}
           hasPartialPayment={hasPartialPayment}
-          hasKitchenTicket={hasKitchenTicket}
           isProcessing={isProcessingQuickCharge}
           customerName={cart.customerName}
           setCustomerName={cart.setCustomerName}
@@ -749,9 +796,8 @@ export default function POSPage() {
           setMobileCartOpen(false);
         }}
         onPartialPayment={handlePartialPayment}
-        onKitchenTicket={handleKitchenTicket}
+        onSaveDraft={handleSaveDraft}
         hasPartialPayment={hasPartialPayment}
-        hasKitchenTicket={hasKitchenTicket}
         isProcessing={isProcessingQuickCharge}
         customerName={cart.customerName}
         setCustomerName={cart.setCustomerName}
