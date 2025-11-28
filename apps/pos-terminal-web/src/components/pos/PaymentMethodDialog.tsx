@@ -4,7 +4,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Banknote, CreditCard, QrCode, X, CheckCircle, AlertTriangle } from "lucide-react";
+import { Banknote, CreditCard, QrCode, X } from "lucide-react";
 import type { PaymentMethod } from "@/hooks/useCart";
 
 type PaymentMethodDialogProps = {
@@ -62,6 +62,14 @@ export function PaymentMethodDialog({
     }, 500);
   };
 
+  const handleCancel = () => {
+    if (!isSubmitting && !isProcessing) {
+      setMethod(defaultPaymentMethod);
+      setCashAmount("");
+      onClose();
+    }
+  };
+
   const renderMethodButton = (id: PaymentMethod, label: string, Icon: typeof Banknote) => (
     <button
       key={id}
@@ -78,14 +86,6 @@ export function PaymentMethodDialog({
     </button>
   );
 
-  const handleCancel = () => {
-    if (!isSubmitting && !isProcessing) {
-      setMethod(defaultPaymentMethod);
-      setCashAmount("");
-      onClose();
-    }
-  };
-
   return (
     <Dialog
       open={open}
@@ -96,10 +96,10 @@ export function PaymentMethodDialog({
       }}
     >
       <DialogContent 
-        className="p-0 gap-0 w-full h-screen md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-2xl rounded-none overflow-hidden flex flex-col md:flex-row"
+        className="p-0 gap-0 w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] md:h-auto md:max-h-[90vh]"
         data-testid="dialog-payment-method"
       >
-        {/* Sidebar (Desktop Only) */}
+        {/* Sidebar (Desktop Only) - Hidden on Mobile */}
         <div className="hidden md:flex w-1/3 bg-slate-50 border-r border-slate-200 p-4 flex-col gap-2">
           <h3 className="font-bold text-slate-700 mb-2 px-1">Metode</h3>
           <button
@@ -143,7 +143,7 @@ export function PaymentMethodDialog({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col h-full relative">
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-white">
+          <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-white flex-shrink-0">
             <div>
               <p className="text-xs text-slate-500 font-medium">Total Tagihan</p>
               <h2 className="text-2xl font-black text-slate-800" data-testid="text-payment-total">
@@ -152,7 +152,7 @@ export function PaymentMethodDialog({
             </div>
             <button
               onClick={handleCancel}
-              className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500"
+              className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500 flex-shrink-0"
               data-testid="button-close-payment"
             >
               <X size={20} />
@@ -160,14 +160,14 @@ export function PaymentMethodDialog({
           </div>
 
           {/* Mobile Method Tabs (Horizontal) - Visible only on mobile */}
-          <div className="md:hidden flex gap-2 p-3 border-b border-slate-100 bg-slate-50 overflow-x-auto no-scrollbar shrink-0">
+          <div className="md:hidden flex gap-2 p-3 border-b border-slate-100 bg-slate-50 overflow-x-auto no-scrollbar flex-shrink-0">
             {renderMethodButton("cash", "Tunai", Banknote)}
             {renderMethodButton("ewallet", "QRIS", QrCode)}
             {renderMethodButton("card", "Kartu", CreditCard)}
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white min-h-0">
             {method === "cash" && (
               <div className="space-y-4 animate-in slide-in-from-right-2 pb-4">
                 <div>
@@ -273,7 +273,7 @@ export function PaymentMethodDialog({
           </div>
 
           {/* Sticky Footer */}
-          <div className="p-4 border-t border-slate-100 bg-white sticky bottom-0 z-10 shrink-0">
+          <div className="p-4 border-t border-slate-100 bg-white sticky bottom-0 z-10 flex-shrink-0">
             <button
               onClick={handleProcess}
               disabled={isProcessing || isSubmitting || (method === "cash" && !isEnough)}
