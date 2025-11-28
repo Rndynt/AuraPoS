@@ -72,13 +72,13 @@ export function OrderQueue({ orders, onUpdateStatus }: OrderQueueProps) {
 
   if (!isVisible) {
     return (
-      <div className="px-4 md:px-8 py-4 md:py-5">
+      <div className="px-4 md:px-8 py-2.5">
         <button
           onClick={() => setIsVisible(true)}
-          className="flex items-center gap-2 text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2.5 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
+          className="flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100"
           data-testid="button-show-queue"
         >
-          <Eye size={16} /> Show Order Queue ({activeOrders.length})
+          <Eye size={14} /> Show Order Queue ({activeOrders.length})
         </button>
       </div>
     );
