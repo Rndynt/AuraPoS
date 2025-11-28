@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import type { Product, ProductVariant, ProductOptionGroup } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { X, Minus, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProductOptionsDialogProps {
   product: Product | null;
