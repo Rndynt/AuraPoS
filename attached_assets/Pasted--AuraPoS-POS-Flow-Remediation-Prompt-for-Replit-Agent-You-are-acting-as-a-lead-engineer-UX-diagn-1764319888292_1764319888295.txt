@@ -1,0 +1,39 @@
+# AuraPoS POS Flow Remediation Prompt (for Replit Agent)
+
+You are acting as a lead engineer/UX diagnostician to fix the POS order flow issues described in the prior QA review. Work in English, output in Markdown, and keep responses copy-pastable.
+
+## Objectives
+- Clarify and stabilize the POS UX for order type, table number, save/send-to-kitchen, and pay actions across **all business types** (cafe/restaurant/laundry/minimarket/etc.).
+- Eliminate ambiguous dialogs where clicking **Save/Send to Kitchen** or **Pay** unexpectedly reopens order type/table selection.
+- Make table number selection usable when the feature is enabled, and ensure save/pay flows honor table-number optionality and feature flags.
+- Ensure the payment flow shows a payment-method choice (not auto-charging with a hidden default) after required metadata is set.
+- Preserve existing architecture, flags (partial_payment, kitchen_ticket, table management), and tenant-awareness.
+
+## Working Style
+- Spin up subagents for parallel tasks (UX audit, data flow tracing, test plan). Use them to accelerate analysis.
+- Do a deep code dive before coding: trace state for order type + table number from UI components through handlers and mutations.
+- Keep scope minimal per commit: targeted fixes and related tests/UX copy only.
+- Follow repo rules in `agents.md`, design conventions in `design_guidelines.md`, and prefer **pnpm** + Turbo commands.
+
+## Key Investigation Targets
+- Frontend POS page and cart: `apps/pos-terminal-web/src/pages/pos.tsx`, cart-related components (`CartPanel`, order dialogs, payment dialogs), hooks (`useCart`, `useFeatures`).
+- Order creation/payment paths: quick charge, partial payment, kitchen ticket, continue-order flows.
+- Feature flags and business-type gating for table management and order types.
+
+## Expected Behaviors to Implement/Verify
+1. **Order Type Handling**: Single source of truth; selecting any tab stores a valid backend ID. If missing, prompt inline/dialog with clear error state (no silent toasts only).
+2. **Save/Send to Kitchen**: Works when order type is set; table number optional unless flag requires. Should not re-prompt order type/table if already set. Honors `continueOrderId` when present.
+3. **Pay Flow**: After metadata validation, show payment-method selection dialog and use the chosen method (no hidden default auto-charge). Still compatible with quick-charge path when explicitly pre-set.
+4. **Table Number Selector**: Clickable/usable when table management feature is on, regardless of business type; optionality driven by feature flag/config.
+5. **Cross-Business Compatibility**: Flows work for cafe/resto/laundry/minimarket without unnecessary restrictions.
+6. **State Consistency**: Cart UI state matches backend payloads for order type, table, payment method; avoid duplicate order creation when continuing existing orders.
+
+## Deliverables
+- Code changes implementing the above behaviors with clear UX (labels/tooltips/disabled states where helpful).
+- Tests or manual test notes covering save vs pay, table-number optionality, and business-type permutations.
+- Concise summary of fixes and impacted files in the PR body.
+
+## Reminders
+- Do not add large dependencies. No try/catch around imports. Keep architecture consistent.
+- Use meaningful commit messages (e.g., `fix: clarify pos save vs pay flow`).
+- If limitations block full implementation, document the gap and propose next steps.

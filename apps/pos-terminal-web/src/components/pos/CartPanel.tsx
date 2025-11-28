@@ -1,3 +1,4 @@
+// @ts-nocheck - React 19 compatibility with shadcn/ui components
 import type { CartItem as CartItemType, PaymentMethod, OrderType } from "@/hooks/useCart";
 import type { OrderType as DomainOrderType } from "@pos/domain/orders/types";
 import { CartItem } from "./CartItem";
@@ -88,7 +89,7 @@ export function CartPanel({
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const { data: tablesData, isLoading: tablesLoading } = useTables();
 
-  const showTableNumber = !isLoading && business_type === 'CAFE_RESTAURANT' && hasModule('enable_table_management');
+  const showTableNumber = !isLoading && hasModule('enable_table_management');
 
   const displayOrderTypes = activeOrderTypes.length > 0 
     ? activeOrderTypes.map(ot => ({

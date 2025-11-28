@@ -10,6 +10,8 @@ import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
 import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDialog";
 import type { OrderTypeSelectionResult } from "@/components/pos/OrderTypeSelectionDialog";
+import { PaymentMethodDialog } from "@/components/pos/PaymentMethodDialog";
+import type { PaymentMethod } from "@/hooks/useCart";
 import { useCart } from "@/hooks/useCart";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment, useOrders } from "@/lib/api/hooks";
@@ -34,6 +36,12 @@ export default function POSPage() {
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
+  const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
+  const [pendingOrderForPayment, setPendingOrderForPayment] = useState<{
+    orderId: string;
+    totalAmount: number;
+    orderNumber: string;
+  } | null>(null);
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
@@ -306,7 +314,7 @@ export default function POSPage() {
     
     console.log("🟡 [CHARGE] Creating new order");
     
-    // P2 Quick Charge Path - check if order type already selected (NEW ORDERS ONLY)
+    // Check if order type is already selected
     if (cart.selectedOrderTypeId) {
       // Get the selected order type metadata
       const selectedOrderType = activeOrderTypes.find(ot => ot.id === cart.selectedOrderTypeId);
@@ -322,7 +330,7 @@ export default function POSPage() {
           return;
         }
         
-        // All metadata ready - direct charge without dialog
+        // All metadata ready - create order then show payment method dialog
         setIsProcessingQuickCharge(true);
         try {
           const orderPayload = {
@@ -334,26 +342,17 @@ export default function POSPage() {
             table_number: cart.tableNumber || undefined,
           };
           
-          // Create the order
+          // Create the order first
           const orderResult = await createOrderMutation.mutateAsync(orderPayload);
           
-          // Auto-pay on direct charge (quick cash sales workflow)
-          await recordPaymentMutation.mutateAsync({
+          // Store pending order and show payment method dialog
+          setPendingOrderForPayment({
             orderId: orderResult.order.id,
-            amount: orderResult.pricing.total_amount,
-            payment_method: cart.paymentMethod,
+            totalAmount: orderResult.pricing.total_amount,
+            orderNumber: orderResult.order.order_number,
           });
-          
-          // Show success message
-          setTimeout(() => {
-            setIsProcessingQuickCharge(false);
-            toast({
-              title: "Order completed & paid",
-              description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")} (Paid)`,
-            });
-          }, 500);
-          
-          cart.clearCart();
+          setIsProcessingQuickCharge(false);
+          setPaymentMethodDialogOpen(true);
           setMobileCartOpen(false);
         } catch (error) {
           let errorMessage = "Failed to process order";
@@ -383,6 +382,48 @@ export default function POSPage() {
     // No order type selected - open dialog for selection
     setOrderTypeSelectionDialogOpen(true);
     setMobileCartOpen(false);
+  };
+
+  // Handle payment method confirmation from dialog
+  const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod) => {
+    if (!pendingOrderForPayment) return;
+    
+    setIsProcessingQuickCharge(true);
+    try {
+      await recordPaymentMutation.mutateAsync({
+        orderId: pendingOrderForPayment.orderId,
+        amount: pendingOrderForPayment.totalAmount,
+        payment_method: paymentMethod,
+      });
+      
+      toast({
+        title: "Order completed & paid",
+        description: `Order #${pendingOrderForPayment.orderNumber} - Total: Rp ${pendingOrderForPayment.totalAmount.toLocaleString("id-ID")} (Paid via ${paymentMethod})`,
+      });
+      
+      cart.clearCart();
+      setPendingOrderForPayment(null);
+      setPaymentMethodDialogOpen(false);
+    } catch (error) {
+      let errorMessage = "Failed to record payment";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      const apiError = error as any;
+      if (apiError?.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (apiError?.body?.message) {
+        errorMessage = apiError.body.message;
+      }
+      
+      toast({
+        title: "Payment failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingQuickCharge(false);
+    }
   };
 
   const handleOrderTypeConfirm = async (result: OrderTypeSelectionResult) => {
@@ -591,7 +632,17 @@ export default function POSPage() {
     if (!validateOrderType()) return;
 
     try {
-      const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+      let orderResult;
+      
+      // If continuing an order, update it; otherwise create new
+      if (continueOrderId) {
+        orderResult = await updateOrderMutation.mutateAsync({
+          orderId: continueOrderId,
+          ...buildOrderPayload(),
+        });
+      } else {
+        orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+      }
 
       await createKitchenTicketMutation.mutateAsync({
         orderId: orderResult.order.id,
@@ -604,6 +655,11 @@ export default function POSPage() {
 
       cart.clearCart();
       setMobileCartOpen(false);
+      
+      // Clear the URL parameter if we were continuing an order
+      if (continueOrderId) {
+        setLocation("/pos");
+      }
     } catch (error) {
       toast({
         title: "Failed to send kitchen ticket",
@@ -741,6 +797,27 @@ export default function POSPage() {
         isSubmitting={isSubmittingOrder}
         initialSelectedOrderTypeId={cart.selectedOrderTypeId}
         initialTableNumber={cart.tableNumber}
+      />
+
+      {/* Payment Method Selection Dialog */}
+      <PaymentMethodDialog
+        open={paymentMethodDialogOpen}
+        onClose={() => {
+          // Inform user the order was created but not paid
+          if (pendingOrderForPayment) {
+            toast({
+              title: "Order created",
+              description: `Order #${pendingOrderForPayment.orderNumber} created. You can complete payment from the Orders page.`,
+            });
+            cart.clearCart();
+          }
+          setPaymentMethodDialogOpen(false);
+          setPendingOrderForPayment(null);
+        }}
+        onConfirm={handlePaymentMethodConfirm}
+        cartTotal={pendingOrderForPayment?.totalAmount || cart.total}
+        isSubmitting={isProcessingQuickCharge}
+        defaultPaymentMethod={cart.paymentMethod}
       />
 
       {/* Quick Charge Processing Overlay */}
