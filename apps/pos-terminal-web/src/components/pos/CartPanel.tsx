@@ -321,8 +321,8 @@ export function CartPanel({
               </div>
             </div>
             
-            {/* Action Buttons - Always 2 columns: Simpan + Bayar */}
-            <div className='grid grid-cols-2 gap-3'>
+            {/* Action Buttons - Always 2 columns: Simpan + Bayar - Only show on desktop */}
+            <div className='hidden md:grid grid-cols-2 gap-3'>
               {/* Save Draft Button - Always visible, NO kitchen dependency */}
               <button
                 onClick={onSaveDraft}
