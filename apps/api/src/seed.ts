@@ -906,22 +906,22 @@ async function seedTenantFeatures(tenantId: string) {
 }
 
 /**
- * Seed LAUNDRY tenant with laundry services
+ * Seed INDONESIAN LAUNDRY tenant with realistic Indonesian services & pricing
  */
-async function seedLaundryTenant(createdOrderTypes: any[]) {
-  console.log('\n🧺 Creating LAUNDRY Demo Tenant...');
+async function seedIndonesianLaundryTenant(createdOrderTypes: any[]) {
+  console.log('\n🧺 Creating INDONESIAN LAUNDRY Demo Tenant...');
   
   const tenantData = {
-    id: 'laundry-demo',
-    name: 'Demo Laundry Express',
-    slug: 'laundry-demo',
-    businessName: 'Express Laundry Service',
-    businessAddress: '456 Cleaning Street, City, Country',
-    businessPhone: '+1987654321',
-    businessEmail: 'info@expresslaundry.com',
-    planTier: 'standard',
+    id: 'laundry-indo',
+    name: 'Cucian Cepat Indonesia',
+    slug: 'laundry-indo',
+    businessName: 'PT Cucian Cepat Indonesia - Layanan Laundry Profesional',
+    businessAddress: 'Jl. Merdeka No. 123, Jakarta Selatan 12345',
+    businessPhone: '+62812-3456-7890',
+    businessEmail: 'layanan@cucianc epat.id',
+    planTier: 'professional',
     subscriptionStatus: 'active',
-    timezone: 'UTC',
+    timezone: 'Asia/Jakarta',
     currency: 'IDR',
     locale: 'id-ID',
     isActive: true,
@@ -943,14 +943,58 @@ async function seedLaundryTenant(createdOrderTypes: any[]) {
   await db.insert(tenantOrderTypes).values(tenantOrderTypesData);
   console.log(`✅ Enabled ${tenantOrderTypesData.length} laundry order types`);
   
-  // Seed laundry services
+  // Seed Indonesian laundry services with realistic pricing
   const serviceProducts = [
-    { name: 'Regular Wash', price: 15000, desc: 'Standard laundry service (3-5 days)' },
-    { name: 'Premium Wash', price: 25000, desc: 'Premium service with fabric softener (2-3 days)' },
-    { name: 'Express Wash', price: 45000, desc: 'Rush service (1 day turnaround)' },
-    { name: 'Ironing Service', price: 12000, desc: 'Clothes ironing per kg' },
-    { name: 'Dry Cleaning', price: 35000, desc: 'Professional dry cleaning per item' },
-    { name: 'Stain Removal', price: 20000, desc: 'Specialized stain treatment' },
+    { 
+      name: 'Cuci Satuan', 
+      price: 9500, 
+      desc: 'Layanan cuci biasa - Harga per kg, Waktu: 3-5 hari kerja' 
+    },
+    { 
+      name: 'Cuci + Setrika', 
+      price: 12000, 
+      desc: 'Cuci dan setrika lengkap - Per kg, Waktu: 2-3 hari kerja' 
+    },
+    { 
+      name: 'Cuci Kilat', 
+      price: 18000, 
+      desc: 'Layanan express - Per kg, Waktu: 1 hari kerja (order sebelum jam 10 pagi)' 
+    },
+    { 
+      name: 'Setrika Saja', 
+      price: 6000, 
+      desc: 'Layanan setrika untuk kain yang sudah bersih - Per kg' 
+    },
+    { 
+      name: 'Dry Cleaning', 
+      price: 45000, 
+      desc: 'Pembersihan profesional untuk gaun, jas, blazer - Per item' 
+    },
+    { 
+      name: 'Cuci Sprai & Sarung Bantal', 
+      price: 25000, 
+      desc: 'Layanan khusus untuk sprai tempat tidur dan sarung bantal - Per set' 
+    },
+    { 
+      name: 'Cuci Selimut & Bedcover', 
+      price: 35000, 
+      desc: 'Pembersihan dalam dan deep wash untuk selimut - Per item' 
+    },
+    { 
+      name: 'Cuci Karpet & Tikar', 
+      price: 50000, 
+      desc: 'Pembersihan profesional karpet dan tikar - Per m²' 
+    },
+    { 
+      name: 'Cuci Sofa & Mebel', 
+      price: 75000, 
+      desc: 'Layanan khusus pembersihan sofa dan furniture - Per kursi/bagian' 
+    },
+    { 
+      name: 'Hapus Noda Membandel', 
+      price: 15000, 
+      desc: 'Layanan khusus hapus noda ekstrem (minyak, tinta, cat, dll) - Per item' 
+    },
   ];
   
   for (const service of serviceProducts) {
@@ -959,28 +1003,28 @@ async function seedLaundryTenant(createdOrderTypes: any[]) {
       name: service.name,
       description: service.desc,
       basePrice: service.price.toString(),
-      category: 'Laundry Services',
+      category: 'Layanan Cuci',
       hasVariants: false,
       stockTrackingEnabled: false,
       isActive: true,
     } as InsertProduct);
   }
   
-  console.log(`✅ Created ${serviceProducts.length} laundry services`);
+  console.log(`✅ Created ${serviceProducts.length} laundry services (Indonesia-specific)`);
   
-  // Module config - no table management or kitchen for laundry
+  // Module config - delivery and appointments enabled for laundry
   await db.insert(tenantModuleConfigs).values({
     tenantId: tenant.id,
     enableTableManagement: false,
     enableKitchenTicket: false,
     enableLoyalty: true,
     enableDelivery: true,
-    enableInventory: true,
+    enableInventory: false,
     enableAppointments: true,
     enableMultiLocation: false,
   });
   
-  console.log(`✅ Module configs set for laundry`);
+  console.log(`✅ Module configs set for laundry (Delivery & Appointments enabled)`);
   
   return tenant.id;
 }
@@ -1114,8 +1158,8 @@ async function seed() {
     await seedTenantFeatures(tenantId);
     console.log('');
     
-    // Seed LAUNDRY tenant
-    const laundryTenantId = await seedLaundryTenant(createdOrderTypes);
+    // Seed INDONESIAN LAUNDRY tenant
+    const laundryTenantId = await seedIndonesianLaundryTenant(createdOrderTypes);
     
     // Seed MINIMARKET tenant
     const minimarketTenantId = await seedMinimarketTenant(createdOrderTypes);
@@ -1125,17 +1169,17 @@ async function seed() {
     console.log('Summary:');
     console.log('- 3 tenants created');
     console.log('  • demo-tenant (Restaurant/Cafe)');
-    console.log('  • laundry-demo (Laundry Service)');
+    console.log('  • laundry-indo (Indonesian Laundry Service)');
     console.log('  • minimarket-demo (Retail/Minimarket)');
     console.log(`- ${createdOrderTypes.length} order types created`);
     console.log('- 8 products with options (Restaurant)');
-    console.log('- 6 laundry services (Laundry)');
+    console.log('- 10 laundry services - Indonesia-specific (Laundry)');
     console.log('- 12 retail products (Minimarket)');
     console.log(`- ${DEMO_TENANT_FEATURES.length} features enabled for restaurant`);
     console.log('');
     console.log('Tenant IDs:');
     console.log(`- Restaurant: ${tenantId}`);
-    console.log(`- Laundry: ${laundryTenantId}`);
+    console.log(`- Laundry (Indonesia): ${laundryTenantId}`);
     console.log(`- Minimarket: ${minimarketTenantId}`);
     
   } catch (error) {

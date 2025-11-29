@@ -91,31 +91,44 @@ I prefer iterative development with a focus on delivering functional, tested fea
 
 **File:** `packages/core/tenant.ts`
 ```typescript
-export const CURRENT_TENANT_ID = "demo-tenant"; // Change this to switch tenant
+export const CURRENT_TENANT_ID = "laundry-indo"; // Change this to switch tenant
 ```
 
 **Available Tenants:**
 1. **`demo-tenant`** - Restaurant/Cafe
    - Order Types: DINE_IN, TAKE_AWAY, DELIVERY
-   - Products: 8 items with variants
+   - Products: 8 items with variants (Burger, Coffee, Pizza, Wings, etc.)
    - Tables: 10 for floor plan
+   - Open Orders: 3 (for testing "Continue Order")
    - Modules: Table Management ✅, Kitchen Display ✅
    
-2. **`laundry-demo`** - Laundry Service
-   - Order Types: DROPOFF, PICKUP_DELIVERY, EXPRESS
-   - Services: 6 (Regular, Premium, Express Wash, Ironing, Dry Clean, Stain Removal)
-   - Modules: Delivery ✅, Appointments ✅, Inventory ✅, Loyalty ✅
+2. **`laundry-indo`** - Indonesian Laundry Service (NEW! Indonesia-specific)
+   - Tenant Name: **Cucian Cepat Indonesia** - PT Layanan Laundry Profesional
+   - Address: Jl. Merdeka No. 123, Jakarta Selatan
+   - Order Types: DROP OFF, PICKUP & DELIVERY, EXPRESS
+   - **10 Services (Indonesia-Realistic Pricing):**
+     - Cuci Satuan: Rp 9.500/kg (3-5 hari)
+     - Cuci + Setrika: Rp 12.000/kg (2-3 hari)
+     - Cuci Kilat: Rp 18.000/kg (1 hari)
+     - Setrika Saja: Rp 6.000/kg
+     - Dry Cleaning: Rp 45.000/item
+     - Cuci Sprai & Sarung Bantal: Rp 25.000/set
+     - Cuci Selimut & Bedcover: Rp 35.000/item
+     - Cuci Karpet & Tikar: Rp 50.000/m²
+     - Cuci Sofa & Mebel: Rp 75.000/bagian
+     - Hapus Noda Membandel: Rp 15.000/item
+   - Modules: Delivery ✅, Appointments ✅, Loyalty ✅
    
 3. **`minimarket-demo`** - Retail/Minimarket
    - Order Types: WALK_IN, SELF_CHECKOUT, PICKUP_STORE
-   - Products: 12 items (Beverages, Snacks, Essentials, Beauty)
+   - Products: 12 items (Beverages, Snacks, Essentials, Beauty & Care)
    - Stock Tracking: Enabled
    - Modules: Inventory ✅, Loyalty ✅
 
 **To Switch Tenant:**
-1. Edit `packages/core/tenant.ts` line 2: `CURRENT_TENANT_ID = "laundry-demo"` (or `minimarket-demo`)
+1. Edit `packages/core/tenant.ts` line 2: `CURRENT_TENANT_ID = "laundry-indo"` (or any tenant ID)
 2. Save file - dev server auto-reloads
-3. Reload browser - now using new tenant
+3. **Hard Refresh browser (Ctrl+Shift+R)** - now using new tenant data
 
 **Alternative (localStorage):** Tenant can be switched via localStorage or URL query param (auto-resolved in frontend)
 
