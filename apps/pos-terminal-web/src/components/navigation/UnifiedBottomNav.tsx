@@ -78,13 +78,13 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
         </button>
       )}
 
-      {/* Settings Button */}
+      {/* Hub Button */}
       <button
-        onClick={() => handleNavClick("/")}
+        onClick={() => handleNavClick("/hub")}
         className={`flex flex-col items-center gap-0.5 ${
-          isActive("/") && location === "/" ? "text-blue-600" : "text-slate-400"
+          isActive("/hub") ? "text-blue-600" : "text-slate-400"
         }`}
-        data-testid="nav-settings"
+        data-testid="nav-hub"
       >
         <Grip size={20} />
         <span className="text-[10px]">Hub</span>
