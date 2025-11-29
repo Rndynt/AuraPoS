@@ -39,6 +39,7 @@ export function ProductOptionsDialog({
   const isMobile = useIsMobile();
   const isDesktop = !isMobile;
 
+
   useEffect(() => {
     if (open && product) {
       setSelectedVariant(product.variants?.[0]);
@@ -408,19 +409,12 @@ export function ProductOptionsDialog({
 
   // Desktop: Dialog
   return (
-    <div 
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
-      data-testid="dialog-product-options"
-    >
-      <div 
-        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-slate-800">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="w-full max-w-md bg-white" data-testid="dialog-product-options">
+        <div className="flex justify-between items-center mb-4">
+          <DialogTitle className="text-lg font-bold text-slate-800">
             {product.name}
-          </h3>
+          </DialogTitle>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-full"
@@ -430,7 +424,7 @@ export function ProductOptionsDialog({
           </button>
         </div>
         <Content />
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

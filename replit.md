@@ -29,15 +29,17 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - **Sidebar** (Sidebar.tsx): Desktop sidebar has feature flag checks
 - **Result**: Tables & Kitchen features fully protected across ALL access points
 
-### ✅ Product Variant Selection - Responsive Drawer + Dialog (useIsMobile Hook)
-- **Mobile (< 768px)**: Shows as **Drawer** (slides from bottom)
-- **Desktop (≥ 768px)**: Shows as **Dialog** (centered modal)
-- **Implementation**: Uses official `useIsMobile()` hook from `/hooks/use-mobile.tsx`
-- **Logic**: `if (!isDesktop) render Drawer else Dialog`
-- **Styling**: Unified with CartPanel (white bg, slate borders, blue actions)
+### ✅ Product Variant Selection - Responsive Drawer + Dialog (useIsMobile Hook - FIXED)
+- **Mobile (< 768px)**: Shows as **Drawer** (slides from bottom via vaul library)
+- **Desktop (≥ 768px)**: Shows as **Dialog** (centered modal via shadcn/ui)
+- **Implementation**: 
+  - Uses official `useIsMobile()` hook from `/hooks/use-mobile.tsx`
+  - Both branches use proper shadcn/ui components (Drawer + DrawerContent for mobile, Dialog + DialogContent for desktop)
+  - Logic: `if (!isDesktop) return <Drawer> else return <Dialog>`
+- **Fix Applied**: Replaced custom div Dialog with proper `<Dialog>` component to ensure correct z-index stacking and Portal rendering
+- **Styling**: Unified appearance (white bg, slate borders, blue actions)
 - **Quantity**: Footer/action area with compact controls
-- **Verified**: Console logging shows correct `isMobile`/`isDesktop` values on different breakpoints
-- **File**: `ProductOptionsDialog.tsx` (line 42-43: isMobile + isDesktop)
+- **Files**: `ProductOptionsDialog.tsx` (line 42-43: isMobile + isDesktop logic, line 407-421: Drawer, line 425-443: Dialog)
 
 ### ✅ Inline Edit Category Names - Preserved Expand/Collapse
 - **Product Management Page** (`/products`) - Daftar Produk tab
