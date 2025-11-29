@@ -256,60 +256,56 @@ export function CartPanel({
         </div>
       </div>
 
-      {/* Footer with totals and actions - inside flex column, not positioned */}
+      {/* Footer with totals and actions - flex-shrink-0 keeps it from collapsing */}
       {items.length > 0 && (
-        <div className='flex-shrink-0 relative'>
-          {/* Expandable Summary Section - Slides UP from bottom */}
-          <div
-            className={`absolute bottom-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
-              isSummaryExpanded
-                ? 'translate-y-4 opacity-100 visible pb-6'
-                : 'translate-y-full opacity-0 invisible'
-            }`}
-          >
-            <div className='space-y-3 pb-2'>
-              <div className='flex justify-between text-sm text-slate-500'>
-                <span>Subtotal</span>
-                <span data-testid="text-subtotal">{formatPrice(subtotal)}</span>
-              </div>
-              <div className='flex justify-between text-sm text-slate-500'>
-                <span>Pajak ({formatRateLabel(taxRate)})</span>
-                <span data-testid="text-tax">{formatPrice(tax)}</span>
-              </div>
-              {serviceCharge > 0 && (
+        <div className='flex-shrink-0 bg-white border-t border-slate-200 shadow-[0_-5px_25px_rgba(0,0,0,0.1)]'>
+          {/* Expandable Summary Section - normal flow, collapsed by default */}
+          {isSummaryExpanded && (
+            <div className='bg-white/95 backdrop-blur-md border-b border-slate-200 p-5'>
+              <div className='space-y-3 pb-2'>
                 <div className='flex justify-between text-sm text-slate-500'>
-                  <span>Service ({formatRateLabel(serviceChargeRate)})</span>
-                  <span data-testid="text-service">{formatPrice(serviceCharge)}</span>
+                  <span>Subtotal</span>
+                  <span data-testid="text-subtotal">{formatPrice(subtotal)}</span>
                 </div>
-              )}
+                <div className='flex justify-between text-sm text-slate-500'>
+                  <span>Pajak ({formatRateLabel(taxRate)})</span>
+                  <span data-testid="text-tax">{formatPrice(tax)}</span>
+                </div>
+                {serviceCharge > 0 && (
+                  <div className='flex justify-between text-sm text-slate-500'>
+                    <span>Service ({formatRateLabel(serviceChargeRate)})</span>
+                    <span data-testid="text-service">{formatPrice(serviceCharge)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           
-          {/* Main Footer - ALWAYS VISIBLE */}
-          <div className='bg-white border-t border-slate-200 p-5 pb-6 shadow-[0_-5px_25px_rgba(0,0,0,0.1)] relative z-20'>
-            {/* Toggle Button */}
-            <div
-              onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-              className='absolute -top-3 left-1/2 -translate-x-1/2 bg-white border border-slate-200 text-slate-400 w-12 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 active:scale-95 transition-transform'
-              data-testid="button-toggle-pricing-details"
-            >
-              <ChevronUp
-                size={16}
-                className={`transition-transform duration-300 ${
-                  isSummaryExpanded ? 'rotate-180' : ''
-                }`}
-              />
-            </div>
-            
+          {/* Main Footer Section */}
+          <div className='p-5 pb-6'>
             {/* Total Section */}
             <div className='flex items-center justify-between mb-4'>
               <div
                 onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
                 className='cursor-pointer group'
               >
-                <p className='text-xs text-slate-400 font-medium group-hover:text-blue-600 transition-colors'>
-                  Total Tagihan
-                </p>
+                <div className='flex items-center justify-between'>
+                  <p className='text-xs text-slate-400 font-medium group-hover:text-blue-600 transition-colors'>
+                    Total Tagihan
+                  </p>
+                  <button
+                    onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                    className='bg-white border border-slate-200 text-slate-400 w-6 h-6 flex items-center justify-center rounded-full shadow-sm cursor-pointer hover:bg-slate-50 active:scale-95 transition-transform'
+                    data-testid="button-toggle-pricing-details"
+                  >
+                    <ChevronUp
+                      size={14}
+                      className={`transition-transform duration-300 ${
+                        isSummaryExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
                 <div className='flex items-center gap-1'>
                   <span className='text-2xl font-black text-slate-800' data-testid="text-total">
                     {formatPrice(total)}
