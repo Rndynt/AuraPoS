@@ -100,6 +100,14 @@ AuraPoS/
   - Streamlined UX, fewer clicks for users
   - Order type always auto-populated from tenant config
 
+### Product Options Dialog Enhancements ✅
+- **Auto-select single required options**: If a required option group has only 1 available option, it auto-selects on dialog open
+  - Example: "Supreme Pizza" with single "Size" option → "Regular" auto-selected
+- **Smart button disabling**: "Tambah" button disabled until ALL required options are selected
+  - Visual feedback: Gray & disabled state when requirements not met
+  - Blue & enabled state when ready to add to cart
+  - Prevents incomplete orders from being added
+
 ---
 
 ## Previous Updates (Nov 28, 2025 - Final Session)

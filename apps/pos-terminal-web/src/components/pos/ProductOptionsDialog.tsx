@@ -30,7 +30,30 @@ export function ProductOptionsDialog({
   useEffect(() => {
     if (open && product) {
       setSelectedVariant(product.variants?.[0]);
-      setSelectedOptionsByGroup(new Map());
+      
+      // Auto-select single options for required groups
+      const initialSelections = new Map<string, SelectedOption[]>();
+      const optionGroups = product.option_groups || [];
+      
+      optionGroups.forEach((group) => {
+        if (group.is_required) {
+          const availableOptions = group.options?.filter(opt => opt.is_available !== false) || [];
+          
+          // Auto-select if only 1 available option
+          if (availableOptions.length === 1) {
+            const option = availableOptions[0];
+            initialSelections.set(group.id, [{
+              group_id: group.id,
+              group_name: group.name,
+              option_id: option.id,
+              option_name: option.name,
+              price_delta: option.price_delta,
+            }]);
+          }
+        }
+      });
+      
+      setSelectedOptionsByGroup(initialSelections);
       setQty(1);
     }
   }, [open, product]);
@@ -111,6 +134,22 @@ export function ProductOptionsDialog({
       allOptions.push(...selections);
     });
     return allOptions;
+  };
+
+  // Check if all required option groups have selections
+  const areAllRequiredOptionsFilled = () => {
+    const optionGroups = product?.option_groups || [];
+    
+    for (const group of optionGroups) {
+      if (group.is_required) {
+        const selections = selectedOptionsByGroup.get(group.id);
+        if (!selections || selections.length === 0) {
+          return false;
+        }
+      }
+    }
+    
+    return true;
   };
 
   const handleAdd = () => {
@@ -348,7 +387,12 @@ export function ProductOptionsDialog({
         <div className="p-4 bg-white border-t border-slate-200">
           <button
             onClick={handleAdd}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold flex justify-between px-6 hover:bg-blue-700"
+            disabled={!areAllRequiredOptionsFilled()}
+            className={`w-full py-3 rounded-xl font-bold flex justify-between px-6 transition-all ${
+              areAllRequiredOptionsFilled()
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }`}
             data-testid="button-add-to-cart"
           >
             <span>Tambah</span>
