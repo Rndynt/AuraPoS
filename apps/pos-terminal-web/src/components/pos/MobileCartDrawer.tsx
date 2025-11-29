@@ -133,19 +133,19 @@ export function MobileCartDrawer({
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55] md:hidden" />
+        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
         <Drawer.Content
-          className={`fixed md:relative top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl md:shadow-none transition-transform duration-300 w-full md:w-[380px] h-[95vh] mt-[5vh] md:mt-0 md:h-auto ${
-            open ? 'translate-y-0' : 'translate-y-full md:translate-y-0'
-          } rounded-t-[2rem] md:rounded-none`}
+          className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl transition-transform duration-300 w-full h-[95vh] mt-[5vh] ${
+            open ? 'translate-y-0' : 'translate-y-full'
+          } rounded-t-[2rem]`}
           data-testid="drawer-mobile-cart"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white rounded-t-[2rem] md:rounded-none relative z-40">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white rounded-t-[2rem] relative z-40">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onOpenChange(false)}
-                className="md:hidden p-1 bg-slate-100 rounded-full"
+                className="p-1 bg-slate-100 rounded-full"
                 data-testid="button-close-drawer"
               >
                 <ChevronDown size={20} />
@@ -285,7 +285,7 @@ export function MobileCartDrawer({
 
           {/* Footer with totals and actions */}
           {items.length > 0 && (
-            <div className="fixed md:absolute bottom-0 left-0 right-0 z-30 w-full md:w-auto">
+            <div className="fixed bottom-0 left-0 right-0 z-30 w-full">
               {/* Expandable Summary Section - Slides UP from bottom */}
               <div
                 className={`absolute bottom-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
@@ -343,7 +343,7 @@ export function MobileCartDrawer({
                       <span className="text-2xl font-black text-slate-800" data-testid="text-total">
                         {formatPrice(total)}
                       </span>
-                      <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 md:hidden">
+                      <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
                         Detail
                       </span>
                     </div>

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getActiveTenantId } from "@/lib/tenant";
 
 export default function POSPage() {
@@ -41,6 +42,7 @@ export default function POSPage() {
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Fetch products from backend (including inactive products to show with overlay)
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts();
@@ -604,8 +606,8 @@ export default function POSPage() {
         onUpdateOrderStatus={handleUpdateOrderStatus}
       />
 
-      {/* Cart Panel - Hidden on mobile */}
-      <div className="hidden lg:flex lg:flex-col w-[360px] min-h-0 h-full overflow-hidden flex-col">
+      {/* Cart Panel - Hidden on mobile, shown on tablet (md) and up */}
+      <div className="hidden md:flex md:flex-col w-[360px] min-h-0 h-full overflow-hidden flex-col">
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <CartPanel
           items={cart.items}
@@ -645,14 +647,17 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <UnifiedBottomNav
-        cartCount={cart.items.length}
-        onCartClick={() => setMobileCartOpen(true)}
-      />
+      {/* Mobile Bottom Navigation - Only on mobile */}
+      {isMobile && (
+        <UnifiedBottomNav
+          cartCount={cart.items.length}
+          onCartClick={() => setMobileCartOpen(true)}
+        />
+      )}
 
-      {/* Mobile Cart Drawer */}
-      <MobileCartDrawer
+      {/* Mobile Cart Drawer - Only on mobile */}
+      {isMobile && (
+        <MobileCartDrawer
         open={mobileCartOpen}
         onOpenChange={setMobileCartOpen}
         items={cart.items}
@@ -686,7 +691,8 @@ export default function POSPage() {
         continueOrderId={continueOrderId}
         activeOrderTypes={activeOrderTypes}
         setSelectedOrderTypeId={cart.setSelectedOrderTypeId}
-      />
+        />
+      )}
 
       {/* Product Options Dialog */}
       <ProductOptionsDialog
