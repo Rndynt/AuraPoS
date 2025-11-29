@@ -84,6 +84,15 @@ export default function POSPage() {
           // Load order into cart with fresh state
           cart.loadOrder(fullOrder);
           
+          // Enrich cart items with full product data (including images) from fetched products
+          const productsMap = new Map(products.map((p: any) => [p.id, p]));
+          cart.items.forEach((item: any) => {
+            const fullProduct = productsMap.get(item.product.id);
+            if (fullProduct) {
+              item.product.image_url = fullProduct.image_url;
+            }
+          });
+          
           toast({
             title: "Order loaded",
             description: `Order #${fullOrder.orderNumber} for Table ${fullOrder.tableNumber} loaded. Continue editing and submit to save changes.`,

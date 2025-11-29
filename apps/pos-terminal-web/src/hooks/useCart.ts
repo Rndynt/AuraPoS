@@ -276,6 +276,7 @@ export function useCart() {
           id: productId,
           name: productName,
           base_price: parseFloat(basePrice || 0),
+          image_url: item.imageUrl || item.image_url || item.productImage || "",
         },
         selectedOptions: selectedOpts,
         quantity: itemQuantity,

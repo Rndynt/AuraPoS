@@ -355,21 +355,16 @@ export default function TablesManagementPage() {
                         </div>
                       </div>
                       <div className="space-y-1 mb-3">
-                        {order.orderItems && order.orderItems.slice(0, 3).map((item: any, idx: number) => (
+                        {order.orderItems && order.orderItems.map((item: any, idx: number) => (
                           <div
                             key={idx}
                             className="flex justify-between text-xs text-slate-500"
                           >
-                            <span>
+                            <span className="flex-1">
                               {item.productName || item.product_name} x{item.quantity}
                             </span>
                           </div>
                         ))}
-                        {order.orderItems && order.orderItems.length > 3 && (
-                          <div className="text-xs text-slate-400 italic">
-                            +{order.orderItems.length - 3} more items
-                          </div>
-                        )}
                       </div>
                       <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                         <span className="text-sm font-bold text-slate-600">

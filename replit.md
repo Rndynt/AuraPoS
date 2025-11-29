@@ -43,6 +43,25 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - Fallback to order ID if order_number missing
 - Fixed LSP errors in partial payment handler
 
+### ✅ Product Images Loading When Continuing Order
+- **Problem**: Product images were not loading when continuing a previous order
+- **Solution**: Added product enrichment in pos.tsx after loading order (lines 90-97)
+  - Creates Map of fetched products indexed by ID
+  - Enriches cart items with full product data including `image_url` from the products list
+  - Ensures images display properly even if API response doesn't include them
+- **Files Modified**: 
+  - `apps/pos-terminal-web/src/pages/pos.tsx` (added product enrichment logic)
+  - `apps/pos-terminal-web/src/hooks/useCart.ts` (added fallback image_url field)
+  - `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` & `MobileCartDrawer.tsx` (fixed scroll layout)
+
+### ✅ Table Order Details - Show All Items
+- **Problem**: Table details dialog showed only 3 items with "+4 more items" text
+- **Solution**: Removed slice(0,3) limitation and show all items in the list
+- **Files Modified**: `apps/pos-terminal-web/src/pages/tables-management.tsx` (lines 360-371)
+  - Changed from `.slice(0, 3).map(...)` to `.map(...)` 
+  - Removed the "+X more items" text
+  - Users now see complete item list with all order details
+
 ## System Architecture
 
 ### UI/UX Decisions
