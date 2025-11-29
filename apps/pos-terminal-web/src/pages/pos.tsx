@@ -648,10 +648,6 @@ export default function POSPage() {
           />
         </div>
         
-        {/* Order Queue Panel - Bottom of sidebar */}
-        <div className="border-t p-3 max-h-[200px] overflow-hidden">
-          <OrderQueuePanel compact={true} />
-        </div>
       </div>
 
       {/* Mobile Bottom Navigation - Only on mobile */}
