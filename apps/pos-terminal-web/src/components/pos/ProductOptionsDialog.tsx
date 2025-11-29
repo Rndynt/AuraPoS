@@ -16,7 +16,6 @@ import {
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductOptionsDialogProps {
   product: Product | null;
@@ -24,6 +23,9 @@ interface ProductOptionsDialogProps {
   onClose: () => void;
   onAdd: (product: Product, variant: ProductVariant | undefined, selectedOptions: SelectedOption[], qty: number) => void;
 }
+
+// Media query breakpoint - matches Tailwind md: 768px
+const MOBILE_BREAKPOINT = 768;
 
 export function ProductOptionsDialog({
   product,
@@ -34,13 +36,25 @@ export function ProductOptionsDialog({
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>();
   const [selectedOptionsByGroup, setSelectedOptionsByGroup] = useState<Map<string, SelectedOption[]>>(new Map());
   const [qty, setQty] = useState(1);
-  const [mounted, setMounted] = useState(false);
-  const isMobileHook = useIsMobile();
-  const isDesktop = !isMobileHook;
+  
+  // Determine if desktop directly from window size (not from hook)
+  // Initialize to true (assume desktop), update on mount and resize
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= MOBILE_BREAKPOINT;
+  });
 
-  // Guard: Only render modal after component mounted (so isMobileHook is defined)
   useEffect(() => {
-    setMounted(true);
+    // Check on mount
+    const checkIsDesktop = () => {
+      setIsDesktop(window.innerWidth >= MOBILE_BREAKPOINT);
+    };
+    
+    checkIsDesktop();
+    
+    // Update on window resize
+    window.addEventListener('resize', checkIsDesktop);
+    return () => window.removeEventListener('resize', checkIsDesktop);
   }, []);
 
   useEffect(() => {
@@ -74,8 +88,7 @@ export function ProductOptionsDialog({
     }
   }, [open, product]);
 
-  // Don't render until component is mounted (ensures isMobileHook is properly set)
-  if (!product || !open || !mounted) return null;
+  if (!product || !open) return null;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
