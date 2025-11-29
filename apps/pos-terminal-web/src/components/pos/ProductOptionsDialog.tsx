@@ -34,7 +34,14 @@ export function ProductOptionsDialog({
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>();
   const [selectedOptionsByGroup, setSelectedOptionsByGroup] = useState<Map<string, SelectedOption[]>>(new Map());
   const [qty, setQty] = useState(1);
-  const isDesktop = !useIsMobile();
+  const [mounted, setMounted] = useState(false);
+  const isMobileHook = useIsMobile();
+  const isDesktop = !isMobileHook;
+
+  // Guard: Only render modal after component mounted (so isMobileHook is defined)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (open && product) {
@@ -67,7 +74,8 @@ export function ProductOptionsDialog({
     }
   }, [open, product]);
 
-  if (!product || !open) return null;
+  // Don't render until component is mounted (ensures isMobileHook is properly set)
+  if (!product || !open || !mounted) return null;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {

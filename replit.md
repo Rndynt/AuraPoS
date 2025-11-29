@@ -29,15 +29,15 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - **Sidebar** (Sidebar.tsx): Desktop sidebar has feature flag checks
 - **Result**: Tables & Kitchen features fully protected across ALL access points
 
-### ✅ Product Variant Selection - Responsive Drawer + Dialog with Optimized Quantity
-- **Mobile/Tablet (< 1024px)**: Shows as **Drawer** (slides from bottom)
-- **Desktop (≥ 1024px)**: Shows as **Dialog** (centered modal)
+### ✅ Product Variant Selection - Responsive Drawer + Dialog with Fixed Hydration
+- **Mobile (< 768px)**: Shows as **Drawer** (slides from bottom)
+- **Desktop (≥ 768px)**: Shows as **Dialog** (centered modal)
 - **Styling**: Unified with CartPanel (white bg, slate borders, blue actions)
-- **Quantity Placement**: Moved to footer/action area
-  - Quantity controls in compact slate-50 bordered container
-  - Action button next to it (flex-1 for full width)
-  - More space-efficient, especially for drawer on mobile
-- **Implementation**: Uses `useIsMobile()` hook, content shared between Drawer/Dialog
+- **Quantity Placement**: Moved to footer/action area with compact controls
+- **Hydration Fix**: Added `mounted` guard to prevent undefined state rendering
+  - Ensures proper breakpoint detection before modal renders
+  - Prevents drawer appearing on wrong screen sizes during initial load
+  - File: `ProductOptionsDialog.tsx` (lines 40, 44-47, 81)
 
 ### ✅ Inline Edit Category Names - Preserved Expand/Collapse
 - **Product Management Page** (`/products`) - Daftar Produk tab
@@ -49,6 +49,15 @@ I prefer iterative development with a focus on delivering functional, tested fea
   - Click outside (blur) to save automatically
 - **Behavior**: Updates ALL products in that category via batch API calls
 - **Files**: `products.tsx` (lines 41-43, 80-116, 490-535)
+
+### ✅ Indonesian Laundry Demo Tenant - Complete Data Model
+- **Function**: `seedIndonesianLaundryTenant()` - 10 realistic services with Indo pricing
+- **Tenant ID**: `laundry-indo` (PT Cucian Cepat Indonesia)
+- **10 Services**: Cuci Satuan (9.5k/kg), Cuci+Setrika (12k/kg), Cuci Kilat (18k/kg), Setrika (6k/kg), Dry Cleaning (45k), Sprai (25k), Selimut (35k), Karpet (50k/m²), Sofa (75k), Hapus Noda (15k)
+- **Order Types**: DROP OFF, PICKUP & DELIVERY, EXPRESS
+- **Modules**: Delivery ✅, Appointments ✅, Loyalty ✅
+- **Implementation**: Replaced generic `seedLaundryTenant()` with Indonesia-specific data
+- **Files**: `apps/api/src/seed.ts` (lines 914-1033), `packages/core/tenant.ts` (line 1)
 
 ## Session Summary (Nov 29, 2025)
 
