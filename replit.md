@@ -81,16 +81,24 @@ AuraPoS/
 
 ---
 
-## Recent Updates (Nov 29, 2025 - UI Polish)
+## Recent Updates (Nov 29, 2025 - Final UI Polish & Simplification)
 
 ### Mobile Drawer & Payment Dialog Fixes ✅
-- **Fixed payment dialog accessibility**: Added `DialogTitle` for screen reader support
 - **Fixed mobile drawer footer cutoff**: Changed footer from `absolute` to `fixed` positioning on mobile
-  - Buttons "Simpan" and "Bayar" now always visible, never cut off by keyboard
-- **Optimized payment dialog scrolling**: Changed from `overflow-y-auto` to `overflow-auto` 
-  - Scrollbar only appears when needed for minimal content
-- **Improved cart item spacing**: Removed excessive `pb-40` padding (now `pb-6`)
-  - Cleaner layout, footer positioning handles visibility
+  - Buttons "Simpan" and "Bayar" ALWAYS visible, never cut off by keyboard
+  - Fixed on both CartPanel (desktop) and MobileCartDrawer (mobile)
+- **Removed duplicate X button**: Payment dialog now closes via ESC or backdrop click only
+  - Clean header with just total display
+- **Optimized payment dialog scrolling**: `overflow-auto` only shows scrollbar when needed
+  - Smart scrolling for minimal payment content
+- **Improved cart item spacing**: Removed excessive `pb-40` padding → `pb-6`
+  - Cleaner layout with proper footer handling
+
+### Dialog Simplification ✅
+- **Removed OrderTypeSelectionDialog entirely**: No more redundant dialog
+  - Auto-selects first order type on Simpan/Bayar/Partial Payment actions
+  - Streamlined UX, fewer clicks for users
+  - Order type always auto-populated from tenant config
 
 ---
 

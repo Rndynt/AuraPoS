@@ -152,13 +152,6 @@ export function PaymentMethodDialog({
                 {formatIDR(cartTotal)}
               </h2>
             </div>
-            <button
-              onClick={handleCancel}
-              className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500 flex-shrink-0"
-              data-testid="button-close-payment"
-            >
-              <X size={20} />
-            </button>
           </div>
 
           {/* Mobile Method Tabs (Horizontal) - Visible only on mobile */}

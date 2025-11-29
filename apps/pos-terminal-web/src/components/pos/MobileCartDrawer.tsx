@@ -259,7 +259,7 @@ export function MobileCartDrawer({
             </div>
 
             {/* Cart Items */}
-            <div className="p-4 space-y-3 pb-40 md:pb-6 flex-1">
+            <div className="p-4 space-y-3 pb-6 flex-1">
               {items.length === 0 ? (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-300">
                   <ShoppingBag size={48} className="mb-3 opacity-50" />
@@ -285,7 +285,7 @@ export function MobileCartDrawer({
 
           {/* Footer with totals and actions */}
           {items.length > 0 && (
-            <div className="absolute md:relative bottom-0 left-0 right-0 z-30">
+            <div className="fixed md:absolute bottom-0 left-0 right-0 z-30 w-full md:w-auto">
               {/* Expandable Summary Section - Slides UP from bottom */}
               <div
                 className={`absolute bottom-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${

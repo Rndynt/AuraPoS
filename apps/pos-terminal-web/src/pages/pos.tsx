@@ -8,8 +8,6 @@ import { OrderQueuePanel } from "@/components/pos/OrderQueuePanel";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
-import { OrderTypeSelectionDialog } from "@/components/pos/OrderTypeSelectionDialog";
-import type { OrderTypeSelectionResult } from "@/components/pos/OrderTypeSelectionDialog";
 import { PaymentMethodDialog } from "@/components/pos/PaymentMethodDialog";
 import type { PaymentMethod } from "@/hooks/useCart";
 import { useCart } from "@/hooks/useCart";
@@ -32,9 +30,7 @@ export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
-  const [orderTypeSelectionDialogOpen, setOrderTypeSelectionDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
-  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
   const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
   const [pendingOrderForPayment, setPendingOrderForPayment] = useState<{
@@ -306,28 +302,12 @@ export default function POSPage() {
       return;
     }
     
-    // Check if order type is already selected
-    if (!cart.selectedOrderTypeId) {
-      // No order type selected - open dialog for selection
-      setOrderTypeSelectionDialogOpen(true);
-      setMobileCartOpen(false);
-      return;
+    // Auto-select first order type if none selected
+    if (!cart.selectedOrderTypeId && activeOrderTypes.length > 0) {
+      cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
     }
     
-    // Get the selected order type metadata
-    const selectedOrderType = activeOrderTypes.find(ot => ot.id === cart.selectedOrderTypeId);
-    if (!selectedOrderType) return;
-    
-    // Check if order type requires table number
-    const needsTable = selectedOrderType.needTableNumber === true;
-    if (needsTable && !cart.tableNumber) {
-      setOrderTypeSelectionDialogOpen(true);
-      setMobileCartOpen(false);
-      return;
-    }
-    
-    // All metadata ready - open payment dialog WITHOUT creating order yet
-    // Order will be created AFTER payment is confirmed
+    // Open payment dialog - order will be created when payment is confirmed
     setPaymentMethodDialogOpen(true);
     setMobileCartOpen(false);
   };
@@ -394,99 +374,16 @@ export default function POSPage() {
     }
   };
 
-  const handleOrderTypeConfirm = async (result: OrderTypeSelectionResult) => {
-    try {
-      setIsSubmittingOrder(true);
-
-      if (!result.orderTypeId) {
-        toast({
-          title: "Order type required",
-          description: "Please select an order type before continuing",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Build order payload with order type and table number from dialog
-      const orderPayload = {
-        items: cart.toBackendOrderItems(),
-        tax_rate: cart.taxRate,
-        service_charge_rate: cart.serviceChargeRate,
-        order_type_id: result.orderTypeId,
-        customer_name: cart.customerName || undefined,
-        table_number: result.tableNumber || undefined,
-      };
-
-      // Decide whether to create new order or update existing one
-      let orderResult;
-      if (continueOrderId) {
-        // Update existing order
-        orderResult = await updateOrderMutation.mutateAsync({
-          orderId: continueOrderId,
-          ...orderPayload,
-        });
-      } else {
-        // Create new order
-        orderResult = await createOrderMutation.mutateAsync(orderPayload);
-      }
-
-      // If mark as paid, record full payment
-      if (result.markAsPaid) {
-        await recordPaymentMutation.mutateAsync({
-          orderId: orderResult.order.id,
-          amount: orderResult.pricing.total_amount,
-          payment_method: cart.paymentMethod,
-        });
-
-        toast({
-          title: "Order completed & paid",
-          description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")} (Paid)`,
-        });
-      } else {
-        toast({
-          title: "Order created",
-          description: `Order #${orderResult.order.order_number} - Total: Rp ${orderResult.pricing.total_amount.toLocaleString("id-ID")}`,
-        });
-      }
-
-      // Update selected order type and table number in cart state
-      cart.setSelectedOrderTypeId(result.orderTypeId);
-      if (result.tableNumber) {
-        cart.setTableNumber(result.tableNumber);
-      }
-
-      // Clear cart
-      cart.clearCart();
-      setOrderTypeSelectionDialogOpen(false);
-    } catch (error) {
-      let errorMessage = "Failed to process order";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      // Try to extract more details from API error response
-      const apiError = error as any;
-      if (apiError?.response?.data?.message) {
-        errorMessage = apiError.response.data.message;
-      } else if (apiError?.body?.message) {
-        errorMessage = apiError.body.message;
-      }
-
-      console.error("Order creation error details:", error);
-
-      toast({
-        title: "Order failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingOrder(false);
-    }
-  };
 
   const handlePartialPayment = () => {
     if (!hasPartialPayment) return;
     if (!ensureCartHasItems()) return;
-    if (!validateOrderType()) return;
+    
+    // Auto-select first order type if none selected
+    if (!cart.selectedOrderTypeId && activeOrderTypes.length > 0) {
+      cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
+    }
+    
     setPartialPaymentDialogOpen(true);
     setMobileCartOpen(false);
   };
@@ -799,19 +696,6 @@ export default function POSPage() {
           isSubmitting={isSubmittingPartialPayment}
         />
       )}
-
-      {/* Order Type Selection Dialog */}
-      <OrderTypeSelectionDialog
-        open={orderTypeSelectionDialogOpen}
-        onClose={() => setOrderTypeSelectionDialogOpen(false)}
-        onConfirm={handleOrderTypeConfirm}
-        orderTypes={orderTypes || []}
-        orderTypesLoading={orderTypesLoading}
-        cartTotal={cart.total}
-        isSubmitting={isSubmittingOrder}
-        initialSelectedOrderTypeId={cart.selectedOrderTypeId}
-        initialTableNumber={cart.tableNumber}
-      />
 
       {/* Payment Method Selection Dialog */}
       <PaymentMethodDialog
