@@ -16,6 +16,33 @@ Key capabilities include:
 ## User Preferences
 I prefer iterative development with a focus on delivering functional, tested features in small increments. Please ask before making major architectural changes or introducing new external dependencies. I value clear, concise communication and prefer detailed explanations for complex logic or design decisions. I expect the agent to maintain the established coding standards and adhere to the project's technology stack.
 
+## Recent Fixes (Nov 29, 2025 - Current Session)
+
+### ✅ Hub Navigation Button Fix
+- Changed Hub button navigation from "/" to "/hub" in UnifiedBottomNav
+- Fixes incorrect POS page display when clicking Hub button
+
+### ✅ Table Occupancy Status Detection
+- Created `getActualTableStatus()` function checking ACTIVE ORDERS instead of database status
+- Table = "occupied" if has active orders (status ≠ completed/cancelled)
+- Occupancy counters updated to use real-time status
+- Fixed header & filter tabs to reflect actual occupancy
+
+### ✅ Continue Order - Cart Count Display
+- Removed duplicate loadOrder() call from tables-management.tsx
+- POS page now handles order loading exclusively via useEffect
+- Cart count shows immediately when continuing order from table
+
+### ✅ Continue Order - Cart Items Scrolling  
+- Fixed items container by adding `flex-1 min-h-0` (CartPanel & MobileCartDrawer)
+- Items container now grows to fill space and scrolls when content exceeds bounds
+- Supports unlimited items with smooth scrolling
+
+### ✅ Continue Order - Toast Error Messages
+- Added optional chaining for all order responses (`orderResult.order?.id`)
+- Fallback to order ID if order_number missing
+- Fixed LSP errors in partial payment handler
+
 ## System Architecture
 
 ### UI/UX Decisions

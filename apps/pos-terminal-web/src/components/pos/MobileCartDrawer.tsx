@@ -259,7 +259,7 @@ export function MobileCartDrawer({
             </div>
 
             {/* Cart Items */}
-            <div className="p-4 space-y-3 pb-6 overflow-y-auto">
+            <div className="flex-1 min-h-0 p-4 space-y-3 pb-6 overflow-y-auto">
               {items.length === 0 ? (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-300">
                   <ShoppingBag size={48} className="mb-3 opacity-50" />
