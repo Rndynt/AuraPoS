@@ -388,13 +388,15 @@ export default function TablesManagementPage() {
                           {formatPrice(order.total)}
                         </span>
                       </div>
-                      <button
-                        onClick={() => handleContinueOrder(order)}
-                        className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                        data-testid={`button-continue-order-${order.id}`}
-                      >
-                        <Edit2 size={14} /> Continue Order
-                      </button>
+                      {order.paymentStatus !== "paid" && (
+                        <button
+                          onClick={() => handleContinueOrder(order)}
+                          className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                          data-testid={`button-continue-order-${order.id}`}
+                        >
+                          <Edit2 size={14} /> Continue Order
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

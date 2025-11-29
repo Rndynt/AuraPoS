@@ -44,23 +44,29 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - Fixed LSP errors in partial payment handler
 
 ### ✅ Product Images Loading When Continuing Order
-- **Problem**: Product images were not loading when continuing a previous order
-- **Solution**: Added product enrichment in pos.tsx after loading order (lines 90-97)
-  - Creates Map of fetched products indexed by ID
-  - Enriches cart items with full product data including `image_url` from the products list
-  - Ensures images display properly even if API response doesn't include them
-- **Files Modified**: 
-  - `apps/pos-terminal-web/src/pages/pos.tsx` (added product enrichment logic)
-  - `apps/pos-terminal-web/src/hooks/useCart.ts` (added fallback image_url field)
-  - `apps/pos-terminal-web/src/components/pos/CartPanel.tsx` & `MobileCartDrawer.tsx` (fixed scroll layout)
+- Added product enrichment in pos.tsx after loading order
+- Creates Map of fetched products indexed by ID
+- Enriches cart items with full product data including `image_url`
+- Ensures images display properly even if API response doesn't include them
 
 ### ✅ Table Order Details - Show All Items
-- **Problem**: Table details dialog showed only 3 items with "+4 more items" text
-- **Solution**: Removed slice(0,3) limitation and show all items in the list
-- **Files Modified**: `apps/pos-terminal-web/src/pages/tables-management.tsx` (lines 360-371)
-  - Changed from `.slice(0, 3).map(...)` to `.map(...)` 
-  - Removed the "+X more items" text
-  - Users now see complete item list with all order details
+- Removed slice(0,3) limitation and show all items
+- Removed "+X more items" text
+- Users now see complete item list with all order details
+
+### ✅ Table Order Details - Show Variant & Option Details
+- Each order item now displays complete details:
+  - **Product name + quantity** (bold)
+  - **Variant name** (if exists) - prefixed with bullet point
+  - **Selected options** (if exist) - each on separate line with bullet point
+- Light gray background cards for better readability
+- Handles multiple field name variations (camelCase and snake_case)
+
+### ✅ Paid Order - Hide Continue Order Button
+- If order.paymentStatus === "paid", the "Continue Order" button is completely hidden
+- Only UNPAID orders show the "Continue Order" button
+- Users must create a new order for tables with paid orders
+- Clean, intuitive UX - no disabled states
 
 ## System Architecture
 
