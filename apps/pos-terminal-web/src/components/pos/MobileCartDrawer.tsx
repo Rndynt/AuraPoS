@@ -131,15 +131,16 @@ export function MobileCartDrawer({
   };
 
   return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange}>
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55] md:hidden" />
-        <Drawer.Content
-          className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl transition-transform duration-300 w-full h-[95vh] mt-[5vh] md:hidden ${
-            open ? 'translate-y-0' : 'translate-y-full'
-          } rounded-t-[2rem]`}
-          data-testid="drawer-mobile-cart"
-        >
+    <div className="md:hidden">
+      <Drawer.Root open={open} onOpenChange={onOpenChange}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
+          <Drawer.Content
+            className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl transition-transform duration-300 w-full h-[95vh] mt-[5vh] ${
+              open ? 'translate-y-0' : 'translate-y-full'
+            } rounded-t-[2rem]`}
+            data-testid="drawer-mobile-cart"
+          >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white rounded-t-[2rem] relative z-40">
             <div className="flex items-center gap-3">
@@ -285,7 +286,7 @@ export function MobileCartDrawer({
 
           {/* Footer with totals and actions */}
           {items.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 z-30 w-full md:hidden">
+            <div className="fixed bottom-0 left-0 right-0 z-30 w-full">
               {/* Expandable Summary Section - Slides UP from bottom */}
               <div
                 className={`absolute bottom-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
@@ -389,5 +390,6 @@ export function MobileCartDrawer({
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+    </div>
   );
 }
