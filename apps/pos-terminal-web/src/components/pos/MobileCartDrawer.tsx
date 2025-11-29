@@ -133,9 +133,9 @@ export function MobileCartDrawer({
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
+        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55] md:hidden" />
         <Drawer.Content
-          className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl transition-transform duration-300 w-full h-[95vh] mt-[5vh] ${
+          className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl transition-transform duration-300 w-full h-[95vh] mt-[5vh] md:hidden ${
             open ? 'translate-y-0' : 'translate-y-full'
           } rounded-t-[2rem]`}
           data-testid="drawer-mobile-cart"

@@ -44,6 +44,13 @@ export default function POSPage() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  // Auto-close mobile cart drawer when switching to tablet/desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileCartOpen(false);
+    }
+  }, [isMobile]);
+
   // Fetch products from backend (including inactive products to show with overlay)
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts();
   const products = productsData?.products || [];
