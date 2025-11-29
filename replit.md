@@ -29,15 +29,15 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - **Sidebar** (Sidebar.tsx): Desktop sidebar has feature flag checks
 - **Result**: Tables & Kitchen features fully protected across ALL access points
 
-### ✅ Product Variant Selection - Responsive Drawer + Dialog with Fixed Hydration
+### ✅ Product Variant Selection - Responsive Drawer + Dialog (useIsMobile Hook)
 - **Mobile (< 768px)**: Shows as **Drawer** (slides from bottom)
 - **Desktop (≥ 768px)**: Shows as **Dialog** (centered modal)
+- **Implementation**: Uses official `useIsMobile()` hook from `/hooks/use-mobile.tsx`
+- **Logic**: `if (!isDesktop) render Drawer else Dialog`
 - **Styling**: Unified with CartPanel (white bg, slate borders, blue actions)
-- **Quantity Placement**: Moved to footer/action area with compact controls
-- **Hydration Fix**: Added `mounted` guard to prevent undefined state rendering
-  - Ensures proper breakpoint detection before modal renders
-  - Prevents drawer appearing on wrong screen sizes during initial load
-  - File: `ProductOptionsDialog.tsx` (lines 40, 44-47, 81)
+- **Quantity**: Footer/action area with compact controls
+- **Verified**: Console logging shows correct `isMobile`/`isDesktop` values on different breakpoints
+- **File**: `ProductOptionsDialog.tsx` (line 42-43: isMobile + isDesktop)
 
 ### ✅ Inline Edit Category Names - Preserved Expand/Collapse
 - **Product Management Page** (`/products`) - Daftar Produk tab
