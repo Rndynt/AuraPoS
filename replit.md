@@ -2,7 +2,7 @@
 
 **Status**: Production Ready ✅  
 **Version**: 1.0.0  
-**Last Updated**: November 28, 2025
+**Last Updated**: November 29, 2025
 
 ---
 
@@ -81,7 +81,20 @@ AuraPoS/
 
 ---
 
-## Recent Updates (Nov 28, 2025 - Final Session)
+## Recent Updates (Nov 29, 2025 - UI Polish)
+
+### Mobile Drawer & Payment Dialog Fixes ✅
+- **Fixed payment dialog accessibility**: Added `DialogTitle` for screen reader support
+- **Fixed mobile drawer footer cutoff**: Changed footer from `absolute` to `fixed` positioning on mobile
+  - Buttons "Simpan" and "Bayar" now always visible, never cut off by keyboard
+- **Optimized payment dialog scrolling**: Changed from `overflow-y-auto` to `overflow-auto` 
+  - Scrollbar only appears when needed for minimal content
+- **Improved cart item spacing**: Removed excessive `pb-40` padding (now `pb-6`)
+  - Cleaner layout, footer positioning handles visibility
+
+---
+
+## Previous Updates (Nov 28, 2025 - Final Session)
 
 ### Payment Flow & UI Improvements ✅
 - **Fixed Payment Dialog Flow**: Dialog now appears FIRST (no order creation yet)

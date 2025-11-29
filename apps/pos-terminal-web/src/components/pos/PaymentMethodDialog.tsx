@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Banknote, CreditCard, QrCode, X } from "lucide-react";
 import type { PaymentMethod } from "@/hooks/useCart";
@@ -95,6 +96,7 @@ export function PaymentMethodDialog({
         }
       }}
     >
+      <DialogTitle className="sr-only">Payment Method Selection</DialogTitle>
       <DialogContent 
         className="p-0 gap-0 w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl overflow-hidden flex flex-col md:flex-row h-[85vh] md:h-auto md:max-h-[90vh]"
         data-testid="dialog-payment-method"
