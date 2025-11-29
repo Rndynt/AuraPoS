@@ -81,13 +81,31 @@ I prefer iterative development with a focus on delivering functional, tested fea
      - Already had feature flag checks for both table management and kitchen display
 - **Result**: Feature flags now work across ALL access points - routes are protected AND UI buttons hide when disabled in tenant config
 
+### ✅ Product Variant Selection - Responsive Drawer + Dialog
+- **Mobile/Tablet (< 1024px)**: Shows as **Drawer** (slides from bottom)
+  - Smooth UX for touch devices
+  - Easy to dismiss with swipe
+  - Matches CartPanel styling: white bg, slate borders, blue actions
+- **Desktop (≥ 1024px)**: Shows as **Dialog** (centered modal)
+  - Traditional focused experience
+  - Efficient space use on larger screens
+- **Styling**: Completely unified with CartPanel
+  - White background (bg-white)
+  - Slate borders and accents (slate-100, slate-200, slate-50)
+  - Blue primary actions (blue-600, blue-700)
+  - Consistent rounded corners (rounded-xl, rounded-2xl)
+- **Implementation**: 
+  - Uses `useIsMobile()` hook for responsive logic
+  - Content component shared between Drawer and Dialog
+  - Maintains all variant/option selection logic
+
 ## System Architecture
 
 ### UI/UX Decisions
 The frontend is built with React 19, TypeScript, Vite, and TailwindCSS for a responsive design that adapts across mobile, tablet, and desktop. UI components are built using `shadcn/ui` (Radix primitives + Tailwind) and `Lucide React` for icons.
-- **Mobile (< 768px)**: Bottom navigation, slide-out cart.
-- **Tablet (768-1024px)**: Split view with a collapsible cart.
-- **Desktop (> 1024px)**: Full sidebar layout.
+- **Mobile (< 768px)**: Bottom navigation, slide-out cart, drawer panels.
+- **Tablet (768-1024px)**: Split view with a collapsible cart, drawer panels.
+- **Desktop (> 1024px)**: Full sidebar layout, centered dialogs.
 - The system simplifies user interaction by auto-selecting the first order type and required product options where applicable, and ensures "Simpan" (draft save) works independently without dialogs. Payment dialogs are designed for a streamlined flow, appearing before order creation and adapting to full-screen on mobile.
 
 ### Technical Implementations

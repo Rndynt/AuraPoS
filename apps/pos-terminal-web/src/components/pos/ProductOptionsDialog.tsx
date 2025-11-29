@@ -9,6 +9,14 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductOptionsDialogProps {
   product: Product | null;
@@ -26,6 +34,7 @@ export function ProductOptionsDialog({
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>();
   const [selectedOptionsByGroup, setSelectedOptionsByGroup] = useState<Map<string, SelectedOption[]>>(new Map());
   const [qty, setQty] = useState(1);
+  const isDesktop = !useIsMobile();
 
   useEffect(() => {
     if (open && product) {
@@ -168,6 +177,237 @@ export function ProductOptionsDialog({
 
   const total = calculateTotal();
 
+  // Content component (shared between drawer and dialog)
+  const Content = () => (
+    <>
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {product.has_variants && product.variants && product.variants.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <h4 className="font-bold text-slate-700 text-sm">
+                Variant
+              </h4>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                Wajib
+              </span>
+            </div>
+            {product.variants.map((variant) => {
+              const isSelected = selectedVariant?.id === variant.id;
+              return (
+                <label
+                  key={variant.id}
+                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                  data-testid={`option-variant-${variant.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-600'
+                          : 'border-slate-300'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                      )}
+                    </div>
+                    <span
+                      className={`text-sm ${
+                        isSelected
+                          ? 'font-semibold text-blue-900'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      {variant.name}
+                    </span>
+                  </div>
+                  {variant.price_delta !== 0 && variant.price_delta !== undefined && (
+                    <span className="text-xs font-medium text-slate-500">
+                      {variant.price_delta > 0 ? '+' : ''}
+                      {formatPrice(variant.price_delta)}
+                    </span>
+                  )}
+                  <input
+                    type="radio"
+                    className="hidden"
+                    checked={isSelected}
+                    onChange={() => setSelectedVariant(variant)}
+                  />
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        {sortedOptionGroups.map((group) => {
+          const selections = selectedOptionsByGroup.get(group.id) || [];
+          const allOptions = group.options || [];
+
+          return (
+            <div key={group.id} className="space-y-2">
+              <div className="flex justify-between">
+                <h4 className="font-bold text-slate-700 text-sm">
+                  {group.name}
+                </h4>
+                {group.is_required && (
+                  <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                    Wajib
+                  </span>
+                )}
+              </div>
+              {allOptions.map((option) => {
+                const isAvailable = option.is_available !== false;
+                const isSelected = group.selection_type === "single"
+                  ? selections[0]?.option_id === option.id
+                  : selections.some(sel => sel.option_id === option.id);
+
+                return (
+                  <label
+                    key={option.id}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      !isAvailable
+                        ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-50'
+                        : isSelected
+                        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200 cursor-pointer'
+                        : 'border-slate-200 hover:bg-slate-50 cursor-pointer'
+                    }`}
+                    data-testid={`option-${group.id}-${option.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {group.selection_type === "single" ? (
+                        /* Radio Button - Single Selection */
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                            !isAvailable
+                              ? 'border-slate-200'
+                              : isSelected
+                              ? 'border-blue-600 bg-blue-600'
+                              : 'border-slate-300'
+                          }`}
+                        >
+                          {isSelected && !isAvailable === false && (
+                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                          )}
+                        </div>
+                      ) : (
+                        /* Checkbox - Multiple Selection */
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                            !isAvailable
+                              ? 'border-slate-200'
+                              : isSelected
+                              ? 'border-blue-600 bg-blue-600'
+                              : 'border-slate-300'
+                          }`}
+                        >
+                          {isSelected && !isAvailable === false && (
+                            <svg className="w-3 h-3 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="13 2 6 13 3 10" />
+                            </svg>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-0.5">
+                        <span
+                          className={`text-sm ${
+                            !isAvailable
+                              ? 'text-slate-400'
+                              : isSelected
+                              ? 'font-semibold text-blue-900'
+                              : 'text-slate-600'
+                          }`}
+                        >
+                          {option.name}
+                        </span>
+                        {!isAvailable && (
+                          <span className="text-[10px] text-slate-400">Tidak tersedia</span>
+                        )}
+                      </div>
+                    </div>
+                    {option.price_delta !== 0 && option.price_delta > 0 && (
+                      <span className={`text-xs font-medium ${!isAvailable ? 'text-slate-300' : 'text-slate-500'}`}>
+                        +{formatPrice(option.price_delta)}
+                      </span>
+                    )}
+                    <input
+                      type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
+                      className="hidden"
+                      checked={isSelected}
+                      disabled={!isAvailable}
+                      onChange={() => {
+                        handleOptionToggle(group, option.id, option.name, option.price_delta, isAvailable);
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          );
+        })}
+
+        <div className="pt-4 border-t border-dashed border-slate-200">
+          <p className="font-bold text-sm text-slate-700 mb-3">Jumlah</p>
+          <div className="flex items-center justify-center gap-6">
+            <button
+              onClick={() => setQty(Math.max(1, qty - 1))}
+              className="w-10 h-10 rounded-full border hover:bg-slate-50 flex items-center justify-center"
+              data-testid="button-qty-minus"
+            >
+              <Minus size={18} />
+            </button>
+            <span className="text-xl font-bold w-8 text-center" data-testid="text-qty">
+              {qty}
+            </span>
+            <button
+              onClick={() => setQty(qty + 1)}
+              className="w-10 h-10 rounded-full border hover:bg-slate-50 flex items-center justify-center"
+              data-testid="button-qty-plus"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 bg-white border-t border-slate-200">
+        <button
+          onClick={handleAdd}
+          disabled={!areAllRequiredOptionsFilled()}
+          className={`w-full py-3 rounded-xl font-bold flex justify-between px-6 transition-all ${
+            areAllRequiredOptionsFilled()
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+          }`}
+          data-testid="button-add-to-cart"
+        >
+          <span>Tambah</span>
+          <span>{formatPrice(total)}</span>
+        </button>
+      </div>
+    </>
+  );
+
+  // Mobile/Tablet: Drawer
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={onClose}>
+        <DrawerContent className="bg-white rounded-t-2xl max-h-[85vh] flex flex-col" data-testid="drawer-product-options">
+          <DrawerHeader className="border-b border-slate-100 pb-4">
+            <h3 className="text-lg font-bold text-slate-800">
+              {product.name}
+            </h3>
+          </DrawerHeader>
+          <Content />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Desktop: Dialog
   return (
     <div 
       className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
@@ -190,215 +430,7 @@ export function ProductOptionsDialog({
             <X size={20} />
           </button>
         </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {product.has_variants && product.variants && product.variants.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <h4 className="font-bold text-slate-700 text-sm">
-                  Variant
-                </h4>
-                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
-                  Wajib
-                </span>
-              </div>
-              {product.variants.map((variant) => {
-                const isSelected = selectedVariant?.id === variant.id;
-                return (
-                  <label
-                    key={variant.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
-                        : 'border-slate-200 hover:bg-slate-50'
-                    }`}
-                    data-testid={`option-variant-${variant.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-600'
-                            : 'border-slate-300'
-                        }`}
-                      >
-                        {isSelected && (
-                          <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                        )}
-                      </div>
-                      <span
-                        className={`text-sm ${
-                          isSelected
-                            ? 'font-semibold text-blue-900'
-                            : 'text-slate-600'
-                        }`}
-                      >
-                        {variant.name}
-                      </span>
-                    </div>
-                    {variant.price_delta !== 0 && variant.price_delta !== undefined && (
-                      <span className="text-xs font-medium text-slate-500">
-                        {variant.price_delta > 0 ? '+' : ''}
-                        {formatPrice(variant.price_delta)}
-                      </span>
-                    )}
-                    <input
-                      type="radio"
-                      className="hidden"
-                      checked={isSelected}
-                      onChange={() => setSelectedVariant(variant)}
-                    />
-                  </label>
-                );
-              })}
-            </div>
-          )}
-
-          {sortedOptionGroups.map((group, idx) => {
-            const selections = selectedOptionsByGroup.get(group.id) || [];
-            const allOptions = group.options || [];
-
-            return (
-              <div key={group.id} className="space-y-2">
-                <div className="flex justify-between">
-                  <h4 className="font-bold text-slate-700 text-sm">
-                    {group.name}
-                  </h4>
-                  {group.is_required && (
-                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
-                      Wajib
-                    </span>
-                  )}
-                </div>
-                {allOptions.map((option) => {
-                  const isAvailable = option.is_available !== false;
-                  const isSelected = group.selection_type === "single"
-                    ? selections[0]?.option_id === option.id
-                    : selections.some(sel => sel.option_id === option.id);
-
-                  return (
-                    <label
-                      key={option.id}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                        !isAvailable
-                          ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-50'
-                          : isSelected
-                          ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200 cursor-pointer'
-                          : 'border-slate-200 hover:bg-slate-50 cursor-pointer'
-                      }`}
-                      data-testid={`option-${group.id}-${option.id}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {group.selection_type === "single" ? (
-                          /* Radio Button - Single Selection */
-                          <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
-                              !isAvailable
-                                ? 'border-slate-200'
-                                : isSelected
-                                ? 'border-blue-600 bg-blue-600'
-                                : 'border-slate-300'
-                            }`}
-                          >
-                            {isSelected && !isAvailable === false && (
-                              <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                            )}
-                          </div>
-                        ) : (
-                          /* Checkbox - Multiple Selection */
-                          <div
-                            className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                              !isAvailable
-                                ? 'border-slate-200'
-                                : isSelected
-                                ? 'border-blue-600 bg-blue-600'
-                                : 'border-slate-300'
-                            }`}
-                          >
-                            {isSelected && !isAvailable === false && (
-                              <svg className="w-3 h-3 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="13 2 6 13 3 10" />
-                              </svg>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-0.5">
-                          <span
-                            className={`text-sm ${
-                              !isAvailable
-                                ? 'text-slate-400'
-                                : isSelected
-                                ? 'font-semibold text-blue-900'
-                                : 'text-slate-600'
-                            }`}
-                          >
-                            {option.name}
-                          </span>
-                          {!isAvailable && (
-                            <span className="text-[10px] text-slate-400">Tidak tersedia</span>
-                          )}
-                        </div>
-                      </div>
-                      {option.price_delta !== 0 && option.price_delta > 0 && (
-                        <span className={`text-xs font-medium ${!isAvailable ? 'text-slate-300' : 'text-slate-500'}`}>
-                          +{formatPrice(option.price_delta)}
-                        </span>
-                      )}
-                      <input
-                        type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
-                        className="hidden"
-                        checked={isSelected}
-                        disabled={!isAvailable}
-                        onChange={() => {
-                          handleOptionToggle(group, option.id, option.name, option.price_delta, isAvailable);
-                        }}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            );
-          })}
-
-          <div className="pt-4 border-t border-dashed border-slate-200">
-            <p className="font-bold text-sm text-slate-700 mb-3">Jumlah</p>
-            <div className="flex items-center justify-center gap-6">
-              <button
-                onClick={() => setQty(Math.max(1, qty - 1))}
-                className="w-10 h-10 rounded-full border hover:bg-slate-50 flex items-center justify-center"
-                data-testid="button-qty-minus"
-              >
-                <Minus size={18} />
-              </button>
-              <span className="text-xl font-bold w-8 text-center" data-testid="text-qty">
-                {qty}
-              </span>
-              <button
-                onClick={() => setQty(qty + 1)}
-                className="w-10 h-10 rounded-full border hover:bg-slate-50 flex items-center justify-center"
-                data-testid="button-qty-plus"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 bg-white border-t border-slate-200">
-          <button
-            onClick={handleAdd}
-            disabled={!areAllRequiredOptionsFilled()}
-            className={`w-full py-3 rounded-xl font-bold flex justify-between px-6 transition-all ${
-              areAllRequiredOptionsFilled()
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
-            data-testid="button-add-to-cart"
-          >
-            <span>Tambah</span>
-            <span>{formatPrice(total)}</span>
-          </button>
-        </div>
+        <Content />
       </div>
     </div>
   );
