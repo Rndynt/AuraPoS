@@ -285,7 +285,7 @@ export function MobileCartDrawer({
 
           {/* Footer with totals and actions */}
           {items.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 z-30 w-full">
+            <div className="fixed bottom-0 left-0 right-0 z-30 w-full md:hidden">
               {/* Expandable Summary Section - Slides UP from bottom */}
               <div
                 className={`absolute bottom-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-5 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-out -z-10 ${
