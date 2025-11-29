@@ -906,6 +906,172 @@ async function seedTenantFeatures(tenantId: string) {
 }
 
 /**
+ * Seed LAUNDRY tenant with laundry services
+ */
+async function seedLaundryTenant(createdOrderTypes: any[]) {
+  console.log('\n🧺 Creating LAUNDRY Demo Tenant...');
+  
+  const tenantData = {
+    id: 'laundry-demo',
+    name: 'Demo Laundry Express',
+    slug: 'laundry-demo',
+    businessName: 'Express Laundry Service',
+    businessAddress: '456 Cleaning Street, City, Country',
+    businessPhone: '+1987654321',
+    businessEmail: 'info@expresslaundry.com',
+    planTier: 'standard',
+    subscriptionStatus: 'active',
+    timezone: 'UTC',
+    currency: 'IDR',
+    locale: 'id-ID',
+    isActive: true,
+  };
+  
+  const [tenant] = await db.insert(tenants).values(tenantData).returning();
+  console.log(`✅ Tenant created: ${tenant.slug}`);
+  
+  // Enable laundry order types
+  const laundryOrderTypes = ['DROPOFF', 'PICKUP_DELIVERY', 'EXPRESS'];
+  const tenantOrderTypesData: InsertTenantOrderType[] = createdOrderTypes
+    .filter(ot => laundryOrderTypes.includes(ot.code))
+    .map(ot => ({
+      tenantId: tenant.id,
+      orderTypeId: ot.id,
+      isEnabled: true,
+    }));
+  
+  await db.insert(tenantOrderTypes).values(tenantOrderTypesData);
+  console.log(`✅ Enabled ${tenantOrderTypesData.length} laundry order types`);
+  
+  // Seed laundry services
+  const serviceProducts = [
+    { name: 'Regular Wash', price: 15000, desc: 'Standard laundry service (3-5 days)' },
+    { name: 'Premium Wash', price: 25000, desc: 'Premium service with fabric softener (2-3 days)' },
+    { name: 'Express Wash', price: 45000, desc: 'Rush service (1 day turnaround)' },
+    { name: 'Ironing Service', price: 12000, desc: 'Clothes ironing per kg' },
+    { name: 'Dry Cleaning', price: 35000, desc: 'Professional dry cleaning per item' },
+    { name: 'Stain Removal', price: 20000, desc: 'Specialized stain treatment' },
+  ];
+  
+  for (const service of serviceProducts) {
+    await db.insert(products).values({
+      tenantId: tenant.id,
+      name: service.name,
+      description: service.desc,
+      basePrice: service.price.toString(),
+      category: 'Laundry Services',
+      hasVariants: false,
+      stockTrackingEnabled: false,
+      isActive: true,
+    } as InsertProduct);
+  }
+  
+  console.log(`✅ Created ${serviceProducts.length} laundry services`);
+  
+  // Module config - no table management or kitchen for laundry
+  await db.insert(tenantModuleConfigs).values({
+    tenantId: tenant.id,
+    enableTableManagement: false,
+    enableKitchenTicket: false,
+    enableLoyalty: true,
+    enableDelivery: true,
+    enableInventory: true,
+    enableAppointments: true,
+    enableMultiLocation: false,
+  });
+  
+  console.log(`✅ Module configs set for laundry`);
+  
+  return tenant.id;
+}
+
+/**
+ * Seed MINIMARKET tenant with retail products
+ */
+async function seedMinimarketTenant(createdOrderTypes: any[]) {
+  console.log('\n🏪 Creating MINIMARKET Demo Tenant...');
+  
+  const tenantData = {
+    id: 'minimarket-demo',
+    name: 'Demo MiniMart 24',
+    slug: 'minimarket-demo',
+    businessName: 'MiniMart 24 Convenience Store',
+    businessAddress: '789 Retail Plaza, City, Country',
+    businessPhone: '+1555666777',
+    businessEmail: 'sales@minimart24.com',
+    planTier: 'professional',
+    subscriptionStatus: 'active',
+    timezone: 'UTC',
+    currency: 'IDR',
+    locale: 'id-ID',
+    isActive: true,
+  };
+  
+  const [tenant] = await db.insert(tenants).values(tenantData).returning();
+  console.log(`✅ Tenant created: ${tenant.slug}`);
+  
+  // Enable retail order types
+  const retailOrderTypes = ['WALK_IN', 'SELF_CHECKOUT', 'PICKUP_STORE'];
+  const tenantOrderTypesData: InsertTenantOrderType[] = createdOrderTypes
+    .filter(ot => retailOrderTypes.includes(ot.code))
+    .map(ot => ({
+      tenantId: tenant.id,
+      orderTypeId: ot.id,
+      isEnabled: true,
+    }));
+  
+  await db.insert(tenantOrderTypes).values(tenantOrderTypesData);
+  console.log(`✅ Enabled ${tenantOrderTypesData.length} retail order types`);
+  
+  // Seed retail products
+  const retailProducts = [
+    { name: 'Mineral Water 600ml', category: 'Beverages', price: 5500 },
+    { name: 'Energy Drink 250ml', category: 'Beverages', price: 12000 },
+    { name: 'Instant Noodles', category: 'Snacks', price: 3000 },
+    { name: 'Potato Chips 100g', category: 'Snacks', price: 8500 },
+    { name: 'Chocolate Bar', category: 'Snacks', price: 10000 },
+    { name: 'Bread Loaf', category: 'Daily Essentials', price: 15000 },
+    { name: 'Milk Carton 1L', category: 'Daily Essentials', price: 18000 },
+    { name: 'Eggs (10 pcs)', category: 'Daily Essentials', price: 22000 },
+    { name: 'Soap 200g', category: 'Beauty & Care', price: 8000 },
+    { name: 'Toothpaste 150ml', category: 'Beauty & Care', price: 12000 },
+    { name: 'Shampoo 250ml', category: 'Beauty & Care', price: 18000 },
+    { name: 'Deodorant Stick', category: 'Beauty & Care', price: 15000 },
+  ];
+  
+  for (const product of retailProducts) {
+    await db.insert(products).values({
+      tenantId: tenant.id,
+      name: product.name,
+      basePrice: product.price.toString(),
+      category: product.category,
+      hasVariants: false,
+      stockTrackingEnabled: true,
+      stockQty: Math.floor(Math.random() * 50) + 20,
+      isActive: true,
+    } as InsertProduct);
+  }
+  
+  console.log(`✅ Created ${retailProducts.length} retail products`);
+  
+  // Module config - no table management or kitchen for retail
+  await db.insert(tenantModuleConfigs).values({
+    tenantId: tenant.id,
+    enableTableManagement: false,
+    enableKitchenTicket: false,
+    enableLoyalty: true,
+    enableDelivery: false,
+    enableInventory: true,
+    enableAppointments: false,
+    enableMultiLocation: false,
+  });
+  
+  console.log(`✅ Module configs set for minimarket`);
+  
+  return tenant.id;
+}
+
+/**
  * Main seed function
  */
 async function seed() {
@@ -948,16 +1114,29 @@ async function seed() {
     await seedTenantFeatures(tenantId);
     console.log('');
     
-    console.log('✅ Database seed completed successfully! 🎉');
+    // Seed LAUNDRY tenant
+    const laundryTenantId = await seedLaundryTenant(createdOrderTypes);
+    
+    // Seed MINIMARKET tenant
+    const minimarketTenantId = await seedMinimarketTenant(createdOrderTypes);
+    
+    console.log('\n✅ Database seed completed successfully! 🎉');
     console.log('');
     console.log('Summary:');
-    console.log('- 1 tenant created (demo-tenant)');
+    console.log('- 3 tenants created');
+    console.log('  • demo-tenant (Restaurant/Cafe)');
+    console.log('  • laundry-demo (Laundry Service)');
+    console.log('  • minimarket-demo (Retail/Minimarket)');
     console.log(`- ${createdOrderTypes.length} order types created`);
-    console.log('- 3 order types enabled for demo tenant (DINE_IN, TAKE_AWAY, DELIVERY)');
-    console.log('- 8 products created with option groups');
-    console.log(`- ${DEMO_TENANT_FEATURES.length} features enabled`);
+    console.log('- 8 products with options (Restaurant)');
+    console.log('- 6 laundry services (Laundry)');
+    console.log('- 12 retail products (Minimarket)');
+    console.log(`- ${DEMO_TENANT_FEATURES.length} features enabled for restaurant`);
     console.log('');
-    console.log('Available feature codes:', FEATURE_CODES.join(', '));
+    console.log('Tenant IDs:');
+    console.log(`- Restaurant: ${tenantId}`);
+    console.log(`- Laundry: ${laundryTenantId}`);
+    console.log(`- Minimarket: ${minimarketTenantId}`);
     
   } catch (error) {
     console.error('❌ Seed failed:', error);

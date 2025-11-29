@@ -57,6 +57,26 @@ I prefer iterative development with a focus on delivering functional, tested fea
 2. ✅ Feature Flags - Full 3-layer protection  
 3. ✅ Responsive Product Variant UI - Drawer + Dialog with optimized quantity layout
 4. ✅ Inline Category Edit - Preserves expand/collapse with smart click detection
+5. ✅ Demo Tenants - 3 complete business types with supporting data
+
+### Demo Tenants Created:
+1. **Restaurant/Cafe** (`demo-tenant`)
+   - Order types: DINE_IN, TAKE_AWAY, DELIVERY
+   - 8 products with variants (Burger, Coffee, Pizza, Wings, etc.)
+   - 10 demo tables with floor plan
+   - 3 open orders for testing
+   - Modules: Table Management ✅, Kitchen Ticket ✅
+
+2. **Laundry Service** (`laundry-demo`)
+   - Order types: DROPOFF, PICKUP_DELIVERY, EXPRESS
+   - 6 services: Regular Wash, Premium Wash, Express, Ironing, Dry Cleaning, Stain Removal
+   - Modules: Delivery ✅, Appointments ✅, Inventory ✅, Loyalty ✅
+
+3. **Minimarket/Retail** (`minimarket-demo`)
+   - Order types: WALK_IN, SELF_CHECKOUT, PICKUP_STORE
+   - 12 products across categories: Beverages, Snacks, Daily Essentials, Beauty & Care
+   - Stock tracking enabled for inventory management
+   - Modules: Inventory ✅, Loyalty ✅
 
 ### Files Modified:
 - `apps/pos-terminal-web/src/pages/tables-management.tsx` - Hide continue button for paid orders
@@ -64,6 +84,7 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - `apps/pos-terminal-web/src/components/navigation/UnifiedBottomNav.tsx` - Mobile nav feature flag
 - `apps/pos-terminal-web/src/components/pos/ProductOptionsDialog.tsx` - Responsive drawer + dialog with optimized quantity
 - `apps/pos-terminal-web/src/pages/products.tsx` - Inline category edit with preserved expand/collapse
+- `apps/api/src/seed.ts` - Added seedLaundryTenant() & seedMinimarketTenant() functions
 - `replit.md` - Documentation
 
 ## System Architecture
