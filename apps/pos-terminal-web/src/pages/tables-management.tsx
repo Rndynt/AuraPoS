@@ -354,15 +354,29 @@ export default function TablesManagementPage() {
                           {order.paymentStatus === "paid" ? "PAID" : "UNPAID"}
                         </div>
                       </div>
-                      <div className="space-y-1 mb-3">
+                      <div className="space-y-2 mb-3">
                         {order.orderItems && order.orderItems.map((item: any, idx: number) => (
                           <div
                             key={idx}
-                            className="flex justify-between text-xs text-slate-500"
+                            className="text-xs text-slate-600 bg-slate-50 p-2 rounded border border-slate-100"
                           >
-                            <span className="flex-1">
+                            <div className="font-medium">
                               {item.productName || item.product_name} x{item.quantity}
-                            </span>
+                            </div>
+                            {(item.variant_name || item.variantName) && (
+                              <div className="text-slate-500 ml-1 mt-0.5">
+                                • {item.variant_name || item.variantName}
+                              </div>
+                            )}
+                            {(item.selected_options || item.selectedOptions) && (item.selected_options || item.selectedOptions).length > 0 && (
+                              <div className="text-slate-500 ml-1 mt-0.5">
+                                {(item.selected_options || item.selectedOptions).map((opt: any, optIdx: number) => (
+                                  <div key={optIdx}>
+                                    • {opt.option_name || opt.optionName}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
