@@ -87,6 +87,38 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - `apps/api/src/seed.ts` - Added seedLaundryTenant() & seedMinimarketTenant() functions
 - `replit.md` - Documentation
 
+## Tenant Switching (No Login - Hardcoded)
+
+**File:** `packages/core/tenant.ts`
+```typescript
+export const CURRENT_TENANT_ID = "demo-tenant"; // Change this to switch tenant
+```
+
+**Available Tenants:**
+1. **`demo-tenant`** - Restaurant/Cafe
+   - Order Types: DINE_IN, TAKE_AWAY, DELIVERY
+   - Products: 8 items with variants
+   - Tables: 10 for floor plan
+   - Modules: Table Management ✅, Kitchen Display ✅
+   
+2. **`laundry-demo`** - Laundry Service
+   - Order Types: DROPOFF, PICKUP_DELIVERY, EXPRESS
+   - Services: 6 (Regular, Premium, Express Wash, Ironing, Dry Clean, Stain Removal)
+   - Modules: Delivery ✅, Appointments ✅, Inventory ✅, Loyalty ✅
+   
+3. **`minimarket-demo`** - Retail/Minimarket
+   - Order Types: WALK_IN, SELF_CHECKOUT, PICKUP_STORE
+   - Products: 12 items (Beverages, Snacks, Essentials, Beauty)
+   - Stock Tracking: Enabled
+   - Modules: Inventory ✅, Loyalty ✅
+
+**To Switch Tenant:**
+1. Edit `packages/core/tenant.ts` line 2: `CURRENT_TENANT_ID = "laundry-demo"` (or `minimarket-demo`)
+2. Save file - dev server auto-reloads
+3. Reload browser - now using new tenant
+
+**Alternative (localStorage):** Tenant can be switched via localStorage or URL query param (auto-resolved in frontend)
+
 ## System Architecture
 
 ### UI/UX Decisions
