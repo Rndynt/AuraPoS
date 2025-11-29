@@ -15,7 +15,7 @@ import EmployeesPage from "@/pages/employees";
 import StoreProfilePage from "@/pages/store-profile";
 import KitchenDisplayPage from "@/pages/kitchen-display";
 import NotFound from "@/pages/not-found";
-import { TenantProvider } from "@/context/TenantContext";
+import { TenantProvider, useTenant } from "@/context/TenantContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 
 const POSPageWithLayout = () => (
@@ -90,6 +90,16 @@ const NotFoundWithLayout = () => (
   </MainLayout>
 );
 
+function ProtectedKitchenRoute() {
+  const { hasModule } = useTenant();
+  return hasModule("enable_kitchen_ticket") ? <KitchenDisplayPageWithLayout /> : <NotFoundWithLayout />;
+}
+
+function ProtectedTablesRoute() {
+  const { hasModule } = useTenant();
+  return hasModule("enable_table_management") ? <TablesManagementPageWithLayout /> : <NotFoundWithLayout />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -97,8 +107,8 @@ function Router() {
       <Route path="/hub" component={HomePageWithLayout} />
       <Route path="/pos" component={POSPageWithLayout} />
       <Route path="/orders" component={OrdersPageWithLayout} />
-      <Route path="/kitchen" component={KitchenDisplayPageWithLayout} />
-      <Route path="/tables" component={TablesManagementPageWithLayout} />
+      <Route path="/kitchen" component={ProtectedKitchenRoute} />
+      <Route path="/tables" component={ProtectedTablesRoute} />
       <Route path="/dashboard" component={DashboardPageWithLayout} />
       <Route path="/products" component={ProductsPageWithLayout} />
       <Route path="/stock" component={StockPageWithLayout} />

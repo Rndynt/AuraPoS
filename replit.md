@@ -68,6 +68,19 @@ I prefer iterative development with a focus on delivering functional, tested fea
 - Users must create a new order for tables with paid orders
 - Clean, intuitive UX - no disabled states
 
+### ✅ Feature Flag System - Table Management & Kitchen Display
+- **Problem**: Table Management and Kitchen Display features were still accessible even when disabled in tenant_module_configurations
+- **Solution**: Implemented multi-layer feature flag checks:
+  1. **Route Protection** (App.tsx): 
+     - Created `ProtectedTablesRoute` and `ProtectedKitchenRoute` components
+     - Routes render NotFound (404) if feature is disabled in `hasModule()` check
+  2. **Navigation UI** (UnifiedBottomNav.tsx):
+     - Added `isTablesEnabled` flag check for mobile bottom nav
+     - Tables button only shows if `hasModule("enable_table_management")` is true
+  3. **Sidebar** (Sidebar.tsx):
+     - Already had feature flag checks for both table management and kitchen display
+- **Result**: Feature flags now work across ALL access points - routes are protected AND UI buttons hide when disabled in tenant config
+
 ## System Architecture
 
 ### UI/UX Decisions
@@ -84,10 +97,12 @@ The frontend is built with React 19, TypeScript, Vite, and TailwindCSS for a res
 - **Build**: Turborepo for monorepo management.
 - **Order Flow**: Orders progress through DRAFT, CONFIRMED, IN_PROGRESS, and COMPLETED states. Payment recording supports partial payments, and quick charge allows atomic order creation and payment.
 - **Data Isolation**: All core tables include `tenant_id` for multi-tenant isolation, ensuring queries are filtered by tenant context and preventing cross-tenant data visibility.
+- **Feature Flags**: Multi-tenant feature management via `tenant_module_configurations` table, checked at route and UI layer using `hasModule()` from TenantContext.
 
 ### Feature Specifications
 - **POS Terminal (`/pos`)**: Product browsing, shopping cart management, order type selection, customer/table assignment, payment method selection, quick charge, partial payment, real-time order queue.
-- **Kitchen Display (`/kitchen`)**: Real-time order ticket queue, ticket status management, item preparation tracking, ready notification system.
+- **Kitchen Display (`/kitchen`)**: Real-time order ticket queue, ticket status management, item preparation tracking, ready notification system. Feature flag: `enable_kitchen_ticket`
+- **Table Management (`/tables`)**: Dynamic table layout, occupancy status, order continuation from tables. Feature flag: `enable_table_management`
 - **Order Queue Panel**: Real-time order display with payment status visibility, integrated into the POS sidebar.
 - **Business Type Templates**: Script for quick setup of various business types (Cafe/Restaurant, Retail, Laundry, Service, Digital/PPOB) with default order types and configurations.
 

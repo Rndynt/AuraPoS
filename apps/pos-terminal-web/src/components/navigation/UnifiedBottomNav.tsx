@@ -11,6 +11,7 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
   const [location, setLocation] = useLocation();
   const { hasModule } = useTenant();
   const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
+  const isTablesEnabled = hasModule("enable_table_management");
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -37,17 +38,19 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
         <span className="text-[10px]">PoS</span>
       </button>
 
-      {/* Tables Button */}
-      <button
-        onClick={() => handleNavClick("/tables")}
-        className={`flex flex-col items-center gap-0.5 ${
-          isActive("/tables") ? "text-blue-600" : "text-slate-400"
-        }`}
-        data-testid="nav-tables"
-      >
-        <Square size={20} />
-        <span className="text-[10px]">Meja</span>
-      </button>
+      {/* Tables Button - Only show if enabled */}
+      {isTablesEnabled && (
+        <button
+          onClick={() => handleNavClick("/tables")}
+          className={`flex flex-col items-center gap-0.5 ${
+            isActive("/tables") ? "text-blue-600" : "text-slate-400"
+          }`}
+          data-testid="nav-tables"
+        >
+          <Square size={20} />
+          <span className="text-[10px]">Meja</span>
+        </button>
+      )}
 
       {/* Cart Button - Floating in Center */}
       <button
