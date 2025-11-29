@@ -18,6 +18,17 @@ I prefer iterative development with a focus on delivering functional, tested fea
 
 ## Recent Fixes (Nov 29, 2025 - Current Session)
 
+### ✅ Mobile Cart Drawer - Fixed Tablet/Desktop Breakpoint Issue
+- **Problem**: MobileCartDrawer was appearing on tablet/desktop, covering the screen and disrupting UX
+- **Root Cause**: Drawer was always rendered regardless of screen size; only overlay was hidden on md+
+- **Solution**: 
+  - Use `useIsMobile()` hook to conditionally render MobileCartDrawer only on mobile (<768px)
+  - Changed CartPanel wrapper from `lg:flex` (1024px+) to `md:flex` (768px+) to cover tablets
+  - Removed unnecessary `md:` responsive fallback classes from MobileCartDrawer since it won't render on tablets
+  - Also conditionally render UnifiedBottomNav only on mobile
+- **Files Modified**: `pos.tsx` (lines 25, 48, 654-698), `MobileCartDrawer.tsx` (lines 139-151, 291, 349)
+- **Result**: Clean separation - Mobile shows drawer + bottom nav, Tablet/Desktop shows full CartPanel
+
 ### ✅ Paid Order - Hide Continue Order Button
 - If order.paymentStatus === "paid", the "Continue Order" button is completely hidden
 - Only UNPAID orders show the "Continue Order" button
@@ -64,11 +75,12 @@ I prefer iterative development with a focus on delivering functional, tested fea
 ## Session Summary (Nov 29, 2025)
 
 ### Implemented Features:
-1. ✅ Paid Order Logic - Hide continue button
-2. ✅ Feature Flags - Full 3-layer protection  
-3. ✅ Responsive Product Variant UI - Drawer + Dialog with optimized quantity layout
-4. ✅ Inline Category Edit - Preserves expand/collapse with smart click detection
-5. ✅ Demo Tenants - 3 complete business types with supporting data
+1. ✅ Mobile Cart Drawer - Fixed tablet/desktop breakpoint issue (useIsMobile + md:flex)
+2. ✅ Paid Order Logic - Hide continue button
+3. ✅ Feature Flags - Full 3-layer protection  
+4. ✅ Responsive Product Variant UI - Drawer + Dialog with optimized quantity layout
+5. ✅ Inline Category Edit - Preserves expand/collapse with smart click detection
+6. ✅ Demo Tenants - 3 complete business types with supporting data
 
 ### Demo Tenants Created:
 1. **Restaurant/Cafe** (`demo-tenant`)
