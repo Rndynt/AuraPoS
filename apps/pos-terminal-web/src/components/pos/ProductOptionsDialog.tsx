@@ -16,6 +16,7 @@ import {
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProductOptionsDialogProps {
   product: Product | null;
@@ -23,9 +24,6 @@ interface ProductOptionsDialogProps {
   onClose: () => void;
   onAdd: (product: Product, variant: ProductVariant | undefined, selectedOptions: SelectedOption[], qty: number) => void;
 }
-
-// Media query breakpoint - matches Tailwind md: 768px
-const MOBILE_BREAKPOINT = 768;
 
 export function ProductOptionsDialog({
   product,
@@ -37,25 +35,9 @@ export function ProductOptionsDialog({
   const [selectedOptionsByGroup, setSelectedOptionsByGroup] = useState<Map<string, SelectedOption[]>>(new Map());
   const [qty, setQty] = useState(1);
   
-  // Determine if desktop directly from window size (not from hook)
-  // Initialize to true (assume desktop), update on mount and resize
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.innerWidth >= MOBILE_BREAKPOINT;
-  });
-
-  useEffect(() => {
-    // Check on mount
-    const checkIsDesktop = () => {
-      setIsDesktop(window.innerWidth >= MOBILE_BREAKPOINT);
-    };
-    
-    checkIsDesktop();
-    
-    // Update on window resize
-    window.addEventListener('resize', checkIsDesktop);
-    return () => window.removeEventListener('resize', checkIsDesktop);
-  }, []);
+  // Use official hook: isMobile = true when width < 768px (mobile), false when >= 768px (desktop)
+  const isMobile = useIsMobile();
+  const isDesktop = !isMobile;
 
   useEffect(() => {
     if (open && product) {

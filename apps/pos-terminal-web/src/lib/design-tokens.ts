@@ -186,3 +186,16 @@ export const Z_INDEX = {
   modal: 60,
   toast: 70,
 } as const;
+
+/**
+ * Responsive Breakpoints (pixels)
+ * Matches Tailwind's default breakpoints
+ */
+export const BREAKPOINTS = {
+  xs: 0,      // Extra small
+  sm: 640,    // Small
+  md: 768,    // Medium - for modal/drawer switching
+  lg: 1024,   // Large
+  xl: 1280,   // Extra large
+  "2xl": 1536, // 2X large
+} as const;
