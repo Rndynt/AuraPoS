@@ -66,8 +66,24 @@ export default function TablesManagementPage() {
   const tables = tablesData?.tables || [];
   const orders = ordersData?.orders || [];
 
-  const availableCount = tables.filter((t) => t.status === "available").length;
-  const occupiedCount = tables.filter((t) => t.status === "occupied").length;
+  // Calculate actual status based on active orders
+  const getActualTableStatus = (table: Table): string => {
+    if (table.status === "maintenance") return "maintenance";
+    if (table.status === "reserved") return "reserved";
+    
+    // Check if table has active orders
+    const hasActiveOrders = orders.some(
+      (order) =>
+        order.tableNumber === table.tableNumber &&
+        order.status !== "completed" &&
+        order.status !== "cancelled"
+    );
+    
+    return hasActiveOrders ? "occupied" : "available";
+  };
+
+  const availableCount = tables.filter((t) => getActualTableStatus(t) === "available").length;
+  const occupiedCount = tables.filter((t) => getActualTableStatus(t) === "occupied").length;
 
   const handleContinueOrder = async (order: any) => {
     try {
@@ -99,13 +115,14 @@ export default function TablesManagementPage() {
 
   const filteredTables = useMemo(() => {
     return tables.filter((table) => {
-      const matchesStatus = filterStatus === "all" || table.status === filterStatus;
+      const actualStatus = getActualTableStatus(table);
+      const matchesStatus = filterStatus === "all" || actualStatus === filterStatus;
       const matchesSearch =
         table.tableNumber.toLowerCase().includes(searchTable.toLowerCase()) ||
         (table.tableName?.toLowerCase().includes(searchTable.toLowerCase()) ?? false);
       return matchesStatus && matchesSearch;
     });
-  }, [tables, searchTable, filterStatus]);
+  }, [tables, searchTable, filterStatus, orders]);
 
   const tableOrders = useMemo(() => {
     if (!selectedTable) return [];
@@ -186,7 +203,7 @@ export default function TablesManagementPage() {
                 >
                   {status}{" "}
                   {status !== "all" &&
-                    `(${tables.filter((t) => t.status === status).length})`}
+                    `(${tables.filter((t) => getActualTableStatus(t) === status).length})`}
                 </button>
               ))}
             </div>
@@ -197,6 +214,7 @@ export default function TablesManagementPage() {
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredTables.map((table) => {
+              const actualStatus = getActualTableStatus(table);
               const hasActiveOrders = orders.some(
                 (order) =>
                   order.tableNumber === table.tableNumber &&
@@ -211,15 +229,15 @@ export default function TablesManagementPage() {
                     selectedTable?.id === table.id
                       ? "ring-4 ring-blue-500/20 border-blue-500 z-10"
                       : ""
-                  } ${getTableCardBg(table.status)}`}
+                  } ${getTableCardBg(actualStatus)}`}
                   data-testid={`table-select-${table.tableNumber}`}
                 >
                   <div
                     className={`absolute top-3 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${getStatusColor(
-                      table.status
+                      actualStatus
                     )}`}
                   >
-                    {table.status}
+                    {actualStatus}
                   </div>
                   <span className="text-3xl font-black text-slate-800 mt-4">
                     {table.tableNumber}
@@ -295,15 +313,15 @@ export default function TablesManagementPage() {
                 </h3>
                 <div
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold capitalize ${getStatusColor(
-                    selectedTable.status
+                    getActualTableStatus(selectedTable)
                   )}`}
                 >
-                  {selectedTable.status === "maintenance" ? (
+                  {getActualTableStatus(selectedTable) === "maintenance" ? (
                     <AlertTriangle size={16} />
                   ) : (
                     <CheckCircle size={16} />
                   )}
-                  {selectedTable.status}
+                  {getActualTableStatus(selectedTable)}
                 </div>
               </div>
 
@@ -376,7 +394,7 @@ export default function TablesManagementPage() {
 
             {/* Panel Footer - Action Buttons */}
             <div className="p-6 border-t border-slate-200 bg-white">
-              {selectedTable.status === "available" ? (
+              {getActualTableStatus(selectedTable) === "available" ? (
                 <button
                   onClick={() => {
                     setLocation(`/pos?table=${selectedTable.tableNumber}`);

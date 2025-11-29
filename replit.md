@@ -108,6 +108,14 @@ AuraPoS/
   - Blue & enabled state when ready to add to cart
   - Prevents incomplete orders from being added
 
+### Table Occupancy Status Fix ✅
+- **Fixed "occupied" status detection**: Tables now show as occupied based on ACTIVE ORDERS, not just database status
+  - Created `getActualTableStatus()` function that checks for active orders
+  - Table status = "occupied" if has active orders (status ≠ completed/cancelled)
+  - Table status = "available" if no active orders (independent of DB status)
+  - Updated occupancy counters in header & filter tabs to reflect real occupancy
+  - Maintenance & reserved statuses still respected from database
+
 ---
 
 ## Previous Updates (Nov 28, 2025 - Final Session)
