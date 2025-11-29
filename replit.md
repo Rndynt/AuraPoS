@@ -39,19 +39,32 @@ I prefer iterative development with a focus on delivering functional, tested fea
   - More space-efficient, especially for drawer on mobile
 - **Implementation**: Uses `useIsMobile()` hook, content shared between Drawer/Dialog
 
+### ✅ Inline Edit Category Names - Preserved Expand/Collapse
+- **Product Management Page** (`/products`) - Daftar Produk tab
+- **Click on category name** → Enter inline edit mode
+- **Click on chevron/empty space** → Toggle expand/collapse
+- **Edit flow**:
+  - Type new name
+  - Press **Enter** to save or **Escape** to cancel
+  - Click outside (blur) to save automatically
+- **Behavior**: Updates ALL products in that category via batch API calls
+- **Files**: `products.tsx` (lines 41-43, 80-116, 490-535)
+
 ## Session Summary (Nov 29, 2025)
 
 ### Implemented Features:
 1. ✅ Paid Order Logic - Hide continue button
 2. ✅ Feature Flags - Full 3-layer protection  
-3. ✅ Responsive Product Variant UI - Drawer + Dialog with optimized layout
+3. ✅ Responsive Product Variant UI - Drawer + Dialog with optimized quantity layout
+4. ✅ Inline Category Edit - Preserves expand/collapse with smart click detection
 
 ### Files Modified:
-- `apps/pos-terminal-web/src/pages/tables-management.tsx`
-- `apps/pos-terminal-web/src/App.tsx`
-- `apps/pos-terminal-web/src/components/navigation/UnifiedBottomNav.tsx`
-- `apps/pos-terminal-web/src/components/pos/ProductOptionsDialog.tsx`
-- `replit.md`
+- `apps/pos-terminal-web/src/pages/tables-management.tsx` - Hide continue button for paid orders
+- `apps/pos-terminal-web/src/App.tsx` - Route protection
+- `apps/pos-terminal-web/src/components/navigation/UnifiedBottomNav.tsx` - Mobile nav feature flag
+- `apps/pos-terminal-web/src/components/pos/ProductOptionsDialog.tsx` - Responsive drawer + dialog with optimized quantity
+- `apps/pos-terminal-web/src/pages/products.tsx` - Inline category edit with preserved expand/collapse
+- `replit.md` - Documentation
 
 ## System Architecture
 

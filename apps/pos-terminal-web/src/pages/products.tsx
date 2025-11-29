@@ -35,6 +35,9 @@ export default function ProductsPage() {
   const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
   const [loadingProductToggles, setLoadingProductToggles] = useState<Set<string>>(new Set());
   const [loadingVariantToggles, setLoadingVariantToggles] = useState<Set<string>>(new Set());
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState<string>("");
+  const [savingCategory, setSavingCategory] = useState<string | null>(null);
 
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const { data: variants = [], isLoading: isLoadingVariants } = useVariantsLibrary();
@@ -69,6 +72,44 @@ export default function ProductsPage() {
       ...prev,
       [categoryName]: !prev[categoryName],
     }));
+  };
+
+  const handleEditCategory = (categoryName: string) => {
+    setEditingCategory(categoryName);
+    setEditingCategoryName(categoryName);
+  };
+
+  const handleSaveCategory = async (oldCategoryName: string, newCategoryName: string) => {
+    const trimmedName = newCategoryName.trim();
+    
+    if (!trimmedName || trimmedName === oldCategoryName) {
+      setEditingCategory(null);
+      return;
+    }
+
+    setSavingCategory(oldCategoryName);
+    try {
+      const itemsInCategory = groupedProducts[oldCategoryName] || [];
+      
+      // Update all products in this category
+      for (const product of itemsInCategory) {
+        await updateProduct.mutateAsync({
+          product_id: product.id,
+          category: trimmedName,
+        } as any);
+      }
+      
+      setEditingCategory(null);
+      addToast("Kategori berhasil diperbarui", "success");
+    } catch (error) {
+      addToast("Gagal memperbarui kategori", "error");
+    } finally {
+      setSavingCategory(null);
+    }
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategory(null);
   };
 
   const handleCreateProduct = () => {
@@ -444,22 +485,47 @@ export default function ProductsPage() {
                     data-testid={`category-${category}`}
                   >
                     <div
-                      onClick={() => toggleCategory(category)}
-                      className="p-4 bg-slate-50 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition-colors"
+                      className="p-4 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors"
                       data-testid={`category-header-${category}`}
                     >
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-slate-700 capitalize">
-                          {category}
-                        </h3>
-                        <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {editingCategory === category ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editingCategoryName}
+                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSaveCategory(category, editingCategoryName);
+                              } else if (e.key === "Escape") {
+                                handleCancelEditCategory();
+                              }
+                            }}
+                            onBlur={() => handleSaveCategory(category, editingCategoryName)}
+                            className="font-bold text-slate-700 capitalize px-2 py-1 border border-blue-500 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                            data-testid={`input-category-name-${category}`}
+                            disabled={savingCategory === category}
+                          />
+                        ) : (
+                          <h3
+                            onClick={() => handleEditCategory(category)}
+                            className="font-bold text-slate-700 capitalize cursor-pointer hover:text-blue-600 transition-colors"
+                            data-testid={`text-category-${category}`}
+                          >
+                            {category}
+                          </h3>
+                        )}
+                        <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
                           {items.length}
                         </span>
                       </div>
                       <div
-                        className={`text-slate-400 transition-transform duration-300 ${
+                        onClick={() => toggleCategory(category)}
+                        className={`text-slate-400 transition-transform duration-300 cursor-pointer hover:text-slate-600 flex-shrink-0 ${
                           isCollapsed ? "-rotate-90" : "rotate-0"
                         }`}
+                        data-testid={`button-toggle-category-${category}`}
                       >
                         <ChevronDown size={20} />
                       </div>
