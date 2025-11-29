@@ -166,8 +166,8 @@ export function PaymentMethodDialog({
             {renderMethodButton("card", "Kartu", CreditCard)}
           </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white min-h-0">
+          {/* Content */}
+          <div className="flex-1 overflow-auto p-4 md:p-6 bg-white">
             {method === "cash" && (
               <div className="space-y-4 animate-in slide-in-from-right-2 pb-4">
                 <div>
