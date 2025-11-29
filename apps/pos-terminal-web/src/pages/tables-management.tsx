@@ -97,12 +97,12 @@ export default function TablesManagementPage() {
       const json = await response.json();
       const fullOrder = json.data;
       
-      const orderId = cart.loadOrder(fullOrder);
       toast({
         title: "Order loaded",
         description: `Order #${order.orderNumber} loaded into cart.`,
       });
-      setLocation(`/pos?continueOrderId=${orderId}`);
+      // Pass orderId directly without calling loadOrder here - let POS page handle it
+      setLocation(`/pos?continueOrderId=${fullOrder.id}`);
     } catch (error) {
       console.error("Error loading order:", error);
       toast({

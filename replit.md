@@ -116,6 +116,13 @@ AuraPoS/
   - Updated occupancy counters in header & filter tabs to reflect real occupancy
   - Maintenance & reserved statuses still respected from database
 
+### Continue Order - Cart Count Display Fix ✅
+- **Fixed cart count not showing immediately on continue order**: Removed duplicate loadOrder call
+  - Tables page no longer calls `loadOrder()` before navigation
+  - POS page handles order loading exclusively via useEffect
+  - Cart state updates properly before UnifiedBottomNav renders
+  - Cart count now shows immediately when continuing order from table
+
 ---
 
 ## Previous Updates (Nov 28, 2025 - Final Session)
