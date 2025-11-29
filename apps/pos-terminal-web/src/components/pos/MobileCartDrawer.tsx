@@ -167,7 +167,7 @@ export function MobileCartDrawer({
           </div>
 
           {/* Content area with customer info and cart items */}
-          <div className="flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative z-0">
+          <div className="flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative z-0 min-h-0">
             {/* Order Type & Customer Info Section */}
             <div className="p-4 bg-white border-b border-slate-100 shadow-sm z-10">
               {/* Order Type Selector */}
@@ -259,7 +259,7 @@ export function MobileCartDrawer({
             </div>
 
             {/* Cart Items */}
-            <div className="p-4 space-y-3 pb-6 flex-1">
+            <div className="p-4 space-y-3 pb-6 overflow-y-auto">
               {items.length === 0 ? (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-300">
                   <ShoppingBag size={48} className="mb-3 opacity-50" />

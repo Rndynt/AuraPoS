@@ -145,7 +145,7 @@ export function CartPanel({
       </div>
 
       {/* Flex container for order type and cart items - this is the scrollable area */}
-      <div className='flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative z-0'>
+      <div className='flex-1 overflow-y-auto bg-slate-50/50 flex flex-col relative z-0 min-h-0'>
         {/* Order Type Selection & Customer Info - Fixed at top of scroll area */}
         <div className='p-4 bg-white border-b border-slate-100 shadow-sm z-10'>
           {/* Order Type Selector */}
@@ -236,7 +236,7 @@ export function CartPanel({
         </div>
 
         {/* Cart Items - Scrollable */}
-        <div className='p-4 space-y-3 pb-6 flex-1'>
+        <div className='p-4 space-y-3 pb-6 overflow-y-auto'>
           {items.length === 0 ? (
             <div className='h-40 flex flex-col items-center justify-center text-slate-300'>
               <ShoppingBag size={48} className='mb-3 opacity-50' />

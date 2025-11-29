@@ -1,419 +1,51 @@
 # AuraPoS - Multi-Tenant Point of Sale System
 
-**Status**: Production Ready ✅  
-**Version**: 1.0.0  
-**Last Updated**: November 29, 2025
-
----
-
-## Project Overview
-
-**AuraPoS** is a modern, multi-tenant Point of Sale (POS) management system built with React, Express, and PostgreSQL. Designed for cafés, restaurants, and retail businesses with support for dine-in, takeaway, and delivery orders.
-
-### Key Features
-- ✅ Full order lifecycle management (draft → confirmed → preparing → completed)
-- ✅ Multi-tenant architecture with complete data isolation
-- ✅ Kitchen Display System (KDS) with real-time ticket management
-- ✅ Flexible payment processing (full/partial, multiple methods)
-- ✅ Dynamic table management for dine-in service
-- ✅ 1-click quick charge for counter service
-- ✅ Atomic order+payment transactions (no orphaned orders)
-- ✅ Responsive design (mobile/tablet/desktop)
-
----
-
-## Quick Start
-
-### Development
-```bash
-npm install
-npm run dev
-# Visit: http://localhost:5000
-# Tenant: demo-tenant
-```
-
-### Production
-```bash
-npm run build
-npm run start
-```
-
-See `DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
-
----
-
-## Project Structure
-
-```
-AuraPoS/
-├── apps/
-│   ├── api/                      # Express backend server
-│   │   ├── src/
-│   │   │   ├── http/
-│   │   │   │   ├── routes/       # API endpoints (orders, payments, kitchen, etc.)
-│   │   │   │   └── controllers/  # Business logic controllers
-│   │   │   └── domain/           # Order domain services
-│   │   └── tsconfig.json
-│   │
-│   └── pos-terminal-web/         # React frontend (POS terminal)
-│       ├── src/
-│       │   ├── pages/            # POS page, Kitchen display
-│       │   ├── components/       # UI components (cart, product area, dialogs)
-│       │   ├── lib/              # API hooks, utilities
-│       │   ├── hooks/            # Custom React hooks (useCart)
-│       │   └── context/          # Context providers (Tenant, Theme)
-│       └── vite.config.ts
-│
-├── packages/
-│   ├── domain/                   # Business domain types & DTOs
-│   ├── application/              # Use case logic & services
-│   ├── infrastructure/           # Repository implementations
-│   └── core/utils/               # Shared utilities (orderStatus.ts)
-│
-├── shared/                       # Database schema (Drizzle ORM)
-│   └── schema.ts                 # All database tables & relationships
-│
-└── docs/                         # Documentation
-    ├── ORDER_LIFECYCLE.md        # Order state machine & workflows
-    ├── FEATURES_CHECKLIST.md     # Complete feature list
-    └── [other documentation]
-```
-
----
-
-## Recent Updates (Nov 29, 2025 - Final UI Polish & Simplification)
-
-### Mobile Drawer & Payment Dialog Fixes ✅
-- **Fixed mobile drawer footer cutoff**: Changed footer from `absolute` to `fixed` positioning on mobile
-  - Buttons "Simpan" and "Bayar" ALWAYS visible, never cut off by keyboard
-  - Fixed on both CartPanel (desktop) and MobileCartDrawer (mobile)
-- **Removed duplicate X button**: Payment dialog now closes via ESC or backdrop click only
-  - Clean header with just total display
-- **Optimized payment dialog scrolling**: `overflow-auto` only shows scrollbar when needed
-  - Smart scrolling for minimal payment content
-- **Improved cart item spacing**: Removed excessive `pb-40` padding → `pb-6`
-  - Cleaner layout with proper footer handling
-
-### Dialog Simplification ✅
-- **Removed OrderTypeSelectionDialog entirely**: No more redundant dialog
-  - Auto-selects first order type on Simpan/Bayar/Partial Payment actions
-  - Streamlined UX, fewer clicks for users
-  - Order type always auto-populated from tenant config
-
-### Product Options Dialog Enhancements ✅
-- **Auto-select single required options**: If a required option group has only 1 available option, it auto-selects on dialog open
-  - Example: "Supreme Pizza" with single "Size" option → "Regular" auto-selected
-- **Smart button disabling**: "Tambah" button disabled until ALL required options are selected
-  - Visual feedback: Gray & disabled state when requirements not met
-  - Blue & enabled state when ready to add to cart
-  - Prevents incomplete orders from being added
-
-### Table Occupancy Status Fix ✅
-- **Fixed "occupied" status detection**: Tables now show as occupied based on ACTIVE ORDERS, not just database status
-  - Created `getActualTableStatus()` function that checks for active orders
-  - Table status = "occupied" if has active orders (status ≠ completed/cancelled)
-  - Table status = "available" if no active orders (independent of DB status)
-  - Updated occupancy counters in header & filter tabs to reflect real occupancy
-  - Maintenance & reserved statuses still respected from database
-
-### Continue Order - Cart Count Display Fix ✅
-- **Fixed cart count not showing immediately on continue order**: Removed duplicate loadOrder call
-  - Tables page no longer calls `loadOrder()` before navigation
-  - POS page handles order loading exclusively via useEffect
-  - Cart state updates properly before UnifiedBottomNav renders
-  - Cart count now shows immediately when continuing order from table
-
----
-
-## Previous Updates (Nov 28, 2025 - Final Session)
-
-### Payment Flow & UI Improvements ✅
-- **Fixed Payment Dialog Flow**: Dialog now appears FIRST (no order creation yet)
-  - Step 1: Click Bayar → Payment dialog opens (order not created)
-  - Step 2: Select payment method & amount in dialog
-  - Step 3: Click Proses → Order created + Payment recorded
-  - Step 4: Click Batal → Back to cart (NO order created)
-- **Dialog Positioning Fixed**: Payment dialog now displays full screen on mobile (h-screen)
-  - Desktop: Centered modal with rounded corners (md:rounded-2xl)
-  - Mobile: Full screen, no rounded corners (rounded-none)
-  - Removed conflicting fixed positioning CSS
-
-### Simpan (Draft Save) Improvements ✅
-- **Simpan** button saves order as DRAFT (NO kitchen dependency)
-- Auto-selects first order type if not already selected
-- Always visible, works independently of features
-- No dialogs shown - direct draft save
-
-### Kitchen Ticket Separation ✅
-- `handleSendToKitchen()` - Separate function for future use
-- Kitchen ticket sending deferred to Order Queue/Details page
-- NO longer part of cart panel flow
-- Gracefully handles disabled kitchen feature
-
-### Business Type Templates ✅
-- Created `docs/BUSINESS_TYPE_TEMPLATES.md` with 5 business types
-- Created `scripts/setup-business-type.sh` for quick setup
-- Supported types: Cafe/Restaurant, Retail, Laundry, Service, Digital/PPOB
-- Each with default order types, features, and module configuration
-
----
-
-## Technology Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, TypeScript, Vite, TailwindCSS, React Query |
-| **Backend** | Express.js, TypeScript, Node.js 20 |
-| **Database** | PostgreSQL, Drizzle ORM |
-| **Forms** | React Hook Form, Zod validation |
-| **Build** | Turborepo, Vite |
-| **UI Components** | shadcn/ui (Radix primitives + Tailwind) |
-| **Icons** | Lucide React |
-| **HTTP** | Node-fetch, CORS enabled |
-
----
-
-## Environment Setup
-
-### Prerequisites
-- Node.js 20.x+
-- PostgreSQL 12+
-- npm or yarn
-
-### Environment Variables (Development)
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/aurapos_dev
-NODE_ENV=development
-VITE_API_URL=http://localhost:5000
-```
-
-### Termux Support
-- ✅ Works in Termux (Android terminal emulator)
-- Uses custom TypeScript path registration
-- No Docker required
-
----
-
-## Database Schema
-
-### Core Tables
-- **tenants** - Business organization (multi-tenant isolation)
-- **orders** - Customer orders with status tracking
-- **order_items** - Individual items in orders
-- **order_payments** - Payment transactions (supports partial payments)
-- **kitchen_tickets** - Kitchen workflow tickets
-- **tables** - Dine-in table management
-- **products** - Menu items with variants
-- **product_categories** - Menu organization
-
-### Data Isolation
-- All tables include `tenant_id` for isolation
-- Queries filtered by tenant context
-- No cross-tenant data visibility
-
----
-
-## API Architecture
-
-### Order Flow
-```
-1. Create Order (POST /api/orders)
-   └─ Items added to DRAFT state
-   
-2. Confirm Order (POST /api/orders/:id/confirm)
-   └─ Transitions to CONFIRMED state
-   
-3. Send to Kitchen (POST /api/kitchen-tickets)
-   └─ Creates kitchen ticket
-   └─ Order moves to IN_PROGRESS
-   
-4. Record Payment (POST /api/orders/:id/payments)
-   └─ Updates payment_status
-   └─ Supports partial payments
-   
-5. Complete Order (POST /api/orders/:id/complete)
-   └─ Marks order as COMPLETED
-   └─ Available when fully paid
-```
-
-### Quick Charge (Atomic)
-```
-POST /api/orders/create-and-pay
-├─ Input: Order items + payment details
-├─ Action: Create order + record payment (atomic)
-└─ Output: Order with payment recorded
-```
-
----
-
-## Frontend Features
-
-### POS Terminal (`/pos`)
-- Product browsing with categories
-- Shopping cart with item management
-- Order type selection (dine-in, takeaway, delivery)
-- Customer name & table assignment
-- Payment method selection
-- Quick charge express path (bypass dialog)
-- Partial payment support
-- Real-time order queue display
-
-### Kitchen Display (`/kitchen`)
-- Real-time order ticket queue
-- Ticket status management
-- Item preparation tracking
-- Ready notification system
-
-### Responsive Layouts
-- **Mobile** (< 768px): Bottom navigation, slide-out cart
-- **Tablet** (768-1024px): Split view with collapsible cart
-- **Desktop** (> 1024px): Full sidebar layout
-
----
-
-## Recent Changes (Nov 28, 2025)
-
-1. **Completed P0-P3 Critical Fixes**
-   - All blocking issues resolved
-   - Application fully functional
-
-2. **Built Order Queue Panel**
-   - Real-time order display
-   - Payment status visibility
-   - Integrated into POS sidebar
-
-3. **Created Helper Utilities**
-   - `packages/core/utils/orderStatus.ts`
-   - Type-safe order state checking
-   - Transition validation helpers
-
-4. **Comprehensive Documentation**
-   - `docs/ORDER_LIFECYCLE.md` - 250+ lines with workflows
-   - `docs/FEATURES_CHECKLIST.md` - Complete feature inventory
-   - `DEPLOYMENT_GUIDE.md` - Production deployment instructions
-
-5. **Sidebar Cleanup**
-   - Removed unused Bills navigation button
-
----
-
-## Known Issues
-
-### TypeScript/React 19 Compatibility
-- **Impact**: IDE type warnings only (no runtime issues)
-- **Files**: OrderTypeSelectionDialog.tsx, OrderQueuePanel.tsx
-- **Workaround**: Using `@ts-nocheck` pragmas
-- **Status**: Non-blocking, component renders correctly
-
----
-
-## Coding Standards
-
-### Frontend
-- React hooks (no class components)
-- TailwindCSS for styling
-- Controlled forms with React Hook Form
-- Type-safe data fetching with React Query
-- Custom hooks for reusable logic
-
-### Backend
-- Express middleware pattern
-- Repository pattern for data access
-- Use case layer for business logic
-- Zod for input validation
-- Proper error handling
-
-### Database
-- Drizzle ORM (no raw SQL except for complex queries)
-- Type-safe schema definitions
-- Migrations via `npm run db:push`
-
----
-
-## Testing Notes
-
-### Manual Testing Checklist
-- [x] Create order with items
-- [x] Add customer name and table
-- [x] Select order type (dine-in/takeaway/delivery)
-- [x] Verify quick charge path (skip dialog)
-- [x] Record full payment
-- [x] Record partial payment
-- [x] Send to kitchen (generate ticket)
-- [x] View real-time order queue
-- [x] Multi-tenant data isolation
-
----
-
-## Performance Metrics
-
-| Metric | Status |
-|--------|--------|
-| **Frontend Load Time** | < 2s (Vite optimized) |
-| **API Response Time** | < 100ms (most endpoints) |
-| **Database Query Time** | < 50ms (with indexes) |
-| **Order Creation** | Atomic, safe ✅ |
-| **Kitchen Display Update** | Real-time ✅ |
-
----
-
-## Support & Documentation
-
-### Quick References
-- `docs/ORDER_LIFECYCLE.md` - Order state machine, workflows, FAQs
-- `docs/FEATURES_CHECKLIST.md` - Complete feature inventory
-- `IMPLEMENTATION_STATUS.md` - Technical status and completion details
-- `DEPLOYMENT_GUIDE.md` - Production deployment steps
-
-### Code Entry Points
-- **POS Terminal**: `apps/pos-terminal-web/src/pages/pos.tsx`
-- **Order API**: `apps/api/src/http/routes/orders.ts`
-- **Order Domain**: `apps/api/src/domain/orders/`
-- **Order Status Utils**: `packages/core/utils/orderStatus.ts`
-
----
-
-## Deployment
-
-### Local
-```bash
-npm install
-npm run dev
-```
-
-### Production
-```bash
-npm run build
-npm start
-```
-
-See `DEPLOYMENT_GUIDE.md` for detailed instructions.
-
----
-
-## Future Enhancements
-
-### Phase 2 Features (Backlog)
-- Bills/Tab management
-- Loyalty program integration
-- Invoice generation
-- Inventory management
-- Staff management & roles
-- Analytics & reporting
-- Multi-location enterprise support
-
----
-
-## Contact & Support
-
-For questions about:
-- **Order flows**: See `docs/ORDER_LIFECYCLE.md`
-- **Features**: See `docs/FEATURES_CHECKLIST.md`
-- **Technical details**: See `IMPLEMENTATION_STATUS.md`
-- **Deployment**: See `DEPLOYMENT_GUIDE.md`
-
----
-
-**Built with ❤️ for Modern Restaurants & Cafés**  
-**Status**: Production Ready ✅  
-**Version**: 1.0.0 - November 28, 2025
+## Overview
+AuraPoS is a modern, multi-tenant Point of Sale (POS) management system designed for cafés, restaurants, and retail businesses, supporting dine-in, takeaway, and delivery orders. Its primary purpose is to provide a robust and flexible solution for order and payment processing with a focus on real-time operations and data isolation.
+
+Key capabilities include:
+- Full order lifecycle management (draft → confirmed → preparing → completed)
+- Multi-tenant architecture with complete data isolation
+- Kitchen Display System (KDS) with real-time ticket management
+- Flexible payment processing (full/partial, multiple methods)
+- Dynamic table management for dine-in service
+- 1-click quick charge for counter service
+- Atomic order+payment transactions
+- Responsive design for various devices.
+
+## User Preferences
+I prefer iterative development with a focus on delivering functional, tested features in small increments. Please ask before making major architectural changes or introducing new external dependencies. I value clear, concise communication and prefer detailed explanations for complex logic or design decisions. I expect the agent to maintain the established coding standards and adhere to the project's technology stack.
+
+## System Architecture
+
+### UI/UX Decisions
+The frontend is built with React 19, TypeScript, Vite, and TailwindCSS for a responsive design that adapts across mobile, tablet, and desktop. UI components are built using `shadcn/ui` (Radix primitives + Tailwind) and `Lucide React` for icons.
+- **Mobile (< 768px)**: Bottom navigation, slide-out cart.
+- **Tablet (768-1024px)**: Split view with a collapsible cart.
+- **Desktop (> 1024px)**: Full sidebar layout.
+- The system simplifies user interaction by auto-selecting the first order type and required product options where applicable, and ensures "Simpan" (draft save) works independently without dialogs. Payment dialogs are designed for a streamlined flow, appearing before order creation and adapting to full-screen on mobile.
+
+### Technical Implementations
+- **Frontend**: React 19, TypeScript, Vite, TailwindCSS, React Query, React Hook Form, Zod validation.
+- **Backend**: Express.js, TypeScript, Node.js 20, using a middleware pattern, repository pattern for data access, and a use case layer for business logic.
+- **Database**: PostgreSQL with Drizzle ORM for type-safe schema definitions and data access.
+- **Build**: Turborepo for monorepo management.
+- **Order Flow**: Orders progress through DRAFT, CONFIRMED, IN_PROGRESS, and COMPLETED states. Payment recording supports partial payments, and quick charge allows atomic order creation and payment.
+- **Data Isolation**: All core tables include `tenant_id` for multi-tenant isolation, ensuring queries are filtered by tenant context and preventing cross-tenant data visibility.
+
+### Feature Specifications
+- **POS Terminal (`/pos`)**: Product browsing, shopping cart management, order type selection, customer/table assignment, payment method selection, quick charge, partial payment, real-time order queue.
+- **Kitchen Display (`/kitchen`)**: Real-time order ticket queue, ticket status management, item preparation tracking, ready notification system.
+- **Order Queue Panel**: Real-time order display with payment status visibility, integrated into the POS sidebar.
+- **Business Type Templates**: Script for quick setup of various business types (Cafe/Restaurant, Retail, Laundry, Service, Digital/PPOB) with default order types and configurations.
+
+### System Design Choices
+- The project follows a modular structure with `apps/` for frontend and backend, `packages/` for shared domain logic, and `shared/` for database schema.
+- Uses `Turborepo` for monorepo management.
+- Core utilities are centralized in `packages/core/utils/` for consistency.
+
+## External Dependencies
+- **Database**: PostgreSQL
+- **ORM**: Drizzle ORM
+- **HTTP Client**: Node-fetch
+- **UI Libraries**: shadcn/ui (based on Radix primitives), Lucide React (for icons)

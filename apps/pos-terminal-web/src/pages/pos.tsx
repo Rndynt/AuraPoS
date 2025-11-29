@@ -330,8 +330,8 @@ export default function POSPage() {
       
       const orderResult = await createOrderMutation.mutateAsync(orderPayload);
       const totalAmount = orderResult.pricing.total_amount;
-      const orderId = orderResult.order.id;
-      const orderNumber = orderResult.order.order_number;
+      const orderId = orderResult.order?.id;
+      const orderNumber = orderResult.order?.order_number || orderResult.order?.id;
       
       // Step 2: Record payment
       await recordPaymentMutation.mutateAsync({
@@ -433,8 +433,10 @@ export default function POSPage() {
       setIsSubmittingPartialPayment(true);
 
       const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+      const orderId = orderResult.order?.id;
+      const orderNumber = orderResult.order?.order_number || orderResult.order?.id;
 
-      const paymentResult = await fetch(`/api/orders/${orderResult.order.id}/payments`, {
+      const paymentResult = await fetch(`/api/orders/${orderId}/payments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -457,7 +459,6 @@ export default function POSPage() {
 
       // Show success toast with remaining balance
       const remainingAmount = paymentData.data.remainingAmount;
-      const orderNumber = paymentData.data.order?.order_number || orderResult.order.order_number;
       toast({
         title: "Partial payment recorded",
         description: `Order #${orderNumber} - Paid: Rp ${amount.toLocaleString("id-ID")} - Remaining: Rp ${remainingAmount.toLocaleString("id-ID")}`,
@@ -523,14 +524,14 @@ export default function POSPage() {
         
         toast({
           title: "Pesanan diperbarui",
-          description: `Order #${orderResult.order.order_number} berhasil diperbarui`,
+          description: `Order #${orderResult.order?.order_number || orderResult.order?.id || "N/A"} berhasil diperbarui`,
         });
       } else {
         orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
         
         toast({
           title: "Pesanan disimpan",
-          description: `Order #${orderResult.order.order_number} berhasil disimpan sebagai draft`,
+          description: `Order #${orderResult.order?.order_number || orderResult.order?.id || "N/A"} berhasil disimpan sebagai draft`,
         });
       }
 
