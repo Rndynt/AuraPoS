@@ -23,6 +23,7 @@ import {
   users,
   orderTypes,
   tenantOrderTypes,
+  businessTypes,
 } from '@shared/schema';
 import type { 
   InsertTenant, 
@@ -34,6 +35,7 @@ import type {
   InsertTable,
   InsertOrderType,
   InsertTenantOrderType,
+  InsertBusinessType,
 } from '@shared/schema';
 import { sql, eq } from 'drizzle-orm';
 
@@ -83,6 +85,24 @@ async function clearDatabase() {
 }
 
 /**
+ * Seed business types (master data)
+ */
+async function seedBusinessTypes() {
+  console.log('📊 Seeding business types...');
+  
+  const businessTypeData: InsertBusinessType[] = [
+    { code: 'CAFE_RESTAURANT', name: 'Cafe & Restaurant', description: 'Food and beverage service', isActive: true },
+    { code: 'LAUNDRY_SERVICE', name: 'Laundry Service', description: 'Laundry and cleaning services', isActive: true },
+    { code: 'RETAIL_MINIMARKET', name: 'Retail & Minimarket', description: 'Retail store and minimarket', isActive: true },
+    { code: 'SERVICE_BUSINESS', name: 'Service Business', description: 'General service business', isActive: true },
+    { code: 'DIGITAL_PPOB', name: 'Digital & PPOB', description: 'Digital products and PPOB services', isActive: true },
+  ];
+  
+  await db.insert(businessTypes).values(businessTypeData);
+  console.log(`✅ Created ${businessTypeData.length} business types\n`);
+}
+
+/**
  * Seed the demo tenant
  */
 async function seedTenant(): Promise<string> {
@@ -92,6 +112,7 @@ async function seedTenant(): Promise<string> {
     id: 'demo-tenant',
     name: 'Demo Restaurant',
     slug: 'demo-tenant',
+    businessType: 'CAFE_RESTAURANT',
     businessName: 'Demo Restaurant & Cafe',
     businessAddress: '123 Main Street, City, Country',
     businessPhone: '+1234567890',
@@ -909,6 +930,7 @@ async function seedIndonesianLaundryTenant(createdOrderTypes: any[]) {
   console.log('\n🧺 Creating INDONESIAN LAUNDRY Demo Tenant...');
   
   const tenantData = {
+    businessType: 'LAUNDRY_SERVICE',
     id: 'laundry-indo',
     name: 'Cucian Cepat Indonesia',
     slug: 'laundry-indo',
@@ -1033,6 +1055,7 @@ async function seedMinimarketTenant(createdOrderTypes: any[]) {
   console.log('\n🏪 Creating MINIMARKET Demo Tenant...');
   
   const tenantData = {
+    businessType: 'RETAIL_MINIMARKET',
     id: 'minimarket-demo',
     name: 'Demo MiniMart 24',
     slug: 'minimarket-demo',
@@ -1122,6 +1145,9 @@ async function seed() {
     // Clear existing data
     await clearDatabase();
     console.log('');
+    
+    // Seed business types (master data - MUST be first for FK constraint)
+    await seedBusinessTypes();
     
     // Seed order types (master data)
     const createdOrderTypes = await seedOrderTypes();

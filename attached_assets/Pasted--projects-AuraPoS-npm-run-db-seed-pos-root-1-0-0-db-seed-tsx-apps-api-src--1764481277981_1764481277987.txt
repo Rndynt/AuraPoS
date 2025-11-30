@@ -1,0 +1,67 @@
+~/projects/AuraPoS $ npm run db:seed                  
+> @pos/root@1.0.0 db:seed
+> tsx apps/api/src/seed.ts
+
+🌱 Starting database seed...
+
+🧹 Clearing existing data...
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '00000',
+  message: 'truncate cascades to table "tables"',
+  file: 'tablecmds.c',
+  line: '1943',
+  routine: 'ExecuteTruncateGuts'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '00000',
+  message: 'truncate cascades to table "tenant_module_configs"',
+  file: 'tablecmds.c',
+  line: '1943',
+  routine: 'ExecuteTruncateGuts'
+}
+✅ Database cleared successfully
+
+📋 Seeding order types...
+✅ Created 15 order types:
+   - DINE_IN: Dine In
+   - TAKE_AWAY: Take Away
+   - DELIVERY: Delivery
+   - DRIVE_THRU: Drive Thru
+   - WALK_IN: Walk In
+   - SELF_CHECKOUT: Self Checkout
+   - PICKUP_STORE: Pickup at Store
+   - PPOB: PPOB
+   - DIGITAL_PRODUCT: Digital Product
+   - PREORDER: Pre-order
+   - DROPOFF: Drop Off
+   - PICKUP_DELIVERY: Pickup & Delivery
+   - EXPRESS: Express
+   - APPOINTMENT: Appointment
+   - SUBSCRIPTION: Subscription
+
+🏢 Seeding tenant...
+❌ Seed failed: PostgresError: insert or update on table "tenants" violates foreign key constraint "tenants_business_type_business_types_code_fk"
+    at ErrorResponse (file:///data/data/com.termux/files/home/projects/AuraPoS/node_modules/postgres/src/connection.js:794:26)
+    at handle (file:///data/data/com.termux/files/home/projects/AuraPoS/node_modules/postgres/src/connection.js:480:6)
+    at Socket.data (file:///data/data/com.termux/files/home/projects/AuraPoS/node_modules/postgres/src/connection.js:315:9)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '23503',
+  detail: 'Key (business_type)=(CAFE_RESTAURANT) is not present in table "business_types".',
+  schema_name: 'public',
+  table_name: 'tenants',
+  constraint_name: 'tenants_business_type_business_types_code_fk',
+  file: 'ri_triggers.c',
+  line: '2610',
+  routine: 'ri_ReportViolation'
+}
+~/projects/AuraPoS $
