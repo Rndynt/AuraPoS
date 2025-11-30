@@ -36,7 +36,6 @@ import type {
   InsertTenantOrderType,
 } from '@shared/schema';
 import { sql, eq } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
 
 // Product images paths
 const PRODUCT_IMAGES = {
@@ -73,9 +72,8 @@ async function clearDatabase() {
   console.log('🧹 Clearing existing data...');
   
   try {
-    // Use neon SQL client directly to avoid Drizzle ORM driver issues
-    const sqlClient = neon(process.env.DATABASE_URL!);
-    await sqlClient`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, tenant_order_types, order_types, product_options, product_option_groups, products, tenant_features, tenants, users CASCADE`;
+    // Works with both local PostgreSQL and Neon cloud via Drizzle ORM
+    await db.execute(sql`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, tenant_order_types, order_types, product_options, product_option_groups, products, tenant_features, tenants, users CASCADE`);
     
     console.log('✅ Database cleared successfully');
   } catch (error) {
