@@ -5,6 +5,7 @@
  * Usage: npm run db:seed
  */
 
+import 'dotenv/config';
 import { db } from '@pos/infrastructure/database';
 import { 
   tenants, 
@@ -34,7 +35,7 @@ import type {
   InsertOrderType,
   InsertTenantOrderType,
 } from '@shared/schema';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 
 // Product images paths
@@ -842,12 +843,10 @@ async function seedOpenOrders(tenantId: string) {
         paymentStatus: 'unpaid',
         tableNumber: testOrder.tableNumber,
         customerName: testOrder.customerName,
-        subtotal: subtotal.toString(),
-        taxRate: (taxRate * 100).toString(),
-        taxAmount: tax.toString(),
-        serviceChargeRate: (serviceChargeRate * 100).toString(),
-        serviceChargeAmount: serviceCharge.toString(),
-        total: total.toString(),
+        subtotal,
+        taxAmount: tax,
+        serviceCharge: serviceCharge,
+        total,
         notes: 'Test order for Continue Order feature',
       }).returning();
 
@@ -875,7 +874,7 @@ async function seedOpenOrders(tenantId: string) {
         where: (t, { eq }) => eq(t.tableNumber, testOrder.tableNumber),
       });
       if (tableToUpdate) {
-        await db.update(tables).set({ status: 'occupied' }).where((t, { eq }) => eq(t.id, tableToUpdate.id));
+        await db.update(tables).set({ status: 'occupied' }).where(eq(tables.id, tableToUpdate.id));
       }
     }
 
