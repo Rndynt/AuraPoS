@@ -1,2 +1,2 @@
 // TODO: integrate AuthCore later (read tenant_id from JWT)
-export const CURRENT_TENANT_ID = "laundry-indo";
+export const CURRENT_TENANT_ID = "demo-tenant";

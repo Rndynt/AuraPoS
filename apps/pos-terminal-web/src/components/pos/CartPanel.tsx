@@ -307,7 +307,7 @@ export function CartPanel({
                   </button>
                 </div>
                 <div className='flex items-center gap-1'>
-                  <span className='text-2xl font-black text-slate-800' data-testid="text-total">
+                  <span className='text-md font-black text-slate-800' data-testid="text-total">
                     {formatPrice(total)}
                   </span>
                   <span className='text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 md:hidden'>
