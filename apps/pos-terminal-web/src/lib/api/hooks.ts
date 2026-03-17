@@ -10,6 +10,48 @@ import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption, Ord
 import type { TenantFeature, FeatureCheck } from "@pos/domain/tenants/types";
 import { getActiveTenantId } from "@/lib/tenant";
 
+/**
+ * Map raw API order response (camelCase) → domain Order type (snake_case)
+ */
+function mapApiOrder(raw: Record<string, any>): Order {
+  return {
+    id: raw.id,
+    tenant_id: raw.tenantId,
+    order_type_id: raw.orderTypeId,
+    sales_channel: raw.salesChannel,
+    order_number: raw.orderNumber,
+    status: raw.status,
+    customer_name: raw.customerName,
+    table_number: raw.tableNumber,
+    notes: raw.notes,
+    subtotal: Number(raw.subtotal ?? 0),
+    tax_amount: Number(raw.taxAmount ?? 0),
+    service_charge_amount: Number(raw.serviceCharge ?? 0),
+    discount_amount: Number(raw.discountAmount ?? 0),
+    total_amount: Number(raw.total ?? 0),
+    paid_amount: Number(raw.paidAmount ?? 0),
+    payment_status: raw.paymentStatus,
+    created_at: new Date(raw.createdAt),
+    updated_at: raw.updatedAt ? new Date(raw.updatedAt) : undefined,
+    completed_at: raw.completedAt ? new Date(raw.completedAt) : undefined,
+    items: Array.isArray(raw.orderItems)
+      ? raw.orderItems.map((item: Record<string, any>) => ({
+          id: item.id,
+          product_id: item.productId,
+          product_name: item.productName,
+          base_price: Number(item.unitPrice ?? 0),
+          variant_id: item.variantId ?? undefined,
+          variant_name: item.variantName ?? undefined,
+          quantity: item.quantity,
+          item_subtotal: Number(item.itemSubtotal ?? 0),
+          notes: item.notes ?? undefined,
+          status: item.status,
+          selected_options: item.selectedOptions ?? [],
+        }))
+      : [],
+  } as Order;
+}
+
 // Helper to add tenant header to fetch requests
 async function fetchWithTenantHeader(url: string) {
   const tenantId = getActiveTenantId();
@@ -132,7 +174,13 @@ export function useOrders(filters?: UseOrdersFilters) {
 
   return useQuery<{ orders: Order[]; pagination: { page: number; limit: number; total: number } }>({
     queryKey: ["/api/orders", JSON.stringify(filters || {})],
-    queryFn: () => fetchWithTenantHeader(url),
+    queryFn: async () => {
+      const data = await fetchWithTenantHeader(url);
+      return {
+        orders: (data.orders ?? []).map(mapApiOrder),
+        pagination: data.pagination,
+      };
+    },
   });
 }
 
@@ -142,7 +190,10 @@ export function useOrders(filters?: UseOrdersFilters) {
 export function useOrder(id: string | undefined) {
   return useQuery<Order>({
     queryKey: ["/api/orders", id],
-    queryFn: () => fetchWithTenantHeader(`/api/orders/${id}`),
+    queryFn: async () => {
+      const data = await fetchWithTenantHeader(`/api/orders/${id}`);
+      return mapApiOrder(data.order ?? data);
+    },
     enabled: !!id,
   });
 }
