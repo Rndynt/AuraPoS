@@ -44,6 +44,9 @@ router.get('/:id', OrdersController.getOrderById);
 // PATCH /api/orders/:id - Update order
 router.patch('/:id', OrdersController.updateOrder);
 
+// PATCH /api/orders/:id/status - Update only the status (kitchen display use)
+router.patch('/:id/status', OrdersController.updateOrderStatus);
+
 // POST /api/orders/:id/confirm - Confirm draft order
 router.post('/:id/confirm', OrdersController.confirmOrder);
 

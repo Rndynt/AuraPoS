@@ -409,7 +409,7 @@ export default function POSPage() {
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const tenantId = getActiveTenantId();
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`/api/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

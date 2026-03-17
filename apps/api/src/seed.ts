@@ -75,7 +75,7 @@ async function clearDatabase() {
   
   try {
     // Works with both local PostgreSQL and Neon cloud via Drizzle ORM
-    await db.execute(sql`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, tenant_order_types, order_types, product_options, product_option_groups, products, tenant_features, tenants, users CASCADE`);
+    await db.execute(sql`TRUNCATE TABLE order_item_modifiers, order_payments, kitchen_tickets, order_items, orders, tenant_order_types, order_types, product_options, product_option_groups, products, tenant_features, tenants, users, business_types CASCADE`);
     
     console.log('✅ Database cleared successfully');
   } catch (error) {
@@ -509,7 +509,9 @@ async function seedProducts(tenantId: string) {
     category: 'Main Course',
     imageUrl: null,
     hasVariants: true,
-    stockTrackingEnabled: false,
+    stockTrackingEnabled: true,
+    stockQty: 18,
+    sku: 'MAIN-AVOTOAST-001',
     isActive: true,
   } as InsertProduct).returning();
   const [avocadoAddGroup] = await db.insert(productOptionGroups).values({
@@ -584,7 +586,9 @@ async function seedProducts(tenantId: string) {
     category: 'Snack',
     imageUrl: null,
     hasVariants: true,
-    stockTrackingEnabled: false,
+    stockTrackingEnabled: true,
+    stockQty: 25,
+    sku: 'SNK-ROTIBAKAR-001',
     isActive: true,
   } as InsertProduct).returning();
   const [rotiToppingGroup] = await db.insert(productOptionGroups).values({
@@ -963,13 +967,24 @@ async function seedTables(tenantId: string) {
 }
 
 /**
- * Seed open (unpaid) orders for demo tables to test Continue Order feature
+ * Generate a proper order number in format ORD-YYYYMMDD-XXXX
+ */
+function generateSeededOrderNumber(date: Date, sequence: number): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const seq = String(sequence).padStart(4, '0');
+  return `ORD-${y}${m}${d}-${seq}`;
+}
+
+/**
+ * Seed open & in-progress orders for the demo queue
+ * Creates a realistic queue with different statuses and Indonesian customer names
  */
 async function seedOpenOrders(tenantId: string) {
-  console.log('🛒 Seeding demo open orders for Continue Order testing...');
+  console.log('🛒 Seeding demo order queue (Thamada Coffee Shop)...');
   
   try {
-    // Get products
     const productsData = await db.query.products.findMany({
       where: (p, { eq }) => eq(p.tenantId, tenantId),
     });
@@ -979,69 +994,118 @@ async function seedOpenOrders(tenantId: string) {
       return;
     }
 
-    // Get first tenant order type (should be DINE_IN for demo)
-    const tenantOrderType = await db.query.tenantOrderTypes.findFirst({
+    const dineInOrderType = await db.query.tenantOrderTypes.findFirst({
       where: (tot, { eq }) => eq(tot.tenantId, tenantId),
     });
 
-    if (!tenantOrderType) {
+    if (!dineInOrderType) {
       console.log('   ℹ️  No order type found for tenant, skipping open orders');
       return;
     }
 
-    const testOrders = [
+    const today = new Date();
+    const taxRate = 0.11;         // PPN 11%
+    const serviceChargeRate = 0.05; // Service charge 5%
+
+    // Queue orders: mix of statuses to demo the full kitchen queue
+    const queueOrders = [
+      // Meja 1 - Budi & teman, confirmed (baru masuk dapur)
       {
         tableNumber: '1',
         customerName: 'Budi Santoso',
+        status: 'confirmed' as const,
+        sequence: 1,
         items: [
           { productName: 'Cappuccino', qty: 2, price: 32000 },
           { productName: 'Avocado Toast', qty: 1, price: 42000 },
+          { productName: 'Croissant', qty: 2, price: 25000 },
         ],
       },
+      // Meja 2 - Sari, preparing (sedang dibuat)
       {
         tableNumber: '2',
         customerName: 'Sari Dewi',
+        status: 'preparing' as const,
+        sequence: 2,
         items: [
           { productName: 'Nasi Goreng Spesial', qty: 1, price: 38000 },
-          { productName: 'Kopi Susu Gula Aren', qty: 2, price: 28000 },
+          { productName: 'Kopi Susu Gula Aren', qty: 1, price: 28000 },
+          { productName: 'Kentang Goreng', qty: 1, price: 22000 },
         ],
       },
+      // Meja 3 - Reza & grup, preparing (sedang dibuat)
       {
         tableNumber: '3',
         customerName: 'Reza Pratama',
+        status: 'preparing' as const,
+        sequence: 3,
         items: [
-          { productName: 'Chicken Sandwich', qty: 1, price: 45000 },
+          { productName: 'Chicken Sandwich', qty: 2, price: 45000 },
+          { productName: 'Cold Brew', qty: 2, price: 38000 },
           { productName: 'Waffle', qty: 1, price: 35000 },
-          { productName: 'Cold Brew', qty: 1, price: 38000 },
+        ],
+      },
+      // Meja 4 - Indah, ready (siap dihidangkan)
+      {
+        tableNumber: '4',
+        customerName: 'Indah Permatasari',
+        status: 'ready' as const,
+        sequence: 4,
+        items: [
+          { productName: 'Matcha Latte', qty: 1, price: 35000 },
+          { productName: 'Chocolate Lava Cake', qty: 1, price: 42000 },
+        ],
+      },
+      // Meja 5 - Farhan & Nadia, confirmed (antri)
+      {
+        tableNumber: '5',
+        customerName: 'Farhan Maulana',
+        status: 'confirmed' as const,
+        sequence: 5,
+        items: [
+          { productName: 'Americano', qty: 1, price: 25000 },
+          { productName: 'Caffe Latte', qty: 1, price: 35000 },
+          { productName: 'Big Breakfast', qty: 2, price: 65000 },
+        ],
+      },
+      // Meja 6 - Ayu, take away - confirmed
+      {
+        tableNumber: '6',
+        customerName: 'Ayu Rahmawati',
+        status: 'confirmed' as const,
+        sequence: 6,
+        items: [
+          { productName: 'Taro Milk Tea', qty: 2, price: 30000 },
+          { productName: 'Thai Tea', qty: 1, price: 28000 },
+          { productName: 'Roti Bakar', qty: 2, price: 20000 },
         ],
       },
     ];
 
-    for (const testOrder of testOrders) {
-      const subtotal = testOrder.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
-      const taxRate = 0.1;
-      const serviceChargeRate = 0.05;
-      const tax = subtotal * taxRate;
-      const serviceCharge = subtotal * serviceChargeRate;
+    for (const queueOrder of queueOrders) {
+      const subtotal = queueOrder.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      const tax = Math.round(subtotal * taxRate);
+      const serviceCharge = Math.round(subtotal * serviceChargeRate);
       const total = subtotal + tax + serviceCharge;
+
+      const orderNumber = generateSeededOrderNumber(today, queueOrder.sequence);
 
       const [order] = await db.insert(orders).values({
         tenantId,
-        orderTypeId: tenantOrderType.orderTypeId,
-        orderNumber: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        status: 'confirmed',
+        orderTypeId: dineInOrderType.orderTypeId,
+        orderNumber,
+        status: queueOrder.status,
         paymentStatus: 'unpaid',
-        tableNumber: testOrder.tableNumber,
-        customerName: testOrder.customerName,
+        tableNumber: queueOrder.tableNumber,
+        customerName: queueOrder.customerName,
         subtotal,
         taxAmount: tax,
-        serviceCharge: serviceCharge,
+        serviceCharge,
         total,
-        notes: 'Test order for Continue Order feature',
+        notes: null,
       }).returning();
 
-      // Add order items
-      for (const item of testOrder.items) {
+      for (const item of queueOrder.items) {
         const product = productsData.find(p => p.name === item.productName);
         if (product) {
           await db.insert(orderItems).values({
@@ -1055,20 +1119,22 @@ async function seedOpenOrders(tenantId: string) {
         }
       }
 
-      console.log(`   ✓ Order for table ${testOrder.tableNumber} (${testOrder.customerName}): Rp ${total.toLocaleString('id-ID')}`);
+      const statusLabel = { confirmed: '🟠 Waiting', preparing: '🟡 Preparing', ready: '🟢 Ready' }[queueOrder.status] || queueOrder.status;
+      console.log(`   ✓ ${orderNumber} | Meja ${queueOrder.tableNumber} | ${queueOrder.customerName} | ${statusLabel} | Rp ${total.toLocaleString('id-ID')}`);
     }
 
-    // Update table statuses to occupied for tables with orders
-    for (const testOrder of testOrders) {
+    // Mark occupied tables
+    const occupiedTables = [...new Set(queueOrders.map(o => o.tableNumber))];
+    for (const tableNum of occupiedTables) {
       const tableToUpdate = await db.query.tables.findFirst({
-        where: (t, { eq }) => eq(t.tableNumber, testOrder.tableNumber),
+        where: (t, { eq }) => eq(t.tableNumber, tableNum),
       });
       if (tableToUpdate) {
         await db.update(tables).set({ status: 'occupied' }).where(eq(tables.id, tableToUpdate.id));
       }
     }
 
-    console.log(`✅ Created ${testOrders.length} demo open orders for testing`);
+    console.log(`✅ Created ${queueOrders.length} demo orders in queue (confirmed: 3, preparing: 2, ready: 1)`);
   } catch (error) {
     console.error('❌ Error seeding open orders:', error);
     throw error;

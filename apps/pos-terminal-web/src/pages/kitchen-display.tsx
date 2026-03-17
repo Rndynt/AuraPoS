@@ -64,7 +64,7 @@ export default function KitchenDisplayPage() {
     setIsUpdating(true);
     try {
       const tenantId = getActiveTenantId();
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`/api/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -78,15 +78,15 @@ export default function KitchenDisplayPage() {
         throw new Error("Failed to update order status");
       }
 
-      const statusLabel = {
+      const statusLabel: Record<string, string> = {
         preparing: "Sedang disiapkan",
         ready: "Siap dihidangkan",
         completed: "Selesai",
-      }[newStatus] || newStatus;
+      };
 
       toast({
         title: "Berhasil",
-        description: `Order #${orderId} diubah ke ${statusLabel}`,
+        description: `Status order diubah ke ${statusLabel[newStatus] || newStatus}`,
         variant: "default",
       });
 

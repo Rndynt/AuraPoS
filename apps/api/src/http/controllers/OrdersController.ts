@@ -355,6 +355,41 @@ export const completeOrder = asyncHandler(async (req: Request, res: Response) =>
 });
 
 /**
+ * PATCH /api/orders/:id/status
+ * Update only the status of an order (e.g. for kitchen display: confirmed → preparing → ready → completed)
+ */
+export const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw createError('Order ID is required', 400, 'MISSING_PARAMETER');
+  }
+
+  const ALLOWED_STATUSES = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled'] as const;
+
+  const bodySchema = z.object({
+    status: z.enum(ALLOWED_STATUSES),
+  });
+
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  const { status } = parsed.data;
+
+  const updatedOrder = await container.orderRepository.update(id, { status }, tenantId);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      order: updatedOrder,
+    },
+  });
+});
+
+/**
  * POST /api/orders/:id/cancel
  * Cancel an order
  */
