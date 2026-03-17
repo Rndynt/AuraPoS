@@ -103,23 +103,23 @@ async function seedBusinessTypes() {
 }
 
 /**
- * Seed the demo tenant
+ * Seed the demo tenant - Thamada Coffee Shop
  */
 async function seedTenant(): Promise<string> {
   console.log('🏢 Seeding tenant...');
   
   const tenantData = {
     id: 'demo-tenant',
-    name: 'Demo Restaurant',
+    name: 'Thamada Coffee Shop',
     slug: 'demo-tenant',
     businessType: 'CAFE_RESTAURANT',
-    businessName: 'Demo Restaurant & Cafe',
-    businessAddress: '123 Main Street, City, Country',
-    businessPhone: '+1234567890',
-    businessEmail: 'demo@restaurant.com',
+    businessName: 'Thamada Coffee Shop',
+    businessAddress: 'Jl. Sudirman No. 45, Jakarta Pusat 10220',
+    businessPhone: '+62812-9988-7766',
+    businessEmail: 'hello@thamadacoffee.id',
     planTier: 'premium',
     subscriptionStatus: 'active',
-    timezone: 'UTC',
+    timezone: 'Asia/Jakarta',
     currency: 'IDR',
     locale: 'id-ID',
     isActive: true,
@@ -132,389 +132,559 @@ async function seedTenant(): Promise<string> {
 }
 
 /**
- * Seed products with option groups (converting from legacy variant format)
+ * Helper: seed a beverage product with Temperature + Sugar Level + Add-ons options
  */
-async function seedProducts(tenantId: string) {
-  console.log('🍔 Seeding products with option groups...');
-  
-  // Product 1: Classic Beef Burger with Size options
-  const [burger] = await db.insert(products).values({
+async function seedBeverageProduct(
+  tenantId: string,
+  name: string,
+  description: string,
+  basePrice: string,
+  category: string,
+  imageUrl: string | null,
+  hasSugarLevel = false,
+) {
+  const [product] = await db.insert(products).values({
     tenantId,
-    name: 'Classic Beef Burger',
-    description: 'Juicy beef patty with fresh vegetables and special sauce',
-    basePrice: '45000',
-    category: 'Burger',
-    imageUrl: PRODUCT_IMAGES.burger,
+    name,
+    description,
+    basePrice,
+    category,
+    imageUrl,
     hasVariants: true,
     stockTrackingEnabled: false,
     isActive: true,
   } as InsertProduct).returning();
-  
-  const [burgerSizeGroup] = await db.insert(productOptionGroups).values({
+
+  // Temperature group
+  const [tempGroup] = await db.insert(productOptionGroups).values({
     tenantId,
-    productId: burger.id,
-    name: 'Size',
+    productId: product.id,
+    name: 'Suhu',
     selectionType: 'single',
     minSelections: 1,
     maxSelections: 1,
     isRequired: true,
     displayOrder: 0,
   } as InsertProductOptionGroup).returning();
-  
+
   await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: burgerSizeGroup.id,
-      name: 'Regular',
-      priceDelta: '0',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: burgerSizeGroup.id,
-      name: 'Large',
-      priceDelta: '10000',
-      isAvailable: true,
-      displayOrder: 1,
-    },
-    {
-      tenantId,
-      optionGroupId: burgerSizeGroup.id,
-      name: 'Extra Large',
-      priceDelta: '20000',
-      isAvailable: true,
-      displayOrder: 2,
-    },
+    { tenantId, optionGroupId: tempGroup.id, name: 'Hot', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: tempGroup.id, name: 'Iced', priceDelta: '3000', isAvailable: true, displayOrder: 1 },
   ] as InsertProductOption[]);
-  
-  console.log(`✅ Created: ${burger.name} with Size options`);
-  
-  // Product 2: Cappuccino with Temperature options and Add-ons (multi-select)
-  const [cappuccino] = await db.insert(products).values({
+
+  // Size group
+  const [sizeGroup] = await db.insert(productOptionGroups).values({
     tenantId,
-    name: 'Cappuccino',
-    description: 'Rich espresso with steamed milk and foam',
-    basePrice: '25000',
+    productId: product.id,
+    name: 'Ukuran',
+    selectionType: 'single',
+    minSelections: 1,
+    maxSelections: 1,
+    isRequired: true,
+    displayOrder: 1,
+  } as InsertProductOptionGroup).returning();
+
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: sizeGroup.id, name: 'Regular (250ml)', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: sizeGroup.id, name: 'Large (350ml)', priceDelta: '8000', isAvailable: true, displayOrder: 1 },
+  ] as InsertProductOption[]);
+
+  if (hasSugarLevel) {
+    const [sugarGroup] = await db.insert(productOptionGroups).values({
+      tenantId,
+      productId: product.id,
+      name: 'Tingkat Gula',
+      selectionType: 'single',
+      minSelections: 1,
+      maxSelections: 1,
+      isRequired: true,
+      displayOrder: 2,
+    } as InsertProductOptionGroup).returning();
+
+    await db.insert(productOptions).values([
+      { tenantId, optionGroupId: sugarGroup.id, name: 'Tanpa Gula', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+      { tenantId, optionGroupId: sugarGroup.id, name: 'Less Sweet', priceDelta: '0', isAvailable: true, displayOrder: 1 },
+      { tenantId, optionGroupId: sugarGroup.id, name: 'Normal', priceDelta: '0', isAvailable: true, displayOrder: 2 },
+      { tenantId, optionGroupId: sugarGroup.id, name: 'Extra Sweet', priceDelta: '0', isAvailable: true, displayOrder: 3 },
+    ] as InsertProductOption[]);
+  }
+
+  console.log(`  ✅ ${name}`);
+  return product;
+}
+
+/**
+ * Seed products - Thamada Coffee Shop menu
+ * Categories: Coffee, Non-Coffee, Main Course, Snack
+ */
+async function seedProducts(tenantId: string) {
+  console.log('☕ Seeding Thamada Coffee Shop menu...\n');
+
+  // ─── COFFEE ──────────────────────────────────────────────────────────────────
+  console.log('📂 Category: Coffee');
+
+  // Espresso - simple, no size
+  const [espresso] = await db.insert(products).values({
+    tenantId,
+    name: 'Espresso',
+    description: 'Single shot espresso dengan crema sempurna, intensity tinggi dan body penuh',
+    basePrice: '22000',
     category: 'Coffee',
     imageUrl: PRODUCT_IMAGES.cappuccino,
     hasVariants: true,
     stockTrackingEnabled: false,
     isActive: true,
   } as InsertProduct).returning();
-  
-  const [cappuccinoTempGroup] = await db.insert(productOptionGroups).values({
-    tenantId,
-    productId: cappuccino.id,
-    name: 'Temperature',
-    selectionType: 'single',
-    minSelections: 1,
-    maxSelections: 1,
-    isRequired: true,
-    displayOrder: 0,
+
+  const [espressoShotGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: espresso.id, name: 'Shot', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
   } as InsertProductOptionGroup).returning();
-  
   await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: cappuccinoTempGroup.id,
-      name: 'Hot',
-      priceDelta: '0',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: cappuccinoTempGroup.id,
-      name: 'Iced',
-      priceDelta: '3000',
-      isAvailable: true,
-      displayOrder: 1,
-    },
+    { tenantId, optionGroupId: espressoShotGroup.id, name: 'Single Shot', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: espressoShotGroup.id, name: 'Double Shot', priceDelta: '10000', isAvailable: true, displayOrder: 1 },
   ] as InsertProductOption[]);
-  
-  // Add multi-select Add-ons group
-  const [cappuccinoAddonsGroup] = await db.insert(productOptionGroups).values({
-    tenantId,
-    productId: cappuccino.id,
-    name: 'Add-ons',
-    selectionType: 'multiple',
-    minSelections: 0,
-    maxSelections: 3,
-    isRequired: false,
-    displayOrder: 1,
+  console.log('  ✅ Espresso');
+
+  // Americano
+  await seedBeverageProduct(tenantId, 'Americano', 'Espresso yang diencerkan dengan air panas, rasa bersih dan refreshing', '25000', 'Coffee', PRODUCT_IMAGES.cappuccino);
+
+  // Cappuccino
+  const cappuccino = await seedBeverageProduct(tenantId, 'Cappuccino', 'Espresso klasik dengan steamed milk dan milk foam yang creamy', '32000', 'Coffee', PRODUCT_IMAGES.cappuccino);
+  // Add coffee add-ons
+  const [capAddonsGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: cappuccino.id, name: 'Tambahan', selectionType: 'multiple',
+    minSelections: 0, maxSelections: 3, isRequired: false, displayOrder: 3,
   } as InsertProductOptionGroup).returning();
-  
   await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: cappuccinoAddonsGroup.id,
-      name: 'Extra Shot',
-      priceDelta: '8000',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: cappuccinoAddonsGroup.id,
-      name: 'Oat Milk',
-      priceDelta: '5000',
-      isAvailable: true,
-      displayOrder: 1,
-    },
-    {
-      tenantId,
-      optionGroupId: cappuccinoAddonsGroup.id,
-      name: 'Caramel Syrup',
-      priceDelta: '6000',
-      isAvailable: true,
-      displayOrder: 2,
-    },
+    { tenantId, optionGroupId: capAddonsGroup.id, name: 'Extra Shot', priceDelta: '10000', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: capAddonsGroup.id, name: 'Oat Milk', priceDelta: '7000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: capAddonsGroup.id, name: 'Vanilla Syrup', priceDelta: '5000', isAvailable: true, displayOrder: 2 },
   ] as InsertProductOption[]);
-  
-  console.log(`✅ Created: ${cappuccino.name} with Temperature and Add-ons options`);
-  
-  // Product 3: Supreme Pizza with Size options
-  const [pizza] = await db.insert(products).values({
-    tenantId,
-    name: 'Supreme Pizza',
-    description: 'Loaded with premium toppings and cheese',
-    basePrice: '85000',
-    category: 'Pizza',
-    imageUrl: PRODUCT_IMAGES.pizza,
-    hasVariants: true,
-    stockTrackingEnabled: false,
-    isActive: true,
-  } as InsertProduct).returning();
-  
-  const [pizzaSizeGroup] = await db.insert(productOptionGroups).values({
-    tenantId,
-    productId: pizza.id,
-    name: 'Size',
-    selectionType: 'single',
-    minSelections: 1,
-    maxSelections: 1,
-    isRequired: true,
-    displayOrder: 0,
+
+  // Caffe Latte
+  const latte = await seedBeverageProduct(tenantId, 'Caffe Latte', 'Perpaduan espresso dengan steamed milk lembut dan sedikit foam di atasnya', '35000', 'Coffee', PRODUCT_IMAGES.icedLatte);
+  const [latteAddonsGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: latte.id, name: 'Tambahan', selectionType: 'multiple',
+    minSelections: 0, maxSelections: 3, isRequired: false, displayOrder: 3,
   } as InsertProductOptionGroup).returning();
-  
   await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: pizzaSizeGroup.id,
-      name: 'Small',
-      priceDelta: '-15000',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: pizzaSizeGroup.id,
-      name: 'Medium',
-      priceDelta: '0',
-      isAvailable: true,
-      displayOrder: 1,
-    },
-    {
-      tenantId,
-      optionGroupId: pizzaSizeGroup.id,
-      name: 'Large',
-      priceDelta: '20000',
-      isAvailable: true,
-      displayOrder: 2,
-    },
+    { tenantId, optionGroupId: latteAddonsGroup.id, name: 'Extra Shot', priceDelta: '10000', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: latteAddonsGroup.id, name: 'Oat Milk', priceDelta: '7000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: latteAddonsGroup.id, name: 'Caramel Drizzle', priceDelta: '5000', isAvailable: true, displayOrder: 2 },
+    { tenantId, optionGroupId: latteAddonsGroup.id, name: 'Hazelnut Syrup', priceDelta: '5000', isAvailable: true, displayOrder: 3 },
   ] as InsertProductOption[]);
-  
-  console.log(`✅ Created: ${pizza.name} with Size options`);
-  
-  // Product 4: French Fries with Size options
-  const [fries] = await db.insert(products).values({
+
+  // Flat White
+  await seedBeverageProduct(tenantId, 'Flat White', 'Espresso dengan microfoam susu sapi pilihan, tekstur halus dan kaya rasa', '36000', 'Coffee', PRODUCT_IMAGES.cappuccino);
+
+  // Kopi Susu Gula Aren
+  const [kopiSusu] = await db.insert(products).values({
     tenantId,
-    name: 'French Fries',
-    description: 'Crispy golden fries seasoned to perfection',
-    basePrice: '18000',
-    category: 'Snack',
-    imageUrl: PRODUCT_IMAGES.fries,
-    hasVariants: true,
-    stockTrackingEnabled: false,
-    isActive: true,
-  } as InsertProduct).returning();
-  
-  const [friesSizeGroup] = await db.insert(productOptionGroups).values({
-    tenantId,
-    productId: fries.id,
-    name: 'Size',
-    selectionType: 'single',
-    minSelections: 1,
-    maxSelections: 1,
-    isRequired: true,
-    displayOrder: 0,
-  } as InsertProductOptionGroup).returning();
-  
-  await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: friesSizeGroup.id,
-      name: 'Regular',
-      priceDelta: '0',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: friesSizeGroup.id,
-      name: 'Large',
-      priceDelta: '8000',
-      isAvailable: true,
-      displayOrder: 1,
-    },
-  ] as InsertProductOption[]);
-  
-  console.log(`✅ Created: ${fries.name} with Size options`);
-  
-  // Product 5: Chicken Rice Bowl (no variants)
-  const [rice] = await db.insert(products).values({
-    tenantId,
-    name: 'Chicken Rice Bowl',
-    description: 'Grilled chicken with steamed rice and vegetables',
-    basePrice: '35000',
-    category: 'Rice Bowl',
-    imageUrl: PRODUCT_IMAGES.rice,
-    hasVariants: false,
-    stockTrackingEnabled: true,
-    stockQty: 25,
-    sku: 'RICE-BOWL-001',
-    isActive: true,
-  } as InsertProduct).returning();
-  
-  console.log(`✅ Created: ${rice.name} (no variants, stock tracked)`);
-  
-  // Product 6: Chocolate Lava Cake (no variants)
-  const [lava] = await db.insert(products).values({
-    tenantId,
-    name: 'Chocolate Lava Cake',
-    description: 'Warm chocolate cake with molten center',
-    basePrice: '38000',
-    category: 'Dessert',
-    imageUrl: PRODUCT_IMAGES.lava,
-    hasVariants: false,
-    stockTrackingEnabled: true,
-    stockQty: 12,
-    sku: 'DESSERT-LAVA-001',
-    isActive: true,
-  } as InsertProduct).returning();
-  
-  console.log(`✅ Created: ${lava.name} (no variants, stock tracked)`);
-  
-  // Product 7: Iced Caramel Latte with multi-select Add-ons
-  const [icedLatte] = await db.insert(products).values({
-    tenantId,
-    name: 'Iced Caramel Latte',
-    description: 'Smooth espresso with caramel and cold milk',
-    basePrice: '32000',
+    name: 'Kopi Susu Gula Aren',
+    description: 'Espresso dingin dengan susu segar dan gula aren asli Kalimantan yang harum',
+    basePrice: '28000',
     category: 'Coffee',
     imageUrl: PRODUCT_IMAGES.icedLatte,
     hasVariants: true,
     stockTrackingEnabled: false,
     isActive: true,
   } as InsertProduct).returning();
-  
-  const [latteAddonsGroup] = await db.insert(productOptionGroups).values({
-    tenantId,
-    productId: icedLatte.id,
-    name: 'Add-ons',
-    selectionType: 'multiple',
-    minSelections: 0,
-    maxSelections: 3,
-    isRequired: false,
-    displayOrder: 0,
+  const [kopiSusuSizeGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: kopiSusu.id, name: 'Ukuran', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
   } as InsertProductOptionGroup).returning();
-  
   await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: latteAddonsGroup.id,
-      name: 'Extra Shot',
-      priceDelta: '8000',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: latteAddonsGroup.id,
-      name: 'Oat Milk',
-      priceDelta: '5000',
-      isAvailable: true,
-      displayOrder: 1,
-    },
-    {
-      tenantId,
-      optionGroupId: latteAddonsGroup.id,
-      name: 'Extra Caramel',
-      priceDelta: '4000',
-      isAvailable: true,
-      displayOrder: 2,
-    },
+    { tenantId, optionGroupId: kopiSusuSizeGroup.id, name: 'Regular (350ml)', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: kopiSusuSizeGroup.id, name: 'Large (500ml)', priceDelta: '8000', isAvailable: true, displayOrder: 1 },
   ] as InsertProductOption[]);
-  
-  console.log(`✅ Created: ${icedLatte.name} with Add-ons options`);
-  
-  // Product 8: Chicken Wings with Portion size
-  const [wings] = await db.insert(products).values({
+  const [kopiSusuSugarGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: kopiSusu.id, name: 'Tingkat Manis', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 1,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: kopiSusuSugarGroup.id, name: 'Less Sweet', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: kopiSusuSugarGroup.id, name: 'Normal', priceDelta: '0', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: kopiSusuSugarGroup.id, name: 'Extra Sweet', priceDelta: '0', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Kopi Susu Gula Aren');
+
+  // Cold Brew
+  const [coldBrew] = await db.insert(products).values({
     tenantId,
-    name: 'Chicken Wings',
-    description: 'Crispy fried chicken wings with your choice of sauce',
-    basePrice: '42000',
-    category: 'Snack',
-    imageUrl: PRODUCT_IMAGES.wings,
+    name: 'Cold Brew',
+    description: 'Kopi diseduh dingin selama 18 jam, smooth dan rendah asam, disajikan langsung dengan es batu',
+    basePrice: '38000',
+    category: 'Coffee',
+    imageUrl: PRODUCT_IMAGES.cappuccino,
     hasVariants: true,
-    stockTrackingEnabled: true,
-    stockQty: 30,
-    sku: 'WINGS-001',
+    stockTrackingEnabled: false,
     isActive: true,
   } as InsertProduct).returning();
-  
-  const [wingsPortionGroup] = await db.insert(productOptionGroups).values({
-    tenantId,
-    productId: wings.id,
-    name: 'Portion',
-    selectionType: 'single',
-    minSelections: 1,
-    maxSelections: 1,
-    isRequired: true,
-    displayOrder: 0,
+  const [coldBrewGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: coldBrew.id, name: 'Varian', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
   } as InsertProductOptionGroup).returning();
-  
   await db.insert(productOptions).values([
-    {
-      tenantId,
-      optionGroupId: wingsPortionGroup.id,
-      name: '4 pcs',
-      priceDelta: '0',
-      isAvailable: true,
-      displayOrder: 0,
-    },
-    {
-      tenantId,
-      optionGroupId: wingsPortionGroup.id,
-      name: '8 pcs',
-      priceDelta: '18000',
-      isAvailable: true,
-      displayOrder: 1,
-    },
-    {
-      tenantId,
-      optionGroupId: wingsPortionGroup.id,
-      name: '12 pcs',
-      priceDelta: '30000',
-      isAvailable: true,
-      displayOrder: 2,
-    },
+    { tenantId, optionGroupId: coldBrewGroup.id, name: 'Original', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: coldBrewGroup.id, name: 'Milk Cold Brew', priceDelta: '8000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: coldBrewGroup.id, name: 'Vanilla Cold Brew', priceDelta: '10000', isAvailable: true, displayOrder: 2 },
   ] as InsertProductOption[]);
-  
-  console.log(`✅ Created: ${wings.name} with Portion options`);
-  
-  console.log('✅ All products seeded successfully');
+  console.log('  ✅ Cold Brew');
+
+  // Vietnamese Iced Coffee
+  const [vietnamCoffee] = await db.insert(products).values({
+    tenantId,
+    name: 'Vietnamese Iced Coffee',
+    description: 'Kopi robusta kuat dengan susu kental manis yang legit, disajikan dengan es batu banyak',
+    basePrice: '30000',
+    category: 'Coffee',
+    imageUrl: PRODUCT_IMAGES.icedLatte,
+    hasVariants: false,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  console.log('  ✅ Vietnamese Iced Coffee');
+
+  // ─── NON-COFFEE ──────────────────────────────────────────────────────────────
+  console.log('\n📂 Category: Non-Coffee');
+
+  // Matcha Latte
+  await seedBeverageProduct(tenantId, 'Matcha Latte', 'Matcha ceremonial grade Jepang dengan steamed milk, earthy dan creamy', '35000', 'Non-Coffee', null, true);
+
+  // Teh Tarik
+  const [tehTarik] = await db.insert(products).values({
+    tenantId,
+    name: 'Teh Tarik',
+    description: 'Teh hitam khas Malaysia dengan susu kental yang ditarik hingga berbusa lembut',
+    basePrice: '22000',
+    category: 'Non-Coffee',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [tehTarikTempGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: tehTarik.id, name: 'Suhu', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: tehTarikTempGroup.id, name: 'Hot', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: tehTarikTempGroup.id, name: 'Iced', priceDelta: '3000', isAvailable: true, displayOrder: 1 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Teh Tarik');
+
+  // Cokelat Panas / Iced Chocolate
+  await seedBeverageProduct(tenantId, 'Dark Chocolate', 'Minuman cokelat premium dengan dark cocoa 70%, kaya rasa dan tidak terlalu manis', '32000', 'Non-Coffee', null, true);
+
+  // Taro Milk Tea
+  await seedBeverageProduct(tenantId, 'Taro Milk Tea', 'Teh susu dengan bubuk taro ungu asli, creamy dan manis alami', '30000', 'Non-Coffee', null, true);
+
+  // Thai Tea
+  await seedBeverageProduct(tenantId, 'Thai Tea', 'Teh Assam khas Thailand dengan susu evaporasi, warna oranye khas dan rasa otentik', '28000', 'Non-Coffee', null, true);
+
+  // Strawberry Smoothie
+  const [strawSmoothie] = await db.insert(products).values({
+    tenantId,
+    name: 'Strawberry Smoothie',
+    description: 'Smoothie strawberry segar dengan yogurt dan susu, tanpa gula tambahan',
+    basePrice: '35000',
+    category: 'Non-Coffee',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [strawSizeGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: strawSmoothie.id, name: 'Ukuran', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: strawSizeGroup.id, name: 'Regular (300ml)', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: strawSizeGroup.id, name: 'Large (500ml)', priceDelta: '10000', isAvailable: true, displayOrder: 1 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Strawberry Smoothie');
+
+  // Lemon Squash
+  const [lemonSquash] = await db.insert(products).values({
+    tenantId,
+    name: 'Lemon Squash',
+    description: 'Perasan lemon segar dengan soda dan madu, segar dan menyegarkan di hari panas',
+    basePrice: '25000',
+    category: 'Non-Coffee',
+    imageUrl: null,
+    hasVariants: false,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  console.log('  ✅ Lemon Squash');
+
+  // ─── MAIN COURSE ─────────────────────────────────────────────────────────────
+  console.log('\n📂 Category: Main Course');
+
+  // Nasi Goreng Spesial
+  const [nasiGoreng] = await db.insert(products).values({
+    tenantId,
+    name: 'Nasi Goreng Spesial',
+    description: 'Nasi goreng bumbu rahasia dengan ayam suwir, telur mata sapi, acar, dan kerupuk renyah',
+    basePrice: '38000',
+    category: 'Main Course',
+    imageUrl: PRODUCT_IMAGES.rice,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [nasiGorengAddGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: nasiGoreng.id, name: 'Tambahan Topping', selectionType: 'multiple',
+    minSelections: 0, maxSelections: 3, isRequired: false, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: nasiGorengAddGroup.id, name: 'Ekstra Telur', priceDelta: '5000', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: nasiGorengAddGroup.id, name: 'Ekstra Ayam', priceDelta: '10000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: nasiGorengAddGroup.id, name: 'Tambah Keju', priceDelta: '8000', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  const [nasiGorengSpicyGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: nasiGoreng.id, name: 'Level Pedas', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 1,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: nasiGorengSpicyGroup.id, name: 'Tidak Pedas', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: nasiGorengSpicyGroup.id, name: 'Pedas Sedang', priceDelta: '0', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: nasiGorengSpicyGroup.id, name: 'Pedas Banget', priceDelta: '0', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Nasi Goreng Spesial');
+
+  // Spaghetti Aglio e Olio
+  const [spaghetti] = await db.insert(products).values({
+    tenantId,
+    name: 'Spaghetti Aglio e Olio',
+    description: 'Pasta Italia dengan bawang putih, olive oil, cabai flakes, dan parsley segar',
+    basePrice: '48000',
+    category: 'Main Course',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [spaghettiProteinGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: spaghetti.id, name: 'Protein', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: spaghettiProteinGroup.id, name: 'Vegetarian', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: spaghettiProteinGroup.id, name: '+ Ayam Panggang', priceDelta: '15000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: spaghettiProteinGroup.id, name: '+ Udang Sautéed', priceDelta: '20000', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Spaghetti Aglio e Olio');
+
+  // Chicken Sandwich
+  const [chickenSandwich] = await db.insert(products).values({
+    tenantId,
+    name: 'Chicken Sandwich',
+    description: 'Ayam crispy juicy dengan selada, tomat, mentimun, mayo bawang putih di roti brioche',
+    basePrice: '45000',
+    category: 'Main Course',
+    imageUrl: PRODUCT_IMAGES.burger,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [sandwichSideGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: chickenSandwich.id, name: 'Side Dish', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: sandwichSideGroup.id, name: 'Tanpa Side', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: sandwichSideGroup.id, name: '+ Kentang Goreng', priceDelta: '12000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: sandwichSideGroup.id, name: '+ Garden Salad', priceDelta: '10000', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Chicken Sandwich');
+
+  // Avocado Toast
+  const [avocadoToast] = await db.insert(products).values({
+    tenantId,
+    name: 'Avocado Toast',
+    description: 'Roti sourdough panggang dengan alpukat tumbuk berbumbu, red pepper flake, dan lemon',
+    basePrice: '42000',
+    category: 'Main Course',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [avocadoAddGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: avocadoToast.id, name: 'Tambahan', selectionType: 'multiple',
+    minSelections: 0, maxSelections: 2, isRequired: false, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: avocadoAddGroup.id, name: '+ Telur Poach', priceDelta: '8000', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: avocadoAddGroup.id, name: '+ Smoked Salmon', priceDelta: '20000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: avocadoAddGroup.id, name: '+ Feta Cheese', priceDelta: '10000', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Avocado Toast');
+
+  // Big Breakfast
+  const [bigBreakfast] = await db.insert(products).values({
+    tenantId,
+    name: 'Big Breakfast',
+    description: 'Set sarapan lengkap: scrambled egg, beef sausage, toast panggang, baked beans, dan mushroom sautéed',
+    basePrice: '65000',
+    category: 'Main Course',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [breakfastEggGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: bigBreakfast.id, name: 'Telur', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: breakfastEggGroup.id, name: 'Scrambled', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: breakfastEggGroup.id, name: 'Sunny Side Up', priceDelta: '0', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: breakfastEggGroup.id, name: 'Poached', priceDelta: '0', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Big Breakfast');
+
+  // ─── SNACK ───────────────────────────────────────────────────────────────────
+  console.log('\n📂 Category: Snack');
+
+  // Croissant
+  const [croissant] = await db.insert(products).values({
+    tenantId,
+    name: 'Croissant',
+    description: 'Croissant butter Prancis yang renyah di luar dan lembut di dalam, dipanggang fresh setiap pagi',
+    basePrice: '25000',
+    category: 'Snack',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: true,
+    stockQty: 20,
+    sku: 'SNK-CROISSANT-001',
+    isActive: true,
+  } as InsertProduct).returning();
+  const [croissantFillingGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: croissant.id, name: 'Isian', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: croissantFillingGroup.id, name: 'Plain', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: croissantFillingGroup.id, name: 'Keju', priceDelta: '5000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: croissantFillingGroup.id, name: 'Cokelat', priceDelta: '5000', isAvailable: true, displayOrder: 2 },
+    { tenantId, optionGroupId: croissantFillingGroup.id, name: 'Ham & Keju', priceDelta: '12000', isAvailable: true, displayOrder: 3 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Croissant');
+
+  // Roti Bakar
+  const [rotiBarkar] = await db.insert(products).values({
+    tenantId,
+    name: 'Roti Bakar',
+    description: 'Roti tawar panggang dengan pilihan topping, disajikan hangat dan crispy',
+    basePrice: '20000',
+    category: 'Snack',
+    imageUrl: null,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [rotiToppingGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: rotiBarkar.id, name: 'Topping', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: rotiToppingGroup.id, name: 'Butter & Gula', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: rotiToppingGroup.id, name: 'Nutella', priceDelta: '8000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: rotiToppingGroup.id, name: 'Selai Kaya', priceDelta: '5000', isAvailable: true, displayOrder: 2 },
+    { tenantId, optionGroupId: rotiToppingGroup.id, name: 'Keju + Susu', priceDelta: '8000', isAvailable: true, displayOrder: 3 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Roti Bakar');
+
+  // Waffle
+  const [waffle] = await db.insert(products).values({
+    tenantId,
+    name: 'Waffle',
+    description: 'Waffle renyah dengan topping pilihan, sempurna untuk menemani kopi pagi anda',
+    basePrice: '35000',
+    category: 'Snack',
+    imageUrl: PRODUCT_IMAGES.lava,
+    hasVariants: true,
+    stockTrackingEnabled: true,
+    stockQty: 15,
+    sku: 'SNK-WAFFLE-001',
+    isActive: true,
+  } as InsertProduct).returning();
+  const [waffleToppingGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: waffle.id, name: 'Topping', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: waffleToppingGroup.id, name: 'Maple Syrup & Butter', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: waffleToppingGroup.id, name: 'Strawberry & Cream', priceDelta: '8000', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: waffleToppingGroup.id, name: 'Nutella & Banana', priceDelta: '10000', isAvailable: true, displayOrder: 2 },
+  ] as InsertProductOption[]);
+  const [waffleAddGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: waffle.id, name: 'Tambahan', selectionType: 'multiple',
+    minSelections: 0, maxSelections: 2, isRequired: false, displayOrder: 1,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: waffleAddGroup.id, name: 'Ice Cream Vanilla', priceDelta: '12000', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: waffleAddGroup.id, name: 'Whipped Cream', priceDelta: '5000', isAvailable: true, displayOrder: 1 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Waffle');
+
+  // Chocolate Lava Cake
+  const [lavaCake] = await db.insert(products).values({
+    tenantId,
+    name: 'Chocolate Lava Cake',
+    description: 'Kue cokelat hangat dengan isi cokelat cair lumer di dalamnya, disajikan dengan ice cream vanilla',
+    basePrice: '42000',
+    category: 'Snack',
+    imageUrl: PRODUCT_IMAGES.lava,
+    hasVariants: false,
+    stockTrackingEnabled: true,
+    stockQty: 12,
+    sku: 'SNK-LAVA-001',
+    isActive: true,
+  } as InsertProduct).returning();
+  console.log('  ✅ Chocolate Lava Cake');
+
+  // Kentang Goreng
+  const [kentangGoreng] = await db.insert(products).values({
+    tenantId,
+    name: 'Kentang Goreng',
+    description: 'Kentang goreng renyah dengan bumbu pilihan dan saus pendamping, cocok untuk ngemil santai',
+    basePrice: '22000',
+    category: 'Snack',
+    imageUrl: PRODUCT_IMAGES.fries,
+    hasVariants: true,
+    stockTrackingEnabled: false,
+    isActive: true,
+  } as InsertProduct).returning();
+  const [kentangSizeGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: kentangGoreng.id, name: 'Ukuran', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 0,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: kentangSizeGroup.id, name: 'Regular', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: kentangSizeGroup.id, name: 'Large', priceDelta: '8000', isAvailable: true, displayOrder: 1 },
+  ] as InsertProductOption[]);
+  const [kentangFlavorGroup] = await db.insert(productOptionGroups).values({
+    tenantId, productId: kentangGoreng.id, name: 'Bumbu', selectionType: 'single',
+    minSelections: 1, maxSelections: 1, isRequired: true, displayOrder: 1,
+  } as InsertProductOptionGroup).returning();
+  await db.insert(productOptions).values([
+    { tenantId, optionGroupId: kentangFlavorGroup.id, name: 'Original', priceDelta: '0', isAvailable: true, displayOrder: 0 },
+    { tenantId, optionGroupId: kentangFlavorGroup.id, name: 'Barbeque', priceDelta: '0', isAvailable: true, displayOrder: 1 },
+    { tenantId, optionGroupId: kentangFlavorGroup.id, name: 'Keju', priceDelta: '3000', isAvailable: true, displayOrder: 2 },
+    { tenantId, optionGroupId: kentangFlavorGroup.id, name: 'Pedas', priceDelta: '0', isAvailable: true, displayOrder: 3 },
+  ] as InsertProductOption[]);
+  console.log('  ✅ Kentang Goreng');
+
+  console.log('\n✅ Semua menu Thamada Coffee Shop berhasil di-seed!');
+  console.log('   • 7 menu Coffee');
+  console.log('   • 6 menu Non-Coffee');
+  console.log('   • 5 menu Main Course');
+  console.log('   • 5 menu Snack');
 }
 
 /**
@@ -822,26 +992,27 @@ async function seedOpenOrders(tenantId: string) {
     const testOrders = [
       {
         tableNumber: '1',
-        customerName: 'John Doe',
+        customerName: 'Budi Santoso',
         items: [
-          { productName: 'Classic Beef Burger', qty: 2, price: 45000 },
-          { productName: 'Cappuccino', qty: 1, price: 35000 },
+          { productName: 'Cappuccino', qty: 2, price: 32000 },
+          { productName: 'Avocado Toast', qty: 1, price: 42000 },
         ],
       },
       {
         tableNumber: '2',
-        customerName: 'Jane Smith',
+        customerName: 'Sari Dewi',
         items: [
-          { productName: 'Chicken Rice Bowl', qty: 1, price: 55000 },
-          { productName: 'Iced Caramel Latte', qty: 2, price: 40000 },
+          { productName: 'Nasi Goreng Spesial', qty: 1, price: 38000 },
+          { productName: 'Kopi Susu Gula Aren', qty: 2, price: 28000 },
         ],
       },
       {
         tableNumber: '3',
-        customerName: 'Bob Johnson',
+        customerName: 'Reza Pratama',
         items: [
-          { productName: 'Supreme Pizza', qty: 1, price: 85000 },
-          { productName: 'Fried Chicken Wings', qty: 1, price: 65000 },
+          { productName: 'Chicken Sandwich', qty: 1, price: 45000 },
+          { productName: 'Waffle', qty: 1, price: 35000 },
+          { productName: 'Cold Brew', qty: 1, price: 38000 },
         ],
       },
     ];
@@ -1191,17 +1362,21 @@ async function seed() {
     console.log('');
     console.log('Summary:');
     console.log('- 3 tenants created');
-    console.log('  • demo-tenant (Restaurant/Cafe)');
-    console.log('  • laundry-indo (Indonesian Laundry Service)');
-    console.log('  • minimarket-demo (Retail/Minimarket)');
+    console.log('  • demo-tenant → Thamada Coffee Shop');
+    console.log('  • laundry-indo → Cucian Cepat Indonesia');
+    console.log('  • minimarket-demo → Minimarket Demo');
     console.log(`- ${createdOrderTypes.length} order types created`);
-    console.log('- 8 products with options (Restaurant)');
+    console.log('- 23 menu items (Thamada Coffee Shop):');
+    console.log('   • 7 Coffee (Espresso, Americano, Cappuccino, Caffe Latte, Flat White, Kopi Susu Gula Aren, Cold Brew, Vietnamese Iced Coffee)');
+    console.log('   • 6 Non-Coffee (Matcha Latte, Teh Tarik, Dark Chocolate, Taro Milk Tea, Thai Tea, Strawberry Smoothie, Lemon Squash)');
+    console.log('   • 5 Main Course (Nasi Goreng Spesial, Spaghetti Aglio e Olio, Chicken Sandwich, Avocado Toast, Big Breakfast)');
+    console.log('   • 5 Snack (Croissant, Roti Bakar, Waffle, Chocolate Lava Cake, Kentang Goreng)');
     console.log('- 10 laundry services - Indonesia-specific (Laundry)');
     console.log('- 12 retail products (Minimarket)');
-    console.log(`- ${DEMO_TENANT_FEATURES.length} features enabled for restaurant`);
+    console.log(`- ${DEMO_TENANT_FEATURES.length} features enabled for Thamada Coffee Shop`);
     console.log('');
     console.log('Tenant IDs:');
-    console.log(`- Restaurant: ${tenantId}`);
+    console.log(`- Thamada Coffee Shop: ${tenantId}`);
     console.log(`- Laundry (Indonesia): ${laundryTenantId}`);
     console.log(`- Minimarket: ${minimarketTenantId}`);
     
