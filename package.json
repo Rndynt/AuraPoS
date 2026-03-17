@@ -28,15 +28,15 @@
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "20.16.11",
     "autoprefixer": "^10.4.22",
-    "drizzle-kit": "^0.31.4",
-    "esbuild": "^0.25.0",
+    "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.25.12",
     "postcss": "^8.5.6",
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.20.5",
-    "turbo": "^1.13.0",
-    "typescript": "5.6.3",
-    "vite": "^5.4.20"
+    "tsx": "^4.21.0",
+    "turbo": "^1.13.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.21"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
