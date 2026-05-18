@@ -1,33 +1,14 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*", "packages/**/*", "apps/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
-  "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
-    "noEmit": true,
-    "module": "ESNext",
-    "strict": true,
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "types": ["node", "vite/client"],
-    "paths": {
-      "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"],
-      "@pos/core": ["./packages/core"],
-      "@pos/core/*": ["./packages/core/*"],
-      "@pos/domain": ["./packages/domain"],
-      "@pos/domain/*": ["./packages/domain/*"],
-      "@pos/application": ["./packages/application"],
-      "@pos/application/*": ["./packages/application/*"],
-      "@pos/infrastructure": ["./packages/infrastructure"],
-      "@pos/infrastructure/*": ["./packages/infrastructure/*"],
-      "@pos/features": ["./packages/features"],
-      "@pos/features/*": ["./packages/features/*"]
-    }
-  }
+  "files": [],
+  "references": [
+    { "path": "./shared/tsconfig.json" },
+    { "path": "./packages/core/tsconfig.json" },
+    { "path": "./packages/domain/tsconfig.json" },
+    { "path": "./packages/application/tsconfig.json" },
+    { "path": "./packages/infrastructure/tsconfig.json" },
+    { "path": "./packages/features/tsconfig.json" },
+    { "path": "./apps/api/tsconfig.json" },
+    { "path": "./apps/pos-terminal-web/tsconfig.json" },
+    { "path": "./apps/web/tsconfig.json" }
+  ]
 }

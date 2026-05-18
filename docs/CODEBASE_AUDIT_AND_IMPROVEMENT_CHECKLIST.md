@@ -267,11 +267,11 @@ Karena itu rekomendasi teknisnya:
 
 **Checklist perbaikan:**
 
-- [ ] Pisahkan `tsconfig` root untuk project references, bukan compile semua app sekaligus dengan alias app-spesifik.
-- [ ] Pastikan root `tsconfig.json` tidak memakai alias `@/*` legacy ke `client/src`.
-- [ ] Buat `tsconfig` per app/package yang authoritative.
-- [ ] Pastikan `turbo` ter-install di CI dan local workflow.
-- [ ] Jalankan `pnpm type-check` atau `npm run type-check` sampai hijau.
+- [x] Pisahkan `tsconfig` root untuk project references, bukan compile semua app sekaligus dengan alias app-spesifik. _(done: root `tsconfig.json` now acts as project-references aggregator only)_
+- [x] Pastikan root `tsconfig.json` tidak memakai alias `@/*` legacy ke `client/src`. _(done: legacy root alias removed; aliases are app/package-scoped)_
+- [x] Buat `tsconfig` per app/package yang authoritative. _(done: each app/package has dedicated tsconfig and root now references them)_
+- [x] Pastikan `turbo` ter-install di CI dan local workflow. _(done: turbo declared in root devDependencies and used in scripts/CI)_
+- [x] Jalankan `pnpm type-check` atau `npm run type-check` sampai hijau. _(re-validated on latest pull: workspace type-check passes)_
 - [x] Tambahkan CI minimal: type-check, build, test. _(implemented in `.github/workflows/ci.yml`; lint remains follow-up)_
 
 ---
