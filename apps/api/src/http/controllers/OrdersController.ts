@@ -86,6 +86,7 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     payment_method: z.enum(['cash', 'card', 'ewallet', 'other']),
     transaction_ref: z.string().optional(),
     notes: z.string().optional(),
+    idempotency_key: z.string().min(8).max(128).optional(),
   });
 
   const parsed = bodySchema.safeParse(req.body);
@@ -93,11 +94,61 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
   }
 
+  const idempotencyKey = parsed.data.idempotency_key?.trim();
+
+  // Idempotency support for payment recording:
+  // if a payment with the same reference already exists for this order+tenant, replay previous result.
+  if (idempotencyKey) {
+    const existing = await container.db
+      .select({
+        paymentId: orderPayments.id,
+        paymentOrderId: orderPayments.orderId,
+      })
+      .from(orderPayments)
+      .innerJoin(orders, eq(orderPayments.orderId, orders.id))
+      .where(
+        and(
+          eq(orders.tenantId, tenantId),
+          eq(orderPayments.orderId, id),
+          eq(orderPayments.referenceNumber, idempotencyKey)
+        )
+      )
+      .limit(1);
+
+    if (existing[0]?.paymentId) {
+      const order = await container.orderRepository.findById(id, tenantId);
+      if (!order) {
+        throw createError('Order not found', 404, 'NOT_FOUND');
+      }
+
+      const payments = await container.orderPaymentRepository.findByOrder(id, tenantId);
+      const matchedPayment = payments.find((p) => p.id === existing[0]?.paymentId);
+
+      if (matchedPayment) {
+        const orderTotal = parseFloat(order.total_amount ?? order.total ?? '0');
+        const orderPaid = parseFloat(order.paid_amount ?? order.paidAmount ?? '0');
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            payment: matchedPayment,
+            order,
+            remainingAmount: orderTotal - orderPaid,
+            idempotent_replay: true,
+          },
+        });
+      }
+    }
+  }
+
   // Execute use case
   const result = await container.recordPayment.execute({
     order_id: id,
     tenant_id: tenantId,
-    ...parsed.data,
+    amount: parsed.data.amount,
+    payment_method: parsed.data.payment_method,
+    notes: parsed.data.notes,
+    transaction_ref: parsed.data.transaction_ref ?? idempotencyKey,
   });
 
   res.status(201).json({
