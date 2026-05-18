@@ -152,7 +152,7 @@ export const createKitchenTicket = asyncHandler(async (req: Request, res: Respon
 export const listOrders = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
 
-  const orderStatusSchema = z.enum(['draft', 'confirmed', 'completed', 'cancelled']);
+  const orderStatusSchema = z.enum(['draft', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled']);
 
   // Validate query params
   const querySchema = z.object({
@@ -379,12 +379,16 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
 
   const { status } = parsed.data;
 
-  const updatedOrder = await container.orderRepository.update(id, { status }, tenantId);
+  const result = await container.transitionOrderStatus.execute({
+    order_id: id,
+    tenant_id: tenantId,
+    status,
+  });
 
   res.status(200).json({
     success: true,
     data: {
-      order: updatedOrder,
+      order: result.order,
     },
   });
 });
