@@ -375,7 +375,7 @@ Karena itu rekomendasi teknisnya:
 
 - [ ] Bungkus `RecordPayment` dalam DB transaction.
 - [ ] Lock row order saat menghitung remaining balance.
-- [ ] Tambahkan idempotency key/reference unik.
+- [x] Tambahkan idempotency key/reference unik. _(implemented for `POST /api/orders/:id/payments` via `idempotency_key` replay lookup using payment reference per order+tenant)_
 - [ ] Tambahkan unique constraint untuk provider reference jika ada.
 - [ ] Tambahkan test concurrent payment.
 
@@ -744,3 +744,34 @@ Codebase baru layak disebut production-ready jika minimal:
 - [ ] Refund/void flow minimal tersedia.
 - [ ] Audit log untuk order/payment/refund/stock adjustment.
 - [ ] Dokumentasi checklist/status sinkron dengan kode; this checklist updated for completed foundational tasks.
+
+
+---
+
+## 13. Eksekusi Mendalam Batch 2026-05-18 (Codebase-wide)
+
+Sesi ini menjalankan audit statis ulang menyeluruh terhadap monorepo (`apps/*`, `packages/*`, `shared/*`) untuk memvalidasi progres, mencari duplikasi implementasi, dan memastikan tidak ada task P0/P1 yang terlewat.
+
+### 11.1 Validasi toolchain & baseline
+
+- [x] Re-validasi monorepo package manager (`pnpm`) dan orkestrasi task (`turbo`) konsisten di root workspace.
+- [x] Re-validasi script root (`type-check`, `build`, `test`, `lint`) tersedia untuk dipakai sebagai CI baseline.
+- [x] Re-validasi dokumen audit ini sinkron dengan progres terbaru (khususnya P0.1/P0.4/P1.5 yang sudah delivered).
+
+### 11.2 Audit duplikasi implementasi
+
+- [x] Cek duplikasi endpoint create-and-pay: flow immediate payment POS sudah diarahkan ke endpoint backend terpusat (`/api/orders/create-and-pay`), tidak lagi menggandakan logika charge di sisi frontend.
+- [x] Cek duplikasi otorisasi tenant pada table operations: source of truth sudah di middleware + repository tenant-aware (bukan validasi ad-hoc per handler).
+- [x] Cek duplikasi transition status order: update status sudah dipaksa lewat use case transisi, bukan direct repository update.
+
+### 11.3 Temuan gap yang masih tersisa (tetap prioritas implementasi)
+
+- [ ] Atomicity penuh create+pay (single DB transaction + lock/order consistency) belum complete.
+- [ ] Transaction safety `record-payment` (row lock/idempotency penuh/concurrency test) belum complete.
+- [ ] Cross-tenant automated tests (tables/payment/order mutation) masih kurang.
+- [ ] Auth production-grade (session/JWT + membership + RBAC granular) belum complete.
+- [ ] Back-office analytics/reports/stock/employees masih dominan placeholder/mock.
+
+### 11.4 Catatan sinkronisasi status checklist
+
+Untuk mencegah false-positive progres, item hanya diubah menjadi `[x]` jika implementasi sudah benar-benar ada dan operasional di code path utama. Item yang masih desain/parsial tetap dipertahankan `[ ]` agar backlog tetap jujur dan bisa dieksekusi bertahap tanpa kehilangan prioritas risiko.
