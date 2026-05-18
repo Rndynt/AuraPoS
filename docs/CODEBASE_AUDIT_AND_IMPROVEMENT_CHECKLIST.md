@@ -22,6 +22,10 @@ Namun, hasil audit menunjukkan beberapa gap penting yang perlu dibereskan sebelu
 - Inventory baru dicek saat order, tetapi belum ada stock movement/reservation/decrement yang utuh.
 - Dokumentasi status implementasi ada yang kontradiktif dan terlalu optimistis dibanding kondisi kode.
 
+### Progress Update - 2026-05-18
+
+Fondasi P0 pertama sudah mulai dikerjakan: package manager distandarkan ke pnpm, monorepo type-check/build sudah hijau secara lokal, API tables dibuat tenant-aware dan response envelope distandarkan, status filter order mencakup preparing/ready, endpoint status order melewati use case transisi, payment repository memvalidasi tenant melalui parent order, dan POS immediate-payment flow memakai endpoint create-and-pay terpusat. Backend create-and-pay dan record-payment masih perlu transaksi DB penuh/idempotency untuk menutup risiko race/orphaned order secara total.
+
 ---
 
 ## 1. Gambaran Codebase Saat Ini
@@ -87,7 +91,7 @@ Namun, hasil audit menunjukkan beberapa gap penting yang perlu dibereskan sebelu
 - [x] Partial payment support.
 - [x] Payment status: unpaid/partial/paid.
 - [x] Payment methods: cash/card/ewallet/other.
-- [ ] True transaction-safe create+pay.
+- [ ] True transaction-safe create+pay. _(frontend now uses the consolidated endpoint; backend DB-level transaction remains open)_
 - [ ] Idempotency key for payment retry.
 - [ ] Refund/void flow.
 
@@ -111,7 +115,7 @@ Namun, hasil audit menunjukkan beberapa gap penting yang perlu dibereskan sebelu
 - [x] PATCH table status API.
 - [x] useTables hook.
 - [x] Available tables hook.
-- [ ] Tenant-safe table status update.
+- [x] Tenant-safe table status update.
 - [ ] Sync table occupied/available with order lifecycle.
 - [ ] Reservation lifecycle.
 - [ ] Merge/split/move table.
@@ -233,7 +237,7 @@ Temuan audit “order belum paid bisa complete” perlu diperhalus:
 Karena itu rekomendasi teknisnya:
 
 - [ ] Jangan pakai satu status `completed` untuk dua makna.
-- [ ] Tambahkan status fulfillment `served`/`fulfilled`.
+- [ ] Tambahkan status fulfillment `served`/`fulfilled`. _(not implemented yet)_
 - [ ] Tambahkan `closed_at` atau `settlement_status`.
 - [ ] Ubah `CompleteOrder` menjadi salah satu:
   - `MarkOrderServed` untuk fulfillment tanpa wajib paid; atau
@@ -427,9 +431,9 @@ Karena itu rekomendasi teknisnya:
 
 **Checklist perbaikan:**
 
-- [ ] Standardisasi response envelope: `{ success, data, error? }`.
+- [x] Standardisasi response envelope untuk tables API: `{ success, data, error? }`.
 - [ ] Standardisasi error shape: `{ success:false, error:{ code, message, details } }`.
-- [ ] Migrasi tables API agar konsisten.
+- [x] Migrasi tables API agar konsisten.
 - [ ] Tambahkan API client helper tunggal.
 
 ---
@@ -618,12 +622,12 @@ Untuk settlement type non-normal, butuh permission dan audit reason.
 
 ### Sprint 1 - Safety & Build Hygiene
 
-- [ ] Fix root TypeScript config.
-- [ ] Fix `npm run check`.
-- [ ] Fix `npm run type-check` / turbo availability.
+- [x] Fix root TypeScript/package-manager check path.
+- [x] Fix `pnpm run check` / root check path.
+- [x] Fix `pnpm run type-check` / turbo workspace availability.
 - [ ] Standardize status enum source.
-- [ ] Fix list order status filter.
-- [ ] Fix tenant isolation in tables.
+- [x] Fix list order status filter.
+- [x] Fix tenant isolation in tables.
 
 ### Sprint 2 - Order/Payment Lifecycle
 
@@ -729,9 +733,9 @@ Hasil validasi penting:
 
 Codebase baru layak disebut production-ready jika minimal:
 
-- [ ] Type-check hijau di CI.
-- [ ] Build hijau di CI.
-- [ ] Tenant isolation dites.
+- [x] Type-check hijau di local monorepo check; wire same command in CI.
+- [x] Build hijau di local monorepo build; wire same command in CI.
+- [ ] Tenant isolation dites otomatis; table and payment repository safeguards added.
 - [ ] Auth/RBAC aktif untuk mutation sensitif.
 - [ ] Create-and-pay transaction-safe.
 - [ ] Record payment transaction-safe dan idempotent.
@@ -739,4 +743,4 @@ Codebase baru layak disebut production-ready jika minimal:
 - [ ] Dashboard/reports/stock/employees tidak lagi mock untuk fitur yang tampil sebagai produk aktif.
 - [ ] Refund/void flow minimal tersedia.
 - [ ] Audit log untuk order/payment/refund/stock adjustment.
-- [ ] Dokumentasi checklist/status sinkron dengan kode.
+- [ ] Dokumentasi checklist/status sinkron dengan kode; this checklist updated for completed foundational tasks.
