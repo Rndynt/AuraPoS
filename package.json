@@ -92,5 +92,5 @@
     "zod": "^3.24.2",
     "zod-validation-error": "^5.0.0"
   },
-  "packageManager": "pnpm@10.28.1"
+  "packageManager": "pnpm@10.26.1"
 }
