@@ -18,7 +18,7 @@ export default function EmployeesPage() {
   const [, setLocation] = useLocation();
 
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/hub");
   };
 
   const handleAddNew = () => {

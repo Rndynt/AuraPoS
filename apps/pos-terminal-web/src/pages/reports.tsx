@@ -122,7 +122,7 @@ const ReportsPage = () => {
   }, [period]);
 
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/hub");
   };
 
   return (

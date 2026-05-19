@@ -63,7 +63,7 @@ export default function StockPage() {
   const criticalStockCount = MOCK_PRODUCTS.filter((p) => p.stock < 10).length;
 
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/hub");
   };
 
   const handleHistory = () => {

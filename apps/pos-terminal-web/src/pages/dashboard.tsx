@@ -98,7 +98,7 @@ export default function DashboardPage() {
   };
 
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/hub");
   };
 
   const getSummaryDataByPeriod = () => {

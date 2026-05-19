@@ -12,7 +12,7 @@ export default function StoreProfilePage() {
   });
 
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/hub");
   };
 
   const handleSave = () => {
