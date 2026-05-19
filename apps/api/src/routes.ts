@@ -6,8 +6,10 @@ import routes from "./http/routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply tenant middleware to non-auth API routes
+  // Exempt /tenants/register because the user has no tenant yet during onboarding
   app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/auth/')) return next();
+    if (req.path === '/tenants/register') return next();
     return tenantMiddleware(req, res, next);
   });
 

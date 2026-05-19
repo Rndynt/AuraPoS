@@ -5,9 +5,13 @@
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import type { BusinessType } from '@pos/core';
+import { auth, authDb } from '../../lib/auth';
+import { user as authUser } from '../../lib/auth-schema';
+import { fromNodeHeaders } from 'better-auth/node';
 
 /**
  * GET /api/tenants/features
@@ -114,6 +118,22 @@ export const registerTenant = asyncHandler(async (req: Request, res: Response) =
     currency: data.currency,
     locale: data.locale,
   });
+
+  const tenantId = result.profile.tenant.id;
+
+  // Link the new tenant to the authenticated user so /api/auth/me returns tenantId
+  try {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+    if (session?.user?.id) {
+      await authDb
+        .update(authUser)
+        .set({ tenantId })
+        .where(eq(authUser.id, session.user.id));
+    }
+  } catch (linkErr) {
+    console.error('[registerTenant] Failed to link tenantId to user:', linkErr);
+    // Non-fatal: tenant was created, user can still log in
+  }
 
   res.status(201).json({
     success: true,

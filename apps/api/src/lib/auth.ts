@@ -14,6 +14,20 @@ if (!DATABASE_URL) {
 const authSql = postgres(DATABASE_URL);
 export const authDb = drizzle(authSql, { schema: authSchema });
 
+// Resolve the canonical base URL for better-auth.
+// In Replit the app is served over HTTPS via a proxy domain, so we must
+// use that domain — not localhost — otherwise session cookies are scoped
+// to 'localhost' and the browser silently drops them.
+const resolveBaseURL = (): string => {
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  if (process.env.BETTER_AUTH_URL) {
+    return process.env.BETTER_AUTH_URL;
+  }
+  return 'http://localhost:5000';
+};
+
 // Build trusted origins — always include Replit domains
 const buildTrustedOrigins = (): string[] => {
   const origins: string[] = [];
@@ -39,6 +53,8 @@ const buildTrustedOrigins = (): string[] => {
   return origins;
 };
 
+const BASE_URL = resolveBaseURL();
+
 export const auth = betterAuth({
   database: drizzleAdapter(authDb, {
     provider: 'pg',
@@ -50,6 +66,6 @@ export const auth = betterAuth({
   plugins: [username(), admin()],
   basePath: '/api/auth',
   secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: BASE_URL,
   trustedOrigins: buildTrustedOrigins(),
 });
