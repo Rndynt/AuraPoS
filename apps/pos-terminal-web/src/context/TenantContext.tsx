@@ -4,12 +4,10 @@ import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import type { BusinessType } from "@pos/core";
 import type { TenantModuleConfig } from "@pos/domain/tenants/types";
 
-const DEMO_TENANT_ID = "demo-tenant";
-
 /**
- * On initial load (or page refresh), resolve the tenantId from the active
- * session. This handles the case where the user is already logged in but the
- * localStorage still holds the "demo-tenant" fallback.
+ * On every page load / refresh, resolve the real tenantId from the active
+ * session cookie. This ensures each user always gets their own tenant,
+ * regardless of what's cached in localStorage.
  */
 async function syncTenantFromSession(): Promise<string | null> {
   try {
@@ -42,10 +40,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setActiveTenantId(nextTenantId);
   }, []);
 
-  // On every page load, if we're still on the demo fallback, try to resolve
-  // the real tenant from the active session cookie.
+  // On every page load, always resolve the real tenant from the session.
+  // This ensures multi-tenant login works — each user gets their own tenant
+  // regardless of what's in localStorage or the fallback constant.
   useEffect(() => {
-    if (tenantId !== DEMO_TENANT_ID) return;
     syncTenantFromSession().then((sessionTenantId) => {
       if (sessionTenantId && sessionTenantId !== tenantId) {
         setTenantId(sessionTenantId);

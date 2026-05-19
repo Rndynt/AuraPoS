@@ -59,5 +59,6 @@ export function useTenantProfile(tenantId: string) {
   return useQuery<TenantProfile>({
     queryKey: ["/api/tenants/profile", tenantId],
     queryFn: () => fetchTenantProfile(tenantId),
+    enabled: !!tenantId,
   });
 }
