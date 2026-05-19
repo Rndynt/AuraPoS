@@ -136,12 +136,17 @@ export function MobileCartDrawer({
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
           <Drawer.Content
-            className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl transition-transform duration-300 w-full rounded-t-[2rem]`}
+            className={`fixed top-0 bottom-0 right-0 z-[60] bg-white border-l border-slate-200 flex flex-col shadow-2xl w-full rounded-t-[2rem]`}
             style={{ height: '95dvh', marginTop: '5dvh' }}
             data-testid="drawer-mobile-cart"
           >
+          {/* Drag Handle */}
+          <div className="flex items-center justify-center pt-3 pb-1 rounded-t-[2rem] bg-white flex-shrink-0">
+            <Drawer.Handle className="w-10 h-1 rounded-full bg-slate-300" />
+          </div>
+
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white rounded-t-[2rem] relative z-40">
+          <div className="flex items-center justify-between px-4 pb-4 pt-2 border-b border-slate-100 bg-white relative z-40">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onOpenChange(false)}
