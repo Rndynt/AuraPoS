@@ -68,4 +68,13 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: BASE_URL,
   trustedOrigins: buildTrustedOrigins(),
+  user: {
+    additionalFields: {
+      tenantId: {
+        type: 'string',
+        required: false,
+        fieldName: 'tenant_id',
+      },
+    },
+  },
 });
