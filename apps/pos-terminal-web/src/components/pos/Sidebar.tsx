@@ -1,38 +1,31 @@
-import { ShoppingBag, LayoutGrid, Square, Settings, LogOut } from "lucide-react";
+import { ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTenant } from "@/context/TenantContext";
 
-type NavItemProps = {
-  icon: typeof LayoutGrid;
-  label: string;
-  route?: string;
-  isActive?: boolean;
-  onClick?: () => void;
-  testId?: string;
-  className?: string;
-};
-
-function NavItem({ 
-  icon: Icon, 
-  label, 
-  isActive = false, 
-  onClick,
-  testId,
-  className = ""
-}: NavItemProps) {
+// ─── Desktop icon-only sidebar ────────────────────────────────────────────────
+function SidebarItem({
+  icon: Icon, label, isActive = false, onClick, testId,
+}: {
+  icon: typeof LayoutGrid; label: string;
+  isActive?: boolean; onClick?: () => void; testId?: string;
+}) {
   return (
     <button
       onClick={onClick}
       data-testid={testId}
-      className={`p-3 rounded-xl transition-all flex justify-center group relative ${
+      title={label}
+      className={`group relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-150 ${
         isActive
-          ? "bg-blue-50 text-blue-600"
-          : "text-slate-400 hover:bg-slate-50"
-      } ${className}`}
+          ? "bg-blue-600 text-white shadow-md shadow-blue-400/30"
+          : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+      }`}
     >
-      <Icon size={22} />
-      <span className="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+      <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+
+      {/* Tooltip */}
+      <span className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 z-50">
         {label}
+        <span className="absolute -left-1 top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-800" />
       </span>
     </button>
   );
@@ -42,131 +35,110 @@ export function Sidebar() {
   const [location, setLocation] = useLocation();
   const { hasModule, isLoading } = useTenant();
 
-  const handleNavigation = (route: string) => {
-    setLocation(route);
-  };
+  const showTables  = !isLoading && hasModule("enable_table_management");
+  const showKitchen = !isLoading && hasModule("enable_kitchen_ticket");
 
-  const isPOSActive = location === "/pos" || location === "/";
-  const isTablesActive = location === "/tables";
-  const isManagementActive = ["/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].includes(location);
-
-  const showTables = !isLoading && hasModule('enable_table_management');
+  const nav = (path: string) => setLocation(path);
+  const isHub = ["/hub", "/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].some(p => location === p || location.startsWith(p));
 
   return (
-    <aside className="hidden md:flex w-20 bg-white border-r border-slate-200 flex-col items-center py-6 flex-shrink-0 z-30">
+    <aside className="hidden md:flex flex-col items-center w-[68px] h-screen bg-white border-r border-slate-100 py-5 flex-shrink-0 z-30 gap-2">
+
       {/* Logo */}
-      <div className="mb-8 p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
-        <ShoppingBag className="text-white w-6 h-6" />
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-md shadow-blue-300/40 mb-3 flex-shrink-0">
+        <ShoppingBag size={18} className="text-white" strokeWidth={2.5} />
       </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 w-full flex flex-col gap-4 px-2">
-        <NavItem
+      {/* Nav items */}
+      <nav className="flex flex-col items-center gap-1.5 flex-1">
+        <SidebarItem
           icon={LayoutGrid}
-          label="POS Menu"
-          isActive={isPOSActive}
-          onClick={() => handleNavigation("/pos")}
+          label="Kasir / POS"
+          isActive={location === "/pos" || location === "/"}
+          onClick={() => nav("/pos")}
           testId="button-nav-pos"
         />
 
         {showTables && (
-          <NavItem
-            icon={Square}
-            label="Tables"
-            isActive={isTablesActive}
-            onClick={() => handleNavigation("/tables")}
+          <SidebarItem
+            icon={UtensilsCrossed}
+            label="Meja"
+            isActive={location.startsWith("/tables")}
+            onClick={() => nav("/tables")}
             testId="button-nav-tables"
           />
         )}
 
-        <NavItem
-          icon={Settings}
-          label="Management"
-          isActive={isManagementActive}
-          onClick={() => handleNavigation("/hub")}
-          testId="button-nav-management"
+        {showKitchen && (
+          <SidebarItem
+            icon={ChefHat}
+            label="Dapur / Kitchen"
+            isActive={location.startsWith("/kitchen")}
+            onClick={() => nav("/kitchen")}
+            testId="button-nav-kitchen"
+          />
+        )}
+
+        <SidebarItem
+          icon={Grip}
+          label="Hub / Manajemen"
+          isActive={isHub}
+          onClick={() => nav("/hub")}
+          testId="button-nav-hub"
         />
       </nav>
 
-      {/* Logout Button */}
-      <button 
-        className="p-3 text-slate-400 hover:text-red-500 transition-colors"
+      {/* Logout */}
+      <button
+        className="flex items-center justify-center w-11 h-11 rounded-xl text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all duration-150 flex-shrink-0"
         data-testid="button-nav-logout"
+        title="Keluar"
       >
-        <LogOut size={22} />
+        <LogOut size={18} strokeWidth={1.8} />
       </button>
     </aside>
   );
 }
 
+// ─── SidebarContent (used in mobile sheet/drawer if needed) ───────────────────
 export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const [location, setLocation] = useLocation();
   const { hasModule, isLoading } = useTenant();
 
-  const handleNavigation = (route: string) => {
-    setLocation(route);
-    onItemClick?.();
-  };
+  const showTables  = !isLoading && hasModule("enable_table_management");
+  const showKitchen = !isLoading && hasModule("enable_kitchen_ticket");
 
-  const isPOSActive = location === "/pos" || location === "/";
-  const isTablesActive = location === "/tables";
-  const isManagementActive = ["/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].includes(location);
+  const nav = (path: string) => { setLocation(path); onItemClick?.(); };
+  const isHub = ["/hub", "/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].some(p => location === p || location.startsWith(p));
 
-  const showTables = !isLoading && hasModule('enable_table_management');
+  const items = [
+    { path: "/pos",      icon: LayoutGrid,       label: "Kasir / POS",      active: location === "/pos" || location === "/",   show: true         },
+    { path: "/tables",   icon: UtensilsCrossed,  label: "Meja",             active: location.startsWith("/tables"),            show: showTables   },
+    { path: "/kitchen",  icon: ChefHat,          label: "Dapur / Kitchen",  active: location.startsWith("/kitchen"),           show: showKitchen  },
+    { path: "/hub",      icon: Grip,             label: "Hub / Manajemen",  active: isHub,                                     show: true         },
+  ];
 
   return (
-    <div className="flex flex-col gap-2 mt-8">
-      <button
-        onClick={() => handleNavigation("/pos")}
-        data-testid="button-nav-mobile-pos"
-        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-          isPOSActive
-            ? "bg-blue-50 text-blue-600"
-            : "text-slate-600 hover:bg-slate-50"
-        }`}
-      >
-        <LayoutGrid size={20} />
-        <span className="font-medium">POS Menu</span>
-      </button>
-
-      {showTables && (
+    <div className="flex flex-col gap-1 py-4">
+      {items.filter(i => i.show).map(({ path, icon: Icon, label, active }) => (
         <button
-          onClick={() => handleNavigation("/tables")}
-          data-testid="button-nav-mobile-tables"
-          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-            isTablesActive
-              ? "bg-blue-50 text-blue-600"
-              : "text-slate-600 hover:bg-slate-50"
+          key={path}
+          onClick={() => nav(path)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium ${
+            active ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
           }`}
         >
-          <Square size={20} />
-          <span className="font-medium">Tables</span>
+          <Icon size={18} strokeWidth={active ? 2.5 : 1.8} />
+          {label}
         </button>
-      )}
+      ))}
 
-      <button
-        onClick={() => handleNavigation("/hub")}
-        data-testid="button-nav-mobile-management"
-        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-          isManagementActive
-            ? "bg-blue-50 text-blue-600"
-            : "text-slate-600 hover:bg-slate-50"
-        }`}
-      >
-        <Settings size={20} />
-        <span className="font-medium">Management</span>
-      </button>
-
-      <div className="flex-1 min-h-8" />
-
-      <button
-        onClick={() => onItemClick?.()}
-        data-testid="button-nav-mobile-logout"
-        className="w-full flex items-center gap-3 p-3 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-      >
-        <LogOut size={20} />
-        <span className="font-medium">Logout</span>
-      </button>
+      <div className="mt-2 pt-2 border-t border-slate-100">
+        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all">
+          <LogOut size={18} strokeWidth={1.8} />
+          Keluar
+        </button>
+      </div>
     </div>
   );
 }
