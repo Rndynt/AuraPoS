@@ -780,12 +780,15 @@ function FullscreenButton({ onClick }: { onClick: () => void }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function CustomerDisplayPage() {
   const [msg, setMsg] = useState<CFDMessage>({ type: 'idle', tenantName: 'AuraPOS' });
-  const [showPrompt, setShowPrompt] = useState(true);
-  const [sessionTenantId, setSessionTenantId] = useState<string | null>(null);
   const { isFullscreen, enter } = useFullscreen();
 
   // Ambil tenantId dari URL (?tenantId=xxx) agar Device B tanpa login bisa sync
   const tenantIdFromUrl = new URLSearchParams(window.location.search).get('tenantId') ?? undefined;
+
+  // Jika tenantId sudah ada di URL → device ini adalah layar pelanggan, langsung tampil
+  // Jika tidak → device kasir, tampilkan prompt setup dulu
+  const [showPrompt, setShowPrompt] = useState(!tenantIdFromUrl);
+  const [sessionTenantId, setSessionTenantId] = useState<string | null>(null);
 
   // Fetch tenantId dari session login — karena CURRENT_TENANT_ID sengaja kosong,
   // satu-satunya cara dapat tenantId yang benar adalah dari /api/auth/me
