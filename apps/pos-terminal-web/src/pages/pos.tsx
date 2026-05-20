@@ -350,15 +350,7 @@ export default function POSPage() {
       cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
     }
     
-    // Open payment dialog - order will be created when payment is confirmed
-    // Broadcast ke Customer Display: state payment
-    sendToCFD({
-      type: 'payment',
-      tenantName: document.title || 'AuraPOS',
-      orderNumber: cart.orderNumber,
-      total: cart.total,
-      method: 'cash',
-    });
+    // Buka dialog dulu — CFD akan diupdate saat user memilih metode bayar
     setPaymentMethodDialogOpen(true);
     setMobileCartOpen(false);
   };
