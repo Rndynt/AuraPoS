@@ -61,7 +61,7 @@ export function toDomainOrder(
     paid_amount: parseFloat(dbOrder.paidAmount),
     payment_status: dbOrder.paymentStatus as 'paid' | 'partial' | 'unpaid',
     order_number: dbOrder.orderNumber,
-    status: dbOrder.status as 'draft' | 'confirmed' | 'completed' | 'cancelled',
+    status: dbOrder.status as 'draft' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled',
     customer_name: dbOrder.customerName || undefined,
     table_number: dbOrder.tableNumber || undefined,
     notes: dbOrder.notes || undefined,

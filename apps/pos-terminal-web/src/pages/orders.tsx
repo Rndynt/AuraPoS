@@ -22,6 +22,7 @@ const ORDER_STATUS_CONFIG = {
   confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-700" },
   preparing: { label: "Preparing", color: "bg-orange-100 text-orange-700" },
   ready: { label: "Ready", color: "bg-emerald-100 text-emerald-700" },
+  served: { label: "Disajikan", color: "bg-teal-100 text-teal-700" },
   completed: { label: "Completed", color: "bg-green-100 text-green-700" },
   cancelled: { label: "Cancelled", color: "bg-red-100 text-red-700" },
 };
