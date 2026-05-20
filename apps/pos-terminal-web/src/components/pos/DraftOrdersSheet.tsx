@@ -16,16 +16,6 @@ interface DraftOrdersSheetProps {
   onContinueOrder: (orderId: string) => void;
 }
 
-function isUuid(str: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-}
-
-function formatOrderNumber(order: { orderNumber?: string; id: string }) {
-  const num = order.orderNumber ?? (order as any).order_number;
-  if (!num || isUuid(num)) return `#${order.id.slice(-6).toUpperCase()}`;
-  return `#${num}`;
-}
-
 export function DraftOrdersSheet({ open, onOpenChange, onContinueOrder }: DraftOrdersSheetProps) {
   const isMobile = useIsMobile();
   const { data, isLoading } = useOpenOrders();
@@ -99,7 +89,7 @@ export function DraftOrdersSheet({ open, onOpenChange, onContinueOrder }: DraftO
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex items-center gap-1 text-xs font-semibold text-slate-700">
                     <Hash className="w-3 h-3 text-slate-400" />
-                    {formatOrderNumber(order)}
+                    {order.orderNumber}
                   </span>
                   {order.tableNumber && (
                     <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
