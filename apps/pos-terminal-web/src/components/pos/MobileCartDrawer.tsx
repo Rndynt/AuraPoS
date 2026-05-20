@@ -155,7 +155,7 @@ export function MobileCartDrawer({
               >
                 <ChevronDown size={20} />
               </button>
-              <h2 className="text-lg font-bold text-slate-800">Pesanan Baru</h2>
+              <h2 className="text-lg font-bold text-slate-800">Order</h2>
             </div>
             <div className="flex items-center gap-2">
               <div className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">

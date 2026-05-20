@@ -128,7 +128,7 @@ export function CartPanel({
       {/* Header with Order Number */}
       <div className="p-4 border-b border-slate-100 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">Pesanan Baru</h2>
+          <h2 className="text-lg font-bold text-slate-800">Order</h2>
           <div className="flex items-center gap-2">
             <div className="px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
               {orderNumber}
