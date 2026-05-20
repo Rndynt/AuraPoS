@@ -12,9 +12,11 @@
  * Semua komunikasi di-scope per tenantId — tidak ada cross-tenant leakage.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { getActiveTenantId } from '@/lib/tenant';
 import type { CartItem } from './useCart';
+
+export type CfdConnectionStatus = 'connected' | 'reconnecting' | 'offline';
 
 export const CFD_CHANNEL = 'aurapos-cfd-v1';
 
@@ -130,67 +132,114 @@ export function useCustomerDisplaySender() {
 }
 
 // ─── Receiver hook (dipakai di CFD page) ─────────────────────────────────────
-// tenantId bisa di-pass langsung (dari URL param yang sudah di-parse di page),
-// atau di-resolve otomatis dari URL search param / localStorage.
+// Fitur:
+//   - Auto-reconnect dengan exponential backoff (1s → 2s → 4s → ... maks 30s)
+//   - Deteksi browser offline/online — reconnect langsung saat online kembali
+//   - Hard reload otomatis jika gagal reconnect > MAX_RETRIES kali berturut-turut
+//   - Expose status: 'connected' | 'reconnecting' | 'offline'
 export function useCustomerDisplayReceiver(
   onMessage: (msg: CFDMessage) => void,
   tenantIdOverride?: string,
-) {
+): { status: CfdConnectionStatus } {
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
+  const [status, setStatus] = useState<CfdConnectionStatus>('reconnecting');
 
   useEffect(() => {
     const tenantId = resolveCfdTenantId(tenantIdOverride);
 
-    // ── Load state terakhir dari localStorage (untuk cold-start CFD) ──────
+    // ── Load state terakhir dari localStorage (cold-start) ────────────────
     try {
       const raw = localStorage.getItem(`${CFD_CHANNEL}:latest`);
-      if (raw) {
-        const msg = JSON.parse(raw) as CFDMessage;
-        onMessageRef.current(msg);
-      }
+      if (raw) onMessageRef.current(JSON.parse(raw) as CFDMessage);
     } catch {}
 
     // ── BroadcastChannel — same-device real-time ──────────────────────────
     let bc: BroadcastChannel | null = null;
     if (typeof BroadcastChannel !== 'undefined') {
       bc = new BroadcastChannel(CFD_CHANNEL);
-      bc.onmessage = (e: MessageEvent<CFDMessage>) => {
-        onMessageRef.current(e.data);
-      };
+      bc.onmessage = (e: MessageEvent<CFDMessage>) => onMessageRef.current(e.data);
     }
 
-    // ── WebSocket — cross-device real-time, scoped ke tenantId ───────────
+    // ── WebSocket — cross-device real-time ────────────────────────────────
+    const MAX_RETRIES   = 15;   // reload halaman setelah 15 gagal berturut-turut
+    const BASE_DELAY_MS = 1000; // backoff awal 1 detik
+    const MAX_DELAY_MS  = 30000; // maks 30 detik antar reconnect
+
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let destroyed = false;
+    let retryCount = 0;
 
-    function connect() {
-      if (destroyed || !tenantId) return;
+    function getDelay() {
+      // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s, 30s, ...
+      return Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS);
+    }
 
-      try {
-        ws = new WebSocket(buildWsUrl(tenantId));
-      } catch {
+    function scheduleReconnect() {
+      if (destroyed) return;
+      retryCount++;
+
+      // Terlalu banyak gagal → hard reload agar fresh connection
+      if (retryCount > MAX_RETRIES) {
+        window.location.reload();
         return;
       }
 
+      setStatus(navigator.onLine ? 'reconnecting' : 'offline');
+      const delay = getDelay();
+      reconnectTimer = setTimeout(connect, delay);
+    }
+
+    function connect() {
+      if (destroyed || !tenantId) return;
+      if (!navigator.onLine) {
+        // Browser offline — tunggu event 'online', jangan buka WS dulu
+        setStatus('offline');
+        return;
+      }
+
+      try {
+        ws?.close();
+        ws = new WebSocket(buildWsUrl(tenantId));
+      } catch {
+        scheduleReconnect();
+        return;
+      }
+
+      ws.onopen = () => {
+        if (destroyed) return;
+        retryCount = 0; // reset backoff setelah berhasil connect
+        setStatus('connected');
+      };
+
       ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data) as CFDMessage;
-          onMessageRef.current(msg);
-        } catch {}
+        try { onMessageRef.current(JSON.parse(e.data) as CFDMessage); } catch {}
       };
 
       ws.onclose = () => {
         if (destroyed) return;
-        // Auto-reconnect setelah 3 detik
-        reconnectTimer = setTimeout(connect, 3000);
+        scheduleReconnect();
       };
 
       ws.onerror = () => {
-        ws?.close();
+        ws?.close(); // akan trigger onclose → scheduleReconnect
       };
     }
+
+    // ── Browser online/offline events ─────────────────────────────────────
+    const handleOnline = () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      retryCount = 0;
+      connect(); // langsung reconnect begitu online
+    };
+    const handleOffline = () => {
+      setStatus('offline');
+      ws?.close();
+    };
+
+    window.addEventListener('online',  handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     connect();
 
@@ -199,8 +248,11 @@ export function useCustomerDisplayReceiver(
       bc?.close();
       if (reconnectTimer) clearTimeout(reconnectTimer);
       ws?.close();
+      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
-  // tenantIdOverride sebagai dep agar reconnect jika berubah
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantIdOverride]);
+
+  return { status };
 }

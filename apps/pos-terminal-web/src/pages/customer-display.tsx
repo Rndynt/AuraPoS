@@ -800,7 +800,7 @@ export default function CustomerDisplayPage() {
       .catch(() => {});
   }, [tenantIdFromUrl]);
 
-  useCustomerDisplayReceiver((m) => { if (m.type !== 'ping') setMsg(m); }, tenantIdFromUrl);
+  const { status } = useCustomerDisplayReceiver((m) => { if (m.type !== 'ping') setMsg(m); }, tenantIdFromUrl);
   const tenantName = msg.type !== 'ping' && 'tenantName' in msg ? msg.tenantName : 'AuraPOS';
 
   // Bangun link CFD yang mengandung tenantId — ini yang di-share ke Device B
@@ -835,6 +835,39 @@ export default function CustomerDisplayPage() {
         {msg.type === 'ordering'  && <OrderingScreen  {...msg} />}
         {msg.type === 'payment'   && <PaymentScreen   {...msg} />}
         {msg.type === 'completed' && <CompletedScreen {...msg} />}
+
+        {/* Indikator koneksi — pojok kiri bawah, hanya tampil saat tidak connected */}
+        {!showPrompt && status !== 'connected' && (
+          <div
+            className="fixed bottom-4 left-4 z-40 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm border text-xs font-semibold"
+            style={{
+              background: status === 'offline' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+              borderColor: status === 'offline' ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)',
+              color: status === 'offline' ? '#f87171' : '#fbbf24',
+              animation: 'fadeUp .25s ease both',
+            }}
+          >
+            {status === 'offline' ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                  <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+                  <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+                  <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+                  <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+                  <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                  <line x1="12" y1="20" x2="12.01" y2="20"/>
+                </svg>
+                Offline — menunggu koneksi…
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+                Menyambung kembali…
+              </>
+            )}
+          </div>
+        )}
 
         {/* Fullscreen prompt — tampil saat pertama buka */}
         {showPrompt && <FullscreenPrompt onEnter={handleEnterFullscreen} cfdUrl={cfdUrl} />}
