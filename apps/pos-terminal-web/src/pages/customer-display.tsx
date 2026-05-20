@@ -635,49 +635,113 @@ function FullscreenPrompt({ onEnter, cfdUrl }: { onEnter: () => void; cfdUrl: st
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation(); // jangan trigger fullscreen
-    navigator.clipboard.writeText(cfdUrl).then(() => {
+    e.stopPropagation();
+    // Reliable clipboard fallback — works inside iframes & non-HTTPS contexts
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = cfdUrl;
+      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* ignore */ }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(cfdUrl).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      }).catch(() => { fallback(); setCopied(true); setTimeout(() => setCopied(false), 2500); });
+    } else {
+      fallback();
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   return (
     <div
-      onClick={onEnter}
-      className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 cursor-pointer select-none"
-      style={{ background: 'rgba(2,6,23,0.82)', backdropFilter: 'blur(8px)', animation: 'fadeUp .3s ease both' }}
+      className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-5 select-none"
+      style={{ background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(10px)', animation: 'fadeUp .3s ease both' }}
     >
-      {/* Icon */}
-      <div className="w-20 h-20 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
-          <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
-        </svg>
-      </div>
-      <div className="text-center">
-        <p className="text-white font-bold text-xl mb-1">Tap untuk Fullscreen</p>
-        <p className="text-white/50 text-sm">Layar akan terkunci landscape otomatis</p>
+      {/* Header */}
+      <div className="text-center mb-1">
+        <p className="text-white/40 text-[11px] font-bold tracking-[0.2em] uppercase mb-2">Customer Facing Display</p>
+        <p className="text-white font-black text-2xl">Tampilan untuk Pelanggan</p>
+        <p className="text-white/40 text-sm mt-1">Halaman ini dirancang untuk layar yang menghadap pelanggan</p>
       </div>
 
-      {/* Link siap share ke device lain */}
-      <div
-        onClick={handleCopy}
-        className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 transition-colors cursor-pointer"
-        title="Klik untuk copy link"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400 flex-shrink-0">
-          <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-        </svg>
-        <span className="text-white/50 text-[11px] font-mono truncate max-w-[280px]">{cfdUrl}</span>
-        <span className={`text-[10px] font-semibold flex-shrink-0 transition-colors ${copied ? 'text-emerald-400' : 'text-blue-400'}`}>
-          {copied ? 'Tersalin!' : 'Copy'}
-        </span>
+      {/* Two cards side-by-side */}
+      <div className="flex gap-4 w-full max-w-xl px-6">
+
+        {/* Card 1 — share to another device */}
+        <div className="flex-1 flex flex-col items-center gap-3 bg-white/8 border border-white/12 rounded-2xl px-5 py-5">
+          <div className="w-11 h-11 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+              <polyline points="16 6 12 2 8 6"/>
+              <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-bold text-sm">Buka di Layar Lain</p>
+            <p className="text-white/40 text-xs mt-0.5 leading-snug">Salin link ini, buka di monitor/tablet pelanggan</p>
+          </div>
+          {/* URL bar + copy button */}
+          <div className="w-full flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+            <span className="flex-1 text-white/40 text-[10px] font-mono truncate">{cfdUrl}</span>
+            <button
+              onClick={handleCopy}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                copied
+                  ? 'bg-emerald-500/25 border border-emerald-400/40 text-emerald-400'
+                  : 'bg-blue-500/25 border border-blue-400/40 text-blue-400 hover:bg-blue-500/35'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Tersalin!
+                </>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  Copy URL
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Card 2 — fullscreen on this device */}
+        <div
+          onClick={onEnter}
+          className="flex-1 flex flex-col items-center justify-center gap-3 bg-white/8 border border-white/12 rounded-2xl px-5 py-5 cursor-pointer hover:bg-white/12 hover:border-white/20 transition-all active:scale-[0.98]"
+        >
+          <div className="w-11 h-11 rounded-xl bg-slate-500/20 border border-slate-400/30 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+              <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+            </svg>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-bold text-sm">Fullscreen di Sini</p>
+            <p className="text-white/40 text-xs mt-0.5 leading-snug">Gunakan layar ini sebagai display pelanggan</p>
+          </div>
+          <div className="w-full flex items-center justify-center gap-1.5 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+            <span className="text-white/50 text-xs font-medium">Tap untuk mulai</span>
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15">
-        <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-        <span className="text-white/60 text-xs font-medium">Customer Display siap • buka link di device lain</span>
+      {/* Footer hint */}
+      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/8 border border-white/10">
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+        <span className="text-white/50 text-xs font-medium">Real-time sync dengan POS kasir aktif</span>
       </div>
     </div>
   );
