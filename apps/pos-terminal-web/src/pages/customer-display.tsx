@@ -25,7 +25,7 @@ function useClock() {
 }
 
 // ─── Animated number ──────────────────────────────────────────────────────────
-function AnimatedTotal({ value, className }: { value: number; className?: string }) {
+function AnimatedTotal({ value, className, style }: { value: number; className?: string; style?: React.CSSProperties }) {
   const [display, setDisplay] = useState(value);
   const rafRef = useRef<number>();
   useEffect(() => {
@@ -42,7 +42,7 @@ function AnimatedTotal({ value, className }: { value: number; className?: string
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
-  return <span className={className}>{fmt(display)}</span>;
+  return <span className={className} style={style}>{fmt(display)}</span>;
 }
 
 // ─── IDLE ─────────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ function OrderingScreen(props: {
       {/* ── Body ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* Items — single column, top-to-bottom, easy to read */}
+        {/* Items — single column, rows stretch to fill full height, nothing cut off */}
         <div className="flex-1 overflow-hidden flex flex-col">
           {props.items.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-300">
@@ -171,22 +171,22 @@ function OrderingScreen(props: {
               <p className="text-sm font-medium">Menambahkan item…</p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col justify-start px-6 py-2 overflow-hidden">
+            <div className="flex-1 flex flex-col px-6 py-2 overflow-hidden">
               {props.items.map((item, i) => {
                 const sub = [item.variantName, item.optionsSummary].filter(Boolean).join(', ');
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-4 py-2.5 ${i < props.items.length - 1 ? 'border-b border-slate-100' : ''}`}
+                    className={`flex-1 flex items-center gap-4 min-h-0 ${i < props.items.length - 1 ? 'border-b border-slate-100' : ''}`}
                   >
                     <span className="flex-shrink-0 text-sm font-bold text-slate-400 w-6 text-right tabular-nums">
                       {item.quantity}×
                     </span>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[15px] font-semibold text-slate-800">{item.name}</span>
-                      {sub && <span className="text-[12px] text-slate-400 ml-2">{sub}</span>}
+                      <span className="text-[14px] font-semibold text-slate-800">{item.name}</span>
+                      {sub && <span className="text-[11px] text-slate-400 ml-2">{sub}</span>}
                     </div>
-                    <span className="flex-shrink-0 text-[15px] font-bold text-slate-800 tabular-nums">
+                    <span className="flex-shrink-0 text-[14px] font-bold text-slate-800 tabular-nums">
                       {fmt(item.itemTotal)}
                     </span>
                   </div>
@@ -198,10 +198,10 @@ function OrderingScreen(props: {
 
         {/* ── Right: Summary panel ── */}
         <div className="flex-shrink-0 w-72 border-l border-slate-200 bg-white flex flex-col overflow-hidden">
-          {/* Total */}
-          <div className="flex-shrink-0 bg-blue-600 px-6 py-8">
+          {/* Total — font auto-shrinks for large numbers */}
+          <div className="flex-shrink-0 bg-blue-600 px-5 py-6">
             <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-2">Total Tagihan</p>
-            <AnimatedTotal value={props.total} className="text-[2.8rem] font-black text-white tabular-nums leading-none block" />
+            <AnimatedTotal value={props.total} className="font-black text-white tabular-nums leading-none block" style={{ fontSize: 'clamp(1.6rem, 4.5vw, 2.6rem)' }} />
             <p className="text-xs text-blue-300 font-medium mt-3">{itemCount} item</p>
           </div>
           {/* Breakdown */}
