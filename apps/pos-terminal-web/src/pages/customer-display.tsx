@@ -1,12 +1,13 @@
 /**
  * Customer Facing Display (CFD)
- *
- * Halaman full-screen untuk monitor kedua yang menghadap pelanggan.
- * Buka via tombol di POS → terbuka di tab/window baru.
- * Menerima update real-time dari POS via BroadcastChannel.
+ * Design mengikuti sistem desain aplikasi utama:
+ * - Font: Inter (sama dengan app)
+ * - Warna: white/slate background, blue-600 primary (sama dengan CartPanel, dll)
+ * - Border radius, shadow, spacing konsisten
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { Monitor } from 'lucide-react';
 import {
   useCustomerDisplayReceiver,
   type CFDMessage,
@@ -14,14 +15,14 @@ import {
 } from '@/hooks/useCustomerDisplay';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
-const fmt = (n: number) =>
+const formatIDR = (n: number) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0,
   }).format(n);
 
-// ─── Animated number ─────────────────────────────────────────────────────────
+// ─── Animated total number ────────────────────────────────────────────────────
 function AnimatedTotal({ value }: { value: number }) {
   const [display, setDisplay] = useState(value);
   const rafRef = useRef<number>();
@@ -30,68 +31,87 @@ function AnimatedTotal({ value }: { value: number }) {
     const start = display;
     const end = value;
     if (start === end) return;
-    const duration = 400;
     const startTime = performance.now();
-
+    const duration = 350;
     const tick = (now: number) => {
       const p = Math.min((now - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
       setDisplay(Math.round(start + (end - start) * eased));
       if (p < 1) rafRef.current = requestAnimationFrame(tick);
     };
-
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  return <span>{fmt(display)}</span>;
+  return <>{formatIDR(display)}</>;
 }
 
 // ─── IDLE SCREEN ─────────────────────────────────────────────────────────────
 function IdleScreen({ tenantName }: { tenantName: string }) {
   return (
-    <div className="cfd-idle">
-      <div className="idle-bg" />
-      <div className="idle-content">
-        <div className="idle-logo">
-          {tenantName.slice(0, 2).toUpperCase()}
+    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 gap-8">
+      {/* Logo / Inisial */}
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-28 h-28 rounded-3xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-200">
+          <span className="text-4xl font-black text-white tracking-tight">
+            {tenantName.slice(0, 2).toUpperCase()}
+          </span>
         </div>
-        <h1 className="idle-name">{tenantName}</h1>
-        <p className="idle-sub">Selamat datang</p>
-        <div className="idle-tagline">
-          <span className="dot" /> Siap melayani Anda
+        <div className="text-center">
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight">{tenantName}</h1>
+          <p className="mt-2 text-slate-400 font-medium text-lg">Selamat datang</p>
+        </div>
+        {/* Status pill */}
+        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-5 py-2.5 shadow-sm">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-sm font-semibold text-slate-600">Siap melayani Anda</span>
         </div>
       </div>
-      <div className="idle-footer">
-        <span>Powered by AuraPOS</span>
+
+      {/* Dekorasi bawah */}
+      <div className="absolute bottom-6 flex items-center gap-2 text-slate-300">
+        <Monitor size={14} />
+        <span className="text-xs font-medium">Customer Display · AuraPOS</span>
       </div>
     </div>
   );
 }
 
-// ─── ORDER ROW ────────────────────────────────────────────────────────────────
+// ─── ITEM ROW ─────────────────────────────────────────────────────────────────
 function ItemRow({ item, index }: { item: CFDItem; index: number }) {
   return (
     <div
-      className="item-row"
-      style={{ animationDelay: `${index * 40}ms` }}
+      className="flex items-start gap-4 py-3.5 border-b border-slate-100 last:border-0"
+      style={{
+        animation: 'slideIn 0.2s ease both',
+        animationDelay: `${index * 35}ms`,
+      }}
     >
-      <div className="item-qty">{item.quantity}×</div>
-      <div className="item-info">
-        <span className="item-name">{item.name}</span>
+      {/* Qty badge */}
+      <div className="min-w-[36px] h-9 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center">
+        <span className="text-sm font-black text-blue-600">{item.quantity}×</span>
+      </div>
+
+      {/* Name + options */}
+      <div className="flex-1 min-w-0">
+        <p className="text-base font-bold text-slate-800 leading-tight">{item.name}</p>
         {(item.variantName || item.optionsSummary) && (
-          <span className="item-opts">
+          <p className="text-sm text-slate-400 mt-0.5">
             {[item.variantName, item.optionsSummary].filter(Boolean).join(' · ')}
-          </span>
+          </p>
         )}
       </div>
-      <div className="item-price">{fmt(item.itemTotal)}</div>
+
+      {/* Price */}
+      <div className="text-base font-bold text-slate-700 text-right tabular-nums">
+        {formatIDR(item.itemTotal)}
+      </div>
     </div>
   );
 }
 
-// ─── ORDERING SCREEN ─────────────────────────────────────────────────────────
+// ─── ORDERING SCREEN ──────────────────────────────────────────────────────────
 function OrderingScreen(props: {
   tenantName: string;
   orderNumber: string;
@@ -102,45 +122,63 @@ function OrderingScreen(props: {
   total: number;
 }) {
   return (
-    <div className="cfd-ordering">
-      {/* Header */}
-      <div className="ord-header">
-        <div className="ord-tenant">{props.tenantName}</div>
-        <div className="ord-num">Order {props.orderNumber}</div>
+    <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
+      {/* Header — mirip CartPanel header */}
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+            <span className="text-xs font-black text-white">
+              {props.tenantName.slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <span className="text-lg font-bold text-slate-800">{props.tenantName}</span>
+        </div>
+        <div className="px-3 py-1.5 bg-blue-50 text-blue-600 text-sm font-bold rounded-lg border border-blue-100">
+          Order {props.orderNumber}
+        </div>
       </div>
 
       {/* Items */}
-      <div className="ord-items">
+      <div className="flex-1 overflow-y-auto px-8 py-4">
         {props.items.length === 0 ? (
-          <div className="ord-empty">Menambahkan item…</div>
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+              <Monitor size={28} className="text-slate-300" />
+            </div>
+            <p className="text-base font-medium">Menambahkan item…</p>
+          </div>
         ) : (
-          props.items.map((item, i) => (
-            <ItemRow key={item.id} item={item} index={i} />
-          ))
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 px-5">
+            {props.items.map((item, i) => (
+              <ItemRow key={item.id} item={item} index={i} />
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Totals */}
-      <div className="ord-totals">
-        <div className="tot-row">
-          <span>Subtotal</span>
-          <span>{fmt(props.subtotal)}</span>
+      {/* Totals — persis seperti CartPanel totals */}
+      <div className="flex-shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="px-8 py-4 space-y-2">
+          <div className="flex justify-between text-sm text-slate-500">
+            <span>Subtotal</span>
+            <span className="font-medium tabular-nums">{formatIDR(props.subtotal)}</span>
+          </div>
+          {props.serviceCharge > 0 && (
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Service Charge</span>
+              <span className="font-medium tabular-nums">{formatIDR(props.serviceCharge)}</span>
+            </div>
+          )}
+          {props.tax > 0 && (
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Pajak</span>
+              <span className="font-medium tabular-nums">{formatIDR(props.tax)}</span>
+            </div>
+          )}
         </div>
-        {props.serviceCharge > 0 && (
-          <div className="tot-row">
-            <span>Service Charge</span>
-            <span>{fmt(props.serviceCharge)}</span>
-          </div>
-        )}
-        {props.tax > 0 && (
-          <div className="tot-row">
-            <span>Pajak</span>
-            <span>{fmt(props.tax)}</span>
-          </div>
-        )}
-        <div className="tot-row tot-grand">
-          <span>Total</span>
-          <span className="grand-val">
+        <div className="px-8 pb-6 pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span className="text-xl font-black text-slate-800">Total</span>
+          <span className="text-3xl font-black text-blue-600 tabular-nums">
             <AnimatedTotal value={props.total} />
           </span>
         </div>
@@ -151,65 +189,84 @@ function OrderingScreen(props: {
 
 // ─── PAYMENT SCREEN ───────────────────────────────────────────────────────────
 const METHOD_LABELS: Record<string, string> = {
-  cash: 'Tunai',
-  card: 'Kartu Debit/Kredit',
-  qris: 'QRIS',
-  transfer: 'Transfer Bank',
-  ewallet: 'E-Wallet',
+  cash: 'Tunai', card: 'Kartu Debit/Kredit',
+  qris: 'QRIS', transfer: 'Transfer Bank', ewallet: 'E-Wallet',
 };
 
 function PaymentScreen(props: {
-  tenantName: string;
-  orderNumber: string;
-  total: number;
-  method: string;
+  tenantName: string; orderNumber: string; total: number; method: string;
 }) {
   return (
-    <div className="cfd-payment">
-      <div className="pay-ring">
-        <div className="pay-icon">💳</div>
+    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 gap-6">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-lg px-16 py-12 flex flex-col items-center gap-5 min-w-[420px]">
+        {/* Spinning indicator */}
+        <div className="w-20 h-20 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+
+        <div className="text-center">
+          <p className="text-base font-semibold text-slate-500 mb-1">Menunggu Pembayaran</p>
+          <p className="text-4xl font-black text-slate-800 tabular-nums">{formatIDR(props.total)}</p>
+        </div>
+
+        {/* Method badge */}
+        <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-5 py-2.5">
+          <span className="text-sm font-bold text-blue-700">
+            {METHOD_LABELS[props.method] ?? props.method}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400 font-medium">Order {props.orderNumber}</p>
       </div>
-      <h2 className="pay-title">Menunggu Pembayaran</h2>
-      <div className="pay-total">{fmt(props.total)}</div>
-      <div className="pay-method">
-        via {METHOD_LABELS[props.method] ?? props.method}
-      </div>
-      <div className="pay-order">Order {props.orderNumber}</div>
+
+      <p className="text-sm font-medium text-slate-400">{props.tenantName}</p>
     </div>
   );
 }
 
 // ─── COMPLETED SCREEN ─────────────────────────────────────────────────────────
 function CompletedScreen(props: {
-  tenantName: string;
-  orderNumber: string;
-  total: number;
-  amountPaid: number;
-  change: number;
+  tenantName: string; orderNumber: string;
+  total: number; amountPaid: number; change: number;
 }) {
   return (
-    <div className="cfd-completed">
-      <div className="done-check">✓</div>
-      <h2 className="done-title">Pembayaran Berhasil!</h2>
-      <div className="done-total">{fmt(props.total)}</div>
-
-      {props.amountPaid > 0 && (
-        <div className="done-rows">
-          <div className="done-row">
-            <span>Bayar</span>
-            <span>{fmt(props.amountPaid)}</span>
-          </div>
-          {props.change > 0 && (
-            <div className="done-row done-change">
-              <span>Kembalian</span>
-              <span>{fmt(props.change)}</span>
-            </div>
-          )}
+    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 gap-6">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-lg px-16 py-12 flex flex-col items-center gap-5 min-w-[420px]">
+        {/* Check icon */}
+        <div
+          className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-100"
+          style={{ animation: 'popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both' }}
+        >
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </div>
-      )}
 
-      <p className="done-thanks">Terima kasih telah berkunjung! 🙏</p>
-      <p className="done-sub">{props.tenantName}</p>
+        <div className="text-center">
+          <p className="text-lg font-bold text-green-600 mb-1">Pembayaran Berhasil!</p>
+          <p className="text-4xl font-black text-slate-800 tabular-nums">{formatIDR(props.total)}</p>
+        </div>
+
+        {/* Breakdown */}
+        {props.amountPaid > 0 && (
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Dibayar</span>
+              <span className="font-semibold tabular-nums">{formatIDR(props.amountPaid)}</span>
+            </div>
+            {props.change > 0 && (
+              <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                <span className="font-bold text-slate-700">Kembalian</span>
+                <span className="font-black text-green-600 tabular-nums">{formatIDR(props.change)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <p className="text-base font-semibold text-slate-500">
+          Terima kasih telah berkunjung! 🙏
+        </p>
+      </div>
+
+      <p className="text-sm font-medium text-slate-400">{props.tenantName} · Order {props.orderNumber}</p>
     </div>
   );
 }
@@ -227,354 +284,23 @@ export default function CustomerDisplayPage() {
 
   return (
     <>
-      <style>{CFD_STYLES}</style>
-      <div className="cfd-root">
-        {msg.type === 'idle' && <IdleScreen tenantName={tenantName} />}
-        {msg.type === 'ordering' && <OrderingScreen {...msg} />}
-        {msg.type === 'payment' && <PaymentScreen {...msg} />}
+      <style>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-10px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.5); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        body { overflow: hidden; }
+      `}</style>
+      <div className="w-screen h-screen flex flex-col bg-slate-50 relative">
+        {msg.type === 'idle'      && <IdleScreen tenantName={tenantName} />}
+        {msg.type === 'ordering'  && <OrderingScreen {...msg} />}
+        {msg.type === 'payment'   && <PaymentScreen {...msg} />}
         {msg.type === 'completed' && <CompletedScreen {...msg} />}
       </div>
     </>
   );
 }
-
-// ─── STYLES ───────────────────────────────────────────────────────────────────
-const CFD_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  .cfd-root {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    background: #0d1117;
-    color: #f0f0f0;
-    display: flex;
-    align-items: stretch;
-  }
-
-  /* ── IDLE ── */
-  .cfd-idle {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(145deg, #0d1117 0%, #111827 60%, #1a1f2e 100%);
-  }
-  .idle-bg {
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 60% 50% at 30% 40%, rgba(251,191,36,0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 60% at 75% 70%, rgba(251,191,36,0.05) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .idle-content {
-    position: relative;
-    text-align: center;
-    animation: fadeUp 0.8s ease both;
-  }
-  .idle-logo {
-    width: 96px; height: 96px;
-    margin: 0 auto 24px;
-    border-radius: 24px;
-    background: linear-gradient(135deg, #f59e0b, #fbbf24);
-    color: #0d1117;
-    font-size: 36px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 48px rgba(251,191,36,0.25), 0 8px 32px rgba(0,0,0,0.4);
-    letter-spacing: -1px;
-  }
-  .idle-name {
-    font-family: 'DM Serif Display', serif;
-    font-size: clamp(2.5rem, 5vw, 4rem);
-    color: #fef3c7;
-    letter-spacing: -0.5px;
-    line-height: 1.1;
-    margin-bottom: 8px;
-  }
-  .idle-sub {
-    font-size: 1.1rem;
-    color: #6b7280;
-    font-weight: 400;
-    margin-bottom: 24px;
-  }
-  .idle-tagline {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(251,191,36,0.1);
-    border: 1px solid rgba(251,191,36,0.2);
-    border-radius: 999px;
-    padding: 8px 20px;
-    font-size: 0.9rem;
-    color: #fbbf24;
-    font-weight: 500;
-  }
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  .idle-footer {
-    position: absolute;
-    bottom: 24px;
-    left: 0; right: 0;
-    text-align: center;
-    font-size: 0.75rem;
-    color: #374151;
-    letter-spacing: 0.05em;
-  }
-
-  /* ── ORDERING ── */
-  .cfd-ordering {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: #0d1117;
-  }
-  .ord-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 32px;
-    background: #111827;
-    border-bottom: 1px solid #1f2937;
-  }
-  .ord-tenant {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.4rem;
-    color: #fbbf24;
-  }
-  .ord-num {
-    font-size: 0.85rem;
-    color: #6b7280;
-    font-weight: 500;
-    background: #1f2937;
-    padding: 4px 12px;
-    border-radius: 999px;
-  }
-  .ord-items {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 32px;
-    scrollbar-width: thin;
-    scrollbar-color: #1f2937 transparent;
-  }
-  .ord-empty {
-    text-align: center;
-    color: #374151;
-    padding: 48px 0;
-    font-size: 1rem;
-  }
-  .item-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 14px 0;
-    border-bottom: 1px solid #1a2030;
-    animation: slideIn 0.25s ease both;
-  }
-  .item-qty {
-    min-width: 36px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #fbbf24;
-    padding-top: 1px;
-  }
-  .item-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  .item-name {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #f9fafb;
-  }
-  .item-opts {
-    font-size: 0.8rem;
-    color: #6b7280;
-    font-weight: 400;
-  }
-  .item-price {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #d1fae5;
-    text-align: right;
-    min-width: 120px;
-  }
-  .ord-totals {
-    padding: 20px 32px;
-    background: #111827;
-    border-top: 1px solid #1f2937;
-  }
-  .tot-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: #9ca3af;
-    padding: 4px 0;
-  }
-  .tot-grand {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #1f2937;
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #f9fafb;
-  }
-  .grand-val { color: #fbbf24; }
-
-  /* ── PAYMENT ── */
-  .cfd-payment {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 16px;
-    background: linear-gradient(145deg, #0d1117, #111827);
-    animation: fadeUp 0.4s ease both;
-  }
-  .pay-ring {
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    border: 3px solid rgba(251,191,36,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: spin 3s linear infinite;
-    box-shadow: 0 0 40px rgba(251,191,36,0.1);
-    margin-bottom: 8px;
-  }
-  .pay-icon { font-size: 48px; animation: spin 3s linear infinite reverse; }
-  .pay-title {
-    font-size: 1.4rem;
-    color: #9ca3af;
-    font-weight: 500;
-  }
-  .pay-total {
-    font-size: clamp(2.5rem, 6vw, 4.5rem);
-    font-weight: 800;
-    color: #fbbf24;
-    letter-spacing: -1px;
-  }
-  .pay-method {
-    font-size: 1rem;
-    color: #6b7280;
-  }
-  .pay-order {
-    font-size: 0.8rem;
-    color: #374151;
-    background: #1f2937;
-    padding: 4px 12px;
-    border-radius: 999px;
-  }
-
-  /* ── COMPLETED ── */
-  .cfd-completed {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 16px;
-    background: linear-gradient(145deg, #052e16, #0d1117 50%, #052e16);
-    animation: fadeUp 0.4s ease both;
-  }
-  .done-check {
-    width: 96px; height: 96px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #16a34a, #22c55e);
-    color: white;
-    font-size: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 60px rgba(34,197,94,0.3);
-    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-    margin-bottom: 8px;
-  }
-  .done-title {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #f0fdf4;
-  }
-  .done-total {
-    font-size: clamp(2.5rem, 6vw, 4.5rem);
-    font-weight: 800;
-    color: #4ade80;
-    letter-spacing: -1px;
-  }
-  .done-rows {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
-    padding: 16px 32px;
-    min-width: 280px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .done-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 48px;
-    font-size: 1rem;
-    color: #9ca3af;
-  }
-  .done-change {
-    color: #4ade80;
-    font-weight: 700;
-    font-size: 1.1rem;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  .done-thanks {
-    font-size: 1.15rem;
-    color: #d1fae5;
-    font-weight: 500;
-    margin-top: 8px;
-  }
-  .done-sub {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1rem;
-    color: #374151;
-  }
-
-  /* ── ANIMATIONS ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-12px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes popIn {
-    from { opacity: 0; transform: scale(0.5); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.6; transform: scale(0.85); }
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-  }
-`;
