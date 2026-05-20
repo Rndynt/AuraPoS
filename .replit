@@ -38,7 +38,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "COREPACK_ENABLE_STRICT=0 pnpm run dev"
+args = "NODE_ENV=development ./node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json apps/api/src/index.ts"
 waitForPort = 5000
 
 [agent]
