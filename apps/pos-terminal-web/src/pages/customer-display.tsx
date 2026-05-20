@@ -119,16 +119,6 @@ function IdleScreen({ tenantName }: { tenantName: string }) {
 }
 
 // ─── ORDERING ─────────────────────────────────────────────────────────────────
-// Category accent colors (cycling)
-const CAT_ACCENTS = [
-  { dot: 'bg-blue-500',   header: 'bg-blue-600',   text: 'text-white' },
-  { dot: 'bg-violet-500', header: 'bg-violet-600',  text: 'text-white' },
-  { dot: 'bg-amber-500',  header: 'bg-amber-500',   text: 'text-white' },
-  { dot: 'bg-emerald-500',header: 'bg-emerald-600', text: 'text-white' },
-  { dot: 'bg-rose-500',   header: 'bg-rose-600',    text: 'text-white' },
-  { dot: 'bg-cyan-500',   header: 'bg-cyan-600',    text: 'text-white' },
-];
-
 function OrderingScreen(props: {
   tenantName: string; orderNumber: string; items: CFDItem[];
   subtotal: number; tax: number; serviceCharge: number; total: number;
@@ -146,7 +136,7 @@ function OrderingScreen(props: {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#f8f9fc' }}>
+    <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
       {/* ── Header ── */}
       <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -171,43 +161,34 @@ function OrderingScreen(props: {
       </div>
 
       {/* ── Body ── */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* Items — 2-col category grid */}
-        <div className="flex-1 p-4 overflow-hidden">
+        {/* Items — single column, top-to-bottom, easy to read */}
+        <div className="flex-1 overflow-hidden flex flex-col">
           {props.items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 text-slate-300 h-full">
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-300">
               <ShoppingCart size={40} strokeWidth={1.5} />
               <p className="text-sm font-medium">Menambahkan item…</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 content-start">
-              {catOrder.map((cat, catIdx) => {
-                const accent = CAT_ACCENTS[catIdx % CAT_ACCENTS.length];
+            <div className="flex-1 flex flex-col justify-start px-6 py-2 overflow-hidden">
+              {props.items.map((item, i) => {
+                const sub = [item.variantName, item.optionsSummary].filter(Boolean).join(', ');
                 return (
-                  <div key={cat} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
-                    {/* Category header — colored */}
-                    <div className={`${accent.header} px-4 py-2.5 flex items-center gap-2`}>
-                      <span className={`text-xs font-black uppercase tracking-widest ${accent.text}`}>{cat}</span>
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-4 py-2.5 ${i < props.items.length - 1 ? 'border-b border-slate-100' : ''}`}
+                  >
+                    <span className="flex-shrink-0 text-sm font-bold text-slate-400 w-6 text-right tabular-nums">
+                      {item.quantity}×
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[15px] font-semibold text-slate-800">{item.name}</span>
+                      {sub && <span className="text-[12px] text-slate-400 ml-2">{sub}</span>}
                     </div>
-                    {/* Item rows */}
-                    <div className="divide-y divide-slate-100">
-                      {grouped[cat].map((item) => {
-                        const sub = [item.variantName, item.optionsSummary].filter(Boolean).join(' · ');
-                        return (
-                          <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
-                            <span className={`flex-shrink-0 w-6 h-6 rounded-md ${accent.dot} flex items-center justify-center text-[10px] font-black text-white leading-none`}>
-                              {item.quantity}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-800 truncate leading-tight">{item.name}</p>
-                              {sub && <p className="text-[10px] text-slate-400 truncate leading-tight">{sub}</p>}
-                            </div>
-                            <span className="flex-shrink-0 text-sm font-bold text-slate-700 tabular-nums">{fmt(item.itemTotal)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <span className="flex-shrink-0 text-[15px] font-bold text-slate-800 tabular-nums">
+                      {fmt(item.itemTotal)}
+                    </span>
                   </div>
                 );
               })}
@@ -216,16 +197,15 @@ function OrderingScreen(props: {
         </div>
 
         {/* ── Right: Summary panel ── */}
-        <div className="flex-shrink-0 w-72 border-l border-slate-200 bg-white flex flex-col">
-          {/* Total — full-width colored block at top */}
-          <div className="bg-blue-600 px-6 py-6">
-            <p className="text-[11px] font-bold text-blue-200 uppercase tracking-widest mb-1">Total Tagihan</p>
-            <AnimatedTotal value={props.total} className="text-[2.4rem] font-black text-white tabular-nums leading-tight block" />
-            <p className="text-xs text-blue-300 font-medium mt-2">{itemCount} item</p>
+        <div className="flex-shrink-0 w-72 border-l border-slate-200 bg-white flex flex-col overflow-hidden">
+          {/* Total */}
+          <div className="flex-shrink-0 bg-blue-600 px-6 py-8">
+            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-2">Total Tagihan</p>
+            <AnimatedTotal value={props.total} className="text-[2.8rem] font-black text-white tabular-nums leading-none block" />
+            <p className="text-xs text-blue-300 font-medium mt-3">{itemCount} item</p>
           </div>
-
           {/* Breakdown */}
-          <div className="flex-1 px-6 py-5 space-y-3">
+          <div className="px-6 py-5 space-y-3.5">
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">Subtotal</span>
               <span className="font-semibold text-slate-700 tabular-nums">{fmt(props.subtotal)}</span>
