@@ -115,59 +115,156 @@ function useClock() {
   return now;
 }
 
+// ─── IDLE SLIDES ──────────────────────────────────────────────────────────────
+type Slide = {
+  id: string;
+  bg: string;          // Tailwind bg class for the slide panel
+  accent: string;      // Tailwind text/border color for labels
+  label?: string;      // Small label above headline
+  headline: string;
+  sub?: string;
+  badge?: string;      // e.g. "–20%"
+  badgeBg?: string;    // Tailwind bg for badge
+};
+
+const DEFAULT_SLIDES: Slide[] = [
+  {
+    id: 'welcome',
+    bg: 'bg-white',
+    accent: 'text-blue-600',
+    headline: 'Selamat\nDatang',
+    sub: 'Terima kasih telah berkunjung',
+  },
+  {
+    id: 'promo1',
+    bg: 'bg-blue-600',
+    accent: 'text-blue-200',
+    label: 'Promo Hari Ini',
+    headline: 'Diskon\n20%',
+    sub: 'Untuk semua minuman pilihan',
+    badge: 'Terbatas',
+    badgeBg: 'bg-white/20',
+  },
+  {
+    id: 'promo2',
+    bg: 'bg-slate-900',
+    accent: 'text-slate-400',
+    label: 'Spesial Weekend',
+    headline: 'Beli 2\nGratis 1',
+    sub: 'Berlaku setiap Sabtu & Minggu',
+    badge: 'Weekend Only',
+    badgeBg: 'bg-blue-600',
+  },
+  {
+    id: 'loyalty',
+    bg: 'bg-slate-50',
+    accent: 'text-blue-600',
+    label: 'Program Loyalitas',
+    headline: 'Kumpulkan\nPoin',
+    sub: 'Setiap transaksi = poin reward',
+  },
+];
+
 // ─── IDLE ─────────────────────────────────────────────────────────────────────
 function IdleScreen({ tenantName }: { tenantName: string }) {
   const now = useClock();
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [fading, setFading] = useState(false);
+  const slides = DEFAULT_SLIDES;
 
+  // Auto-advance every 5 s with fade transition
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setActiveIdx(i => (i + 1) % slides.length);
+        setFading(false);
+      }, 350);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [slides.length]);
+
+  const slide = slides[activeIdx];
   const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
   const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const initials = tenantName.slice(0, 2).toUpperCase();
 
+  // Text colour depends on slide bg
+  const isDarkSlide = slide.bg === 'bg-blue-600' || slide.bg === 'bg-slate-900';
+  const headlineColor = isDarkSlide ? 'text-white' : 'text-slate-900';
+  const subColor      = isDarkSlide ? 'text-white/60' : 'text-slate-400';
+  const labelColor    = slide.accent;
+
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 relative overflow-hidden select-none">
-      {/* Top accent bar — app primary blue */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600 z-20" />
+    <div className="flex-1 flex flex-col overflow-hidden select-none">
 
-      {/* Background texture — very subtle grid */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
-        style={{ backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-
-      {/* Time — top right corner, secondary */}
-      <div className="absolute top-6 right-8 z-10 text-right" style={{ animation: 'fadeUp .5s ease both' }}>
-        <p className="text-2xl font-bold text-slate-400 tabular-nums tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {timeStr}
-        </p>
-        <p className="text-xs text-slate-300 font-medium capitalize mt-0.5">{dateStr}</p>
-      </div>
-
-      {/* Center — store brand as the hero */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 relative z-10 px-8">
-
-        {/* Logo badge — large, app's blue gradient */}
-        <div
-          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-200"
-          style={{ animation: 'fadeUp .5s ease both' }}
-        >
-          <span className="text-2xl font-black text-white tracking-wide">{initials}</span>
+      {/* ── Top bar ─────────────────────────────────────────────────────── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-7 py-4 bg-white border-b border-slate-100 z-20">
+        {/* Brand */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-sm shadow-blue-200">
+            <span className="text-[11px] font-black text-white">{initials}</span>
+          </div>
+          <span className="font-bold text-slate-700 text-sm tracking-tight">{tenantName}</span>
         </div>
 
-        {/* Store name */}
-        <div className="text-center" style={{ animation: 'fadeUp .5s ease .08s both' }}>
-          <h1
-            className="font-black text-slate-900 tracking-tight leading-none"
-            style={{ fontSize: 'clamp(2rem,6vw,4rem)' }}
+        {/* Clock */}
+        <div className="text-right">
+          <p className="text-xl font-black text-slate-800 tabular-nums leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {timeStr}
+          </p>
+          <p className="text-[11px] text-slate-400 font-medium capitalize mt-0.5">{dateStr}</p>
+        </div>
+      </div>
+
+      {/* ── Slide area ──────────────────────────────────────────────────── */}
+      <div
+        className={`flex-1 flex flex-col items-center justify-center px-12 transition-opacity duration-300 ${slide.bg} ${fading ? 'opacity-0' : 'opacity-100'}`}
+      >
+        <div className="w-full max-w-2xl flex flex-col gap-5">
+
+          {/* Label */}
+          {slide.label && (
+            <p className={`text-xs font-bold tracking-[0.18em] uppercase ${labelColor}`}>
+              {slide.label}
+            </p>
+          )}
+
+          {/* Headline */}
+          <h2
+            className={`font-black leading-[0.95] tracking-tighter ${headlineColor}`}
+            style={{ fontSize: 'clamp(3.5rem,10vw,7rem)', whiteSpace: 'pre-line' }}
           >
-            {tenantName}
-          </h1>
-          {/* Blue underline accent */}
-          <div className="mx-auto mt-4 h-1 w-16 rounded-full bg-blue-600" />
+            {slide.headline}
+          </h2>
+
+          {/* Sub */}
+          {slide.sub && (
+            <p className={`font-medium text-lg ${subColor}`}>{slide.sub}</p>
+          )}
+
+          {/* Badge */}
+          {slide.badge && (
+            <span className={`self-start text-xs font-bold text-white px-3 py-1.5 rounded-full tracking-wide ${slide.badgeBg}`}>
+              {slide.badge}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex-shrink-0 flex items-center justify-center pb-6 relative z-10"
-        style={{ animation: 'fadeUp .5s ease .15s both' }}>
-        <span className="text-[11px] font-medium text-slate-300 tracking-widest uppercase">Powered by AuraPOS</span>
+      {/* ── Bottom bar — dot indicators + powered by ─────────────────── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-7 py-4 bg-white border-t border-slate-100 z-20">
+        {/* Dots */}
+        <div className="flex items-center gap-2">
+          {slides.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => { setFading(true); setTimeout(() => { setActiveIdx(i); setFading(false); }, 350); }}
+              className={`rounded-full transition-all duration-300 ${i === activeIdx ? 'w-5 h-2 bg-blue-600' : 'w-2 h-2 bg-slate-200'}`}
+            />
+          ))}
+        </div>
+        <span className="text-[11px] text-slate-300 font-medium tracking-widest uppercase">Powered by AuraPOS</span>
       </div>
     </div>
   );
