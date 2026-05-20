@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PortraitOverlay } from "@/components/PortraitOverlay";
 import { useEffect, useState } from "react";
 import HomePage from "@/pages/home";
 import POSPage from "@/pages/pos";
@@ -225,6 +226,7 @@ function App() {
         <TooltipProvider>
           <ToastProvider>
             <Router />
+            <PortraitOverlay />
           </ToastProvider>
         </TooltipProvider>
       </TenantProvider>
