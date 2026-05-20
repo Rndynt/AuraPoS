@@ -1,5 +1,4 @@
 import type { CartItem as CartItemType } from "@/hooks/useCart";
-import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
 type CartItemProps = {
@@ -10,82 +9,73 @@ type CartItemProps = {
 };
 
 export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItemProps) {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
-  const itemPrice = getItemPrice(item);
-  const totalPrice = itemPrice * item.quantity;
+  const totalPrice = getItemPrice(item) * item.quantity;
 
   return (
-    <div 
-      className='flex gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm relative'
+    <div
+      className="flex gap-2.5 bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm"
       data-testid={`cart-item-${item.id}`}
     >
-      <div className='w-14 h-14 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0'>
+      {/* Thumbnail */}
+      <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0 mt-0.5">
         {item.product.image_url && (
-          <img
-            src={item.product.image_url}
-            className='w-full h-full object-cover'
-            alt={item.product.name}
-          />
+          <img src={item.product.image_url} className="w-full h-full object-cover" alt={item.product.name} />
         )}
       </div>
-      <div className='flex-1 flex flex-col justify-between min-w-0'>
-        <div className='flex justify-between items-start'>
-          <h4 className='font-bold text-slate-700 text-sm truncate pr-4' data-testid={`text-cart-product-${item.id}`}>
-            {item.product.name}
-          </h4>
-          <span className='text-blue-600 font-bold text-sm whitespace-nowrap' data-testid={`text-item-total-${item.id}`}>
-            {formatPrice(totalPrice)}
-          </span>
-        </div>
-        {(item.variant || (item.selectedOptions && item.selectedOptions.length > 0)) && (
-          <div className='text-[10px] text-slate-500 my-1 bg-slate-50 p-1.5 rounded border border-slate-100 w-max max-w-full'>
-            {item.variant && (
-              <span className='block truncate'>
-                • {item.variant.name}
-              </span>
-            )}
-            {item.selectedOptions && item.selectedOptions.length > 0 && (
-              item.selectedOptions.map((option, idx) => (
-                <span key={idx} className='block truncate'>
-                  • {option.option_name}
-                </span>
-              ))
-            )}
-          </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        {/* Nama item — full width, wrap jika panjang */}
+        <p className="font-bold text-slate-800 text-sm leading-tight" data-testid={`text-cart-product-${item.id}`}>
+          {item.product.name}
+        </p>
+
+        {/* Opsi/varian */}
+        {(item.variant || item.selectedOptions?.length > 0) && (
+          <p className="text-[10px] text-slate-400 leading-tight">
+            {[item.variant?.name, ...(item.selectedOptions?.map(o => o.option_name) ?? [])].filter(Boolean).join(" · ")}
+          </p>
         )}
-        <div className='flex items-center justify-between mt-2'>
+
+        {/* Row bawah: trash | harga | qty control */}
+        <div className="flex items-center justify-between mt-0.5">
           <button
             onClick={() => onRemove(item.id)}
-            className='text-slate-300 hover:text-red-500'
+            className="text-slate-300 hover:text-red-500 transition-colors"
             data-testid={`button-remove-${item.id}`}
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
-          <div className='flex items-center gap-3 bg-slate-50 rounded-lg p-0.5 border border-slate-100'>
-            <button
-              onClick={() => onUpdateQty(item.id, item.quantity - 1)}
-              className='w-6 h-6 bg-white rounded shadow-sm flex items-center justify-center'
-              data-testid={`button-qty-minus-${item.id}`}
-            >
-              <Minus size={12} />
-            </button>
-            <span className='text-xs font-bold w-4 text-center' data-testid={`text-qty-${item.id}`}>
-              {item.quantity}
+
+          <div className="flex items-center gap-2">
+            {/* Harga sejajar dengan qty */}
+            <span className="text-sm font-bold text-blue-600 tabular-nums" data-testid={`text-item-total-${item.id}`}>
+              {fmt(totalPrice)}
             </span>
-            <button
-              onClick={() => onUpdateQty(item.id, item.quantity + 1)}
-              className='w-6 h-6 bg-white rounded shadow-sm flex items-center justify-center'
-              data-testid={`button-qty-plus-${item.id}`}
-            >
-              <Plus size={12} />
-            </button>
+
+            {/* Qty control */}
+            <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg p-0.5 border border-slate-100">
+              <button
+                onClick={() => onUpdateQty(item.id, item.quantity - 1)}
+                className="w-5 h-5 bg-white rounded shadow-sm flex items-center justify-center"
+                data-testid={`button-qty-minus-${item.id}`}
+              >
+                <Minus size={10} />
+              </button>
+              <span className="text-xs font-black w-4 text-center tabular-nums" data-testid={`text-qty-${item.id}`}>
+                {item.quantity}
+              </span>
+              <button
+                onClick={() => onUpdateQty(item.id, item.quantity + 1)}
+                className="w-5 h-5 bg-white rounded shadow-sm flex items-center justify-center"
+                data-testid={`button-qty-plus-${item.id}`}
+              >
+                <Plus size={10} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
