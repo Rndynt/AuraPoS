@@ -119,70 +119,55 @@ function useClock() {
 function IdleScreen({ tenantName }: { tenantName: string }) {
   const now = useClock();
 
-  const hh  = now.toLocaleTimeString('id-ID', { hour: '2-digit', hour12: false });
-  const mm  = now.toLocaleTimeString('id-ID', { minute: '2-digit' });
-  const ss  = now.toLocaleTimeString('id-ID', { second: '2-digit' });
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
   const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const initials = tenantName.slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-950 relative overflow-hidden select-none">
-      {/* Blue accent stripe — app primary color */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-blue-600 z-20" />
+    <div className="flex-1 flex flex-col bg-slate-50 relative overflow-hidden select-none">
+      {/* Top accent bar — app primary blue */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600 z-20" />
 
-      {/* Soft center glow */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 50%, rgba(59,130,246,0.09) 0%, transparent 70%)' }} />
+      {/* Background texture — very subtle grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
+        style={{ backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
-      {/* Main — fully centered */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 relative z-10 px-8">
-
-        {/* HH:MM big + SS small */}
-        <div className="flex items-end leading-none tabular-nums" style={{ animation: 'fadeUp .5s ease both' }}>
-          <span
-            className="font-black text-white tracking-tighter"
-            style={{ fontSize: 'clamp(5.5rem,19vw,12rem)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            {hh}
-          </span>
-          <span
-            className="font-black text-blue-500 mx-[0.04em] pb-[0.05em]"
-            style={{ fontSize: 'clamp(5.5rem,19vw,12rem)' }}
-          >
-            :
-          </span>
-          <span
-            className="font-black text-white tracking-tighter"
-            style={{ fontSize: 'clamp(5.5rem,19vw,12rem)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            {mm}
-          </span>
-          <span
-            className="font-bold text-slate-600 ml-[0.2em] mb-[0.18em] tracking-tighter"
-            style={{ fontSize: 'clamp(1.8rem,5vw,3.8rem)', fontVariantNumeric: 'tabular-nums' }}
-          >
-            {ss}
-          </span>
-        </div>
-
-        {/* Date — one line, minimal */}
-        <p
-          className="text-slate-500 font-medium capitalize tracking-widest uppercase"
-          style={{ fontSize: 'clamp(.7rem,1.1vw,.9rem)', letterSpacing: '0.15em', animation: 'fadeUp .5s ease .08s both' }}
-        >
-          {dateStr}
+      {/* Time — top right corner, secondary */}
+      <div className="absolute top-6 right-8 z-10 text-right" style={{ animation: 'fadeUp .5s ease both' }}>
+        <p className="text-2xl font-bold text-slate-400 tabular-nums tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {timeStr}
         </p>
+        <p className="text-xs text-slate-300 font-medium capitalize mt-0.5">{dateStr}</p>
       </div>
 
-      {/* Bottom — store brand only */}
-      <div
-        className="flex-shrink-0 flex items-center justify-center gap-2.5 pb-6 relative z-10"
-        style={{ animation: 'fadeUp .5s ease .15s both' }}
-      >
-        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-          <span className="text-[8px] font-black text-white leading-none">{initials}</span>
+      {/* Center — store brand as the hero */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 relative z-10 px-8">
+
+        {/* Logo badge — large, app's blue gradient */}
+        <div
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-200"
+          style={{ animation: 'fadeUp .5s ease both' }}
+        >
+          <span className="text-2xl font-black text-white tracking-wide">{initials}</span>
         </div>
-        <span className="text-xs font-semibold text-slate-600 tracking-widest uppercase">{tenantName}</span>
+
+        {/* Store name */}
+        <div className="text-center" style={{ animation: 'fadeUp .5s ease .08s both' }}>
+          <h1
+            className="font-black text-slate-900 tracking-tight leading-none"
+            style={{ fontSize: 'clamp(2rem,6vw,4rem)' }}
+          >
+            {tenantName}
+          </h1>
+          {/* Blue underline accent */}
+          <div className="mx-auto mt-4 h-1 w-16 rounded-full bg-blue-600" />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex-shrink-0 flex items-center justify-center pb-6 relative z-10"
+        style={{ animation: 'fadeUp .5s ease .15s both' }}>
+        <span className="text-[11px] font-medium text-slate-300 tracking-widest uppercase">Powered by AuraPOS</span>
       </div>
     </div>
   );
