@@ -15,6 +15,7 @@ import StockPage from "@/pages/stock";
 import EmployeesPage from "@/pages/employees";
 import StoreProfilePage from "@/pages/store-profile";
 import KitchenDisplayPage from "@/pages/kitchen-display";
+import CustomerDisplayPage from "@/pages/customer-display";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
@@ -210,6 +211,8 @@ function Router() {
           <StoreProfilePageWithLayout />
         </RequireAuth>
       </Route>
+      {/* Customer Facing Display — tidak butuh auth, full-screen tanpa layout */}
+      <Route path="/display" component={CustomerDisplayPage} />
       <Route component={NotFoundWithLayout} />
     </Switch>
   );

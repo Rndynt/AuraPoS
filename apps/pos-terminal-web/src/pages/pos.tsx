@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getActiveTenantId } from "@/lib/tenant";
+import { useTenant } from "@/context/TenantContext";
+import { useCustomerDisplaySender, toCFDItem } from "@/hooks/useCustomerDisplay";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -43,6 +45,28 @@ export default function POSPage() {
   const { hasFeature } = useFeatures();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { send: sendToCFD } = useCustomerDisplaySender();
+  const { tenantId } = useTenant();
+
+  // ── Broadcast cart state ke Customer Display setiap ada perubahan ──────────
+  useEffect(() => {
+    const tenantName = document.title || 'AuraPOS';
+    if (cart.items.length === 0) {
+      sendToCFD({ type: 'idle', tenantName });
+    } else {
+      sendToCFD({
+        type: 'ordering',
+        tenantName,
+        orderNumber: cart.orderNumber,
+        items: cart.items.map(toCFDItem),
+        subtotal: cart.subtotal,
+        tax: cart.tax,
+        serviceCharge: cart.serviceCharge,
+        total: cart.total,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.items, cart.total, cart.orderNumber]);
 
   // Auto-close mobile cart drawer when switching to tablet/desktop
   useEffect(() => {
@@ -327,6 +351,14 @@ export default function POSPage() {
     }
     
     // Open payment dialog - order will be created when payment is confirmed
+    // Broadcast ke Customer Display: state payment
+    sendToCFD({
+      type: 'payment',
+      tenantName: document.title || 'AuraPOS',
+      orderNumber: cart.orderNumber,
+      total: cart.total,
+      method: 'cash',
+    });
     setPaymentMethodDialogOpen(true);
     setMobileCartOpen(false);
   };
@@ -335,6 +367,15 @@ export default function POSPage() {
   const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod) => {
     if (!ensureCartHasItems() || !cart.selectedOrderTypeId) return;
     
+    // Update CFD dengan metode bayar yang dipilih
+    sendToCFD({
+      type: 'payment',
+      tenantName: document.title || 'AuraPOS',
+      orderNumber: cart.orderNumber,
+      total: cart.total,
+      method: paymentMethod,
+    });
+
     setIsProcessingQuickCharge(true);
     try {
       const totalAmount = cart.total;
@@ -350,11 +391,26 @@ export default function POSPage() {
       });
       const orderNumber = orderResult.order?.order_number || orderResult.order?.id;
       
+      // Broadcast: pembayaran selesai
+      sendToCFD({
+        type: 'completed',
+        tenantName: document.title || 'AuraPOS',
+        orderNumber: String(orderNumber ?? ''),
+        total: totalAmount,
+        amountPaid: totalAmount,
+        change: 0,
+      });
+      
       toast({
         title: "Pesanan berhasil dibuat & dibayar",
         description: `Order #${orderNumber} - Total: Rp ${totalAmount.toLocaleString("id-ID")} (${paymentMethod})`,
       });
       
+      // Kembali ke idle setelah 4 detik
+      setTimeout(() => {
+        sendToCFD({ type: 'idle', tenantName: document.title || 'AuraPOS' });
+      }, 4000);
+
       // Clear everything and close
       cart.clearCart();
       setPendingOrderForPayment(null);
@@ -594,7 +650,25 @@ export default function POSPage() {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
+    <div className="flex flex-col flex-1 min-h-0 h-full w-full max-w-[100vw]">
+      {/* Customer Display Shortcut Bar */}
+      <div className="flex items-center justify-end gap-2 px-3 py-1.5 bg-slate-50 border-b border-slate-200">
+        <button
+          onClick={() => window.open('/display', '_blank', 'width=1280,height=720,menubar=no,toolbar=no')}
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-200 px-3 py-1.5 rounded-md transition-colors"
+          title="Buka layar Customer Display di window baru"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          Customer Display
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
       {/* Main Product Area */}
       <ProductArea
         products={products}
@@ -741,6 +815,7 @@ export default function POSPage() {
           </div>
         </div>
       )}
+      </div> {/* end main content */}
     </div>
   );
 }
