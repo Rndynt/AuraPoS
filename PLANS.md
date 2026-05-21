@@ -100,3 +100,21 @@ Lanjutkan dengan endpoint backend payload struk tenant-aware dan fitur reprint d
 
 ### Continuation Notes
 Langkah berikutnya: simpan preferensi service/characteristic UUID per model printer agar lebih kompatibel lintas perangkat.
+
+## Plan: Perbaikan Auto Print Saat Printer Sudah Paired
+
+### Source
+- Tasklist: Request langsung user
+- User request: auto print di cart belum jalan walau printer paired sukses
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Progress
+#### Completed
+- [x] Tambah auto-reconnect di `bluetoothReceiptPrinter.print()` sebelum kirim bytes.
+- [x] Tambah reconnect attempt di flow pembayaran POS sebelum print.
+
+### Validation Log
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+- Notes: Lolos setelah perbaikan reconnect flow.

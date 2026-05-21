@@ -457,6 +457,7 @@ export default function POSPage() {
 
       if (hasReceiptPrinter) {
         try {
+          await bluetoothReceiptPrinter.reconnectIfPossible().catch(() => false);
           await bluetoothReceiptPrinter.print({
             orderNumber: String(orderNumber ?? cfdOrderNumber),
             tenantName,

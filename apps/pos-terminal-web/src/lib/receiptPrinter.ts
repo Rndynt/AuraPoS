@@ -89,8 +89,13 @@ class BluetoothReceiptPrinterManager {
 
   async print(payload: ReceiptPrintPayload): Promise<void> {
     if (!this.characteristic || !this.device?.gatt?.connected) {
-      throw new Error("Printer belum terkoneksi. Pair printer di halaman Printer Hub.");
+      await this.reconnectIfPossible();
     }
+
+    if (!this.characteristic || !this.device?.gatt?.connected) {
+      throw new Error("Printer belum terkoneksi. Buka halaman Printer Hub untuk pair/connect.");
+    }
+
     const data = buildEscPosBytes(buildReceiptText(payload));
     await this.characteristic.writeValue(data);
   }
