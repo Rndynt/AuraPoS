@@ -257,3 +257,27 @@ Opsional berikutnya: buat endpoint analytics summary dedicated (server-side aggr
 - Form tambah/edit produk: input kategori sekarang searchable (datalist-style) dengan sumber dari master kategori API.
 - Alur simpan produk kini mendukung `category_id` (UUID), dan backend resolve nama kategori dari UUID untuk kompatibilitas transisi.
 - Seeder diupdate: kategori master diinsert dan `products.category_id` ikut diisi.
+
+## Plan: Edit/Hapus + Urutkan Kartu Kategori Produk
+
+### Source
+- Tasklist: Request user langsung
+- User request: tambahkan action pada card kategori (ubah urutan/hapus), drag-drop urutan kategori, dan urutan tampil di POS setelah "All".
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Progress
+#### Completed
+- [x] Tambah endpoint tenant-aware untuk simpan urutan kategori berdasarkan sequence (`display_order`).
+- [x] Tambah UI aksi per card kategori: "Ubah urutan" dan "Hapus".
+- [x] Implement drag & drop kategori untuk update urutan otomatis ke database.
+- [x] Sinkronkan urutan kategori pada halaman POS (chip kategori + grouped view) setelah "All".
+
+### Validation Log
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+
+### Continuation Notes
+Opsional next: tambah modal konfirmasi hapus kategori dengan dropdown fallback (mengganti window.prompt) agar UX lebih aman.

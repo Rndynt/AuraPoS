@@ -32,5 +32,7 @@ router.post('/categories', CategoryController.createCategory);
 router.patch('/categories', CategoryController.renameCategory);
 // DELETE /api/catalog/categories - Delete category by moving products to fallback
 router.delete('/categories', CategoryController.deleteCategory);
+// PUT /api/catalog/categories/reorder - Reorder categories by id sequence
+router.put('/categories/reorder', CategoryController.reorderCategories);
 
 export default router;

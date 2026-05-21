@@ -10,6 +10,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
 import { useTenant } from "@/context/TenantContext";
 import { useOpenOrders } from "@/lib/api/tableHooks";
+import { useCategories } from "@/hooks/api/useCategories";
 
 const DEFAULT_CATEGORY = "All";
 
@@ -24,12 +25,16 @@ type ProductAreaProps = {
 };
 
 // Extract unique categories from products
-const getCategories = (products: Product[]): string[] => {
+const getCategories = (products: Product[], orderedCategoryNames: string[]): string[] => {
   if (!products || products.length === 0) {
     return [DEFAULT_CATEGORY];
   }
-  const categorySet = new Set(products.map(p => p.category).filter(Boolean));
-  return [DEFAULT_CATEGORY, ...Array.from(categorySet).sort()];
+
+  const categorySet = new Set(products.map((p) => p.category).filter(Boolean));
+  const ordered = orderedCategoryNames.filter((name) => categorySet.has(name));
+  const leftovers = Array.from(categorySet).filter((name) => !ordered.includes(name)).sort();
+
+  return [DEFAULT_CATEGORY, ...ordered, ...leftovers];
 };
 
 // Filter products by category
@@ -41,14 +46,16 @@ const filterByCategory = (products: Product[], category: string): Product[] => {
 };
 
 // Group products by category, preserving order
-const groupByCategory = (products: Product[]): { category: string; items: Product[] }[] => {
+const groupByCategory = (products: Product[], orderedCategoryNames: string[]): { category: string; items: Product[] }[] => {
   const map = new Map<string, Product[]>();
   for (const p of products) {
     const cat = p.category || "Lainnya";
     if (!map.has(cat)) map.set(cat, []);
     map.get(cat)!.push(p);
   }
-  return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+  const unordered = Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+  const orderIndex = new Map(orderedCategoryNames.map((name, index) => [name, index]));
+  return unordered.sort((a, b) => (orderIndex.get(a.category) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(b.category) ?? Number.MAX_SAFE_INTEGER));
 };
 
 export function ProductArea({ 
@@ -66,9 +73,11 @@ export function ProductArea({
   const { hasModule } = useTenant();
   const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
   const { data: openOrdersData } = useOpenOrders();
+  const { data: categories = [] } = useCategories();
+  const orderedCategoryNames = useMemo(() => categories.map((c) => c.name), [categories]);
   const draftCount = (openOrdersData?.orders ?? []).filter((o) => o.paymentStatus !== "paid").length;
 
-  const categories = useMemo(() => getCategories(products), [products]);
+  const categoryNames = useMemo(() => getCategories(products, orderedCategoryNames), [products, orderedCategoryNames]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -82,8 +91,8 @@ export function ProductArea({
 
   const isGroupedView = !searchQuery.trim() && selectedCategory === DEFAULT_CATEGORY;
   const groupedProducts = useMemo(
-    () => (isGroupedView ? groupByCategory(filteredProducts) : []),
-    [isGroupedView, filteredProducts]
+    () => (isGroupedView ? groupByCategory(filteredProducts, orderedCategoryNames) : []),
+    [isGroupedView, filteredProducts, orderedCategoryNames]
   );
 
   return (
@@ -109,7 +118,7 @@ export function ProductArea({
               <Skeleton className="h-9 w-20 rounded-full flex-shrink-0" />
             </>
           ) : (
-            categories.map((category) => (
+            categoryNames.map((category) => (
               <CategoryChip
                 key={category}
                 id={category}

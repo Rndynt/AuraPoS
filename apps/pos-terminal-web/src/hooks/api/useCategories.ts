@@ -51,3 +51,14 @@ export function useDeleteCategory() {
     },
   });
 }
+
+export function useReorderCategories() {
+  return useMutation({
+    mutationFn: (payload: { ordered_ids: string[] }) =>
+      req('/api/catalog/categories/reorder', { method: 'PUT', body: JSON.stringify(payload) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/catalog/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/catalog/products'] });
+    },
+  });
+}
