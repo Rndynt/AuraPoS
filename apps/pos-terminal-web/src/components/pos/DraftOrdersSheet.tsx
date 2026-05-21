@@ -7,7 +7,7 @@ import { useCancelOrder } from "@/lib/api/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/context/TenantContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Clock, ArrowRight, PackageOpen, User, Hash, Trash2, Loader2 } from "lucide-react";
+import { Clock, ArrowRight, PackageOpen, User, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface DraftOrdersSheetProps {
@@ -42,19 +42,16 @@ export function DraftOrdersSheet({ open, onOpenChange, onContinueOrder }: DraftO
   const content = (
     <div className="flex flex-col overflow-hidden" style={{ maxHeight: isMobile ? "70dvh" : "480px" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-            <Clock className="w-4 h-4 text-amber-500" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-slate-800">Pesanan Draft</h2>
-            <p className="text-xs text-slate-400">{unpaid.length} pesanan belum selesai</p>
-          </div>
+      <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 flex-shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+          <Clock className="w-4 h-4 text-amber-500" />
         </div>
-        <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
-          {unpaid.length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-800">Pesanan Draft</h2>
+          <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
+            {unpaid.length}
+          </Badge>
+        </div>
       </div>
 
       {/* List */}
@@ -87,8 +84,7 @@ export function DraftOrdersSheet({ open, onOpenChange, onContinueOrder }: DraftO
                 data-testid={`btn-continue-draft-${order.id}`}
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs font-semibold text-slate-700">
-                    <Hash className="w-3 h-3 text-slate-400" />
+                  <span className="text-xs font-semibold text-slate-700">
                     {order.orderNumber}
                   </span>
                   {order.tableNumber && (
