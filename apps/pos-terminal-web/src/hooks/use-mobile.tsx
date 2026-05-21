@@ -20,18 +20,28 @@ export function useIsMobile() {
 }
 
 export function useDeviceType(): "mobile" | "tablet" | "desktop" {
-  const [type, setType] = React.useState<"mobile" | "tablet" | "desktop">("desktop")
+  const detect = () => {
+    const isMobileWidth = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches
+    const isTabletWidth = window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT}px) and (max-width: ${TABLET_BREAKPOINT - 1}px)`).matches
+    // Require coarse pointer (touch) to treat as actual tablet — rules out small desktop windows
+    const isTouch = window.matchMedia("(pointer: coarse)").matches
+    if (isMobileWidth) return "mobile" as const
+    if (isTabletWidth && isTouch) return "tablet" as const
+    return "desktop" as const
+  }
+
+  const [type, setType] = React.useState<"mobile" | "tablet" | "desktop">(detect)
 
   React.useEffect(() => {
-    const update = () => {
-      const w = window.innerWidth
-      if (w < MOBILE_BREAKPOINT) setType("mobile")
-      else if (w < TABLET_BREAKPOINT) setType("tablet")
-      else setType("desktop")
-    }
-    window.addEventListener("resize", update)
+    const mqls = [
+      window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`),
+      window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT}px) and (max-width: ${TABLET_BREAKPOINT - 1}px)`),
+    ]
+    const update = () => setType(detect())
+    mqls.forEach(mql => mql.addEventListener("change", update))
     update()
-    return () => window.removeEventListener("resize", update)
+    return () => mqls.forEach(mql => mql.removeEventListener("change", update))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return type
