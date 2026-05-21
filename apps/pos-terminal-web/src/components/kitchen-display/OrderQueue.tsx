@@ -10,6 +10,7 @@ interface OrderQueueProps {
 
 const getStatusBgColor = (status: string) => {
   switch (status) {
+    case "draft": return "bg-slate-100";
     case "confirmed": return "bg-orange-50";
     case "preparing": return "bg-yellow-50";
     case "ready":     return "bg-green-50";
@@ -20,6 +21,7 @@ const getStatusBgColor = (status: string) => {
 
 const getStatusTextColor = (status: string) => {
   switch (status) {
+    case "draft": return "text-slate-600";
     case "confirmed": return "text-orange-600";
     case "preparing": return "text-yellow-600";
     case "ready":     return "text-green-600";
@@ -30,6 +32,7 @@ const getStatusTextColor = (status: string) => {
 
 const getStatusLabel = (status: string) => {
   switch (status) {
+    case "draft": return "Draft";
     case "confirmed": return "Menunggu";
     case "preparing": return "Diproses";
     case "ready":     return "Siap Saji";
@@ -48,11 +51,12 @@ export function OrderQueue({ orders, onUpdateStatus, onExpandChange }: OrderQueu
   const [isVisible, setIsVisible] = useState(false);
 
   const activeOrders = orders.filter((o) =>
-    ["confirmed", "preparing", "ready", "served"].includes(o.status)
+    ["draft", "confirmed", "preparing", "ready", "served"].includes(o.status)
   );
 
   const handleQuickAction = (orderId: string, currentStatus: string) => {
     const next: Record<string, string> = {
+      draft: "confirmed",
       confirmed: "preparing",
       preparing: "ready",
       ready:     "served",   // kitchen selesai di served; completed = financial close (kasir)
@@ -146,21 +150,26 @@ export function OrderQueue({ orders, onUpdateStatus, onExpandChange }: OrderQueu
 
               <div className="w-full">
                 <button
-                  onClick={() =>
-                    handleQuickAction(order.id, order.status)
-                  }
+                  onClick={() => handleQuickAction(order.id, order.status)}
+                  disabled={order.status === "served"}
                   className={`w-full text-[10px] font-bold py-1.5 rounded flex items-center justify-center gap-1 transition-colors ${
-                    order.status === "ready"
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                    order.status === "served"
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : order.status === "ready"
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                   data-testid={`queue-action-${order.id}`}
                 >
-                  {order.status === "confirmed"
-                    ? "Start Prep"
-                    : order.status === "preparing"
-                      ? "Mark Ready"
-                      : "Complete"}
+                  {order.status === "draft"
+                    ? "Confirm"
+                    : order.status === "confirmed"
+                      ? "Start Prep"
+                      : order.status === "preparing"
+                        ? "Mark Ready"
+                        : order.status === "ready"
+                          ? "Mark Served"
+                          : "Served"}
                 </button>
               </div>
             </div>

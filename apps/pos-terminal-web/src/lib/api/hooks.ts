@@ -149,7 +149,12 @@ export type UseOrdersFilters = {
   limit?: number;
 };
 
-export function useOrders(filters?: UseOrdersFilters) {
+export type UseOrdersOptions = {
+  refetchInterval?: number | false;
+  enabled?: boolean;
+};
+
+export function useOrders(filters?: UseOrdersFilters, options?: UseOrdersOptions) {
   const queryParams = new URLSearchParams();
   if (filters?.status) {
     queryParams.append("status", filters.status);
@@ -181,6 +186,8 @@ export function useOrders(filters?: UseOrdersFilters) {
         pagination: data.pagination,
       };
     },
+    refetchInterval: options?.refetchInterval,
+    enabled: options?.enabled ?? true,
   });
 }
 

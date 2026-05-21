@@ -13,8 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/lib/api/hooks";
 import { KitchenTicket } from "@/components/kitchen-display/KitchenTicket";
 import { useTenant } from "@/context/TenantContext";
+import { useFeatures } from "@/hooks/useFeatures";
 import type { Order } from "@pos/domain/orders/types";
 import { getActiveTenantId } from "@/lib/tenant";
+import { queryClient } from "@/lib/queryClient";
 
 const ACTIVE_STATUSES = ["confirmed", "preparing", "ready"] as const;
 const AUTO_REFRESH_INTERVAL = 20_000; // 20 detik
@@ -23,12 +25,16 @@ export default function KitchenDisplayPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { hasModule } = useTenant();
+  const { hasFeature } = useFeatures();
   const isEnabled = hasModule("enable_kitchen_ticket");
+  const isOrderQueueEnabled = hasFeature("order_queue");
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  const { data, isLoading, error, refetch } = useOrders();
+  const { data, isLoading, error, refetch } = useOrders(undefined, {
+    refetchInterval: isOrderQueueEnabled ? 5000 : AUTO_REFRESH_INTERVAL,
+  });
   const orders: Order[] = data?.orders ?? [];
 
   const activeOrders = orders.filter((o) =>
@@ -41,14 +47,22 @@ export default function KitchenDisplayPage() {
     ready: activeOrders.filter((o) => o.status === "ready").length,
   };
 
-  // Auto-refresh setiap 20 detik
   useEffect(() => {
-    const interval = setInterval(async () => {
-      await refetch();
-      setLastRefresh(new Date());
-    }, AUTO_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [refetch]);
+    if (!isOrderQueueEnabled) return;
+
+    const es = new EventSource("/api/orders/queue/stream", { withCredentials: true });
+    const onUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    };
+
+    es.addEventListener("order_queue_updated", onUpdate as EventListener);
+
+    return () => {
+      es.removeEventListener("order_queue_updated", onUpdate as EventListener);
+      es.close();
+    };
+  }, [isOrderQueueEnabled]);
+
 
   const handleRefresh = async () => {
     await refetch();

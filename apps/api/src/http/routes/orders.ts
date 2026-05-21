@@ -23,6 +23,9 @@ router.post('/order-types/:orderTypeId/enable', OrderTypesController.enableOrder
 router.post('/order-types/:orderTypeId/disable', OrderTypesController.disableOrderType);
 
 // Order Routes (MUST be before /:id routes)
+// GET /api/orders/queue/stream - SSE order queue updates
+router.get('/queue/stream', OrdersController.streamOrderQueue);
+
 // POST /api/orders/create-and-pay - Create order and record payment atomically [P3]
 router.post('/create-and-pay', OrdersController.createAndPay);
 

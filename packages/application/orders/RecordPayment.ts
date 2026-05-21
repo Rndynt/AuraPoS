@@ -98,20 +98,14 @@ export class RecordPayment {
       const newPaymentStatus: 'paid' | 'partial' | 'unpaid' =
         newRemaining <= 0.001 ? 'paid' : newPaidAmount > 0 ? 'partial' : 'unpaid';
 
-      // Set closedAt and status = completed if fully paid
+      // Keep fulfillment/order lifecycle explicit: payment success must not
+      // automatically close order. This allows paid and unpaid orders to stay
+      // visible in operational queues until cashier/kitchen completes flow.
       const orderUpdates: Record<string, any> = {
         paid_amount: newPaidAmount.toString(),
         payment_status: newPaymentStatus,
         updated_at: new Date(),
       };
-      if (newPaymentStatus === 'paid') {
-        // Auto-close only if order is in a settled fulfillment state
-        const currentStatus = orderRow.status as string;
-        if (['ready', 'served', 'confirmed', 'preparing'].includes(currentStatus)) {
-          orderUpdates.status = 'completed';
-          orderUpdates.closed_at = new Date();
-        }
-      }
 
       // Use raw SQL update to match DB column names (snake_case)
       const updatedOrders = await tx.execute(sql`
