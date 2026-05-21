@@ -1,13 +1,26 @@
 import { useState, useEffect } from "react";
-import { Box, Layers, Save, ChevronLeft, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Box, Layers, Save, ChevronLeft, Trash2, ChevronsUpDown, Check } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface ProductFormProps {
   product?: any | null;
@@ -32,17 +45,145 @@ const InputField = ({
   placeholder?: string;
   type?: string;
 }) => (
-  <div className="space-y-1">
+  <div className="space-y-1.5">
     <label className="text-xs font-bold text-slate-500">{label}</label>
     <input
       type={type}
-      className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors bg-white"
       placeholder={placeholder}
       value={value}
       onChange={onChange}
     />
   </div>
 );
+
+function CategoryComboboxContent({
+  categories,
+  value,
+  onSelect,
+}: {
+  categories: Array<{ id: string; name: string }>;
+  value: string;
+  onSelect: (id: string, name: string) => void;
+}) {
+  return (
+    <Command>
+      <CommandInput placeholder="Cari kategori..." className="h-10" />
+      <CommandList>
+        <CommandEmpty>
+          <span className="text-sm text-slate-400">Kategori tidak ditemukan</span>
+        </CommandEmpty>
+        <CommandGroup>
+          {categories.map((cat) => (
+            <CommandItem
+              key={cat.id}
+              value={cat.name}
+              onSelect={() => onSelect(cat.id, cat.name)}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Check
+                size={15}
+                className={cn(
+                  "flex-shrink-0 text-blue-600",
+                  value === cat.id ? "opacity-100" : "opacity-0"
+                )}
+              />
+              <span className="capitalize">{cat.name}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  );
+}
+
+function CategoryCombobox({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: Array<{ id: string; name: string }>;
+  value: { id: string; name: string } | null;
+  onChange: (id: string, name: string) => void;
+}) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+
+  const handleSelect = (id: string, name: string) => {
+    onChange(id, name);
+    setOpen(false);
+  };
+
+  const triggerLabel = value?.name
+    ? <span className="capitalize">{value.name}</span>
+    : <span className="text-slate-400">Pilih kategori</span>;
+
+  const triggerButton = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className={cn(
+        "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors bg-white",
+        open
+          ? "border-blue-400 ring-2 ring-blue-500/20"
+          : "border-slate-200 hover:border-slate-300"
+      )}
+      data-testid="button-select-category"
+    >
+      {triggerLabel}
+      <ChevronsUpDown size={15} className="text-slate-400 flex-shrink-0" />
+    </button>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        {triggerButton}
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerContent>
+            <DrawerHeader className="pb-2">
+              <DrawerTitle className="text-base font-bold text-slate-800">Pilih Kategori</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-6">
+              <CategoryComboboxContent
+                categories={categories}
+                value={value?.id ?? ""}
+                onSelect={handleSelect}
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors bg-white",
+            open
+              ? "border-blue-400 ring-2 ring-blue-500/20"
+              : "border-slate-200 hover:border-slate-300"
+          )}
+          data-testid="button-select-category"
+        >
+          {triggerLabel}
+          <ChevronsUpDown size={15} className="text-slate-400 flex-shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <CategoryComboboxContent
+          categories={categories}
+          value={value?.id ?? ""}
+          onSelect={handleSelect}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function ProductForm({
   product,
@@ -91,6 +232,10 @@ export default function ProductForm({
       image_url: formData.imageUrl,
     });
   };
+
+  const selectedCategory = formData.category_id
+    ? categories.find((c) => c.id === formData.category_id) ?? null
+    : categories.find((c) => c.name === formData.category) ?? null;
 
   const variantsCount = product?.option_groups?.length || 0;
 
@@ -156,42 +301,15 @@ export default function ProductForm({
               onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
               placeholder="SKU-001"
             />
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500">Kategori</label>
-              <Select
-                value={formData.category_id || formData.category}
-                onValueChange={(selectedValue) => {
-                  const selectedCategory = categories.find(
-                    (category) => category.id === selectedValue || category.name === selectedValue
-                  );
-
-                  if (selectedCategory) {
-                    setFormData({
-                      ...formData,
-                      category: selectedCategory.name,
-                      category_id: selectedCategory.id,
-                    });
-                    return;
-                  }
-
-                  setFormData({
-                    ...formData,
-                    category: selectedValue,
-                    category_id: "",
-                  });
-                }}
-              >
-                <SelectTrigger className="h-10 rounded-xl border-slate-200">
-                  <SelectValue placeholder="Pilih kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategoryCombobox
+                categories={categories}
+                value={selectedCategory}
+                onChange={(id, name) =>
+                  setFormData({ ...formData, category: name, category_id: id })
+                }
+              />
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -202,7 +320,7 @@ export default function ProductForm({
               {formData.stockTracking && (
                 <input
                   type="number"
-                  className="w-24 border border-slate-200 rounded-lg p-2 text-sm text-center"
+                  className="w-24 border border-slate-200 rounded-lg p-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                   placeholder="Qty"
                   value={formData.stockQty}
                   onChange={(e) =>

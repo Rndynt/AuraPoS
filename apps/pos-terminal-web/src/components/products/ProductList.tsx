@@ -138,6 +138,7 @@ export default function ProductList({
 
                       <div className="pl-4 border-l border-slate-100 flex flex-col items-center gap-1">
                         <ToggleSwitch
+                          size="sm"
                           checked={isAvailable}
                           onChange={(val) => {
                             if (onToggleProduct) {
