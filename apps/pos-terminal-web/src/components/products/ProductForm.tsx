@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, Layers, Save, ChevronLeft, Trash2, ChevronsUpDown, Check } from "lucide-react";
+import { Box, Layers, Save, ChevronLeft, Trash2, ChevronDown, Check } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -97,6 +97,9 @@ function CategoryComboboxContent({
   );
 }
 
+const triggerClass =
+  "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer";
+
 function CategoryCombobox({
   categories,
   value,
@@ -114,35 +117,25 @@ function CategoryCombobox({
     setOpen(false);
   };
 
-  const triggerLabel = value?.name
-    ? <span className="capitalize">{value.name}</span>
-    : <span className="text-slate-400">Pilih kategori</span>;
-
-  const triggerButton = (
-    <button
-      type="button"
-      onClick={() => setOpen(true)}
-      className={cn(
-        "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors bg-white",
-        open
-          ? "border-blue-400 ring-2 ring-blue-500/20"
-          : "border-slate-200 hover:border-slate-300"
-      )}
-      data-testid="button-select-category"
-    >
-      {triggerLabel}
-      <ChevronsUpDown size={15} className="text-slate-400 flex-shrink-0" />
-    </button>
-  );
-
   if (isMobile) {
     return (
       <>
-        {triggerButton}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={triggerClass}
+          data-testid="button-select-category"
+        >
+          {value?.name
+            ? <span className="capitalize text-foreground">{value.name}</span>
+            : <span className="text-muted-foreground">Pilih kategori</span>
+          }
+          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+        </button>
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerContent>
             <DrawerHeader className="pb-2">
-              <DrawerTitle className="text-base font-bold text-slate-800">Pilih Kategori</DrawerTitle>
+              <DrawerTitle className="text-base font-bold">Pilih Kategori</DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-6">
               <CategoryComboboxContent
@@ -162,16 +155,14 @@ function CategoryCombobox({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={cn(
-            "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors bg-white",
-            open
-              ? "border-blue-400 ring-2 ring-blue-500/20"
-              : "border-slate-200 hover:border-slate-300"
-          )}
+          className={triggerClass}
           data-testid="button-select-category"
         >
-          {triggerLabel}
-          <ChevronsUpDown size={15} className="text-slate-400 flex-shrink-0" />
+          {value?.name
+            ? <span className="capitalize text-foreground">{value.name}</span>
+            : <span className="text-muted-foreground">Pilih kategori</span>
+          }
+          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">
