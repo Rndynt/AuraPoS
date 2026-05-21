@@ -25,7 +25,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 /**
  * Map database product to domain product (camelCase -> snake_case)
  */
-function mapProductToDomain(dbProduct: DBProduct): Product {
+function mapProductToDomain(dbProduct: Pick<DBProduct, 'id' | 'tenantId' | 'name' | 'description' | 'basePrice' | 'category' | 'imageUrl' | 'metadata' | 'hasVariants' | 'stockTrackingEnabled' | 'stockQty' | 'sku' | 'isActive' | 'createdAt' | 'updatedAt'>): Product {
   return {
     id: dbProduct.id,
     tenant_id: dbProduct.tenantId,
