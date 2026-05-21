@@ -36,3 +36,14 @@ export function useCreateCategory() {
     },
   });
 }
+
+export function useDeleteCategory() {
+  return useMutation({
+    mutationFn: (payload: { id?: string; name?: string; fallback_name: string }) =>
+      req('/api/catalog/categories', { method: 'DELETE', body: JSON.stringify(payload) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/catalog/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/catalog/products'] });
+    },
+  });
+}

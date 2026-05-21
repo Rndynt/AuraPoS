@@ -39,6 +39,8 @@ export default function ProductsPage() {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState<string>("");
   const [savingCategory, setSavingCategory] = useState<string | null>(null);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const { data: categories = [] } = useCategories();
@@ -48,7 +50,7 @@ export default function ProductsPage() {
   const createOrUpdateVariant = useCreateOrUpdateVariant();
   const renameCategoryMutation = useRenameCategory();
   const createCategoryMutation = useCreateCategory();
-  const categoryNames = useMemo(() => categories.map((c: any) => c.name), [categories]);
+  
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -114,10 +116,11 @@ export default function ProductsPage() {
   };
 
   const handleCreateCategory = async () => {
-    const name = window.prompt("Nama kategori baru");
-    if (!name || !name.trim()) return;
+    if (!newCategoryName.trim()) return;
     try {
-      await createCategoryMutation.mutateAsync({ name: name.trim() });
+      await createCategoryMutation.mutateAsync({ name: newCategoryName.trim() });
+      setNewCategoryName("");
+      setIsCategoryDialogOpen(false);
       addToast("Kategori berhasil dibuat", "success");
     } catch (e) {
       addToast("Gagal membuat kategori", "error");
@@ -387,7 +390,7 @@ export default function ProductsPage() {
     return (
       <ProductForm
         product={editingProduct}
-        categories={categoryNames}
+        categories={categories.map((c: any) => ({ id: c.id, name: c.name }))}
         onSave={handleSaveProduct}
         onCancel={handleCancelForm}
         isLoading={updateProduct.isPending || createProduct.isPending}
@@ -412,6 +415,18 @@ export default function ProductsPage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
+      {isCategoryDialogOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-md space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">Tambah Kategori</h3>
+            <input className="w-full border border-slate-200 rounded-xl p-3 text-sm" placeholder="Nama kategori" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 rounded-xl border" onClick={() => setIsCategoryDialogOpen(false)}>Batal</button>
+              <button className="px-4 py-2 rounded-xl bg-blue-600 text-white" onClick={handleCreateCategory}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
@@ -429,7 +444,7 @@ export default function ProductsPage() {
           {activeTab === "products" ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={handleCreateCategory}
+                onClick={() => setIsCategoryDialogOpen(true)}
                 className="bg-white text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold"
                 data-testid="button-add-category"
               >

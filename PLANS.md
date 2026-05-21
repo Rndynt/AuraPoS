@@ -251,3 +251,9 @@ Opsional berikutnya: buat endpoint analytics summary dedicated (server-side aggr
 - Endpoint kategori ditingkatkan agar berbasis master data, dengan bootstrap awal dari nilai legacy `products.category` saat master masih kosong.
 - Tambah endpoint create kategori agar admin bisa membuat kategori walau belum ada produk.
 - UI manajemen produk ditambah aksi `+ Kategori` dan form produk baca daftar kategori dari master data API.
+
+### Continuation Update (2026-05-21 - UX & Schema Category Revamp)
+- Ganti UX tambah kategori dari `window.prompt` ke dialog form pada halaman Products.
+- Form tambah/edit produk: input kategori sekarang searchable (datalist-style) dengan sumber dari master kategori API.
+- Alur simpan produk kini mendukung `category_id` (UUID), dan backend resolve nama kategori dari UUID untuk kompatibilitas transisi.
+- Seeder diupdate: kategori master diinsert dan `products.category_id` ikut diisi.

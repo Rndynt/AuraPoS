@@ -10,7 +10,7 @@
 import 'dotenv/config';
 import { db } from '@pos/infrastructure/database';
 import {
-  tenants, products, productOptionGroups, productOptions,
+  tenants, products, productCategories, productOptionGroups, productOptions,
   tenantFeatures, tenantModuleConfigs, tables, orders, orderItems,
   orderTypes, tenantOrderTypes, businessTypes,
 } from '@shared/schema';
@@ -40,7 +40,7 @@ async function clearDatabase() {
     TRUNCATE TABLE
       order_item_modifiers, order_payments, kitchen_tickets,
       order_items, orders, tenant_order_types, order_types,
-      product_options, product_option_groups, products,
+      product_options, product_option_groups, products, product_categories,
       tenant_features, tenant_module_configs, "tables",
       tenants, business_types
     CASCADE
@@ -206,8 +206,23 @@ async function seedThamada(createdOrderTypes: any[]) {
     return grp.id;
   };
 
+  const categoryIdByName = new Map<string, string>();
+  const getCategoryId = async (name: string) => {
+    if (categoryIdByName.has(name)) return categoryIdByName.get(name)!;
+    const [created] = await db.insert(productCategories).values({ tenantId: tenant.id, name }).onConflictDoNothing().returning();
+    if (created) {
+      categoryIdByName.set(name, created.id);
+      return created.id;
+    }
+    const [found] = await db.select({ id: productCategories.id }).from(productCategories).where(eq(productCategories.tenantId, tenant.id)).limit(1);
+    if (!found) throw new Error('Failed finding category id');
+    categoryIdByName.set(name, found.id);
+    return found.id;
+  };
+
   const addProduct = async (p: Omit<InsertProduct, 'tenantId'>) => {
-    const [prod] = await db.insert(products).values({ ...p, tenantId: tenant.id } as InsertProduct).returning();
+    const categoryId = await getCategoryId((p as any).category);
+    const [prod] = await db.insert(products).values({ ...p, tenantId: tenant.id, categoryId } as InsertProduct).returning();
     allProducts.push(prod);
     console.log(`   ✅ ${prod.name}`);
     return prod;
@@ -439,8 +454,23 @@ async function seedNusantara(createdOrderTypes: any[]) {
     return grp.id;
   };
 
+  const categoryIdByName = new Map<string, string>();
+  const getCategoryId = async (name: string) => {
+    if (categoryIdByName.has(name)) return categoryIdByName.get(name)!;
+    const [created] = await db.insert(productCategories).values({ tenantId: tenant.id, name }).onConflictDoNothing().returning();
+    if (created) {
+      categoryIdByName.set(name, created.id);
+      return created.id;
+    }
+    const [found] = await db.select({ id: productCategories.id }).from(productCategories).where(eq(productCategories.tenantId, tenant.id)).limit(1);
+    if (!found) throw new Error('Failed finding category id');
+    categoryIdByName.set(name, found.id);
+    return found.id;
+  };
+
   const addProduct = async (p: Omit<InsertProduct, 'tenantId'>) => {
-    const [prod] = await db.insert(products).values({ ...p, tenantId: tenant.id } as InsertProduct).returning();
+    const categoryId = await getCategoryId((p as any).category);
+    const [prod] = await db.insert(products).values({ ...p, tenantId: tenant.id, categoryId } as InsertProduct).returning();
     allProducts.push(prod);
     console.log(`   ✅ ${prod.name}`);
     return prod;

@@ -7,6 +7,9 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
+import { db } from '@pos/infrastructure/database';
+import { productCategories } from '@shared/schema';
+import { and, eq } from 'drizzle-orm';
 
 /**
  * GET /api/catalog/products
@@ -105,6 +108,7 @@ export const createOrUpdateProduct = asyncHandler(async (req: Request, res: Resp
     description: z.string().optional(),
     base_price: z.number().optional(),
     category: z.string().optional(),
+    category_id: z.string().optional(),
     image_url: z.string().optional(),
     metadata: z.record(z.any()).optional(),
     has_variants: z.boolean().optional(),
@@ -121,10 +125,22 @@ export const createOrUpdateProduct = asyncHandler(async (req: Request, res: Resp
   }
 
   // Execute use case
+  let category = parsed.data.category;
+  if (parsed.data.category_id && !category) {
+    const found = await db
+      .select({ name: productCategories.name })
+      .from(productCategories)
+      .where(and(eq(productCategories.tenantId, tenantId), eq(productCategories.id, parsed.data.category_id)))
+      .limit(1);
+    if (!found[0]) throw createError('Category not found', 404, 'CATEGORY_NOT_FOUND');
+    category = found[0].name;
+  }
+
   const result = await container.createOrUpdateProduct.execute({
     tenant_id: tenantId,
     product_id: productId,
     ...parsed.data,
+    category,
   });
 
   res.status(result.isNew ? 201 : 200).json({

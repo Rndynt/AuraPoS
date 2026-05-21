@@ -91,6 +91,7 @@ export interface CreateProductInput {
   description?: string;
   base_price: number;
   category: string;
+  category_id?: string;
   image_url?: string;
   metadata?: Record<string, any>;
   has_variants?: boolean;
