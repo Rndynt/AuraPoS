@@ -52,6 +52,7 @@ export interface CreateOrUpdateProductInput {
   description?: string;
   base_price?: number;
   category?: string;
+  category_id?: string;
   image_url?: string;
   metadata?: {
     service_duration_minutes?: number;
@@ -412,6 +413,7 @@ export class CreateOrUpdateProduct {
       description: input.description,
       basePrice: input.base_price.toString(),
       category: input.category,
+      categoryId: input.category_id,
       imageUrl: input.image_url,
       metadata: input.metadata,
       hasVariants: input.has_variants ?? false,
@@ -442,6 +444,9 @@ export class CreateOrUpdateProduct {
 
     if (input.category !== undefined) {
       updateData.category = input.category;
+    }
+    if (input.category_id !== undefined) {
+      updateData.categoryId = input.category_id;
     }
 
     // Only include optional fields if explicitly provided

@@ -9,6 +9,7 @@ interface ProductFormProps {
   isLoading?: boolean;
   onNavigateToVariants?: () => void;
   onDelete?: () => void;
+  categories?: Array<{ id: string; name: string }>;
 }
 
 const CustomSelect = ({
@@ -72,10 +73,12 @@ export default function ProductForm({
   isLoading,
   onNavigateToVariants,
   onDelete,
+  categories = [],
 }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     category: "Makanan",
+    category_id: "",
     price: "",
     stockTracking: false,
     stockQty: 0,
@@ -88,6 +91,7 @@ export default function ProductForm({
       setFormData({
         name: product.name || "",
         category: product.category || "Makanan",
+        category_id: product.category_id || "",
         price: (product.base_price || product.basePrice || "").toString(),
         stockTracking: product.stock_tracking_enabled || product.stockTrackingEnabled || false,
         stockQty: product.stock_qty || product.stockQty || 0,
@@ -101,6 +105,7 @@ export default function ProductForm({
     onSave({
       name: formData.name,
       category: formData.category,
+      category_id: formData.category_id || undefined,
       base_price: parseFloat(formData.price) || 0,
       stock_tracking_enabled: formData.stockTracking,
       stock_qty: formData.stockTracking ? parseInt(formData.stockQty.toString()) : undefined,
@@ -175,18 +180,22 @@ export default function ProductForm({
             />
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500">Kategori</label>
-              <CustomSelect
+              <input
+                className="w-full border border-slate-200 rounded-xl p-2.5 text-sm"
+                placeholder="Cari kategori..."
+                list="category-options"
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                options={[
-                  { value: "burger", label: "Burger" },
-                  { value: "coffee", label: "Kopi" },
-                  { value: "pizza", label: "Pizza" },
-                  { value: "snack", label: "Snack" },
-                  { value: "Makanan", label: "Makanan" },
-                  { value: "Minuman", label: "Minuman" },
-                ]}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  const found = categories.find((c) => c.name === name);
+                  setFormData({ ...formData, category: name, category_id: found?.id || "" });
+                }}
               />
+              <datalist id="category-options">
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name} />
+                ))}
+              </datalist>
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useProducts, useCreateProduct, useUpdateProduct } from "@/hooks/api/useProducts";
 import { useVariantsLibrary, useCreateOrUpdateVariant, type Variant } from "@/hooks/useVariants";
+import { useCategories, useCreateCategory, useRenameCategory } from "@/hooks/api/useCategories";
 import ProductForm from "@/components/products/ProductForm";
 import VariantForm from "@/components/products/VariantForm";
 import VariantLibrary from "@/components/products/VariantLibrary";
@@ -38,12 +39,18 @@ export default function ProductsPage() {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState<string>("");
   const [savingCategory, setSavingCategory] = useState<string | null>(null);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
+  const { data: categories = [] } = useCategories();
   const { data: variants = [], isLoading: isLoadingVariants } = useVariantsLibrary();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const createOrUpdateVariant = useCreateOrUpdateVariant();
+  const renameCategoryMutation = useRenameCategory();
+  const createCategoryMutation = useCreateCategory();
+  
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -89,16 +96,7 @@ export default function ProductsPage() {
 
     setSavingCategory(oldCategoryName);
     try {
-      const itemsInCategory = groupedProducts[oldCategoryName] || [];
-      
-      // Update all products in this category
-      for (const product of itemsInCategory) {
-        await updateProduct.mutateAsync({
-          product_id: product.id,
-          category: trimmedName,
-        } as any);
-      }
-      
+      await renameCategoryMutation.mutateAsync({ old_name: oldCategoryName, new_name: trimmedName });
       setEditingCategory(null);
       addToast("Kategori berhasil diperbarui", "success");
     } catch (error) {
@@ -115,6 +113,18 @@ export default function ProductsPage() {
   const handleCreateProduct = () => {
     setEditingProduct(null);
     setViewState("form_product");
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      await createCategoryMutation.mutateAsync({ name: newCategoryName.trim() });
+      setNewCategoryName("");
+      setIsCategoryDialogOpen(false);
+      addToast("Kategori berhasil dibuat", "success");
+    } catch (e) {
+      addToast("Gagal membuat kategori", "error");
+    }
   };
 
   const handleEditProduct = (product: any) => {
@@ -380,6 +390,7 @@ export default function ProductsPage() {
     return (
       <ProductForm
         product={editingProduct}
+        categories={categories.map((c: any) => ({ id: c.id, name: c.name }))}
         onSave={handleSaveProduct}
         onCancel={handleCancelForm}
         isLoading={updateProduct.isPending || createProduct.isPending}
@@ -404,6 +415,18 @@ export default function ProductsPage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
+      {isCategoryDialogOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-md space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">Tambah Kategori</h3>
+            <input className="w-full border border-slate-200 rounded-xl p-3 text-sm" placeholder="Nama kategori" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 rounded-xl border" onClick={() => setIsCategoryDialogOpen(false)}>Batal</button>
+              <button className="px-4 py-2 rounded-xl bg-blue-600 text-white" onClick={handleCreateCategory}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
@@ -419,13 +442,22 @@ export default function ProductsPage() {
             </h1>
           </div>
           {activeTab === "products" ? (
-            <button
-              onClick={handleCreateProduct}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
-              data-testid="button-add-product"
-            >
-              <Plus size={18} /> Produk
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsCategoryDialogOpen(true)}
+                className="bg-white text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold"
+                data-testid="button-add-category"
+              >
+                + Kategori
+              </button>
+              <button
+                onClick={handleCreateProduct}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                data-testid="button-add-product"
+              >
+                <Plus size={18} /> Produk
+              </button>
+            </div>
           ) : (
             <button
               onClick={handleCreateVariant}
