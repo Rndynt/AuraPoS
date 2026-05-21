@@ -4,8 +4,12 @@ import { getActiveTenantId } from '@/lib/tenant';
 
 async function req(url: string, init?: RequestInit) {
   const res = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-tenant-id': getActiveTenantId(), ...(init?.headers || {}) }, ...init });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const payload = await res.json().catch(() => null);
+  if (!res.ok || (payload && payload.success === false)) {
+    const message = payload?.error?.message || payload?.message || payload?.error || (await res.text().catch(() => 'Request failed'));
+    throw new Error(message || 'Request failed');
+  }
+  return payload;
 }
 
 export type CategoryItem = { id: string; name: string; is_active: boolean; display_order: number };

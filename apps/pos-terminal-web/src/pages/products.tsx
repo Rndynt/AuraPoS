@@ -54,15 +54,17 @@ export default function ProductsPage() {
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, any[]> = {};
+
+    for (const category of categories) {
+      groups[category.name] = [];
+    }
+
     products.forEach((product) => {
       const category = product.category || "Uncategorized";
-      if (!groups[category]) {
-        groups[category] = [];
-      }
+      if (!groups[category]) groups[category] = [];
       groups[category].push(product);
     });
-    
-    // Sort items within each category by name for stable ordering
+
     Object.keys(groups).forEach((category) => {
       groups[category].sort((a, b) => {
         const nameA = (a.name || "").toLowerCase();
@@ -70,9 +72,9 @@ export default function ProductsPage() {
         return nameA.localeCompare(nameB);
       });
     });
-    
+
     return groups;
-  }, [products]);
+  }, [products, categories]);
 
   const toggleCategory = (categoryName: string) => {
     setCollapsedCategories((prev) => ({
@@ -123,7 +125,8 @@ export default function ProductsPage() {
       setIsCategoryDialogOpen(false);
       addToast("Kategori berhasil dibuat", "success");
     } catch (e) {
-      addToast("Gagal membuat kategori", "error");
+      const message = e instanceof Error ? e.message : "Gagal membuat kategori";
+      addToast(message, "error");
     }
   };
 
