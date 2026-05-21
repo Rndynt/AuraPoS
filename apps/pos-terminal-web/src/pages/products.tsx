@@ -6,10 +6,12 @@ import {
   ChevronDown,
   Layers,
   ChevronRight,
+  MoreVertical,
+  GripVertical,
 } from "lucide-react";
 import { useProducts, useCreateProduct, useUpdateProduct } from "@/hooks/api/useProducts";
 import { useVariantsLibrary, useCreateOrUpdateVariant, type Variant } from "@/hooks/useVariants";
-import { useCategories, useCreateCategory, useRenameCategory } from "@/hooks/api/useCategories";
+import { useCategories, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories } from "@/hooks/api/useCategories";
 import ProductForm from "@/components/products/ProductForm";
 import VariantForm from "@/components/products/VariantForm";
 import VariantLibrary from "@/components/products/VariantLibrary";
@@ -41,6 +43,9 @@ export default function ProductsPage() {
   const [savingCategory, setSavingCategory] = useState<string | null>(null);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [openCategoryActionFor, setOpenCategoryActionFor] = useState<string | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null);
 
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const { data: categories = [] } = useCategories();
@@ -50,6 +55,8 @@ export default function ProductsPage() {
   const createOrUpdateVariant = useCreateOrUpdateVariant();
   const renameCategoryMutation = useRenameCategory();
   const createCategoryMutation = useCreateCategory();
+  const deleteCategoryMutation = useDeleteCategory();
+  const reorderCategoriesMutation = useReorderCategories();
   
 
   const groupedProducts = useMemo(() => {
@@ -110,6 +117,47 @@ export default function ProductsPage() {
 
   const handleCancelEditCategory = () => {
     setEditingCategory(null);
+  };
+
+
+
+  const orderedCategories = useMemo(() => {
+    const byName = new Map(categories.map((c) => [c.name, c]));
+    return Object.keys(groupedProducts).map((name) => ({
+      id: byName.get(name)?.id ?? name,
+      name,
+      items: groupedProducts[name] || [],
+    }));
+  }, [categories, groupedProducts]);
+
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    const fallback = window.prompt(`Pindahkan produk dari kategori "${categoryName}" ke kategori:`, "Uncategorized");
+    if (!fallback || !fallback.trim()) return;
+    try {
+      await deleteCategoryMutation.mutateAsync({ id: categoryId, fallback_name: fallback.trim() });
+      addToast("Kategori berhasil dihapus", "success");
+    } catch (error) {
+      addToast("Gagal menghapus kategori", "error");
+    }
+  };
+
+  const handleDropCategory = async (targetCategoryId: string) => {
+    if (!draggingCategoryId || draggingCategoryId === targetCategoryId) return;
+    const current = [...orderedCategories];
+    const from = current.findIndex((c) => c.id === draggingCategoryId);
+    const to = current.findIndex((c) => c.id === targetCategoryId);
+    if (from < 0 || to < 0) return;
+    const [moved] = current.splice(from, 1);
+    current.splice(to, 0, moved);
+
+    try {
+      await reorderCategoriesMutation.mutateAsync({ ordered_ids: current.map((c) => c.id) });
+      addToast("Urutan kategori diperbarui", "success");
+    } catch (error) {
+      addToast("Gagal menyimpan urutan kategori", "error");
+    } finally {
+      setDraggingCategoryId(null);
+    }
   };
 
   const handleCreateProduct = () => {
@@ -447,6 +495,12 @@ export default function ProductsPage() {
           {activeTab === "products" ? (
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setReorderMode((v) => !v)}
+                className={`px-3 py-2 rounded-xl text-sm font-bold border ${reorderMode ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white text-slate-700 border-slate-200"}`}
+              >
+                {reorderMode ? "Selesai Urutkan" : "Urutkan Kategori"}
+              </button>
+              <button
                 onClick={() => setIsCategoryDialogOpen(true)}
                 className="bg-white text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold"
                 data-testid="button-add-category"
@@ -511,12 +565,16 @@ export default function ProductsPage() {
                 <p className="text-xs">Klik tombol "+ Produk" untuk menambahkan</p>
               </div>
             ) : (
-              Object.entries(groupedProducts).map(([category, items]) => {
+              orderedCategories.map(({ id: categoryId, name: category, items }) => {
                 const isCollapsed = collapsedCategories[category];
                 return (
                   <div
                     key={category}
                     className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+                    draggable={reorderMode}
+                    onDragStart={() => setDraggingCategoryId(categoryId)}
+                    onDragOver={(e) => reorderMode && e.preventDefault()}
+                    onDrop={() => reorderMode && handleDropCategory(categoryId)}
                     data-testid={`category-${category}`}
                   >
                     <div
@@ -524,6 +582,7 @@ export default function ProductsPage() {
                       data-testid={`category-header-${category}`}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {reorderMode && <GripVertical size={16} className="text-slate-400" />}
                         {editingCategory === category ? (
                           <input
                             autoFocus
@@ -555,14 +614,31 @@ export default function ProductsPage() {
                           {items.length}
                         </span>
                       </div>
-                      <div
-                        onClick={() => toggleCategory(category)}
+                      <div className="relative flex items-center gap-1">
+                        {!reorderMode && (
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-slate-200"
+                            onClick={() => setOpenCategoryActionFor(openCategoryActionFor === categoryId ? null : categoryId)}
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        )}
+                        {openCategoryActionFor === categoryId && !reorderMode && (
+                          <div className="absolute right-8 top-0 z-10 bg-white border border-slate-200 rounded-lg shadow-md p-1 min-w-36">
+                            <button className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 rounded" onClick={() => { setReorderMode(true); setOpenCategoryActionFor(null); }}>Ubah urutan</button>
+                            <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded" onClick={() => { setOpenCategoryActionFor(null); handleDeleteCategory(categoryId, category); }}>Hapus</button>
+                          </div>
+                        )}
+                        <div
+                          onClick={() => toggleCategory(category)}
                         className={`text-slate-400 transition-transform duration-300 cursor-pointer hover:text-slate-600 flex-shrink-0 ${
                           isCollapsed ? "-rotate-90" : "rotate-0"
                         }`}
                         data-testid={`button-toggle-category-${category}`}
                       >
-                        <ChevronDown size={20} />
+                          <ChevronDown size={20} />
+                        </div>
                       </div>
                     </div>
 

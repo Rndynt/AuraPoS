@@ -78,3 +78,31 @@ export const deleteCategory = asyncHandler(async (req: Request, res: Response) =
 
   res.status(200).json({ success: true });
 });
+
+export const reorderCategories = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const body = z.object({ ordered_ids: z.array(z.string().min(1)).min(1) }).parse(req.body);
+
+  await db.transaction(async (tx) => {
+    const existing = await tx
+      .select({ id: productCategories.id })
+      .from(productCategories)
+      .where(and(eq(productCategories.tenantId, tenantId), eq(productCategories.isActive, true)));
+
+    const existingIdSet = new Set(existing.map((row) => row.id));
+    const submittedIdSet = new Set(body.ordered_ids);
+
+    if (existingIdSet.size !== submittedIdSet.size || [...existingIdSet].some((id) => !submittedIdSet.has(id))) {
+      throw createError('Invalid category ordering payload', 400, 'INVALID_CATEGORY_ORDERING');
+    }
+
+    for (const [index, categoryId] of body.ordered_ids.entries()) {
+      await tx
+        .update(productCategories)
+        .set({ displayOrder: index, updatedAt: new Date() })
+        .where(and(eq(productCategories.tenantId, tenantId), eq(productCategories.id, categoryId)));
+    }
+  });
+
+  res.status(200).json({ success: true });
+});
