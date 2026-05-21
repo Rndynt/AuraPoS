@@ -176,11 +176,11 @@ export function ProductArea({
           <div className="space-y-6">
             {groupedProducts.map(({ category, items }) => (
               <div key={category}>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <span>{category}</span>
-                  <span className="text-slate-300">·</span>
-                  <span className="normal-case font-normal text-slate-400">{items.length} item</span>
-                </h3>
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-sm font-bold text-slate-700 tracking-wide">{category}</h3>
+                  <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{items.length}</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                   {items.map((product) => (
                     <ProductCard
