@@ -177,3 +177,23 @@ Jika masih ada model printer yang gagal, tambahkan mapping UUID per vendor/model
 
 ### Continuation Notes
 Jika masih ada printer bermasalah, tuning `MAX_WRITE_CHUNK_BYTES` per model di setting printer.
+
+## Plan: Auto-print POS bayar tidak jalan meski test print sukses
+
+### Source
+- User request: pull terbaru lagi; investigasi kenapa test print sukses tapi saat bayar tidak keluar struk.
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Findings
+- Root cause: flow POS mengunci auto-print di feature flag `receipt_printer`.
+- Test print di halaman Printer Hub tidak memakai gate flag yang sama.
+- Akibatnya: test print bisa sukses, tapi bayar di POS tidak memanggil print sama sekali ketika flag tenant off.
+
+### Completed
+- [x] Ubah gate auto-print POS: print dijalankan jika `receipt_printer` aktif **atau** sudah ada device printer yang dipair.
+- [x] Tambah toast informatif saat auto-print tidak aktif (flag off + belum paired).
+
+### Validation Log
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass

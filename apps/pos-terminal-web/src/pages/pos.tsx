@@ -48,6 +48,8 @@ export default function POSPage() {
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const hasReceiptPrinter = hasFeature("receipt_printer");
+  const hasPairedPrinter = Boolean(bluetoothReceiptPrinter.getPairedDeviceId());
+  const shouldAutoPrintReceipt = hasReceiptPrinter || hasPairedPrinter;
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { send: sendToCFD } = useCustomerDisplaySender();
@@ -455,7 +457,7 @@ export default function POSPage() {
         description: `Order #${orderNumber} - Total: Rp ${totalAmount.toLocaleString("id-ID")} (${paymentMethod})`,
       });
 
-      if (hasReceiptPrinter) {
+      if (shouldAutoPrintReceipt) {
         try {
           await bluetoothReceiptPrinter.reconnectIfPossible().catch(() => false);
           await bluetoothReceiptPrinter.print({
@@ -491,6 +493,11 @@ export default function POSPage() {
             variant: "destructive",
           });
         }
+      } else {
+        toast({
+          title: "Pembayaran sukses, auto-print tidak aktif",
+          description: "Feature receipt_printer nonaktif dan belum ada printer yang dipair.",
+        });
       }
       
       // Kembali ke idle setelah 7 detik — release lock lalu kirim idle
