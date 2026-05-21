@@ -26,6 +26,16 @@ type PrinterConnectionState = "disconnected" | "connecting" | "connected";
 const STORAGE_KEY = "aurapos.receipt_printer.device_id";
 const SERVICE_UUID = "000018f0-0000-1000-8000-00805f9b34fb";
 const CHARACTERISTIC_UUID = "00002af1-0000-1000-8000-00805f9b34fb";
+const FALLBACK_SERVICE_UUIDS = [
+  "0000ffe0-0000-1000-8000-00805f9b34fb",
+  "0000ff00-0000-1000-8000-00805f9b34fb",
+  "0000ae30-0000-1000-8000-00805f9b34fb",
+];
+const FALLBACK_CHARACTERISTIC_UUIDS = [
+  "0000ffe1-0000-1000-8000-00805f9b34fb",
+  "0000ff02-0000-1000-8000-00805f9b34fb",
+  "0000ae01-0000-1000-8000-00805f9b34fb",
+];
 const PRINTER_LINE_WIDTH = 32;
 
 class BluetoothReceiptPrinterManager {
@@ -52,7 +62,7 @@ class BluetoothReceiptPrinterManager {
     this.setState("connecting");
     const device = await bluetooth.requestDevice({
       acceptAllDevices: true,
-      optionalServices: [SERVICE_UUID],
+      optionalServices: [SERVICE_UUID, ...FALLBACK_SERVICE_UUIDS],
     });
 
     await this.connectDevice(device);
@@ -113,14 +123,52 @@ class BluetoothReceiptPrinterManager {
       const server = await device.gatt?.connect();
       if (!server) throw new Error("Gagal connect ke printer bluetooth");
 
-      const service = await server.getPrimaryService(SERVICE_UUID);
-      const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-      this.characteristic = characteristic;
+      this.characteristic = await this.resolveWritableCharacteristic(server);
+      if (!this.characteristic) {
+        throw new Error("Printer terkoneksi tapi channel tulis tidak ditemukan. Coba pair ulang dari Printer Hub.");
+      }
+
       this.setState("connected");
     } catch (error) {
       this.setState("disconnected");
       throw error;
     }
+  }
+
+  private async resolveWritableCharacteristic(server: any): Promise<any | null> {
+    const servicesToTry = [SERVICE_UUID, ...FALLBACK_SERVICE_UUIDS];
+    const charsToTry = [CHARACTERISTIC_UUID, ...FALLBACK_CHARACTERISTIC_UUIDS];
+
+    for (const serviceUuid of servicesToTry) {
+      try {
+        const service = await server.getPrimaryService(serviceUuid);
+        for (const charUuid of charsToTry) {
+          try {
+            const characteristic = await service.getCharacteristic(charUuid);
+            if (characteristic?.properties?.write || characteristic?.properties?.writeWithoutResponse) {
+              return characteristic;
+            }
+          } catch {
+            // lanjut coba characteristic berikutnya
+          }
+        }
+      } catch {
+        // lanjut coba service berikutnya
+      }
+    }
+
+    const services = await server.getPrimaryServices();
+    for (const service of services ?? []) {
+      try {
+        const chars = await service.getCharacteristics();
+        const writable = chars.find((char: any) => char?.properties?.write || char?.properties?.writeWithoutResponse);
+        if (writable) return writable;
+      } catch {
+        // abaikan service yang tidak bisa di-enumerate
+      }
+    }
+
+    return null;
   }
 }
 
@@ -129,6 +177,7 @@ export const bluetoothReceiptPrinter = new BluetoothReceiptPrinterManager();
 const rupiah = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 const truncate = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
 const padRight = (value: string, width: number) => (value.length >= width ? value.slice(0, width) : `${value}${" ".repeat(width - value.length)}`);
+const padLeft = (value: string, width: number) => (value.length >= width ? value.slice(0, width) : `${" ".repeat(width - value.length)}${value}`);
 
 const twoCol = (left: string, right: string) => {
   const rightText = truncate(right, PRINTER_LINE_WIDTH - 2);
@@ -136,29 +185,40 @@ const twoCol = (left: string, right: string) => {
   return `${padRight(truncate(left, leftWidth), leftWidth)} ${rightText}`;
 };
 
+const center = (value: string) => {
+  const clean = truncate(value, PRINTER_LINE_WIDTH);
+  const leftPadding = Math.max(0, Math.floor((PRINTER_LINE_WIDTH - clean.length) / 2));
+  return `${" ".repeat(leftPadding)}${clean}`;
+};
+
 function buildReceiptText(payload: ReceiptPrintPayload): string {
   const lines: string[] = [];
-  lines.push(payload.tenantName.toUpperCase());
-  lines.push("-".repeat(PRINTER_LINE_WIDTH));
-  lines.push(twoCol("Order", payload.orderNumber));
+  lines.push(center(payload.tenantName.toUpperCase()));
+  lines.push(center("STRUK PEMBAYARAN"));
+  lines.push("=".repeat(PRINTER_LINE_WIDTH));
+  lines.push(twoCol("No. Order", payload.orderNumber));
   lines.push(twoCol("Waktu", payload.createdAt.toLocaleString("id-ID")));
   lines.push(twoCol("Metode", payload.paymentMethod.toUpperCase()));
   if (payload.customerName) lines.push(twoCol("Customer", payload.customerName));
   if (payload.tableNumber) lines.push(twoCol("Meja", payload.tableNumber));
   lines.push("-".repeat(PRINTER_LINE_WIDTH));
 
+  lines.push("Item");
   for (const item of payload.items) {
     lines.push(truncate(item.name, PRINTER_LINE_WIDTH));
-    lines.push(twoCol(`${item.qty} x ${rupiah(item.unitPrice)}`, rupiah(item.total)));
+    const qtyPrice = `${item.qty} x ${rupiah(item.unitPrice)}`;
+    lines.push(`${padRight(truncate(qtyPrice, 21), 21)}${padLeft(rupiah(item.total), 11)}`);
   }
 
   lines.push("-".repeat(PRINTER_LINE_WIDTH));
   lines.push(twoCol("Subtotal", rupiah(payload.subtotal)));
   lines.push(twoCol("Pajak", rupiah(payload.tax)));
   lines.push(twoCol("Service", rupiah(payload.serviceCharge)));
+  lines.push("=".repeat(PRINTER_LINE_WIDTH));
   lines.push(twoCol("TOTAL", rupiah(payload.total)));
-  lines.push("-".repeat(PRINTER_LINE_WIDTH));
-  lines.push("Terima kasih");
+  lines.push("=".repeat(PRINTER_LINE_WIDTH));
+  lines.push(center("Terima kasih"));
+  lines.push(center("Simpan struk ini"));
   lines.push("\n\n\n");
   return lines.join("\n");
 }
