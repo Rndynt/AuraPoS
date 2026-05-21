@@ -37,6 +37,7 @@ const FALLBACK_CHARACTERISTIC_UUIDS = [
   "0000ae01-0000-1000-8000-00805f9b34fb",
 ];
 const PRINTER_LINE_WIDTH = 32;
+const MAX_WRITE_CHUNK_BYTES = 180;
 
 class BluetoothReceiptPrinterManager {
   private device: any | null = null;
@@ -107,7 +108,25 @@ class BluetoothReceiptPrinterManager {
     }
 
     const data = buildEscPosBytes(buildReceiptText(payload));
-    await this.characteristic.writeValue(data);
+    await this.writeInChunks(data);
+  }
+
+
+
+  private async writeInChunks(data: Uint8Array): Promise<void> {
+    if (!this.characteristic) throw new Error("Characteristic printer tidak tersedia.");
+
+    const supportsWriteWithoutResponse = Boolean(this.characteristic?.properties?.writeWithoutResponse);
+
+    for (let offset = 0; offset < data.length; offset += MAX_WRITE_CHUNK_BYTES) {
+      const chunk = data.slice(offset, offset + MAX_WRITE_CHUNK_BYTES);
+
+      if (supportsWriteWithoutResponse && typeof this.characteristic.writeValueWithoutResponse === "function") {
+        await this.characteristic.writeValueWithoutResponse(chunk);
+      } else {
+        await this.characteristic.writeValue(chunk);
+      }
+    }
   }
 
   private async connectDevice(device: any): Promise<void> {

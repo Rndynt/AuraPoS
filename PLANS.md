@@ -161,3 +161,19 @@ Langkah berikutnya: simpan preferensi service/characteristic UUID per model prin
 
 ### Continuation Notes
 Jika masih ada model printer yang gagal, tambahkan mapping UUID per vendor/model pada setting Printer Hub.
+
+## Plan: Fix Bluetooth writeValue >512 bytes on test print
+
+### Source
+- User request: tarik kode terbaru, perbaiki test print error `Value can't exceed 512 bytes`
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Progress
+#### Completed
+- [x] Ganti alur kirim data ESC/POS menjadi chunked write agar tiap write <= batas BLE characteristic.
+  - Files changed: apps/pos-terminal-web/src/lib/receiptPrinter.ts
+  - Validation: pnpm --filter @pos/terminal-web type-check (pass)
+
+### Continuation Notes
+Jika masih ada printer bermasalah, tuning `MAX_WRITE_CHUNK_BYTES` per model di setting printer.
