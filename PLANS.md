@@ -281,3 +281,43 @@ Opsional berikutnya: buat endpoint analytics summary dedicated (server-side aggr
 
 ### Continuation Notes
 Opsional next: tambah modal konfirmasi hapus kategori dengan dropdown fallback (mengganti window.prompt) agar UX lebih aman.
+
+
+## Plan: Order Queue Independen (POS + Kitchen Opsional)
+
+### Source
+- User request: Implement order queue sebagai feature flag independen, usable untuk draft/unpaid/paid, tetap kompatibel POS & kitchen
+- Date started: 2026-05-21
+- Current status: In progress
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Relevant docs/source files
+
+### Progress
+#### Completed
+- [x] Menambahkan feature flag independen `order_queue` pada enum core/domain feature codes.
+- [x] Menambahkan default aktivasi `order_queue` pada business type templates.
+- [x] Mengubah gate Order Queue di POS agar memakai feature `order_queue` (independen dari module kitchen).
+- [x] Mengubah filter queue agar mencakup `draft`, `unpaid`, dan `paid` order flow (berbasis status aktif).
+- [x] Menonaktifkan auto-close saat payment menjadi paid agar order tetap bisa berada di queue operasional sampai ditutup eksplisit.
+- [x] Menambahkan refresh interval 5 detik pada data orders di POS saat feature `order_queue` aktif (near real-time tanpa reload manual).
+- [x] Menyamakan refresh queue di Kitchen Display ke polling 5 detik saat feature `order_queue` aktif agar POS/Kitchen konsisten near real-time.
+- [x] Menambahkan SSE endpoint tenant-aware (`/api/orders/queue/stream`) dan event publish dari mutation order utama untuk push update queue real-time.
+- [x] Menambahkan SSE subscriber di POS dan Kitchen agar invalidate order queries secara event-driven (tetap ada polling fallback).
+- [x] Perbaikan UX aksi queue: status `served` sekarang non-aksi (disabled), tidak menampilkan tombol aksi menyesatkan.
+
+#### Partially Completed
+- [ ] Belum ada tabel queue terpisah (masih berbasis status order aktif).
+  - Reason: scope batch ini fokus fitur independen + alur operasional kompatibel dengan arsitektur eksisting.
+
+### Validation Log
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+
+### Continuation Notes
+Langkah berikutnya opsional: jika dibutuhkan audit/analytics queue lebih detail, tambahkan entitas `order_queue_entries` terpisah (queued_at, dequeued_at, source, station) sambil mempertahankan fallback status-based queue.

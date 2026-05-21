@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
 import { useTenant } from "@/context/TenantContext";
+import { useFeatures } from "@/hooks/useFeatures";
 import { useOpenOrders } from "@/lib/api/tableHooks";
 import { useCategories } from "@/hooks/api/useCategories";
 
@@ -71,7 +72,8 @@ export function ProductArea({
   const [searchQuery, setSearchQuery] = useState("");
   const [isOrderQueueExpanded, setIsOrderQueueExpanded] = useState(false);
   const { hasModule } = useTenant();
-  const isKitchenDisplayEnabled = hasModule("enable_kitchen_ticket");
+  const { hasFeature } = useFeatures();
+  const isOrderQueueEnabled = hasFeature("order_queue");
   const { data: openOrdersData } = useOpenOrders();
   const { data: categories = [] } = useCategories();
   const orderedCategoryNames = useMemo(() => categories.map((c) => c.name), [categories]);
@@ -97,8 +99,8 @@ export function ProductArea({
 
   return (
     <div className="flex flex-col bg-slate-50/50 h-full min-h-0 overflow-x-hidden w-full max-w-full">
-      {/* Order Queue - shown when kitchen display is enabled AND there are active orders */}
-      {isKitchenDisplayEnabled && orders.length > 0 && onUpdateOrderStatus && (
+      {/* Order Queue - shown when order_queue feature is enabled */}
+      {isOrderQueueEnabled && orders.length > 0 && onUpdateOrderStatus && (
         <div className="border-b border-slate-200 bg-white flex-shrink-0">
           <OrderQueue
             orders={orders}

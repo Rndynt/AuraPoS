@@ -26,6 +26,7 @@ import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { useCustomerDisplaySender, toCFDItem } from "@/hooks/useCustomerDisplay";
 import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
+import { queryClient } from "@/lib/queryClient";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -48,6 +49,7 @@ export default function POSPage() {
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const hasReceiptPrinter = hasFeature("receipt_printer");
+  const isOrderQueueEnabled = hasFeature("order_queue");
   const hasPairedPrinter = Boolean(bluetoothReceiptPrinter.getPairedDeviceId());
   const shouldAutoPrintReceipt = hasReceiptPrinter || hasPairedPrinter;
   const { toast } = useToast();
@@ -95,8 +97,26 @@ export default function POSPage() {
   const products = productsData?.products || [];
 
   // Fetch orders for queue display
-  const { data: ordersData, refetch: refetchOrders } = useOrders();
+  const { data: ordersData, refetch: refetchOrders } = useOrders(undefined, {
+    refetchInterval: isOrderQueueEnabled ? 5000 : false,
+  });
   const orders: Order[] = ordersData?.orders || [];
+
+  useEffect(() => {
+    if (!isOrderQueueEnabled) return;
+
+    const es = new EventSource("/api/orders/queue/stream", { withCredentials: true });
+    const onUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    };
+
+    es.addEventListener("order_queue_updated", onUpdate as EventListener);
+
+    return () => {
+      es.removeEventListener("order_queue_updated", onUpdate as EventListener);
+      es.close();
+    };
+  }, [isOrderQueueEnabled]);
 
   // Fetch order types for tenant
   const { data: orderTypes, isLoading: orderTypesLoading } = useOrderTypes();

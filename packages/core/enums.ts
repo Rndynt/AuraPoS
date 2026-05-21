@@ -157,6 +157,7 @@ export const FeatureCode = {
   INVENTORY_TRACKING: 'inventory_tracking',
   PARTIAL_PAYMENTS: 'partial_payments',
   DISCOUNTS: 'discounts',
+  ORDER_QUEUE: 'order_queue',
   
   // Reporting features
   SALES_REPORTS: 'sales_reports',

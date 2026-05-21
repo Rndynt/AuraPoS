@@ -63,6 +63,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
       { feature_code: 'kitchen_display', source: 'plan_default', is_active: true },
       { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
+      { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'multi_variant', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
@@ -96,6 +97,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
     },
     features: [
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
+      { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'inventory_tracking', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
@@ -130,6 +132,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
     },
     features: [
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
+      { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'label_printer', source: 'plan_default', is_active: true },
       { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
@@ -164,6 +167,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
     features: [
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
       { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
+      { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
       { feature_code: 'partial_payments', source: 'plan_default', is_active: true },
@@ -195,6 +199,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
     },
     features: [
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
+      { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
       { feature_code: 'payment_gateway', source: 'plan_default', is_active: true },
       { feature_code: 'analytics_dashboard', source: 'plan_default', is_active: true },

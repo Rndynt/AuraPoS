@@ -7,6 +7,29 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
+import { emitOrderQueueChanged, subscribeOrderQueue } from '../services/orderQueueEvents';
+
+/**
+ * GET /api/orders/queue/stream
+ * SSE stream for near real-time order queue updates per tenant.
+ */
+export const streamOrderQueue = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const unsubscribe = subscribeOrderQueue(tenantId, res);
+  const heartbeat = setInterval(() => {
+    res.write(`event: ping\ndata: ${Date.now()}\n\n`);
+  }, 15000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
+});
 
 /**
  * POST /api/orders
@@ -57,6 +80,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     ...parsed.data,
   });
 
+  emitOrderQueueChanged(tenantId, { source: 'create_order', orderId: result.order.id });
+
   res.status(201).json({
     success: true,
     data: {
@@ -105,6 +130,8 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     notes: parsed.data.notes,
     transaction_ref: transactionRef,
   });
+
+  emitOrderQueueChanged(tenantId, { source: 'record_payment', orderId: result.order.id });
 
   res.status(201).json({
     success: true,
@@ -301,6 +328,8 @@ export const updateOrder = asyncHandler(async (req: Request, res: Response) => {
     ...parsed.data,
   });
 
+  emitOrderQueueChanged(tenantId, { source: 'update_order', orderId: result.order.id });
+
   res.status(200).json({
     success: true,
     data: {
@@ -328,6 +357,8 @@ export const confirmOrder = asyncHandler(async (req: Request, res: Response) => 
     tenant_id: tenantId,
   });
 
+  emitOrderQueueChanged(tenantId, { source: 'confirm_order', orderId: result.order.id });
+
   res.status(200).json({
     success: true,
     data: {
@@ -353,6 +384,8 @@ export const completeOrder = asyncHandler(async (req: Request, res: Response) =>
     order_id: id,
     tenant_id: tenantId,
   });
+
+  emitOrderQueueChanged(tenantId, { source: 'complete_order', orderId: result.order.id });
 
   res.status(200).json({
     success: true,
@@ -406,6 +439,8 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
       status: parsed.data.status,
     });
 
+    emitOrderQueueChanged(tenantId, { source: 'update_status_kitchen', orderId: result.order.id });
+
     return res.status(200).json({
       success: true,
       data: {
@@ -433,6 +468,8 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
     status: parsed.data.status,
     override_payment_check: parsed.data.override_payment_check,
   });
+
+  emitOrderQueueChanged(tenantId, { source: 'update_status_pos', orderId: result.order.id });
 
   res.status(200).json({
     success: true,
@@ -470,6 +507,8 @@ export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
     tenant_id: tenantId,
     cancellation_reason: parsed.data.cancellation_reason,
   });
+
+  emitOrderQueueChanged(tenantId, { source: 'cancel_order', orderId: result.order.id });
 
   res.status(200).json({
     success: true,
@@ -644,6 +683,8 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
     payment_notes: parsed.data.payment_notes,
     idempotency_key: parsed.data.idempotency_key,
   });
+
+  emitOrderQueueChanged(tenantId, { source: 'create_and_pay', orderId: result.order.id });
 
   const status = result.idempotent_replay ? 200 : 201;
   res.status(status).json({
