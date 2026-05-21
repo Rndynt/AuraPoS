@@ -40,6 +40,17 @@ const filterByCategory = (products: Product[], category: string): Product[] => {
   return products.filter(p => p.category === category);
 };
 
+// Group products by category, preserving order
+const groupByCategory = (products: Product[]): { category: string; items: Product[] }[] => {
+  const map = new Map<string, Product[]>();
+  for (const p of products) {
+    const cat = p.category || "Lainnya";
+    if (!map.has(cat)) map.set(cat, []);
+    map.get(cat)!.push(p);
+  }
+  return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+};
+
 export function ProductArea({ 
   products, 
   isLoading, 
@@ -66,9 +77,14 @@ export function ProductArea({
         product.name.toLowerCase().includes(normalizedQuery)
       );
     }
-
     return filterByCategory(products, selectedCategory);
   }, [products, selectedCategory, searchQuery]);
+
+  const isGroupedView = !searchQuery.trim() && selectedCategory === DEFAULT_CATEGORY;
+  const groupedProducts = useMemo(
+    () => (isGroupedView ? groupByCategory(filteredProducts) : []),
+    [isGroupedView, filteredProducts]
+  );
 
   return (
     <div className="flex flex-col bg-slate-50/50 h-full min-h-0 overflow-x-hidden w-full max-w-full">
@@ -155,6 +171,27 @@ export function ProductArea({
             <p className="text-sm text-slate-400">
               {searchQuery ? `Tidak ada produk yang cocok dengan "${searchQuery}"` : "Belum ada produk di kategori ini"}
             </p>
+          </div>
+        ) : isGroupedView ? (
+          <div className="space-y-6">
+            {groupedProducts.map(({ category, items }) => (
+              <div key={category}>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <span>{category}</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="normal-case font-normal text-slate-400">{items.length} item</span>
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {items.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAddToCart={onAddToCart}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
