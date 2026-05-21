@@ -118,3 +118,82 @@ Langkah berikutnya: simpan preferensi service/characteristic UUID per model prin
 - Command: pnpm --filter @pos/terminal-web type-check
 - Result: pass
 - Notes: Lolos setelah perbaikan reconnect flow.
+
+## Plan: Investigasi Struk Pembayaran Tidak Keluar + Template Struk
+
+### Source
+- Tasklist: Tidak ada checklist formal, request user langsung
+- User request: "Printer sudah konek, tapi saat pembayaran order bayar struk gak keluar; check kenapa + buat template struk"
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Relevant source files
+
+### Workstreams
+#### Frontend/UI Workstream
+- Scope: POS payment print trigger & printer hub UX
+- Files inspected: apps/pos-terminal-web/src/lib/receiptPrinter.ts, apps/pos-terminal-web/src/pages/pos.tsx, apps/pos-terminal-web/src/pages/printers.tsx
+- Findings: Trigger print sudah benar; kegagalan utama di koneksi hardcoded service/characteristic UUID printer bluetooth tertentu.
+- Tasks: Implement fallback UUID + dynamic writable characteristic discovery; refresh template struk pembayaran.
+- Risks: Sebagian model printer tetap bisa butuh UUID khusus vendor.
+- Validation: pnpm --filter @pos/terminal-web type-check (pass)
+
+### Progress
+#### Completed
+- [x] Investigasi akar masalah print tidak keluar walau printer paired.
+  - Files changed: apps/pos-terminal-web/src/lib/receiptPrinter.ts
+  - Validation: type-check pass
+- [x] Perbaikan koneksi printer agar tidak hard fail di satu UUID.
+  - Files changed: apps/pos-terminal-web/src/lib/receiptPrinter.ts
+  - Validation: type-check pass
+- [x] Menyediakan template struk pembayaran baru (58mm) yang lebih terstruktur.
+  - Files changed: apps/pos-terminal-web/src/lib/receiptPrinter.ts
+  - Validation: type-check pass
+
+### Validation Log
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+- Notes: Tidak ada error TypeScript setelah perubahan printer manager dan template struk.
+
+### Continuation Notes
+Jika masih ada model printer yang gagal, tambahkan mapping UUID per vendor/model pada setting Printer Hub.
+
+## Plan: Fix Bluetooth writeValue >512 bytes on test print
+
+### Source
+- User request: tarik kode terbaru, perbaiki test print error `Value can't exceed 512 bytes`
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Progress
+#### Completed
+- [x] Ganti alur kirim data ESC/POS menjadi chunked write agar tiap write <= batas BLE characteristic.
+  - Files changed: apps/pos-terminal-web/src/lib/receiptPrinter.ts
+  - Validation: pnpm --filter @pos/terminal-web type-check (pass)
+
+### Continuation Notes
+Jika masih ada printer bermasalah, tuning `MAX_WRITE_CHUNK_BYTES` per model di setting printer.
+
+## Plan: Auto-print POS bayar tidak jalan meski test print sukses
+
+### Source
+- User request: pull terbaru lagi; investigasi kenapa test print sukses tapi saat bayar tidak keluar struk.
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Findings
+- Root cause: flow POS mengunci auto-print di feature flag `receipt_printer`.
+- Test print di halaman Printer Hub tidak memakai gate flag yang sama.
+- Akibatnya: test print bisa sukses, tapi bayar di POS tidak memanggil print sama sekali ketika flag tenant off.
+
+### Completed
+- [x] Ubah gate auto-print POS: print dijalankan jika `receipt_printer` aktif **atau** sudah ada device printer yang dipair.
+- [x] Tambah toast informatif saat auto-print tidak aktif (flag off + belum paired).
+
+### Validation Log
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
