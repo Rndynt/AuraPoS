@@ -197,3 +197,57 @@ Jika masih ada printer bermasalah, tuning `MAX_WRITE_CHUNK_BYTES` per model di s
 ### Validation Log
 - Command: pnpm --filter @pos/terminal-web type-check
 - Result: pass
+
+## Plan: Perbaikan Dashboard & Laporan Data Real + Empty State
+
+### Source
+- Tasklist: Request user langsung
+- User request: set remote origin + perbaiki dashboard/laporan agar data real dan handle empty state.
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Relevant source files
+
+### Progress
+#### Completed
+- [x] Set remote `origin` ke `https://github.com/Rndynt/AuraPoS.git`.
+- [x] Ganti data mock halaman dashboard dengan agregasi dari order API tenant-aware.
+- [x] Ganti data mock halaman laporan dengan data transaksi real dari order API.
+- [x] Tambahkan empty state untuk dashboard chart/report table saat tidak ada data periode.
+
+### Validation Log
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+
+### Continuation Notes
+Opsional berikutnya: buat endpoint analytics summary dedicated (server-side aggregated) agar performa dashboard lebih stabil untuk data besar.
+
+## Plan: Master Data Kategori Produk + Perbaikan Manajemen Produk Terkait Kategori
+
+### Source
+- User request: master data/manage kategori belum ada; perbaiki semua manajemen produk terkait kategori.
+- Date started: 2026-05-21
+- Current status: Implemented
+
+### Progress
+#### Completed
+- [x] Tambah endpoint kategori berbasis tenant untuk listing kategori dari data real produk.
+- [x] Tambah endpoint rename kategori (bulk update kategori produk tenant-aware).
+- [x] Integrasi halaman manajemen produk agar edit kategori pakai endpoint master kategori, bukan loop update per produk.
+- [x] Form produk sekarang pakai daftar kategori real dari API kategori.
+
+### Validation Log
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+
+### Continuation Update (2026-05-21)
+- Implementasi next step dimulai: master table kategori `product_categories` + relasi opsional `products.category_id`.
+- Endpoint kategori ditingkatkan agar berbasis master data, dengan bootstrap awal dari nilai legacy `products.category` saat master masih kosong.
+- Tambah endpoint create kategori agar admin bisa membuat kategori walau belum ada produk.
+- UI manajemen produk ditambah aksi `+ Kategori` dan form produk baca daftar kategori dari master data API.

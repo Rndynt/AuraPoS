@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useProducts, useCreateProduct, useUpdateProduct } from "@/hooks/api/useProducts";
 import { useVariantsLibrary, useCreateOrUpdateVariant, type Variant } from "@/hooks/useVariants";
+import { useCategories, useCreateCategory, useRenameCategory } from "@/hooks/api/useCategories";
 import ProductForm from "@/components/products/ProductForm";
 import VariantForm from "@/components/products/VariantForm";
 import VariantLibrary from "@/components/products/VariantLibrary";
@@ -40,10 +41,14 @@ export default function ProductsPage() {
   const [savingCategory, setSavingCategory] = useState<string | null>(null);
 
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
+  const { data: categories = [] } = useCategories();
   const { data: variants = [], isLoading: isLoadingVariants } = useVariantsLibrary();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const createOrUpdateVariant = useCreateOrUpdateVariant();
+  const renameCategoryMutation = useRenameCategory();
+  const createCategoryMutation = useCreateCategory();
+  const categoryNames = useMemo(() => categories.map((c: any) => c.name), [categories]);
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -89,16 +94,7 @@ export default function ProductsPage() {
 
     setSavingCategory(oldCategoryName);
     try {
-      const itemsInCategory = groupedProducts[oldCategoryName] || [];
-      
-      // Update all products in this category
-      for (const product of itemsInCategory) {
-        await updateProduct.mutateAsync({
-          product_id: product.id,
-          category: trimmedName,
-        } as any);
-      }
-      
+      await renameCategoryMutation.mutateAsync({ old_name: oldCategoryName, new_name: trimmedName });
       setEditingCategory(null);
       addToast("Kategori berhasil diperbarui", "success");
     } catch (error) {
@@ -115,6 +111,17 @@ export default function ProductsPage() {
   const handleCreateProduct = () => {
     setEditingProduct(null);
     setViewState("form_product");
+  };
+
+  const handleCreateCategory = async () => {
+    const name = window.prompt("Nama kategori baru");
+    if (!name || !name.trim()) return;
+    try {
+      await createCategoryMutation.mutateAsync({ name: name.trim() });
+      addToast("Kategori berhasil dibuat", "success");
+    } catch (e) {
+      addToast("Gagal membuat kategori", "error");
+    }
   };
 
   const handleEditProduct = (product: any) => {
@@ -380,6 +387,7 @@ export default function ProductsPage() {
     return (
       <ProductForm
         product={editingProduct}
+        categories={categoryNames}
         onSave={handleSaveProduct}
         onCancel={handleCancelForm}
         isLoading={updateProduct.isPending || createProduct.isPending}
@@ -419,13 +427,22 @@ export default function ProductsPage() {
             </h1>
           </div>
           {activeTab === "products" ? (
-            <button
-              onClick={handleCreateProduct}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
-              data-testid="button-add-product"
-            >
-              <Plus size={18} /> Produk
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCreateCategory}
+                className="bg-white text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold"
+                data-testid="button-add-category"
+              >
+                + Kategori
+              </button>
+              <button
+                onClick={handleCreateProduct}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                data-testid="button-add-product"
+              >
+                <Plus size={18} /> Produk
+              </button>
+            </div>
           ) : (
             <button
               onClick={handleCreateVariant}

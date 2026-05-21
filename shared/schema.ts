@@ -111,9 +111,24 @@ export const selectTenantModuleConfigSchema = createSelectSchema(tenantModuleCon
 export type InsertTenantModuleConfig = z.infer<typeof insertTenantModuleConfigSchema>;
 export type TenantModuleConfig = typeof tenantModuleConfigs.$inferSelect;
 
+export const productCategories = pgTable("product_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  tenantIdx: index("product_categories_tenant_idx").on(table.tenantId),
+  tenantNameUnique: uniqueIndex("product_categories_tenant_name_unique").on(table.tenantId, table.name),
+}));
+
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  categoryId: varchar("category_id").references(() => productCategories.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   description: text("description"),
   basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),

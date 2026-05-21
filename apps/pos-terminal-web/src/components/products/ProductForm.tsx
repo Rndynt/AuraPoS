@@ -9,6 +9,7 @@ interface ProductFormProps {
   isLoading?: boolean;
   onNavigateToVariants?: () => void;
   onDelete?: () => void;
+  categories?: string[];
 }
 
 const CustomSelect = ({
@@ -72,6 +73,7 @@ export default function ProductForm({
   isLoading,
   onNavigateToVariants,
   onDelete,
+  categories = [],
 }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -178,14 +180,10 @@ export default function ProductForm({
               <CustomSelect
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                options={[
-                  { value: "burger", label: "Burger" },
-                  { value: "coffee", label: "Kopi" },
-                  { value: "pizza", label: "Pizza" },
-                  { value: "snack", label: "Snack" },
-                  { value: "Makanan", label: "Makanan" },
-                  { value: "Minuman", label: "Minuman" },
-                ]}
+                options={(categories.length ? categories : ["Makanan", "Minuman"]).map((c) => ({
+                  value: c,
+                  label: c,
+                }))}
               />
             </div>
           </div>
