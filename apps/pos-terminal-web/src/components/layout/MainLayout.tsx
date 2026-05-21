@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/pos/Sidebar";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
+import { TabletOrientationGuard } from "./TabletOrientationGuard";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,9 @@ interface MainLayoutProps {
 export function MainLayout({ children, cartCount = 0, onCartClick, hideBottomNav }: MainLayoutProps) {
   return (
     <div className="flex h-screen bg-background w-full overflow-hidden">
+      {/* Tablet portrait orientation warning */}
+      <TabletOrientationGuard />
+
       {/* Desktop Sidebar */}
       <Sidebar />
       
