@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Box, Layers, Save, ChevronLeft, ChevronDown, Trash2 } from "lucide-react";
+import { Box, Layers, Save, ChevronLeft, ChevronDown, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 interface ProductFormProps {
   product?: any | null;
@@ -101,6 +103,8 @@ export default function ProductForm({
     }
   }, [product]);
 
+  const [categoryOpen, setCategoryOpen] = useState(false);
+
   const handleSubmit = () => {
     onSave({
       name: formData.name,
@@ -180,22 +184,42 @@ export default function ProductForm({
             />
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500">Kategori</label>
-              <input
-                className="w-full border border-slate-200 rounded-xl p-2.5 text-sm"
-                placeholder="Cari kategori..."
-                list="category-options"
-                value={formData.category}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  const found = categories.find((c) => c.name === name);
-                  setFormData({ ...formData, category: name, category_id: found?.id || "" });
-                }}
-              />
-              <datalist id="category-options">
-                {categories.map((c) => (
-                  <option key={c.id} value={c.name} />
-                ))}
-              </datalist>
+              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full border border-slate-200 rounded-xl p-2.5 text-sm text-left bg-white flex items-center justify-between"
+                  >
+                    <span className={formData.category ? "text-slate-700" : "text-slate-400"}>
+                      {formData.category || "Pilih kategori"}
+                    </span>
+                    <ChevronDown size={16} className="text-slate-400" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Cari kategori..." />
+                    <CommandList>
+                      <CommandEmpty>Kategori tidak ditemukan.</CommandEmpty>
+                      <CommandGroup>
+                        {categories.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={c.name}
+                            onSelect={() => {
+                              setFormData({ ...formData, category: c.name, category_id: c.id });
+                              setCategoryOpen(false);
+                            }}
+                          >
+                            <Check size={14} className={formData.category_id === c.id ? "opacity-100" : "opacity-0"} />
+                            {c.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
