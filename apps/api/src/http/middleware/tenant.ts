@@ -1,80 +1,71 @@
-/**
- * Tenant Middleware
- * Extracts tenant_id from request and validates tenant exists
- * Rejects requests without valid tenant_id
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { db } from '@pos/infrastructure/database';
 import { tenants } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 
 declare global {
   namespace Express {
     interface Request {
       tenantId?: string;
+      tenantSlug?: string;
     }
   }
 }
 
+const BASE_DOMAIN = process.env.BASE_DOMAIN || 'aurapos.my.id';
+
+const RESERVED_SLUGS = new Set([
+  'www','api','app','admin','mail','ftp','ssh','dev','staging','test','demo',
+  'cdn','media','assets','static','dashboard','manage','account','auth',
+  'login','register','signup','help','support','status','blog','docs',
+]);
+
+function extractSlugFromHost(hostname: string): string | null {
+  const host = (hostname || '').split(':')[0];
+  if (!host.endsWith(`.${BASE_DOMAIN}`)) return null;
+  const slug = host.slice(0, -(BASE_DOMAIN.length + 1));
+  if (!slug || RESERVED_SLUGS.has(slug)) return null;
+  return slug;
+}
+
 export async function tenantMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
+  req: Request, res: Response, next: NextFunction,
 ): Promise<void> {
   try {
-    // Extract tenant_id from header or query param
-    const tenantId = 
-      req.headers['x-tenant-id'] as string || 
-      req.query.tenant_id as string;
+    const hostname = req.hostname || (req.headers.host as string) || '';
+
+    // ── 1. Subdomain: {slug}.aurapos.my.id ───────────────────────────────────
+    const slug = extractSlugFromHost(hostname);
+    if (slug) {
+      const rows = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+      if (!rows.length) { res.status(404).json({ error: 'Tenant not found', slug }); return; }
+      if (!rows[0].isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
+      req.tenantId = rows[0].id;
+      req.tenantSlug = slug;
+      return next();
+    }
+
+    // ── 2. Header / query fallback (dev, API client) ─────────────────────────
+    const tenantId =
+      (req.headers['x-tenant-id'] as string) ||
+      (req.query.tenant_id as string);
 
     if (!tenantId) {
-      res.status(400).json({
-        error: 'Missing tenant_id',
-        message: 'tenant_id is required in x-tenant-id header or tenant_id query parameter',
-      });
+      res.status(400).json({ error: 'Missing tenant', message: 'Use {slug}.aurapos.my.id or provide x-tenant-id header' });
       return;
     }
 
-    // Try to validate tenant exists and is active (optional for now)
-    try {
-      const result = await db
-        .select()
-        .from(tenants)
-        .where(eq(tenants.id, tenantId))
-        .limit(1);
+    const rows = await db.select().from(tenants)
+      .where(or(eq(tenants.id, tenantId), eq(tenants.slug, tenantId))).limit(1);
 
-      // If database validation succeeds, check tenant status
-      if (result && Array.isArray(result) && result.length > 0) {
-        const tenant = result[0];
-        if (!tenant.isActive) {
-          res.status(403).json({
-            error: 'Tenant inactive',
-            message: `Tenant ${tenantId} is not active`,
-          });
-          return;
-        }
-      }
-      // Tenant must exist in every environment so local/dev catches isolation bugs early.
-      else {
-        res.status(404).json({
-          error: 'Tenant not found',
-          message: `Tenant ${tenantId} does not exist`,
-        });
-        return;
-      }
-    } catch (dbError) {
-      throw dbError;
-    }
+    if (!rows.length) { res.status(404).json({ error: 'Tenant not found' }); return; }
+    if (!rows[0].isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
 
-    // Inject tenant_id into request context
-    req.tenantId = tenantId;
+    req.tenantId = rows[0].id;
+    req.tenantSlug = rows[0].slug;
     next();
-  } catch (error) {
-    console.error('Tenant middleware error:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: 'Failed to validate tenant',
-    });
+  } catch (err) {
+    console.error('Tenant middleware error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

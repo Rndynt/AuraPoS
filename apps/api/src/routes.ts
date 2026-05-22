@@ -61,8 +61,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply tenant middleware to all other /api routes
   app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/auth/')) return next();
+    if (req.path.startsWith('/register')) return next();          // public registration
+    if (req.path.startsWith('/tenants/by-slug/')) return next();  // public slug lookup
     if (req.path === '/tenants/register') return next();
-    if (req.path === '/cfd/update') return next(); // already handled above
+    if (req.path === '/cfd/update') return next();
     return tenantMiddleware(req, res, next);
   });
 

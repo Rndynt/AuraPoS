@@ -1,14 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { resolveInitialTenantId, setActiveTenantId } from "@/lib/tenant";
+import { getSubdomainSlug, resolveTenantBySlug } from "@/lib/subdomain";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import type { BusinessType } from "@pos/core";
 import type { TenantModuleConfig } from "@pos/domain/tenants/types";
 
-/**
- * On every page load / refresh, resolve the real tenantId from the active
- * session cookie. This ensures each user always gets their own tenant,
- * regardless of what's cached in localStorage.
- */
 async function syncTenantFromSession(): Promise<string | null> {
   try {
     const res = await fetch("/api/auth/me", { credentials: "include" });
@@ -18,6 +14,23 @@ async function syncTenantFromSession(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve tenantId dengan prioritas:
+ * 1. Subdomain ({slug}.aurapos.my.id)
+ * 2. Session cookie (login)
+ * 3. localStorage fallback
+ */
+async function resolveActiveTenant(): Promise<string | null> {
+  // 1. Subdomain
+  const slug = getSubdomainSlug();
+  if (slug) {
+    const id = await resolveTenantBySlug(slug);
+    if (id) return id;
+  }
+  // 2. Session
+  return syncTenantFromSession();
 }
 
 export type TenantContextValue = {
@@ -40,14 +53,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setActiveTenantId(nextTenantId);
   }, []);
 
-  // On every page load, always resolve the real tenant from the session.
-  // This ensures multi-tenant login works — each user gets their own tenant
-  // regardless of what's in localStorage or the fallback constant.
+  // On every page load: subdomain → session → localStorage
   useEffect(() => {
-    syncTenantFromSession().then((sessionTenantId) => {
-      if (sessionTenantId && sessionTenantId !== tenantId) {
-        setTenantId(sessionTenantId);
-      }
+    resolveActiveTenant().then((id) => {
+      if (id && id !== tenantId) setTenantId(id);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -68,6 +68,27 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// ── CORS — allow *.aurapos.my.id + localhost + replit ────────────────────────
+const BASE_DOMAIN = process.env.BASE_DOMAIN || 'aurapos.my.id';
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  const allowed =
+    origin.endsWith(`.${BASE_DOMAIN}`) ||
+    origin === `https://${BASE_DOMAIN}` ||
+    origin.includes('localhost') ||
+    origin.includes('replit.dev') ||
+    origin.includes('repl.co') ||
+    origin.includes('sisko.replit.dev');
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-tenant-id');
+  }
+  if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

@@ -1,30 +1,24 @@
-/**
- * Routes Index
- * Aggregates all API routes
- */
-
 import { Router } from 'express';
 import { db } from '@pos/infrastructure/database';
 import catalogRoutes from './catalog';
 import ordersRoutes from './orders';
 import tenantsRoutes from './tenants';
 import { createTablesRouter } from './tables';
+import registrationRoutes from './registration';
 
 const router = Router();
 
-// Mount domain routes
+// ── Public ────────────────────────────────────────────────────────────────────
+router.use('/register', registrationRoutes);
+
+// ── Tenant-scoped ─────────────────────────────────────────────────────────────
 router.use('/catalog', catalogRoutes);
 router.use('/orders', ordersRoutes);
 router.use('/tenants', tenantsRoutes);
 router.use('/tables', createTablesRouter(db));
 
-// Health check endpoint
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API is healthy',
-    timestamp: new Date().toISOString(),
-  });
+router.get('/health', (_req, res) => {
+  res.json({ success: true, timestamp: new Date().toISOString() });
 });
 
 export default router;

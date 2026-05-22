@@ -21,6 +21,7 @@ import PrintersPage from "@/pages/printers";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
+import RegisterTenantPage from "@/pages/register-tenant";
 import { TenantProvider, useTenant } from "@/context/TenantContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 
@@ -236,6 +237,8 @@ function Router() {
       </Route>
       {/* Customer Facing Display — tidak butuh auth, full-screen tanpa layout */}
       <Route path="/display" component={CustomerDisplayPage} />
+      {/* Pendaftaran tenant baru — public, no auth */}
+      <Route path="/register-tenant" component={RegisterTenantPage} />
       <Route component={NotFoundWithLayout} />
     </Switch>
   );
