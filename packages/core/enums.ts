@@ -152,10 +152,17 @@ export const FeatureCode = {
   KITCHEN_DISPLAY: 'kitchen_display',
   ORDER_NOTIFICATIONS: 'order_notifications',
   
+  // Kitchen ticket feature (synced with enable_kitchen_ticket module)
+  KITCHEN_TICKET: 'kitchen_ticket',
+
   // POS features
-  MULTI_VARIANT: 'multi_variant',
+  PRODUCT_VARIANTS: 'product_variants',
+  /** @deprecated Use PRODUCT_VARIANTS — kept for backward compatibility */
+  MULTI_VARIANT: 'product_variants',
   INVENTORY_TRACKING: 'inventory_tracking',
-  PARTIAL_PAYMENTS: 'partial_payments',
+  PARTIAL_PAYMENT: 'partial_payment',
+  /** @deprecated Use PARTIAL_PAYMENT — kept for backward compatibility */
+  PARTIAL_PAYMENTS: 'partial_payment',
   DISCOUNTS: 'discounts',
   ORDER_QUEUE: 'order_queue',
   

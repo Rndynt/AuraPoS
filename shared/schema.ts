@@ -401,6 +401,7 @@ export const kitchenTickets = pgTable("kitchen_tickets", {
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
   ticketNumber: text("ticket_number").notNull(),
+  tableNumber: text("table_number"),
   status: varchar("status", { length: 50 }).notNull().default("pending"),
   items: json("items").notNull(),
   printedAt: timestamp("printed_at"),

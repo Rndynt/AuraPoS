@@ -163,13 +163,25 @@ async function seedThamada(createdOrderTypes: any[]) {
     enableMultiLocation: false,
   } as InsertTenantModuleConfig);
 
-  // Features
+  // Features — seeded lengkap sesuai CAFE_RESTAURANT template
+  // kitchen_ticket disinkronisasi dengan enableKitchenTicket: true di atas
   await db.insert(tenantFeatures).values([
-    { tenantId: tenant.id, featureCode: 'product_variants', source: 'plan_default', isActive: true },
-    { tenantId: tenant.id, featureCode: 'partial_payment',  source: 'plan_default', isActive: true },
-    { tenantId: tenant.id, featureCode: 'kitchen_ticket',   source: 'plan_default', isActive: true },
+    // Kitchen features (synced: enableKitchenTicket = true)
+    { tenantId: tenant.id, featureCode: 'kitchen_ticket',      source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'kitchen_display',     source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'kitchen_printer',     source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'order_notifications', source: 'plan_default', isActive: true },
+    // POS features
+    { tenantId: tenant.id, featureCode: 'product_variants',    source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'partial_payment',     source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'discounts',           source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'order_queue',         source: 'plan_default', isActive: true },
+    // Printing
+    { tenantId: tenant.id, featureCode: 'receipt_printer',     source: 'plan_default', isActive: true },
+    // Reporting
+    { tenantId: tenant.id, featureCode: 'sales_reports',       source: 'plan_default', isActive: true },
   ] as InsertTenantFeature[]);
-  console.log('✅ Modules & features configured\n');
+  console.log('✅ Modules & features configured (10 features)\n');
 
   // Tables
   console.log('🪑 Seeding tables...');
@@ -415,11 +427,20 @@ async function seedNusantara(createdOrderTypes: any[]) {
     enableMultiLocation: false,
   } as InsertTenantModuleConfig);
 
-  // Features
+  // Features — seeded lengkap (CAFE_RESTAURANT tanpa kitchen karena enableKitchenTicket: false)
+  // Tidak ada kitchen_ticket/kitchen_display/kitchen_printer karena module kitchen OFF
   await db.insert(tenantFeatures).values([
-    { tenantId: tenant.id, featureCode: 'product_variants', source: 'plan_default', isActive: true },
+    // POS features
+    { tenantId: tenant.id, featureCode: 'product_variants',    source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'partial_payment',     source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'discounts',           source: 'plan_default', isActive: true },
+    { tenantId: tenant.id, featureCode: 'order_queue',         source: 'plan_default', isActive: true },
+    // Printing
+    { tenantId: tenant.id, featureCode: 'receipt_printer',     source: 'plan_default', isActive: true },
+    // Reporting
+    { tenantId: tenant.id, featureCode: 'sales_reports',       source: 'plan_default', isActive: true },
   ] as InsertTenantFeature[]);
-  console.log('✅ Modules & features configured\n');
+  console.log('✅ Modules & features configured (6 features, no kitchen)\n');
 
   // Tables — lesehan/warung style, fewer tables
   console.log('🪑 Seeding tables...');
