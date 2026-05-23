@@ -5,7 +5,7 @@ import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Drawer } from "vaul";
-import { ShoppingBag, CreditCard, Printer, X, Edit2, User, Banknote, Scan, ChevronDown, ChevronUp, ChefHat, Trash2 } from "lucide-react";
+import { ShoppingBag, CreditCard, Printer, X, User, Banknote, Scan, ChevronDown, ChevronUp, ChefHat, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -219,72 +219,46 @@ export function MobileCartDrawer({
                 ))}
               </div>
               
-              {/* Customer Name & Table Number */}
-              <div className="flex gap-3">
-                {/* Customer Name Card */}
-                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2 flex items-center gap-3 hover:border-blue-300 transition-colors group">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-400 shadow-sm group-hover:text-blue-500 flex-shrink-0">
-                    <User size={16} />
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">
-                      Pelanggan
-                    </p>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="bg-transparent w-full text-sm font-bold text-slate-700 focus:outline-none"
-                      placeholder="Walk-in Guest"
-                      data-testid="input-customer-name"
-                    />
-                  </div>
-                  <Edit2
-                    size={12}
-                    className="text-slate-300 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              {/* Customer Name & Table Number — compact row */}
+              <div className="flex items-center gap-2">
+                {/* Customer Name */}
+                <div className="flex-1 flex items-center gap-2 h-10 bg-white border border-slate-200 rounded-xl px-3 min-w-0 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all">
+                  <User size={14} className="text-slate-400 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="bg-transparent flex-1 text-sm text-slate-700 focus:outline-none placeholder:text-slate-300 min-w-0"
+                    placeholder="Nama pelanggan"
+                    data-testid="input-customer-name"
                   />
                 </div>
-                
-                {/* Table Number Card (only for dine-in) */}
+
+                {/* Table Number — compact select (dine-in only) */}
                 {orderType === 'dine-in' && showTableNumber && setTableNumber && (
-                  <div className="w-20 bg-slate-50 border border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:border-blue-300 cursor-pointer group">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold text-center">
-                      Meja
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <Select 
-                        value={tableNumber} 
-                        onValueChange={setTableNumber}
-                      >
-                        <SelectTrigger className="border-0 h-auto p-0 focus:ring-0 w-auto bg-transparent" data-testid="select-table-mobile">
-                          <div className="flex items-center gap-1">
-                            <span className="text-lg font-black text-slate-700">
-                              {tableNumber || "-"}
-                            </span>
-                            <Edit2
-                              size={10}
-                              className="text-slate-300 opacity-0 group-hover:opacity-100"
-                            />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className="z-[100]">
-                          {tablesLoading ? (
-                            <div className="p-2 text-xs text-slate-400">Loading...</div>
-                          ) : tablesData?.tables && tablesData.tables.length > 0 ? (
-                            tablesData.tables
-                              .filter(t => t.status !== 'maintenance')
-                              .map((table) => (
-                                <SelectItem key={table.id} value={table.tableNumber}>
-                                  Table {table.tableNumber}
-                                </SelectItem>
-                              ))
-                          ) : (
-                            <div className="p-2 text-xs text-slate-400">No tables</div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  <Select value={tableNumber} onValueChange={setTableNumber}>
+                    <SelectTrigger
+                      className="h-10 min-w-[76px] max-w-[96px] flex-shrink-0 border border-slate-200 bg-white rounded-xl px-3 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-50 focus:border-blue-400 gap-1.5 transition-all"
+                      data-testid="select-table-mobile"
+                    >
+                      <span className="truncate">{tableNumber ? `Meja ${tableNumber}` : "Meja"}</span>
+                    </SelectTrigger>
+                    <SelectContent className="z-[100]">
+                      {tablesLoading ? (
+                        <div className="p-2 text-xs text-slate-400">Loading...</div>
+                      ) : tablesData?.tables && tablesData.tables.length > 0 ? (
+                        tablesData.tables
+                          .filter(t => t.status !== 'maintenance')
+                          .map((table) => (
+                            <SelectItem key={table.id} value={table.tableNumber}>
+                              Meja {table.tableNumber}
+                            </SelectItem>
+                          ))
+                      ) : (
+                        <div className="p-2 text-xs text-slate-400">Tidak ada meja</div>
+                      )}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>

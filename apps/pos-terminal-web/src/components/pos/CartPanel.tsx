@@ -118,36 +118,36 @@ export function CartPanel({
           ))}
         </div>
 
-        {/* Customer + table — satu baris compact */}
-        <div className="flex gap-2">
+        {/* Customer + table — single compact row */}
+        <div className="flex items-center gap-1.5">
           {/* Customer name */}
-          <div className="flex-1 flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 min-w-0">
-            <User size={12} className="text-slate-400 flex-shrink-0" />
+          <div className="flex-1 flex items-center gap-1.5 h-7 bg-white border border-slate-200 rounded-md px-2 min-w-0 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 transition-all">
+            <User size={11} className="text-slate-400 flex-shrink-0" />
             <input
               type="text"
               value={customerName}
               onChange={e => setCustomerName(e.target.value)}
-              placeholder="Pelanggan"
-              className="bg-transparent w-full text-xs font-semibold text-slate-700 focus:outline-none placeholder:text-slate-300 min-w-0"
+              placeholder="Nama pelanggan"
+              className="bg-transparent w-full text-xs text-slate-700 focus:outline-none placeholder:text-slate-300 min-w-0"
               data-testid="input-customer-name"
             />
           </div>
 
           {/* Table number */}
           {orderType === "dine-in" && showTable && setTableNumber && (
-            <div className="w-20 flex-shrink-0 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 flex flex-col items-center justify-center">
-              <span className="text-[9px] text-slate-400 font-bold uppercase">Meja</span>
-              <Select value={tableNumber} onValueChange={setTableNumber}>
-                <SelectTrigger className="border-0 h-auto p-0 focus:ring-0 w-full bg-transparent justify-center" data-testid="select-table">
-                  <span className="text-xs font-black text-slate-700">{tableNumber || "–"}</span>
-                </SelectTrigger>
-                <SelectContent>
-                  {tablesData?.tables?.filter(t => t.status !== "maintenance").map(t => (
-                    <SelectItem key={t.id} value={t.tableNumber}>Table {t.tableNumber}</SelectItem>
-                  )) ?? <div className="p-2 text-xs text-slate-400">No tables</div>}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={tableNumber} onValueChange={setTableNumber}>
+              <SelectTrigger
+                className="h-7 min-w-[64px] max-w-[80px] flex-shrink-0 border border-slate-200 bg-white rounded-md px-2 text-xs font-semibold text-slate-700 focus:ring-1 focus:ring-blue-100 focus:border-blue-400 gap-1 transition-all"
+                data-testid="select-table"
+              >
+                <span className="truncate">{tableNumber ? `Meja ${tableNumber}` : "Meja"}</span>
+              </SelectTrigger>
+              <SelectContent>
+                {tablesData?.tables?.filter(t => t.status !== "maintenance").map(t => (
+                  <SelectItem key={t.id} value={t.tableNumber}>Meja {t.tableNumber}</SelectItem>
+                )) ?? <div className="p-2 text-xs text-slate-400">Tidak ada meja</div>}
+              </SelectContent>
+            </Select>
           )}
         </div>
       </div>
