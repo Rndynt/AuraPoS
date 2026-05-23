@@ -1,3 +1,5 @@
+import { NetworkStatusBadge } from "@/components/offline/NetworkStatusBadge";
+import { SyncStatusWidget } from "@/components/offline/SyncStatusWidget";
 import { Sidebar } from "@/components/pos/Sidebar";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 
@@ -17,6 +19,7 @@ export function MainLayout({ children, cartCount = 0, onCartClick, hideBottomNav
       
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="px-4 pt-3 flex items-center justify-between gap-2"><NetworkStatusBadge pendingSyncCount={0} /><SyncStatusWidget /></div>
         <main className="flex-1 overflow-hidden">
           {children}
         </main>

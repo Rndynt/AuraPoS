@@ -2,11 +2,34 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
+    VitePWA({
+      registerType: "prompt",
+      includeAssets: ["favicon.png", "icons/icon.svg"],
+      manifest: false,
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
+        navigateFallback: "/index.html",
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages-cache",
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
+      },
+      devOptions: {
+        enabled: true,
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -27,6 +50,7 @@ export default defineConfig({
       "@pos/infrastructure": path.resolve(import.meta.dirname, "..", "..", "packages", "infrastructure"),
       "@pos/features": path.resolve(import.meta.dirname, "..", "..", "packages", "features"),
       "@pos/ui": path.resolve(import.meta.dirname, "..", "..", "packages", "ui", "src"),
+      "@pos/offline": path.resolve(import.meta.dirname, "..", "..", "packages", "offline", "src"),
     },
   },
   root: path.resolve(import.meta.dirname),

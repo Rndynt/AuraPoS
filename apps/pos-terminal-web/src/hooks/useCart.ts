@@ -3,6 +3,8 @@ import { nanoid } from "nanoid";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
+import { getActiveTenantId, resolveInitialTenantId } from "@/lib/tenant";
+import { clearCartSession, migrateLegacySession, saveCartSession } from "@pos/offline";
 
 export interface ItemDiscount {
   type: "percent" | "nominal";
@@ -126,6 +128,7 @@ export type OrderType = "dine-in" | "take-away" | "delivery";
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 export function useCart() {
   const saved = useRef(loadSession());
+  const tenantId = getActiveTenantId() || resolveInitialTenantId() || "default";
 
   const [items, setItems] = useState<CartItem[]>(saved.current?.items ?? []);
   const [customerName, setCustomerName] = useState<string>(saved.current?.customerName ?? "");
@@ -141,9 +144,29 @@ export function useCart() {
     saved.current?.orderDiscount ?? null
   );
 
+  useEffect(() => {
+    let mounted = true;
+    migrateLegacySession<CartSession>(tenantId).then((persisted) => {
+      if (!mounted || !persisted || saved.current) return;
+      setItems(persisted.items ?? []);
+      setCustomerName(persisted.customerName ?? "");
+      setTableNumber(persisted.tableNumber ?? "");
+      setPaymentMethod(persisted.paymentMethod ?? "cash");
+      setSelectedOrderTypeId(persisted.selectedOrderTypeId ?? null);
+      setOrderType(persisted.orderType ?? "dine-in");
+      setOrderDiscount(persisted.orderDiscount ?? null);
+    }).catch(() => undefined);
+
+    return () => {
+      mounted = false;
+    };
+  }, [tenantId]);
+
   // Persist to sessionStorage on every relevant state change
   useEffect(() => {
-    saveSession({ items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber, orderDiscount });
+    const session = { items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber, orderDiscount };
+    saveSession(session);
+    saveCartSession(tenantId, session).catch(() => undefined);
   }, [items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber, orderDiscount]);
 
   const addItem = (
@@ -228,6 +251,7 @@ export function useCart() {
     setOrderType("dine-in");
     setOrderDiscount(null);
     clearSession();
+    clearCartSession().catch(() => undefined);
   };
 
   const loadOrder = (order: any): string => {

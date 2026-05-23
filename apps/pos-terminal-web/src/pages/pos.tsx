@@ -10,6 +10,7 @@ import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
 import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
 import { PaymentMethodDialog } from "@/components/pos/PaymentMethodDialog";
 import { DraftOrdersSheet } from "@/components/pos/DraftOrdersSheet";
+import { LocalDraftOrdersSheet } from "@/components/pos/LocalDraftOrdersSheet";
 import type { PaymentMethod } from "@/hooks/useCart";
 import { useCart } from "@/hooks/useCart";
 import { useFeatures } from "@/hooks/useFeatures";
@@ -27,6 +28,7 @@ import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { useCustomerDisplaySender, toCFDItem } from "@/hooks/useCustomerDisplay";
 import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
 import { queryClient } from "@/lib/queryClient";
+import { saveLocalDraftOrder } from "@pos/offline";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -37,6 +39,7 @@ export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [draftSheetOpen, setDraftSheetOpen] = useState(false);
+  const [localDraftSheetOpen, setLocalDraftSheetOpen] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
@@ -743,6 +746,31 @@ export default function POSPage() {
         setLocation("/pos");
       }
     } catch (error) {
+      const isNetworkError = error instanceof TypeError || (error instanceof Error && /network|fetch/i.test(error.message));
+
+      if (isNetworkError) {
+        try {
+          const draft = await saveLocalDraftOrder({
+            tenantId,
+            customerName: cart.customerName || undefined,
+            tableNumber: cart.tableNumber || undefined,
+            items: cart.items,
+            total: cart.total,
+          });
+
+          toast({
+            title: "Draft lokal disimpan",
+            description: `Koneksi bermasalah. Draft #${draft.id.slice(0, 8)} disimpan di perangkat ini.`,
+          });
+
+          cart.clearCart();
+          setMobileCartOpen(false);
+          return;
+        } catch {
+          // fallback to generic API error toast
+        }
+      }
+
       toast({
         title: "Gagal menyimpan pesanan",
         description: error instanceof Error ? error.message : "Gagal membuat pesanan",
@@ -752,6 +780,18 @@ export default function POSPage() {
   };
   
   // Send to Kitchen - Separate action, only available when kitchen feature is enabled
+
+  const handleResumeLocalDraft = (draft: any) => {
+    cart.clearCart();
+    cart.setCustomerName(draft.customerName || "");
+    cart.setTableNumber(draft.tableNumber || "");
+    const localItems = Array.isArray(draft.items) ? draft.items : [];
+    localItems.forEach((item: any) => {
+      if (!item?.product) return;
+      cart.addItem(item.product, item.variant, item.selectedOptions || [], item.quantity || 1);
+    });
+    toast({ title: "Draft lokal dimuat", description: `Draft LOCAL-${String(draft.id).slice(0,8)} siap dilanjutkan.` });
+  };
   const handleSendToKitchen = async (orderId: string) => {
     if (!hasKitchenTicket) {
       toast({
@@ -795,7 +835,7 @@ export default function POSPage() {
         onAddToCart={handleAddToCart}
         orders={orders}
         onUpdateOrderStatus={handleUpdateOrderStatus}
-        onOpenDraftSheet={() => setDraftSheetOpen(true)}
+        onOpenDraftSheet={() => { setDraftSheetOpen(true); setLocalDraftSheetOpen(true); }}
       />
 
       {/* Cart Panel - Hidden on mobile, shown on tablet (md) and up */}
@@ -895,6 +935,12 @@ export default function POSPage() {
       )}
 
       {/* Draft Orders Sheet */}
+      <LocalDraftOrdersSheet
+        open={localDraftSheetOpen}
+        onOpenChange={setLocalDraftSheetOpen}
+        onResumeLocalDraft={handleResumeLocalDraft}
+      />
+
       <DraftOrdersSheet
         open={draftSheetOpen}
         onOpenChange={setDraftSheetOpen}

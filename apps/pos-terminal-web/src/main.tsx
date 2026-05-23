@@ -9,3 +9,19 @@ try {
 } catch {}
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      registration.addEventListener("updatefound", () => {
+        if (window.confirm("A new version is available. Refresh app?")) {
+          window.location.reload();
+        }
+      });
+    } catch {
+      // no-op for unsupported environments
+    }
+  });
+}

@@ -20,6 +20,7 @@ import KitchenDisplayPage from "@/pages/kitchen-display";
 import CustomerDisplayPage from "@/pages/customer-display";
 import PrintersPage from "@/pages/printers";
 import NotFound from "@/pages/not-found";
+import LocalOrdersPage from "@/pages/local-orders";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import RegisterTenantPage from "@/pages/register-tenant";
@@ -101,6 +102,12 @@ const PrintersPageWithLayout = () => (
 const KitchenDisplayPageWithLayout = () => (
   <MainLayout hideBottomNav>
     <KitchenDisplayPage />
+  </MainLayout>
+);
+
+const LocalOrdersPageWithLayout = () => (
+  <MainLayout>
+    <LocalOrdersPage />
   </MainLayout>
 );
 
@@ -240,6 +247,11 @@ function Router() {
       <Route path="/printers">
         <RequireAuth>
           <PrintersPageWithLayout />
+        </RequireAuth>
+      </Route>
+      <Route path="/local-orders">
+        <RequireAuth>
+          <LocalOrdersPageWithLayout />
         </RequireAuth>
       </Route>
       <Route path="/store-profile">

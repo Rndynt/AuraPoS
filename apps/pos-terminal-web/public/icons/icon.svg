@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AuraPoS icon">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect x="106" y="168" width="300" height="176" rx="24" fill="#ffffff" opacity="0.95"/>
+  <rect x="146" y="208" width="220" height="18" rx="9" fill="#1d4ed8"/>
+  <rect x="146" y="248" width="160" height="18" rx="9" fill="#1d4ed8"/>
+  <circle cx="356" cy="257" r="35" fill="#2563eb"/>
+  <path d="M356 236v42M335 257h42" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+</svg>

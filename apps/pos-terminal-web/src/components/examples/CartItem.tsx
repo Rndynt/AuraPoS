@@ -37,7 +37,9 @@ export default function CartItemExample() {
           item={item}
           onUpdateQty={(id, qty) => console.log("Update qty:", id, qty)}
           onRemove={(id) => console.log("Remove:", id)}
+          onUpdateNote={(id, note) => console.log("Update note:", id, note)}
           getItemPrice={getItemPrice}
+          onSetDiscount={(id, discount) => console.log("Set discount:", id, discount)}
         />
       ))}
     </div>

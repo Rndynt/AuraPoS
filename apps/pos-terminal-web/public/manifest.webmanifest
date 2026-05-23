@@ -1,0 +1,14 @@
+{
+  "name": "AuraPoS Terminal",
+  "short_name": "AuraPoS",
+  "description": "Offline-first POS terminal for AuraPoS",
+  "start_url": "/pos",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "landscape",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

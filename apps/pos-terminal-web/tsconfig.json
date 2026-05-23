@@ -3,25 +3,71 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@shared": ["../../shared"],
-      "@shared/*": ["../../shared/*"],
-      "@assets": ["../../attached_assets"],
-      "@assets/*": ["../../attached_assets/*"],
-      "@pos/core": ["../../packages/core"],
-      "@pos/core/*": ["../../packages/core/*"],
-      "@pos/ui": ["../../packages/ui/src"],
-      "@pos/ui/*": ["../../packages/ui/src/*"],
-      "@pos/domain": ["../../packages/domain"],
-      "@pos/domain/*": ["../../packages/domain/*"],
-      "@pos/application": ["../../packages/application"],
-      "@pos/application/*": ["../../packages/application/*"],
-      "@pos/infrastructure": ["../../packages/infrastructure"],
-      "@pos/infrastructure/*": ["../../packages/infrastructure/*"],
-      "@pos/features": ["../../packages/features"],
-      "@pos/features/*": ["../../packages/features/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@shared": [
+        "../../shared"
+      ],
+      "@shared/*": [
+        "../../shared/*"
+      ],
+      "@assets": [
+        "../../attached_assets"
+      ],
+      "@assets/*": [
+        "../../attached_assets/*"
+      ],
+      "@pos/core": [
+        "../../packages/core"
+      ],
+      "@pos/core/*": [
+        "../../packages/core/*"
+      ],
+      "@pos/ui": [
+        "../../packages/ui/src"
+      ],
+      "@pos/ui/*": [
+        "../../packages/ui/src/*"
+      ],
+      "@pos/domain": [
+        "../../packages/domain"
+      ],
+      "@pos/domain/*": [
+        "../../packages/domain/*"
+      ],
+      "@pos/application": [
+        "../../packages/application"
+      ],
+      "@pos/application/*": [
+        "../../packages/application/*"
+      ],
+      "@pos/infrastructure": [
+        "../../packages/infrastructure"
+      ],
+      "@pos/infrastructure/*": [
+        "../../packages/infrastructure/*"
+      ],
+      "@pos/features": [
+        "../../packages/features"
+      ],
+      "@pos/features/*": [
+        "../../packages/features/*"
+      ],
+      "@pos/offline": [
+        "../../packages/offline/src"
+      ],
+      "@pos/offline/*": [
+        "../../packages/offline/src/*"
+      ]
     }
   },
-  "include": ["src", "index.html"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "index.html"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

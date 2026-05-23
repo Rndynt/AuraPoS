@@ -60,6 +60,12 @@
       ],
       "@shared/*": [
         "./shared/*"
+      ],
+      "@pos/offline": [
+        "./packages/offline/src"
+      ],
+      "@pos/offline/*": [
+        "./packages/offline/src/*"
       ]
     }
   },
