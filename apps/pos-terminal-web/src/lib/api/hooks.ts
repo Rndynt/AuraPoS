@@ -9,6 +9,16 @@ import type { Product } from "@pos/domain/catalog/types";
 import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption, OrderType, TenantOrderType } from "@pos/domain/orders/types";
 import type { TenantFeature, FeatureCheck } from "@pos/domain/tenants/types";
 import { getActiveTenantId } from "@/lib/tenant";
+import {
+  getCachedOrderTypes,
+  saveCachedOrderTypes,
+  updateTenantCachedAt,
+  getCachedFeatures,
+  saveCachedFeatures,
+  getCachedProducts,
+  saveCachedProducts,
+  updateCatalogCachedAt,
+} from "@pos/offline";
 
 /**
  * Map raw API order response (camelCase) → domain Order type (snake_case)
@@ -106,6 +116,7 @@ export type UseProductsFilters = {
 };
 
 export function useProducts(filters?: UseProductsFilters) {
+  const tenantId = getActiveTenantId();
   const queryParams = new URLSearchParams();
   if (filters?.category) {
     queryParams.append("category", filters.category);
@@ -118,7 +129,19 @@ export function useProducts(filters?: UseProductsFilters) {
 
   return useQuery<{ products: Product[]; total: number }>({
     queryKey: ["/api/catalog/products", JSON.stringify(filters || {})],
-    queryFn: () => fetchWithTenantHeader(url),
+    queryFn: async () => {
+      try {
+        const data = await fetchWithTenantHeader(url);
+        const products: Product[] = data?.products ?? [];
+        saveCachedProducts(tenantId, products).catch(() => undefined);
+        updateCatalogCachedAt(tenantId).catch(() => undefined);
+        return { products, total: data?.total ?? products.length };
+      } catch (err) {
+        const cached = await getCachedProducts(tenantId) as Product[];
+        if (cached.length > 0) return { products: cached, total: cached.length };
+        throw err;
+      }
+    },
   });
 }
 
@@ -368,12 +391,25 @@ export function useCreateAndPay() {
 }
 
 /**
- * Fetch order types for tenant
+ * Fetch order types for tenant — with offline IndexedDB fallback
  */
 export function useOrderTypes() {
+  const tenantId = getActiveTenantId();
   return useQuery<OrderType[]>({
     queryKey: ["/api/orders/order-types"],
-    queryFn: () => fetchWithTenantHeader("/api/orders/order-types"),
+    queryFn: async () => {
+      try {
+        const data = await fetchWithTenantHeader("/api/orders/order-types");
+        const orderTypes: OrderType[] = Array.isArray(data) ? data : (data?.orderTypes ?? []);
+        saveCachedOrderTypes(tenantId, orderTypes).catch(() => undefined);
+        updateTenantCachedAt(tenantId).catch(() => undefined);
+        return orderTypes;
+      } catch (err) {
+        const cached = await getCachedOrderTypes(tenantId) as OrderType[];
+        if (cached.length > 0) return cached;
+        throw err;
+      }
+    },
   });
 }
 
@@ -487,12 +523,25 @@ export function useCancelOrder() {
 // ============================================================================
 
 /**
- * Fetch active features for tenant
+ * Fetch active features for tenant — with offline IndexedDB fallback
  */
 export function useTenantFeatures() {
+  const tenantId = getActiveTenantId();
   return useQuery<{ features: TenantFeature[]; total: number }>({
     queryKey: ["/api/tenants/features"],
-    queryFn: () => fetchWithTenantHeader("/api/tenants/features"),
+    queryFn: async () => {
+      try {
+        const data = await fetchWithTenantHeader("/api/tenants/features");
+        const features: TenantFeature[] = data?.features ?? (Array.isArray(data) ? data : []);
+        saveCachedFeatures(tenantId, features).catch(() => undefined);
+        updateTenantCachedAt(tenantId).catch(() => undefined);
+        return { features, total: features.length };
+      } catch (err) {
+        const cached = await getCachedFeatures(tenantId) as TenantFeature[];
+        if (cached.length > 0) return { features: cached, total: cached.length };
+        throw err;
+      }
+    },
   });
 }
 

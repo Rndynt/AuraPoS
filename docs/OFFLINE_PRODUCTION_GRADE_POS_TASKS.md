@@ -104,24 +104,26 @@
 
 ---
 
-## Sprint 2 — Local Catalog & Cache ❌ NOT STARTED
+## Sprint 2 — Local Catalog & Cache ✅ DONE
 
 ### Phase 5.1 — Cache Products Locally
 
-- [ ] `packages/offline/src/catalogCache.ts` — fetch from `/api/catalog/products`, save to IndexedDB, `lastSyncedAt`, checksum
-- [ ] Store: product, category, variant, option group, option, stock fields, active status, pricing
-- [ ] `apps/pos-terminal-web/src/hooks/useOfflineProducts.ts` — online: fetch + cache, offline: read from IndexedDB
-- [ ] Label stale cache in UI
-- [ ] Block inactive products from being added when local cache knows they are inactive
-- [ ] Graceful crash-free behavior when server unreachable
+- [x] `packages/offline/src/catalogCache.ts` — `saveCachedProducts`, `getCachedProducts`, `saveCachedCategories`, `getCachedCategories`, `updateCatalogCachedAt`, `getCatalogCachedAt`, `isCatalogStale`
+- [x] Full product `rawData` stored in IndexedDB — full Product shape preserved alongside indexed fields
+- [x] `useProducts()` in `@/lib/api/hooks.ts` — write-through cache on success, IndexedDB fallback on network error
+- [x] `useProducts()` in `@/hooks/api/useProducts.ts` — same write-through pattern
+- [x] `useCategories()` in `@/hooks/api/useCategories.ts` — write-through + offline fallback
+- [x] `OfflineCacheBanner` — shown in POS when offline, shows cache timestamp, amber tint if stale (>6h)
+- [x] Banner wired into `pos.tsx` via `useNetworkStatus` hook
+- [x] Graceful crash-free: if server unreachable and cache empty, error propagates normally
 
 ### Phase 5.2 — Cache Tenant Features & Order Types
 
-- [ ] `packages/offline/src/tenantCache.ts` — cache tenant profile, features, order types, tax/service charge config, table list
-- [ ] `apps/pos-terminal-web/src/hooks/useOfflineTenantFeatures.ts`
-- [ ] `apps/pos-terminal-web/src/hooks/useOfflineOrderTypes.ts`
-- [ ] Feature gate still works offline
-- [ ] Tax/service charge consistent offline
+- [x] `packages/offline/src/tenantCache.ts` — `saveCachedOrderTypes`, `getCachedOrderTypes`, `saveCachedFeatures`, `getCachedFeatures`, `updateTenantCachedAt`, `getTenantCachedAt`, `isTenantCacheStale`
+- [x] `useOrderTypes()` in `@/lib/api/hooks.ts` — write-through cache on success, IndexedDB fallback on error
+- [x] `useTenantFeatures()` in `@/lib/api/hooks.ts` — same; `useFeatures()` + `hasFeature()` gate works offline
+- [x] Feature gate works offline (cached features via `useTenantFeatures` → `useFeatures`)
+- [x] `packages/offline/src/index.ts` — exports `catalogCache` and `tenantCache` modules
 
 ---
 

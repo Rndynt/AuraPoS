@@ -29,6 +29,8 @@ import { useCustomerDisplaySender, toCFDItem } from "@/hooks/useCustomerDisplay"
 import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
 import { queryClient } from "@/lib/queryClient";
 import { saveLocalDraftOrder } from "@pos/offline";
+import { OfflineCacheBanner } from "@/components/offline/OfflineCacheBanner";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -57,6 +59,7 @@ export default function POSPage() {
   const shouldAutoPrintReceipt = hasReceiptPrinter || hasPairedPrinter;
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { isOnline } = useNetworkStatus();
   const { send: sendToCFD } = useCustomerDisplaySender();
   const { tenantId } = useTenant();
   const { data: tenantProfile } = useTenantProfile(tenantId);
@@ -825,6 +828,7 @@ export default function POSPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full w-full max-w-[100vw]">
+      <OfflineCacheBanner show={!isOnline} />
       {/* Main Content */}
       <div className="flex flex-1 min-h-0 h-full w-full max-w-[100vw]">
       {/* Main Product Area */}

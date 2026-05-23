@@ -2,75 +2,73 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Product } from "@pos/domain/catalog/types";
 import { getActiveTenantId } from "@/lib/tenant";
 import { queryClient } from "@/lib/queryClient";
+import {
+  getCachedProducts,
+  saveCachedProducts,
+  updateCatalogCachedAt,
+} from "@pos/offline";
 
 async function fetchWithTenantHeader(url: string) {
   const res = await fetch(url, {
-    headers: {
-      "x-tenant-id": getActiveTenantId(),
-    },
+    headers: { "x-tenant-id": getActiveTenantId() },
     credentials: "include",
   });
-
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
-
   return res.json();
 }
 
 async function postWithTenantHeader(url: string, body: any) {
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-tenant-id": getActiveTenantId(),
-    },
+    headers: { "Content-Type": "application/json", "x-tenant-id": getActiveTenantId() },
     credentials: "include",
     body: JSON.stringify(body),
   });
-
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
-
   return res.json();
 }
 
 async function putWithTenantHeader(url: string, body: any) {
   const res = await fetch(url, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "x-tenant-id": getActiveTenantId(),
-    },
+    headers: { "Content-Type": "application/json", "x-tenant-id": getActiveTenantId() },
     credentials: "include",
     body: JSON.stringify(body),
   });
-
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
-
   return res.json();
 }
 
 interface ProductsResponse {
   success: boolean;
-  data: {
-    products: Product[];
-    total: number;
-  };
+  data: { products: Product[]; total: number };
 }
 
 export function useProducts() {
+  const tenantId = getActiveTenantId();
   return useQuery<Product[]>({
     queryKey: ["/api/catalog/products"],
     queryFn: async () => {
-      const response = await fetchWithTenantHeader("/api/catalog/products");
-      return response.data?.products || response;
+      try {
+        const response: ProductsResponse = await fetchWithTenantHeader("/api/catalog/products");
+        const products: Product[] = response.data?.products ?? (response as any) ?? [];
+        saveCachedProducts(tenantId, products).catch(() => undefined);
+        updateCatalogCachedAt(tenantId).catch(() => undefined);
+        return products;
+      } catch (err) {
+        const cached = await getCachedProducts(tenantId) as Product[];
+        if (cached.length > 0) return cached;
+        throw err;
+      }
     },
   });
 }
@@ -136,17 +134,12 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: async (input: UpdateProductInput) => {
       const { product_id, ...body } = input;
-      const response = await putWithTenantHeader(
-        `/api/catalog/products/${product_id}`,
-        body
-      );
+      const response = await putWithTenantHeader(`/api/catalog/products/${product_id}`, body);
       return response.data || response;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/catalog/products", variables.product_id] 
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/products", variables.product_id] });
     },
   });
 }

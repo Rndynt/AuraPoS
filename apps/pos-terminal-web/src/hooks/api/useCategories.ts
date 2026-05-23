@@ -1,12 +1,29 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { getActiveTenantId } from '@/lib/tenant';
+import {
+  getCachedCategories,
+  saveCachedCategories,
+  updateCatalogCachedAt,
+} from '@pos/offline';
 
 async function req(url: string, init?: RequestInit) {
-  const res = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json', 'x-tenant-id': getActiveTenantId(), ...(init?.headers || {}) }, ...init });
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': getActiveTenantId(),
+      ...(init?.headers || {}),
+    },
+    ...init,
+  });
   const payload = await res.json().catch(() => null);
   if (!res.ok || (payload && payload.success === false)) {
-    const message = payload?.error?.message || payload?.message || payload?.error || (await res.text().catch(() => 'Request failed'));
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      payload?.error ||
+      (await res.text().catch(() => 'Request failed'));
     throw new Error(message || 'Request failed');
   }
   return payload;
@@ -15,15 +32,29 @@ async function req(url: string, init?: RequestInit) {
 export type CategoryItem = { id: string; name: string; is_active: boolean; display_order: number };
 
 export function useCategories() {
+  const tenantId = getActiveTenantId();
   return useQuery<CategoryItem[]>({
     queryKey: ['/api/catalog/categories'],
-    queryFn: async () => (await req('/api/catalog/categories')).data.categories ?? [],
+    queryFn: async () => {
+      try {
+        const data = await req('/api/catalog/categories');
+        const categories: CategoryItem[] = data?.data?.categories ?? [];
+        saveCachedCategories(tenantId, categories).catch(() => undefined);
+        updateCatalogCachedAt(tenantId).catch(() => undefined);
+        return categories;
+      } catch (err) {
+        const cached = await getCachedCategories(tenantId) as CategoryItem[];
+        if (cached.length > 0) return cached;
+        throw err;
+      }
+    },
   });
 }
 
 export function useRenameCategory() {
   return useMutation({
-    mutationFn: (payload: { old_name: string; new_name: string }) => req('/api/catalog/categories', { method: 'PATCH', body: JSON.stringify(payload) }),
+    mutationFn: (payload: { old_name: string; new_name: string }) =>
+      req('/api/catalog/categories', { method: 'PATCH', body: JSON.stringify(payload) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/catalog/categories'] });
       queryClient.invalidateQueries({ queryKey: ['/api/catalog/products'] });
@@ -33,7 +64,8 @@ export function useRenameCategory() {
 
 export function useCreateCategory() {
   return useMutation({
-    mutationFn: (payload: { name: string; description?: string }) => req('/api/catalog/categories', { method: 'POST', body: JSON.stringify(payload) }),
+    mutationFn: (payload: { name: string; description?: string }) =>
+      req('/api/catalog/categories', { method: 'POST', body: JSON.stringify(payload) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/catalog/categories'] });
       queryClient.invalidateQueries({ queryKey: ['/api/catalog/products'] });

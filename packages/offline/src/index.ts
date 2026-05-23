@@ -6,3 +6,5 @@ export * from "./cartStore";
 export * from "./draftOrders";
 export * from "./outbox";
 export * from "./syncEngine";
+export * from "./catalogCache";
+export * from "./tenantCache";
