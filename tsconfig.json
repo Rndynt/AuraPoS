@@ -1,14 +1,35 @@
 {
   "files": [],
   "references": [
-    { "path": "./shared/tsconfig.json" },
-    { "path": "./packages/core/tsconfig.json" },
-    { "path": "./packages/domain/tsconfig.json" },
-    { "path": "./packages/application/tsconfig.json" },
-    { "path": "./packages/infrastructure/tsconfig.json" },
-    { "path": "./packages/features/tsconfig.json" },
-    { "path": "./apps/api/tsconfig.json" },
-    { "path": "./apps/pos-terminal-web/tsconfig.json" },
-    { "path": "./apps/web/tsconfig.json" }
+    {
+      "path": "./shared/tsconfig.json"
+    },
+    {
+      "path": "./packages/core/tsconfig.json"
+    },
+    {
+      "path": "./packages/domain/tsconfig.json"
+    },
+    {
+      "path": "./packages/application/tsconfig.json"
+    },
+    {
+      "path": "./packages/infrastructure/tsconfig.json"
+    },
+    {
+      "path": "./packages/features/tsconfig.json"
+    },
+    {
+      "path": "./packages/offline/tsconfig.json"
+    },
+    {
+      "path": "./apps/api/tsconfig.json"
+    },
+    {
+      "path": "./apps/pos-terminal-web/tsconfig.json"
+    },
+    {
+      "path": "./apps/web/tsconfig.json"
+    }
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "name": "@pos/offline",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "dexie": "^4.0.8"
+  },
+  "scripts": {
+    "type-check": "tsc -p tsconfig.json --noEmit"
+  }
+}

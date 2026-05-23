@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ItemDiscount } from "@/hooks/useCart";
 import { nanoid } from "nanoid";
 import { CartPanel } from "../pos/CartPanel";
 import { mockProducts } from "@/lib/mockData";
@@ -31,10 +32,16 @@ export default function CartPanelExample() {
     return item.product.base_price + (item.variant?.price_delta || 0) + optionsDelta;
   };
 
+  const [orderDiscount, setOrderDiscount] = useState<ItemDiscount | null>(null);
+
   const subtotal = items.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0);
-  const tax = subtotal * DEFAULT_TAX_RATE;
-  const serviceCharge = subtotal * DEFAULT_SERVICE_CHARGE_RATE;
-  const total = subtotal + tax + serviceCharge;
+  const itemsDiscountTotal = items.reduce((sum, item) => sum + (item.discount ? (item.discount.type === "percent" ? (item.itemTotal * Math.min(item.discount.value, 100) / 100) : Math.min(item.itemTotal, item.discount.value)) : 0), 0);
+  const discountedSubtotal = Math.max(0, subtotal - itemsDiscountTotal);
+  const orderDiscountAmount = orderDiscount ? (orderDiscount.type === "percent" ? discountedSubtotal * Math.min(orderDiscount.value, 100) / 100 : Math.min(discountedSubtotal, orderDiscount.value)) : 0;
+  const taxableBase = Math.max(0, discountedSubtotal - orderDiscountAmount);
+  const tax = taxableBase * DEFAULT_TAX_RATE;
+  const serviceCharge = taxableBase * DEFAULT_SERVICE_CHARGE_RATE;
+  const total = taxableBase + tax + serviceCharge;
 
   return (
     <div className="h-screen w-[360px]">
@@ -56,7 +63,7 @@ export default function CartPanelExample() {
           setItems([]);
         }}
         getItemPrice={getItemPrice}
-        subtotal={subtotal}
+        subtotal={discountedSubtotal}
         taxRate={DEFAULT_TAX_RATE}
         tax={tax}
         serviceChargeRate={DEFAULT_SERVICE_CHARGE_RATE}
@@ -75,6 +82,13 @@ export default function CartPanelExample() {
         setPaymentMethod={() => undefined}
         orderType="dine-in"
         setOrderType={() => undefined}
+        onSetItemDiscount={(id, discount) => {
+          setItems(items.map(item => item.id === id ? { ...item, discount: discount ?? undefined } : item));
+        }}
+        orderDiscount={orderDiscount}
+        setOrderDiscount={setOrderDiscount}
+        itemsDiscountTotal={itemsDiscountTotal}
+        orderDiscountAmount={orderDiscountAmount}
       />
     </div>
   );
