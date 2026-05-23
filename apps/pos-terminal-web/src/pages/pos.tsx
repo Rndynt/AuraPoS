@@ -239,6 +239,10 @@ export default function POSPage() {
     order_type_id: cart.selectedOrderTypeId || undefined,
     customer_name: cart.customerName || undefined,
     table_number: cart.tableNumber || undefined,
+    order_discount_type: cart.orderDiscount?.type,
+    order_discount_value: cart.orderDiscount?.value,
+    order_discount_amount: cart.orderDiscountAmount > 0 ? cart.orderDiscountAmount : undefined,
+    items_discount_total: cart.itemsDiscountTotal > 0 ? cart.itemsDiscountTotal : undefined,
   });
 
   const handleAddToCart = (product: Product) => {
@@ -827,6 +831,11 @@ export default function POSPage() {
           continueOrderId={continueOrderId}
           activeOrderTypes={activeOrderTypes}
           setSelectedOrderTypeId={cart.setSelectedOrderTypeId}
+          onSetItemDiscount={cart.setItemDiscount}
+          orderDiscount={cart.orderDiscount}
+          setOrderDiscount={cart.setOrderDiscount}
+          itemsDiscountTotal={cart.itemsDiscountTotal}
+          orderDiscountAmount={cart.orderDiscountAmount}
           />
         </div>
         
@@ -877,6 +886,11 @@ export default function POSPage() {
         continueOrderId={continueOrderId}
         activeOrderTypes={activeOrderTypes}
         setSelectedOrderTypeId={cart.setSelectedOrderTypeId}
+        onSetItemDiscount={cart.setItemDiscount}
+        orderDiscount={cart.orderDiscount}
+        setOrderDiscount={cart.setOrderDiscount}
+        itemsDiscountTotal={cart.itemsDiscountTotal}
+        orderDiscountAmount={cart.orderDiscountAmount}
         />
       )}
 

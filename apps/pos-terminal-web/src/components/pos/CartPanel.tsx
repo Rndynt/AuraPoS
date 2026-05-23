@@ -1,8 +1,8 @@
 // @ts-nocheck
-import type { CartItem as CartItemType, PaymentMethod, OrderType } from "@/hooks/useCart";
+import type { CartItem as CartItemType, PaymentMethod, OrderType, ItemDiscount } from "@/hooks/useCart";
 import type { OrderType as DomainOrderType } from "@pos/domain/orders/types";
 import { CartItem } from "./CartItem";
-import { ShoppingBag, Banknote, ChevronUp, User, Trash2 } from "lucide-react";
+import { ShoppingBag, Banknote, ChevronUp, User, Trash2, Tag, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from "@/context/TenantContext";
 import { useState, useCallback } from "react";
@@ -38,6 +38,12 @@ type CartPanelProps = {
   continueOrderId?: string | null;
   activeOrderTypes?: DomainOrderType[];
   setSelectedOrderTypeId?: (id: string | null) => void;
+  // Discount props
+  onSetItemDiscount: (id: string, discount: ItemDiscount | null) => void;
+  orderDiscount: ItemDiscount | null;
+  setOrderDiscount: (discount: ItemDiscount | null) => void;
+  itemsDiscountTotal: number;
+  orderDiscountAmount: number;
 };
 
 export function CartPanel({
@@ -48,10 +54,19 @@ export function CartPanel({
   tableNumber, setTableNumber,
   orderType, setOrderType,
   activeOrderTypes = [], setSelectedOrderTypeId,
+  onSetItemDiscount,
+  orderDiscount, setOrderDiscount,
+  itemsDiscountTotal, orderDiscountAmount,
 }: CartPanelProps) {
   const { hasModule, isLoading } = useTenant();
   const [expanded, setExpanded] = useState(false);
   const { data: tablesData } = useTables();
+
+  const [orderDiscountOpen, setOrderDiscountOpen] = useState(false);
+  const [orderDiscountType, setOrderDiscountType] = useState<"percent" | "nominal">(orderDiscount?.type ?? "percent");
+  const [orderDiscountValue, setOrderDiscountValue] = useState<string>(
+    orderDiscount && orderDiscount.value > 0 ? String(orderDiscount.value) : ""
+  );
 
   const showTable = !isLoading && hasModule("enable_table_management");
 
@@ -75,6 +90,25 @@ export function CartPanel({
     const pct = r * 100;
     return `${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`;
   };
+
+  const handleOpenOrderDiscount = () => {
+    setOrderDiscountType(orderDiscount?.type ?? "percent");
+    setOrderDiscountValue(orderDiscount && orderDiscount.value > 0 ? String(orderDiscount.value) : "");
+    setOrderDiscountOpen(true);
+  };
+
+  const handleApplyOrderDiscount = () => {
+    const val = parseFloat(orderDiscountValue);
+    if (!orderDiscountValue || isNaN(val) || val <= 0) {
+      setOrderDiscount(null);
+    } else {
+      setOrderDiscount({ type: orderDiscountType, value: val });
+    }
+    setOrderDiscountOpen(false);
+  };
+
+  const hasOrderDiscount = orderDiscount && orderDiscount.value > 0;
+  const totalDiscountAmount = itemsDiscountTotal + orderDiscountAmount;
 
   return (
     <div className="w-full h-full bg-white border-l border-slate-200 flex flex-col overflow-hidden">
@@ -169,6 +203,7 @@ export function CartPanel({
               onRemove={onRemove}
               onUpdateNote={onUpdateNote ?? (() => {})}
               getItemPrice={getItemPrice}
+              onSetDiscount={onSetItemDiscount}
             />
           ))
         )}
@@ -178,13 +213,118 @@ export function CartPanel({
       {items.length > 0 && (
         <div className="flex-shrink-0 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.07)]">
 
-          {/* Expanded detail — muncul di atas, tidak tutupi cart */}
+          {/* Expanded detail */}
           {expanded && (
             <div className="px-3 py-2 border-b border-slate-100 space-y-1.5 bg-slate-50/80">
               <div className="flex justify-between text-xs text-slate-500">
                 <span>Subtotal</span>
-                <span className="tabular-nums" data-testid="text-subtotal">{fmt(subtotal)}</span>
+                <span className="tabular-nums" data-testid="text-subtotal">{fmt(subtotal + itemsDiscountTotal)}</span>
               </div>
+
+              {/* Per-item discounts total */}
+              {itemsDiscountTotal > 0 && (
+                <div className="flex justify-between text-xs text-green-600">
+                  <span>Diskon item</span>
+                  <span className="tabular-nums" data-testid="text-items-discount">-{fmt(itemsDiscountTotal)}</span>
+                </div>
+              )}
+
+              {/* Order-level discount row */}
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1">
+                  <span className={hasOrderDiscount ? "text-green-600 font-medium" : "text-slate-500"}>
+                    Diskon pesanan
+                  </span>
+                  {hasOrderDiscount && (
+                    <button
+                      onClick={() => { setOrderDiscount(null); setOrderDiscountValue(""); }}
+                      className="text-red-400 hover:text-red-500 transition-colors"
+                      data-testid="button-clear-order-discount"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {hasOrderDiscount && !orderDiscountOpen && (
+                    <span className="tabular-nums text-green-600" data-testid="text-order-discount">
+                      -{fmt(orderDiscountAmount)}
+                    </span>
+                  )}
+                  {!orderDiscountOpen && (
+                    <button
+                      onClick={handleOpenOrderDiscount}
+                      className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                        hasOrderDiscount
+                          ? "bg-green-50 text-green-600 hover:bg-green-100"
+                          : "bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
+                      }`}
+                      data-testid="button-add-order-discount"
+                    >
+                      <Tag size={9} />
+                      {hasOrderDiscount
+                        ? `${orderDiscount.type === "percent" ? `${orderDiscount.value}%` : fmt(orderDiscount.value)}`
+                        : "+ Tambah"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Inline order discount editor */}
+              {orderDiscountOpen && (
+                <div className="flex items-center gap-1 p-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex rounded-md overflow-hidden border border-amber-300 flex-shrink-0">
+                    <button
+                      onClick={() => setOrderDiscountType("percent")}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 transition-colors ${
+                        orderDiscountType === "percent" ? "bg-amber-400 text-white" : "text-amber-600 bg-white"
+                      }`}
+                      data-testid="button-order-discount-type-percent"
+                    >
+                      %
+                    </button>
+                    <button
+                      onClick={() => setOrderDiscountType("nominal")}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 transition-colors ${
+                        orderDiscountType === "nominal" ? "bg-amber-400 text-white" : "text-amber-600 bg-white"
+                      }`}
+                      data-testid="button-order-discount-type-nominal"
+                    >
+                      Rp
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max={orderDiscountType === "percent" ? "100" : undefined}
+                    value={orderDiscountValue}
+                    onChange={e => setOrderDiscountValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") handleApplyOrderDiscount();
+                      if (e.key === "Escape") setOrderDiscountOpen(false);
+                    }}
+                    placeholder={orderDiscountType === "percent" ? "0-100" : "Nominal"}
+                    className="flex-1 min-w-0 text-[11px] bg-white border border-amber-200 rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-400 text-slate-700"
+                    autoFocus
+                    data-testid="input-order-discount"
+                  />
+                  <button
+                    onClick={handleApplyOrderDiscount}
+                    className="px-2 py-0.5 bg-amber-400 hover:bg-amber-500 text-white rounded text-[10px] font-bold transition-colors flex-shrink-0"
+                    data-testid="button-apply-order-discount"
+                  >
+                    OK
+                  </button>
+                  <button
+                    onClick={() => setOrderDiscountOpen(false)}
+                    className="w-5 h-5 flex-shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded flex items-center justify-center transition-colors"
+                    data-testid="button-cancel-order-discount"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              )}
+
               <div className="flex justify-between text-xs text-slate-500">
                 <span>Pajak ({fmtRate(taxRate)})</span>
                 <span className="tabular-nums" data-testid="text-tax">{fmt(tax)}</span>
@@ -195,10 +335,17 @@ export function CartPanel({
                   <span className="tabular-nums" data-testid="text-service">{fmt(serviceCharge)}</span>
                 </div>
               )}
+
+              {totalDiscountAmount > 0 && (
+                <div className="flex justify-between text-xs font-semibold text-green-600 border-t border-slate-100 pt-1.5">
+                  <span>Total hemat</span>
+                  <span className="tabular-nums" data-testid="text-total-discount">-{fmt(totalDiscountAmount)}</span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Total row — satu baris */}
+          {/* Total row */}
           <div className="px-3 py-2 flex items-center justify-between">
             <button
               onClick={() => setExpanded(!expanded)}
@@ -210,15 +357,19 @@ export function CartPanel({
                 size={12}
                 className={`text-slate-400 group-hover:text-blue-600 transition-all ${expanded ? "" : "rotate-180"}`}
               />
+              {totalDiscountAmount > 0 && (
+                <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1 py-0.5 rounded">
+                  Hemat {fmt(totalDiscountAmount)}
+                </span>
+              )}
             </button>
             <span className="text-base font-black text-slate-800 tabular-nums" data-testid="text-total">
               {fmt(total)}
             </span>
           </div>
 
-          {/* Action buttons — compact */}
+          {/* Action buttons */}
           <div className="px-3 pb-3 flex gap-2">
-            {/* Draft: icon only */}
             <button
               onClick={onSaveDraft}
               disabled={isProcessing || items.length === 0}
@@ -229,7 +380,6 @@ export function CartPanel({
               <ShoppingBag size={16} />
             </button>
 
-            {/* Bayar: text only, full width */}
             <button
               onClick={onCharge}
               disabled={isProcessing || items.length === 0}

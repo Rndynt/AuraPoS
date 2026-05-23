@@ -4,14 +4,20 @@ import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
 
+export interface ItemDiscount {
+  type: "percent" | "nominal";
+  value: number;
+}
+
 export interface CartItem {
   id: string;
   product: Product;
   variant?: ProductVariant;
   selectedOptions: SelectedOption[];
   quantity: number;
-  itemTotal: number;
+  itemTotal: number; // pre-discount base total
   note?: string;
+  discount?: ItemDiscount;
 }
 
 export interface BackendOrderItem {
@@ -24,6 +30,9 @@ export interface BackendOrderItem {
   variant_price_delta?: number;
   selected_options?: SelectedOption[];
   notes?: string;
+  discount_type?: string;
+  discount_value?: number;
+  discount_amount?: number;
 }
 
 function serializeOptions(options: SelectedOption[]): string {
@@ -58,6 +67,18 @@ function calculateItemTotal(
   return (basePrice + variantDelta + optionsDelta) * quantity;
 }
 
+export function getItemEffectiveTotal(item: CartItem): number {
+  if (!item.discount || item.discount.value <= 0) return item.itemTotal;
+  if (item.discount.type === "percent") {
+    return item.itemTotal * (1 - Math.min(item.discount.value, 100) / 100);
+  }
+  return Math.max(0, item.itemTotal - item.discount.value);
+}
+
+export function getItemDiscountAmount(item: CartItem): number {
+  return item.itemTotal - getItemEffectiveTotal(item);
+}
+
 // ─── Session storage keys ──────────────────────────────────────────────────────
 const STORAGE_KEY = "pos_cart_session";
 
@@ -69,6 +90,7 @@ interface CartSession {
   selectedOrderTypeId: string | null;
   orderType: OrderType;
   orderNumber: string;
+  orderDiscount: ItemDiscount | null;
 }
 
 function loadSession(): CartSession | null {
@@ -115,11 +137,14 @@ export function useCart() {
     if (saved.current?.orderNumber) return saved.current.orderNumber;
     return `#${String(new Date().getTime()).slice(-6)}`;
   });
+  const [orderDiscount, setOrderDiscount] = useState<ItemDiscount | null>(
+    saved.current?.orderDiscount ?? null
+  );
 
   // Persist to sessionStorage on every relevant state change
   useEffect(() => {
-    saveSession({ items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber });
-  }, [items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber]);
+    saveSession({ items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber, orderDiscount });
+  }, [items, customerName, tableNumber, paymentMethod, selectedOrderTypeId, orderType, orderNumber, orderDiscount]);
 
   const addItem = (
     product: Product,
@@ -185,6 +210,15 @@ export function useCart() {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, note } : item)));
   };
 
+  const setItemDiscount = (id: string, discount: ItemDiscount | null) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        return { ...item, discount: discount ?? undefined };
+      })
+    );
+  };
+
   const clearCart = () => {
     setItems([]);
     setCustomerName("");
@@ -192,6 +226,7 @@ export function useCart() {
     setPaymentMethod("cash");
     setSelectedOrderTypeId(null);
     setOrderType("dine-in");
+    setOrderDiscount(null);
     clearSession();
   };
 
@@ -235,25 +270,43 @@ export function useCart() {
   };
 
   const toBackendOrderItems = (): BackendOrderItem[] => {
-    return items.map((item) => ({
-      product_id: item.product.id,
-      product_name: item.product.name,
-      base_price: item.product.base_price,
-      quantity: item.quantity,
-      variant_id: item.variant?.id,
-      variant_name: item.variant?.name,
-      variant_price_delta: item.variant?.price_delta,
-      selected_options: item.selectedOptions.length > 0 ? item.selectedOptions : undefined,
-      notes: item.note || undefined,
-    }));
+    return items.map((item) => {
+      const discountAmount = getItemDiscountAmount(item);
+      return {
+        product_id: item.product.id,
+        product_name: item.product.name,
+        base_price: item.product.base_price,
+        quantity: item.quantity,
+        variant_id: item.variant?.id,
+        variant_name: item.variant?.name,
+        variant_price_delta: item.variant?.price_delta,
+        selected_options: item.selectedOptions.length > 0 ? item.selectedOptions : undefined,
+        notes: item.note || undefined,
+        discount_type: item.discount?.type,
+        discount_value: item.discount?.value,
+        discount_amount: discountAmount > 0 ? discountAmount : undefined,
+      };
+    });
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const itemsDiscountTotal = items.reduce((sum, item) => sum + getItemDiscountAmount(item), 0);
+  const subtotal = items.reduce((sum, item) => sum + getItemEffectiveTotal(item), 0);
+
+  const orderDiscountAmount =
+    orderDiscount && orderDiscount.value > 0
+      ? orderDiscount.type === "percent"
+        ? subtotal * (Math.min(orderDiscount.value, 100) / 100)
+        : Math.min(orderDiscount.value, subtotal)
+      : 0;
+
+  const discountedSubtotal = subtotal - orderDiscountAmount;
+
   const taxRate = DEFAULT_TAX_RATE;
   const serviceChargeRate = DEFAULT_SERVICE_CHARGE_RATE;
-  const tax = subtotal * taxRate;
-  const serviceCharge = subtotal * serviceChargeRate;
-  const total = subtotal + tax + serviceCharge;
+  const tax = discountedSubtotal * taxRate;
+  const serviceCharge = discountedSubtotal * serviceChargeRate;
+  const total = discountedSubtotal + tax + serviceCharge;
 
   return {
     items,
@@ -261,6 +314,7 @@ export function useCart() {
     removeItem,
     updateQuantity,
     updateNote,
+    setItemDiscount,
     clearCart,
     loadOrder,
     getItemPrice,
@@ -271,6 +325,10 @@ export function useCart() {
     tax,
     serviceCharge,
     total,
+    itemsDiscountTotal,
+    orderDiscount,
+    setOrderDiscount,
+    orderDiscountAmount,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
     customerName,
     setCustomerName,
