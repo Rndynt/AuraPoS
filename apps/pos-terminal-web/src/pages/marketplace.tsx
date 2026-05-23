@@ -1,55 +1,33 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  LayoutGrid,
-  ChefHat,
-  Heart,
-  Truck,
-  CalendarDays,
-  Package,
-  MapPin,
-  Printer,
-  CreditCard,
-  BarChart3,
-  Tag,
-  Zap,
-  ShoppingBag,
-  ArrowLeft,
-  CheckCircle2,
-  Lock,
-  Sparkles,
-  Crown,
-  ChevronRight,
-  X,
-  ExternalLink,
-  Info,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
 import { getActiveTenantId } from "@/lib/tenant";
+import {
+  ArrowLeft, Crown, Sparkles, ChevronRight, X, Zap,
+  ToggleLeft, ToggleRight, Lock, Info, CheckCircle2, Plus,
+  // Module icons
+  LayoutGrid, ChefHat, Heart, Truck, CalendarDays, Package, MapPin,
+  // Feature icons
+  Layers, SplitSquareVertical, Tag, ClipboardList, Printer, QrCode,
+  BarChart3, PieChart, Archive, Globe, Webhook, BookOpen, CalendarClock,
+  Bell, Receipt, PackageSearch, Banknote,
+} from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 type PlanTier = "free" | "growth" | "pro";
-
+type TabType = "modul" | "fitur";
 type ModuleKey =
-  | "enableTableManagement"
-  | "enableKitchenTicket"
-  | "enableLoyalty"
-  | "enableDelivery"
-  | "enableInventory"
-  | "enableAppointments"
-  | "enableMultiLocation";
+  | "enableTableManagement" | "enableKitchenTicket" | "enableLoyalty"
+  | "enableDelivery" | "enableInventory" | "enableAppointments" | "enableMultiLocation";
 
-type FeatureItem = {
-  id: ModuleKey | string;
-  isModule: boolean;
-  moduleKey?: ModuleKey;
+type ModuleItem = {
+  type: "module";
+  moduleKey: ModuleKey;
   title: string;
   description: string;
   longDesc: string;
@@ -61,197 +39,392 @@ type FeatureItem = {
   badge?: string;
 };
 
-// ─── Catalog Definition ───────────────────────────────────────────────────────
+type FeatureItem = {
+  type: "feature";
+  featureCode: string;
+  title: string;
+  description: string;
+  longDesc: string;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  requiredPlan: PlanTier;
+  category: string;
+  badge?: string;
+};
 
-const CATALOG: FeatureItem[] = [
-  // ── Restoran & Meja
+type CatalogItem = ModuleItem | FeatureItem;
+
+// ─── Module Catalog ────────────────────────────────────────────────────────────
+
+const MODULE_CATALOG: ModuleItem[] = [
   {
-    id: "enableTableManagement",
-    isModule: true,
-    moduleKey: "enableTableManagement",
-    title: "Manajemen Meja",
+    type: "module", moduleKey: "enableTableManagement",
+    title: "Manajemen Meja", category: "Restoran & Meja",
     description: "Denah meja real-time, status duduk, & kelola pesanan per meja.",
-    longDesc:
-      "Aktifkan fitur denah meja restoran dengan status real-time (tersedia/terisi/reservasi). Kasir bisa melihat, memilih, dan melanjutkan pesanan langsung dari tampilan denah meja yang interaktif.",
-    icon: LayoutGrid,
-    iconBg: "bg-blue-100",
-    iconColor: "text-blue-600",
-    requiredPlan: "free",
-    category: "Restoran & Meja",
+    longDesc: "Aktifkan denah meja restoran interaktif. Kasir bisa lihat status meja (tersedia/terisi/reservasi) dan lanjutkan pesanan langsung dari tampilan denah.",
+    icon: LayoutGrid, iconBg: "bg-blue-100", iconColor: "text-blue-600", requiredPlan: "free",
   },
   {
-    id: "enableKitchenTicket",
-    isModule: true,
-    moduleKey: "enableKitchenTicket",
-    title: "Kitchen Display (KDS)",
+    type: "module", moduleKey: "enableKitchenTicket",
+    title: "Kitchen Display (KDS)", category: "Restoran & Meja",
     description: "Tiket pesanan real-time langsung ke layar dapur.",
-    longDesc:
-      "Tampilkan tiket pesanan secara otomatis ke layar Kitchen Display System (KDS). Staf dapur bisa update status (cooking → ready) tanpa kertas struk, mengurangi miskomunikasi.",
-    icon: ChefHat,
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-600",
-    requiredPlan: "free",
-    category: "Restoran & Meja",
+    longDesc: "Tampilkan tiket pesanan otomatis ke layar KDS. Staf dapur update status (memasak → siap) tanpa struk kertas, mengurangi miskomunikasi.",
+    icon: ChefHat, iconBg: "bg-orange-100", iconColor: "text-orange-600", requiredPlan: "free",
   },
-  // ── Pelanggan
   {
-    id: "enableLoyalty",
-    isModule: true,
-    moduleKey: "enableLoyalty",
-    title: "Program Loyalitas",
+    type: "module", moduleKey: "enableLoyalty",
+    title: "Program Loyalitas", category: "Pelanggan",
     description: "Poin reward, member card, & retensi pelanggan.",
-    longDesc:
-      "Bangun hubungan jangka panjang dengan pelanggan melalui sistem poin reward. Pelanggan kumpul poin setiap transaksi dan bisa tukar dengan diskon atau hadiah.",
-    icon: Heart,
-    iconBg: "bg-pink-100",
-    iconColor: "text-pink-600",
-    requiredPlan: "growth",
-    category: "Pelanggan",
-    badge: "Populer",
+    longDesc: "Bangun hubungan jangka panjang dengan pelanggan melalui sistem poin reward. Kumpul poin tiap transaksi, tukar dengan diskon atau hadiah.",
+    icon: Heart, iconBg: "bg-pink-100", iconColor: "text-pink-600", requiredPlan: "growth", badge: "Populer",
   },
   {
-    id: "enableDelivery",
-    isModule: true,
-    moduleKey: "enableDelivery",
-    title: "Delivery & Pengiriman",
+    type: "module", moduleKey: "enableDelivery",
+    title: "Delivery & Pengiriman", category: "Pelanggan",
     description: "Tipe order delivery, alamat pengiriman, & tracking.",
-    longDesc:
-      "Tambahkan tipe pesanan delivery ke alur POS. Kasir bisa input alamat pengiriman, catatan driver, dan pantau status pengiriman langsung dari dashboard.",
-    icon: Truck,
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-600",
-    requiredPlan: "growth",
-    category: "Pelanggan",
+    longDesc: "Tambahkan tipe pesanan delivery ke alur POS. Input alamat pengiriman, catatan driver, dan pantau status pengiriman dari dashboard.",
+    icon: Truck, iconBg: "bg-emerald-100", iconColor: "text-emerald-600", requiredPlan: "growth",
   },
   {
-    id: "enableAppointments",
-    isModule: true,
-    moduleKey: "enableAppointments",
-    title: "Sistem Appointment",
+    type: "module", moduleKey: "enableAppointments",
+    title: "Sistem Appointment", category: "Pelanggan",
     description: "Jadwal booking, reminder otomatis, & manajemen antrian.",
-    longDesc:
-      "Cocok untuk salon, klinik, atau bengkel. Pelanggan bisa booking jadwal dan mendapat reminder otomatis. Manajer bisa lihat kalender appointment dan atur kapasitas slot.",
-    icon: CalendarDays,
-    iconBg: "bg-violet-100",
-    iconColor: "text-violet-600",
-    requiredPlan: "growth",
-    category: "Pelanggan",
+    longDesc: "Cocok untuk salon, klinik, atau bengkel. Pelanggan booking jadwal, dapat reminder otomatis. Manajer lihat kalender dan atur kapasitas slot.",
+    icon: CalendarDays, iconBg: "bg-violet-100", iconColor: "text-violet-600", requiredPlan: "growth",
   },
-  // ── Inventori
   {
-    id: "enableInventory",
-    isModule: true,
-    moduleKey: "enableInventory",
-    title: "Manajemen Inventori",
+    type: "module", moduleKey: "enableInventory",
+    title: "Manajemen Inventori", category: "Inventori",
     description: "Stok otomatis berkurang, low-stock alert, & laporan.",
-    longDesc:
-      "Aktifkan tracking stok otomatis. Setiap pesanan terkonfirmasi akan mengurangi stok produk secara real-time. Dapatkan notifikasi saat stok mendekati batas minimum.",
-    icon: Package,
-    iconBg: "bg-amber-100",
-    iconColor: "text-amber-600",
-    requiredPlan: "growth",
-    category: "Inventori",
+    longDesc: "Tracking stok otomatis per transaksi. Notifikasi saat stok mendekati batas minimum. Laporan pergerakan stok harian/mingguan.",
+    icon: Package, iconBg: "bg-amber-100", iconColor: "text-amber-600", requiredPlan: "growth",
   },
-  // ── Ekspansi
   {
-    id: "enableMultiLocation",
-    isModule: true,
-    moduleKey: "enableMultiLocation",
-    title: "Multi Lokasi",
+    type: "module", moduleKey: "enableMultiLocation",
+    title: "Multi Lokasi", category: "Ekspansi",
     description: "Kelola beberapa cabang dari satu dashboard.",
-    longDesc:
-      "Buka dan kelola beberapa cabang bisnis dari satu akun. Lihat laporan per cabang, atur produk & harga per lokasi, dan transfer stok antar cabang dengan mudah.",
-    icon: MapPin,
-    iconBg: "bg-cyan-100",
-    iconColor: "text-cyan-600",
-    requiredPlan: "pro",
-    category: "Ekspansi",
-    badge: "Pro",
+    longDesc: "Buka dan kelola beberapa cabang dari satu akun. Laporan per cabang, atur produk & harga per lokasi, transfer stok antar cabang.",
+    icon: MapPin, iconBg: "bg-cyan-100", iconColor: "text-cyan-600", requiredPlan: "pro", badge: "Pro",
   },
 ];
 
-const CATEGORIES = ["Semua", "Restoran & Meja", "Pelanggan", "Inventori", "Ekspansi"];
+// ─── Feature Catalog ───────────────────────────────────────────────────────────
+
+const FEATURE_CATALOG: FeatureItem[] = [
+  // Kasir & Transaksi
+  {
+    type: "feature", featureCode: "product_variants",
+    title: "Variasi Produk", category: "Kasir & Transaksi",
+    description: "Size, topping, rasa — tambahkan pilihan ke setiap produk.",
+    longDesc: "Buat variasi produk fleksibel (ukuran, rasa, topping, dll). Setiap varian bisa punya harga berbeda. Pelanggan pilih opsi saat checkout.",
+    icon: Layers, iconBg: "bg-blue-100", iconColor: "text-blue-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "partial_payment",
+    title: "Pembayaran Parsial", category: "Kasir & Transaksi",
+    description: "Bayar sebagian, lunasi nanti — split bill & cicilan.",
+    longDesc: "Terima pembayaran parsial atau split bill antar pelanggan. Sisa tagihan tercatat dan bisa dilunasi di waktu berbeda.",
+    icon: SplitSquareVertical, iconBg: "bg-green-100", iconColor: "text-green-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "discounts",
+    title: "Sistem Diskon", category: "Kasir & Transaksi",
+    description: "Diskon per item (% atau nominal) dan per order.",
+    longDesc: "Berikan diskon fleksibel: persentase atau nominal per item, plus diskon keseluruhan per order. Badge hemat tampil otomatis di struk.",
+    icon: Tag, iconBg: "bg-rose-100", iconColor: "text-rose-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "order_queue",
+    title: "Panel Antrian Order", category: "Kasir & Transaksi",
+    description: "Tampilkan antrian order real-time di layar kasir.",
+    longDesc: "Panel samping yang menampilkan semua order aktif secara real-time. Kasir bisa pantau status pesanan tanpa berpindah layar.",
+    icon: ClipboardList, iconBg: "bg-indigo-100", iconColor: "text-indigo-600", requiredPlan: "free",
+  },
+  // Dapur & Notifikasi
+  {
+    type: "feature", featureCode: "kitchen_ticket",
+    title: "Tiket Dapur", category: "Dapur & Notifikasi",
+    description: "Cetak atau tampilkan tiket otomatis saat order masuk.",
+    longDesc: "Setiap order yang dikonfirmasi otomatis muncul sebagai tiket di KDS atau tercetak ke printer dapur. Workflow dapur jadi lebih terstruktur.",
+    icon: Receipt, iconBg: "bg-orange-100", iconColor: "text-orange-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "kitchen_display",
+    title: "Layar KDS", category: "Dapur & Notifikasi",
+    description: "Layar display khusus untuk staf dapur memantau order.",
+    longDesc: "Halaman /kitchen sebagai display staf dapur. Update status item (memasak/siap) langsung dari layar tanpa komunikasi verbal.",
+    icon: ChefHat, iconBg: "bg-amber-100", iconColor: "text-amber-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "kitchen_printer",
+    title: "Printer Dapur", category: "Dapur & Notifikasi",
+    description: "Cetak tiket otomatis ke printer thermal di dapur.",
+    longDesc: "Hubungkan printer thermal di dapur. Setiap order baru otomatis cetak tiket yang berisi item, catatan, dan nomor meja.",
+    icon: Printer, iconBg: "bg-slate-100", iconColor: "text-slate-600", requiredPlan: "growth",
+  },
+  {
+    type: "feature", featureCode: "order_notifications",
+    title: "Notifikasi Order", category: "Dapur & Notifikasi",
+    description: "Alert bunyi & visual saat order baru masuk.",
+    longDesc: "Notifikasi audio dan visual saat ada order baru atau perubahan status. Kasir dan dapur tidak melewatkan satu pun pesanan.",
+    icon: Bell, iconBg: "bg-yellow-100", iconColor: "text-yellow-600", requiredPlan: "growth",
+  },
+  // Cetak & Hardware
+  {
+    type: "feature", featureCode: "receipt_printer",
+    title: "Printer Struk", category: "Cetak & Hardware",
+    description: "Cetak struk thermal saat transaksi selesai.",
+    longDesc: "Integrasi printer thermal untuk struk pelanggan. Struk mencakup item, harga, diskon, pajak, metode bayar, dan info toko.",
+    icon: Printer, iconBg: "bg-slate-100", iconColor: "text-slate-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "label_printer",
+    title: "Printer Label", category: "Cetak & Hardware",
+    description: "Cetak label harga, barcode, atau stiker produk.",
+    longDesc: "Cetak label produk dengan barcode, harga, dan nama. Cocok untuk retail, laundry, atau usaha dengan banyak SKU.",
+    icon: QrCode, iconBg: "bg-teal-100", iconColor: "text-teal-600", requiredPlan: "growth",
+  },
+  {
+    type: "feature", featureCode: "barcode_scanner",
+    title: "Scanner Barcode", category: "Cetak & Hardware",
+    description: "Scan produk langsung dari kamera atau scanner USB.",
+    longDesc: "Tambahkan produk ke keranjang dengan scan barcode. Mendukung scanner USB dan kamera perangkat. Proses checkout retail jadi lebih cepat.",
+    icon: PackageSearch, iconBg: "bg-purple-100", iconColor: "text-purple-600", requiredPlan: "growth",
+  },
+  // Laporan & Analitik
+  {
+    type: "feature", featureCode: "sales_reports",
+    title: "Laporan Penjualan", category: "Laporan & Analitik",
+    description: "Ringkasan omzet harian, mingguan, dan bulanan.",
+    longDesc: "Laporan penjualan lengkap: omzet per periode, produk terlaris, metode pembayaran, dan tren penjualan. Export ke PDF/Excel.",
+    icon: BarChart3, iconBg: "bg-blue-100", iconColor: "text-blue-600", requiredPlan: "free",
+  },
+  {
+    type: "feature", featureCode: "analytics_dashboard",
+    title: "Dashboard Analitik", category: "Laporan & Analitik",
+    description: "Grafik real-time, KPI bisnis, & insight penjualan.",
+    longDesc: "Dashboard visual dengan grafik omzet, chart produk terlaris, rata-rata nilai transaksi, dan insight bisnis. Update real-time.",
+    icon: PieChart, iconBg: "bg-violet-100", iconColor: "text-violet-600", requiredPlan: "growth", badge: "Baru",
+  },
+  {
+    type: "feature", featureCode: "inventory_reports",
+    title: "Laporan Inventori", category: "Laporan & Analitik",
+    description: "Pergerakan stok, barang kadaluarsa, & reorder alert.",
+    longDesc: "Laporan inventori detail: stok masuk/keluar, barang hampir habis, histori pergerakan, dan rekomendasi reorder.",
+    icon: Archive, iconBg: "bg-amber-100", iconColor: "text-amber-600", requiredPlan: "growth",
+  },
+  // Integrasi
+  {
+    type: "feature", featureCode: "payment_gateway",
+    title: "Payment Gateway", category: "Integrasi",
+    description: "Terima pembayaran online (QRIS, VA, e-wallet).",
+    longDesc: "Integrasi payment gateway untuk terima QRIS, Virtual Account, GoPay, OVO, dan kartu kredit. Rekonsiliasi otomatis ke laporan.",
+    icon: Banknote, iconBg: "bg-green-100", iconColor: "text-green-600", requiredPlan: "pro", badge: "Pro",
+  },
+  {
+    type: "feature", featureCode: "api_integration",
+    title: "Integrasi API", category: "Integrasi",
+    description: "Hubungkan AuraPOS ke sistem eksternal via REST API.",
+    longDesc: "API key untuk integrasi dengan sistem lain (ERP, marketplace, akuntansi). Dokumentasi lengkap & webhook tersedia.",
+    icon: Webhook, iconBg: "bg-slate-100", iconColor: "text-slate-600", requiredPlan: "pro", badge: "Pro",
+  },
+  {
+    type: "feature", featureCode: "online_booking",
+    title: "Booking Online", category: "Integrasi",
+    description: "Pelanggan booking langsung dari link/QR code.",
+    longDesc: "Halaman booking online untuk pelanggan. Mereka pilih layanan, tanggal, dan jam — langsung masuk ke kalender appointment toko.",
+    icon: Globe, iconBg: "bg-cyan-100", iconColor: "text-cyan-600", requiredPlan: "pro",
+  },
+  {
+    type: "feature", featureCode: "calendar_sync",
+    title: "Sinkronisasi Kalender", category: "Integrasi",
+    description: "Sync appointment ke Google Calendar atau iCal.",
+    longDesc: "Appointment otomatis tersync ke Google Calendar atau iCal. Reminder email & WhatsApp ke pelanggan terkirim otomatis.",
+    icon: CalendarClock, iconBg: "bg-indigo-100", iconColor: "text-indigo-600", requiredPlan: "pro",
+  },
+];
 
 // ─── Plan config ──────────────────────────────────────────────────────────────
 
 const PLANS = [
   {
-    tier: "free" as PlanTier,
-    name: "Starter",
-    price: "Gratis",
-    color: "slate",
-    features: ["POS Terminal", "Manajemen Produk", "Laporan Dasar", "Meja & KDS"],
+    tier: "free" as PlanTier, name: "Starter", price: "Gratis", color: "slate",
+    features: ["POS Terminal", "Manajemen Produk", "Laporan Dasar", "Variasi Produk", "Diskon & Parsial"],
   },
   {
-    tier: "growth" as PlanTier,
-    name: "Growth",
-    price: "Rp 149.000",
-    color: "blue",
-    features: ["Semua Starter", "Loyalitas Pelanggan", "Delivery", "Inventori", "Appointment"],
+    tier: "growth" as PlanTier, name: "Growth", price: "Rp 149.000", color: "blue",
+    features: ["Semua Starter", "Loyalitas Pelanggan", "Delivery", "Inventori", "Appointment", "Analitik Dashboard"],
     popular: true,
   },
   {
-    tier: "pro" as PlanTier,
-    name: "Pro",
-    price: "Rp 349.000",
-    color: "violet",
-    features: ["Semua Growth", "Multi Lokasi", "API Integration", "Priority Support"],
+    tier: "pro" as PlanTier, name: "Pro", price: "Rp 349.000", color: "violet",
+    features: ["Semua Growth", "Multi Lokasi", "Payment Gateway", "API Integration", "Booking Online"],
   },
 ];
 
 const PLAN_RANK: Record<PlanTier, number> = { free: 0, growth: 1, pro: 2 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const MODULE_CATS = ["Semua", "Restoran & Meja", "Pelanggan", "Inventori", "Ekspansi"];
+const FEATURE_CATS = ["Semua", "Kasir & Transaksi", "Dapur & Notifikasi", "Cetak & Hardware", "Laporan & Analitik", "Integrasi"];
+
+// ─── Hooks ─────────────────────────────────────────────────────────────────────
+
+function useActiveFeatures(tenantId: string) {
+  return useQuery({
+    queryKey: ["/api/tenants/features", tenantId],
+    queryFn: async () => {
+      const res = await fetch("/api/tenants/features", {
+        headers: { "x-tenant-id": tenantId },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch features");
+      const json = await res.json();
+      return (json.data?.features ?? []) as Array<{ feature_code: string; is_active: boolean }>;
+    },
+    enabled: !!tenantId,
+  });
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function CatalogCard({
+  item, isActive, unlocked, isToggling, onToggle, onSelect,
+}: {
+  item: CatalogItem; isActive: boolean; unlocked: boolean;
+  isToggling: boolean; onToggle: () => void; onSelect: () => void;
+}) {
+  return (
+    <div
+      className={`bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
+        isActive ? "border-emerald-200 shadow-md shadow-emerald-50"
+        : unlocked ? "border-slate-200 hover:border-slate-300 hover:shadow-md"
+        : "border-slate-100 opacity-65"
+      }`}
+    >
+      <button className="w-full text-left p-4" onClick={onSelect}>
+        <div className="flex items-start justify-between mb-3">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
+            <item.icon size={18} className={item.iconColor} />
+          </div>
+          <div className="flex items-center gap-1.5">
+            {item.badge && (
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                item.badge === "Pro" ? "bg-violet-50 text-violet-600 border-violet-200"
+                : item.badge === "Baru" ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                : "bg-orange-50 text-orange-600 border-orange-200"
+              }`}>{item.badge}</span>
+            )}
+            {!unlocked && <Lock size={11} className="text-slate-300" />}
+          </div>
+        </div>
+        <h3 className="font-black text-slate-800 text-sm mb-1">{item.title}</h3>
+        <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{item.description}</p>
+      </button>
+
+      <div className={`px-4 py-3 flex items-center justify-between border-t ${
+        isActive ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
+      }`}>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+          item.requiredPlan === "free" ? "bg-slate-100 text-slate-500"
+          : item.requiredPlan === "growth" ? "bg-blue-50 text-blue-600"
+          : "bg-violet-50 text-violet-600"
+        }`}>
+          {item.requiredPlan === "free" ? "Gratis" : item.requiredPlan === "growth" ? "Growth" : "Pro"}
+        </span>
+
+        {unlocked ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            disabled={isToggling}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95 ${
+              isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              : "bg-slate-800 text-white hover:bg-slate-700"
+            } ${isToggling ? "opacity-60" : ""}`}
+          >
+            {isToggling ? (
+              <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            ) : isActive ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+            {isActive ? "Aktif" : "Aktifkan"}
+          </button>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-700 transition-colors"
+          >
+            <Crown size={11} /> Upgrade
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
   const [, setLocation] = useLocation();
   const { tenantId, moduleConfig } = useTenant();
-  const { data: profile, isLoading } = useTenantProfile(tenantId);
+  const { data: profile } = useTenantProfile(tenantId);
+  const { data: activeFeaturesList = [], isLoading: featuresLoading } = useActiveFeatures(tenantId);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [activeCategory, setActiveCategory] = useState("Semua");
-  const [selectedFeature, setSelectedFeature] = useState<FeatureItem | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>("modul");
+  const [moduleCat, setModuleCat] = useState("Semua");
+  const [featureCat, setFeatureCat] = useState("Semua");
+  const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [showPlans, setShowPlans] = useState(false);
 
   const currentPlan: PlanTier = (profile?.tenant?.planTier as PlanTier) ?? "free";
 
-  const isModuleActive = (item: FeatureItem): boolean => {
-    if (!item.isModule || !item.moduleKey) return false;
-    return !!(moduleConfig?.[item.moduleKey]);
-  };
+  // Build a Set of active feature codes for O(1) lookup
+  const activeFeatureCodes = new Set(
+    activeFeaturesList.filter((f) => f.is_active).map((f) => f.feature_code)
+  );
 
-  const canActivate = (item: FeatureItem): boolean => {
-    return PLAN_RANK[item.requiredPlan] <= PLAN_RANK[currentPlan];
-  };
+  const isModuleActive = (item: ModuleItem) => !!(moduleConfig?.[item.moduleKey]);
+  const isFeatureActive = (item: FeatureItem) => activeFeatureCodes.has(item.featureCode);
+  const isItemActive = (item: CatalogItem) =>
+    item.type === "module" ? isModuleActive(item as ModuleItem) : isFeatureActive(item as FeatureItem);
+  const canActivate = (item: CatalogItem) => PLAN_RANK[item.requiredPlan] <= PLAN_RANK[currentPlan];
 
-  const handleToggle = async (item: FeatureItem) => {
-    if (!item.isModule || !item.moduleKey) return;
-    if (!canActivate(item)) {
-      setShowPlans(true);
-      return;
-    }
-    const newVal = !isModuleActive(item);
-    setToggling(item.id);
+  // Counts
+  const activeModules = MODULE_CATALOG.filter(isModuleActive).length;
+  const activeFeatures = FEATURE_CATALOG.filter(isFeatureActive).length;
+  const totalActive = activeModules + activeFeatures;
+  const totalItems = MODULE_CATALOG.length + FEATURE_CATALOG.length;
+
+  const handleToggle = async (item: CatalogItem) => {
+    if (!canActivate(item)) { setShowPlans(true); return; }
+    const key = item.type === "module" ? (item as ModuleItem).moduleKey : (item as FeatureItem).featureCode;
+    setToggling(key);
     try {
-      const res = await fetch("/api/tenants/modules", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": getActiveTenantId(),
-        },
-        body: JSON.stringify({ [item.moduleKey]: newVal }),
-      });
-      if (!res.ok) throw new Error("Gagal mengupdate modul");
-      await queryClient.invalidateQueries({ queryKey: ["/api/tenants/profile"] });
-      toast({
-        title: newVal ? `${item.title} diaktifkan` : `${item.title} dinonaktifkan`,
-        description: newVal
-          ? "Fitur sudah aktif dan siap digunakan."
-          : "Fitur berhasil dinonaktifkan.",
-      });
-      setSelectedFeature(null);
+      if (item.type === "module") {
+        const mItem = item as ModuleItem;
+        const newVal = !isModuleActive(mItem);
+        const res = await fetch("/api/tenants/modules", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "x-tenant-id": getActiveTenantId() },
+          body: JSON.stringify({ [mItem.moduleKey]: newVal }),
+        });
+        if (!res.ok) throw new Error();
+        await queryClient.invalidateQueries({ queryKey: ["/api/tenants/profile"] });
+        toast({ title: newVal ? `${item.title} diaktifkan` : `${item.title} dinonaktifkan` });
+      } else {
+        const fItem = item as FeatureItem;
+        const res = await fetch("/api/tenants/features/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-id": getActiveTenantId() },
+          body: JSON.stringify({ feature_code: fItem.featureCode }),
+        });
+        if (!res.ok) throw new Error();
+        await queryClient.invalidateQueries({ queryKey: ["/api/tenants/features", tenantId] });
+        const wasActive = isFeatureActive(fItem);
+        toast({ title: !wasActive ? `${item.title} diaktifkan` : `${item.title} dinonaktifkan` });
+      }
+      setSelected(null);
     } catch {
       toast({ title: "Gagal", description: "Coba lagi beberapa saat.", variant: "destructive" });
     } finally {
@@ -259,336 +432,275 @@ export default function MarketplacePage() {
     }
   };
 
-  const filtered =
-    activeCategory === "Semua"
-      ? CATALOG
-      : CATALOG.filter((f) => f.category === activeCategory);
+  const filteredModules = moduleCat === "Semua"
+    ? MODULE_CATALOG
+    : MODULE_CATALOG.filter((m) => m.category === moduleCat);
 
-  const activeModules = CATALOG.filter((f) => isModuleActive(f));
+  const filteredFeatures = featureCat === "Semua"
+    ? FEATURE_CATALOG
+    : FEATURE_CATALOG.filter((f) => f.category === featureCat);
+
+  const selectedActive = selected ? isItemActive(selected) : false;
+  const selectedUnlocked = selected ? canActivate(selected) : false;
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-6">
+
       {/* ── HEADER ── */}
       <div className="bg-white border-b border-slate-100 sticky top-0 z-10">
         <div className="flex items-center gap-3 px-4 py-4">
-          <button
-            onClick={() => setLocation("/hub")}
-            className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
-            data-testid="button-back-hub"
-          >
+          <button onClick={() => setLocation("/hub")} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <div className="flex-1">
-            <h1 className="text-lg font-black text-slate-800" data-testid="text-marketplace-title">
-              Marketplace Fitur
-            </h1>
-            <p className="text-[11px] text-slate-400">Aktifkan modul sesuai kebutuhan bisnis</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-black text-slate-800">Marketplace Fitur</h1>
+            <p className="text-[11px] text-slate-400">Aktifkan modul & fitur sesuai kebutuhan bisnis</p>
           </div>
           <button
             onClick={() => setShowPlans(true)}
             className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 text-violet-700 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-violet-100 transition-colors"
-            data-testid="button-view-plans"
           >
-            <Crown size={13} />
-            Paket
+            <Crown size={13} /> Paket
           </button>
         </div>
-      </div>
 
-      <div className="px-4 py-4 space-y-5">
-
-        {/* ── PLAN BANNER ── */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white" />
-            <div className="absolute -bottom-16 -left-8 w-40 h-40 rounded-full bg-white" />
-          </div>
-          <div className="relative flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles size={14} className="text-yellow-400" />
-                <span className="text-[11px] font-bold text-white/60 uppercase tracking-wide">
-                  Paket Saat Ini
-                </span>
-              </div>
-              <h2 className="text-2xl font-black mb-1">
-                {PLANS.find((p) => p.tier === currentPlan)?.name ?? "Starter"}
-              </h2>
-              <p className="text-white/60 text-xs">
-                {activeModules.length} modul aktif dari {CATALOG.length} tersedia
-              </p>
-            </div>
-            <button
-              onClick={() => setShowPlans(true)}
-              className="flex items-center gap-1 bg-white text-slate-800 font-bold text-xs px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
-              data-testid="button-upgrade"
-            >
-              Upgrade <ChevronRight size={13} />
-            </button>
-          </div>
-
-          {/* Progress bar */}
-          <div className="relative mt-4">
-            <div className="flex justify-between text-[10px] text-white/50 mb-1.5">
-              <span>Modul Aktif</span>
-              <span>{activeModules.length} / {CATALOG.length}</span>
-            </div>
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white/70 rounded-full transition-all duration-500"
-                style={{ width: `${(activeModules.length / CATALOG.length) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── ACTIVE MODULES ── */}
-        {activeModules.length > 0 && (
-          <div>
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">
-              Modul Aktif
-            </h2>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {activeModules.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedFeature(item)}
-                  className="flex-shrink-0 flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-3 py-2 shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
-                  data-testid={`chip-active-${item.id}`}
-                >
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${item.iconBg}`}>
-                    <item.icon size={14} className={item.iconColor} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-slate-700 whitespace-nowrap">{item.title}</p>
-                    <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                      <span className="text-[10px] text-emerald-600 font-semibold">Aktif</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── CATEGORY FILTER ── */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                activeCategory === cat
-                  ? "bg-slate-800 text-white shadow-sm"
-                  : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
-              }`}
-              data-testid={`filter-cat-${cat}`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* ── FEATURE GRID ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((item) => {
-            const active = isModuleActive(item);
-            const unlocked = canActivate(item);
-            const isToggling = toggling === item.id;
-
+        {/* Tabs */}
+        <div className="flex px-4 pb-0 border-t border-slate-100 gap-1">
+          {(["modul", "fitur"] as TabType[]).map((tab) => {
+            const count = tab === "modul" ? activeModules : activeFeatures;
+            const total = tab === "modul" ? MODULE_CATALOG.length : FEATURE_CATALOG.length;
             return (
-              <div
-                key={item.id}
-                className={`bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
-                  active
-                    ? "border-emerald-200 shadow-emerald-50 shadow-md"
-                    : unlocked
-                    ? "border-slate-200 hover:border-slate-300 hover:shadow-md"
-                    : "border-slate-100 opacity-70"
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`relative px-4 py-3 text-sm font-bold capitalize transition-colors ${
+                  activeTab === tab ? "text-slate-800" : "text-slate-400 hover:text-slate-600"
                 }`}
-                data-testid={`card-feature-${item.id}`}
               >
-                <div className="p-4">
-                  {/* Top row */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
-                      <item.icon size={18} className={item.iconColor} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {item.badge && (
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                          item.badge === "Pro"
-                            ? "bg-violet-50 text-violet-600 border-violet-200"
-                            : "bg-orange-50 text-orange-600 border-orange-200"
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
-                      {!unlocked && (
-                        <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Lock size={11} className="text-slate-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Title + description */}
-                  <h3 className="font-black text-slate-800 text-sm mb-1">{item.title}</h3>
-                  <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{item.description}</p>
-                </div>
-
-                {/* Footer */}
-                <div className={`px-4 py-3 flex items-center justify-between border-t ${
-                  active ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
-                }`}>
-                  {/* Plan badge */}
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    item.requiredPlan === "free"
-                      ? "bg-slate-100 text-slate-500"
-                      : item.requiredPlan === "growth"
-                      ? "bg-blue-50 text-blue-600"
-                      : "bg-violet-50 text-violet-600"
-                  }`}>
-                    {item.requiredPlan === "free" ? "Gratis" : item.requiredPlan === "growth" ? "Growth" : "Pro"}
-                  </span>
-
-                  {/* Toggle */}
-                  {unlocked ? (
-                    <button
-                      onClick={() => handleToggle(item)}
-                      disabled={isToggling}
-                      className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95 ${
-                        active
-                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                          : "bg-slate-800 text-white hover:bg-slate-700"
-                      } ${isToggling ? "opacity-60" : ""}`}
-                      data-testid={`toggle-${item.id}`}
-                    >
-                      {isToggling ? (
-                        <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                      ) : active ? (
-                        <ToggleRight size={14} />
-                      ) : (
-                        <ToggleLeft size={14} />
-                      )}
-                      {active ? "Aktif" : "Aktifkan"}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowPlans(true)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-700 transition-colors"
-                      data-testid={`upgrade-${item.id}`}
-                    >
-                      <Crown size={11} />
-                      Upgrade
-                    </button>
-                  )}
-                </div>
-              </div>
+                {tab === "modul" ? "Modul" : "Fitur Satuan"}
+                <span className={`ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-400"
+                }`}>{count}/{total}</span>
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-800 rounded-full" />
+                )}
+              </button>
             );
           })}
         </div>
+      </div>
 
-        {/* ── INFO FOOTER ── */}
-        <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl p-4">
-          <Info size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-700 leading-relaxed">
-            Beberapa fitur membutuhkan upgrade paket. Perubahan modul langsung aktif tanpa restart aplikasi.
+      <div className="px-4 pt-4 space-y-4">
+
+        {/* ── PLAN BANNER ── */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 text-white relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white" />
+            <div className="absolute -bottom-12 -left-6 w-32 h-32 rounded-full bg-white" />
+          </div>
+          <div className="relative flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Sparkles size={12} className="text-yellow-400" />
+                <span className="text-[10px] font-bold text-white/60 uppercase tracking-wide">Paket Aktif</span>
+              </div>
+              <h2 className="text-xl font-black">{PLANS.find((p) => p.tier === currentPlan)?.name ?? "Starter"}</h2>
+              <p className="text-white/50 text-[11px] mt-0.5">{totalActive} aktif dari {totalItems} tersedia</p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={() => setShowPlans(true)}
+                className="flex items-center gap-1 bg-white text-slate-800 font-bold text-xs px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                Upgrade <ChevronRight size={12} />
+              </button>
+              <div className="text-right">
+                <p className="text-[10px] text-white/40">Aktif</p>
+                <div className="flex gap-2">
+                  <span className="text-[11px] font-black text-emerald-400">{activeModules} modul</span>
+                  <span className="text-white/30">·</span>
+                  <span className="text-[11px] font-black text-blue-400">{activeFeatures} fitur</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="relative mt-3">
+            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-white/60 rounded-full transition-all duration-500" style={{ width: `${(totalActive / totalItems) * 100}%` }} />
+            </div>
+          </div>
+        </div>
+
+        {/* ── TAB CONTENT: MODUL ── */}
+        {activeTab === "modul" && (
+          <>
+            {/* Category filter */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {MODULE_CATS.map((cat) => (
+                <button key={cat} onClick={() => setModuleCat(cat)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    moduleCat === cat ? "bg-slate-800 text-white shadow-sm" : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
+                  }`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {filteredModules.map((item) => (
+                <CatalogCard key={item.moduleKey} item={item}
+                  isActive={isModuleActive(item)} unlocked={canActivate(item)}
+                  isToggling={toggling === item.moduleKey}
+                  onToggle={() => handleToggle(item)} onSelect={() => setSelected(item)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── TAB CONTENT: FITUR SATUAN ── */}
+        {activeTab === "fitur" && (
+          <>
+            {/* Category filter */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {FEATURE_CATS.map((cat) => (
+                <button key={cat} onClick={() => setFeatureCat(cat)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    featureCat === cat ? "bg-slate-800 text-white shadow-sm" : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
+                  }`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {featuresLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl border-2 border-slate-100 p-4 animate-pulse">
+                    <div className="w-10 h-10 bg-slate-100 rounded-2xl mb-3" />
+                    <div className="h-4 bg-slate-100 rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-slate-100 rounded w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Active features summary strip */}
+                {featureCat === "Semua" && activeFeatures > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    {FEATURE_CATALOG.filter(isFeatureActive).map((item) => (
+                      <button key={item.featureCode} onClick={() => setSelected(item)}
+                        className="flex-shrink-0 flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-2.5 py-1.5 shadow-sm hover:shadow-md transition-all">
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${item.iconBg}`}>
+                          <item.icon size={12} className={item.iconColor} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-700 whitespace-nowrap">{item.title}</p>
+                          <div className="flex items-center gap-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                            <span className="text-[9px] text-emerald-600 font-semibold">Aktif</span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {filteredFeatures.map((item) => (
+                    <CatalogCard key={item.featureCode} item={item}
+                      isActive={isFeatureActive(item)} unlocked={canActivate(item)}
+                      isToggling={toggling === item.featureCode}
+                      onToggle={() => handleToggle(item)} onSelect={() => setSelected(item)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Info footer */}
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl p-3.5">
+          <Info size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] text-blue-700 leading-relaxed">
+            Perubahan modul & fitur langsung aktif tanpa restart. Beberapa fitur membutuhkan upgrade paket terlebih dahulu.
           </p>
         </div>
       </div>
 
-      {/* ── FEATURE DETAIL DRAWER ── */}
-      {selectedFeature && (
+      {/* ── DETAIL DRAWER ── */}
+      {selected && (
         <>
-          <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-[60]"
-            onClick={() => setSelectedFeature(null)}
-          />
-          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-3xl shadow-2xl">
-            {/* Handle */}
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-[60]" onClick={() => setSelected(null)} />
+          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto">
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-slate-200" />
             </div>
             <div className="px-5 pb-6 pt-3">
-              {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedFeature.iconBg}`}>
-                    <selectedFeature.icon size={22} className={selectedFeature.iconColor} />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selected.iconBg}`}>
+                    <selected.icon size={22} className={selected.iconColor} />
                   </div>
                   <div>
-                    <h3 className="font-black text-slate-800 text-base">{selectedFeature.title}</h3>
+                    <h3 className="font-black text-slate-800 text-base">{selected.title}</h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      {isModuleActive(selectedFeature) ? (
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Aktif
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-slate-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                          Tidak Aktif
-                        </span>
-                      )}
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        selectedFeature.requiredPlan === "free"
-                          ? "bg-slate-100 text-slate-500"
-                          : selectedFeature.requiredPlan === "growth"
-                          ? "bg-blue-50 text-blue-600"
-                          : "bg-violet-50 text-violet-600"
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        selectedActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"
                       }`}>
-                        {selectedFeature.requiredPlan === "free" ? "Gratis" : selectedFeature.requiredPlan === "growth" ? "Growth" : "Pro"}
+                        <span className={`w-1.5 h-1.5 rounded-full ${selectedActive ? "bg-emerald-500" : "bg-slate-300"}`} />
+                        {selectedActive ? "Aktif" : "Tidak Aktif"}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        selected.requiredPlan === "free" ? "bg-slate-100 text-slate-500"
+                        : selected.requiredPlan === "growth" ? "bg-blue-50 text-blue-600"
+                        : "bg-violet-50 text-violet-600"
+                      }`}>
+                        {selected.requiredPlan === "free" ? "Gratis" : selected.requiredPlan === "growth" ? "Growth" : "Pro"}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium capitalize bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                        {selected.type === "module" ? "Modul" : "Fitur"}
                       </span>
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedFeature(null)}
-                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500"
-                >
+                <button onClick={() => setSelected(null)} className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500">
                   <X size={16} />
                 </button>
               </div>
 
-              {/* Description */}
-              <p className="text-sm text-slate-600 leading-relaxed mb-5">{selectedFeature.longDesc}</p>
+              <p className="text-sm text-slate-600 leading-relaxed mb-5">{selected.longDesc}</p>
 
-              {/* Action */}
-              {canActivate(selectedFeature) ? (
+              {selected.type === "feature" && (
+                <div className="bg-slate-50 rounded-2xl px-4 py-3 mb-5 border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Feature Code</p>
+                  <code className="text-xs font-mono text-slate-700 font-semibold">{(selected as FeatureItem).featureCode}</code>
+                </div>
+              )}
+
+              {selectedUnlocked ? (
                 <button
-                  onClick={() => handleToggle(selectedFeature)}
-                  disabled={toggling === selectedFeature.id}
+                  onClick={() => handleToggle(selected)}
+                  disabled={toggling === (selected.type === "module" ? (selected as ModuleItem).moduleKey : (selected as FeatureItem).featureCode)}
                   className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99] ${
-                    isModuleActive(selectedFeature)
-                      ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      : "bg-slate-800 text-white hover:bg-slate-700 shadow-lg shadow-slate-200"
+                    selectedActive ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : "bg-slate-800 text-white hover:bg-slate-700 shadow-lg shadow-slate-200"
                   }`}
-                  data-testid="button-toggle-detail"
                 >
-                  {toggling === selectedFeature.id ? (
+                  {toggling ? (
                     <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                  ) : isModuleActive(selectedFeature) ? (
-                    <>
-                      <ToggleRight size={16} />
-                      Nonaktifkan Modul
-                    </>
+                  ) : selectedActive ? (
+                    <><ToggleRight size={16} /> Nonaktifkan</>
                   ) : (
-                    <>
-                      <Zap size={16} />
-                      Aktifkan Sekarang
-                    </>
+                    <><Zap size={16} /> Aktifkan Sekarang</>
                   )}
                 </button>
               ) : (
                 <button
-                  onClick={() => { setSelectedFeature(null); setShowPlans(true); }}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-violet-600 text-white hover:bg-violet-700 transition-all shadow-lg shadow-violet-200 active:scale-[0.99]"
-                  data-testid="button-upgrade-detail"
+                  onClick={() => { setSelected(null); setShowPlans(true); }}
+                  className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-violet-600 text-white hover:bg-violet-700 transition-all shadow-lg shadow-violet-200"
                 >
                   <Crown size={16} />
-                  Upgrade ke {selectedFeature.requiredPlan === "growth" ? "Growth" : "Pro"}
+                  Upgrade ke {selected.requiredPlan === "growth" ? "Growth" : "Pro"}
                 </button>
               )}
             </div>
@@ -599,41 +711,25 @@ export default function MarketplacePage() {
       {/* ── PLANS MODAL ── */}
       {showPlans && (
         <>
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-[80]"
-            onClick={() => setShowPlans(false)}
-          />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-[80]" onClick={() => setShowPlans(false)} />
           <div className="fixed inset-0 z-[90] flex items-end md:items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-              {/* Modal header */}
+            <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100">
                 <div>
                   <h2 className="font-black text-slate-800 text-lg">Pilih Paket</h2>
                   <p className="text-xs text-slate-400 mt-0.5">Unlock lebih banyak fitur untuk bisnis kamu</p>
                 </div>
-                <button
-                  onClick={() => setShowPlans(false)}
-                  className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500"
-                >
+                <button onClick={() => setShowPlans(false)} className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500">
                   <X size={16} />
                 </button>
               </div>
-
               <div className="p-5 space-y-3">
                 {PLANS.map((plan) => {
                   const isCurrent = plan.tier === currentPlan;
                   return (
-                    <div
-                      key={plan.tier}
-                      className={`rounded-2xl border-2 p-4 relative transition-all ${
-                        plan.popular
-                          ? "border-blue-400 bg-blue-50/30"
-                          : isCurrent
-                          ? "border-slate-300 bg-slate-50"
-                          : "border-slate-200"
-                      }`}
-                      data-testid={`plan-card-${plan.tier}`}
-                    >
+                    <div key={plan.tier} className={`rounded-2xl border-2 p-4 relative ${
+                      plan.popular ? "border-blue-400 bg-blue-50/30" : isCurrent ? "border-slate-300 bg-slate-50" : "border-slate-200"
+                    }`}>
                       {plan.popular && (
                         <span className="absolute -top-3 left-4 text-[10px] font-black bg-blue-500 text-white px-2.5 py-0.5 rounded-full">
                           PALING POPULER
@@ -648,13 +744,11 @@ export default function MarketplacePage() {
                           </p>
                         </div>
                         {isCurrent ? (
-                          <span className="text-[11px] font-black bg-slate-200 text-slate-600 px-2.5 py-1 rounded-xl">
-                            Paket Kamu
-                          </span>
+                          <span className="text-[11px] font-black bg-slate-200 text-slate-600 px-2.5 py-1 rounded-xl">Paket Kamu</span>
                         ) : (
-                          <button className={`text-xs font-black px-3 py-1.5 rounded-xl text-white transition-colors ${
+                          <button className={`text-xs font-black px-3 py-1.5 rounded-xl text-white ${
                             plan.tier === "growth" ? "bg-blue-500 hover:bg-blue-600" : "bg-violet-500 hover:bg-violet-600"
-                          }`}>
+                          } transition-colors`}>
                             Pilih
                           </button>
                         )}

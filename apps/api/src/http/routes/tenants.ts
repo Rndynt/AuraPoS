@@ -41,6 +41,9 @@ router.get('/features', TenantsController.getActiveFeatures);
 // PATCH /api/tenants/modules - Update module config flags
 router.patch('/modules', TenantsController.updateModuleConfig);
 
+// POST /api/tenants/features/toggle - Toggle a single feature on/off
+router.post('/features/toggle', TenantsController.toggleFeature);
+
 // POST /api/tenants/features/check - Check feature access
 router.post('/features/check', TenantsController.checkFeatureAccess);
 

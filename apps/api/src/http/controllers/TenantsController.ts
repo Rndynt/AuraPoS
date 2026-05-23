@@ -146,6 +146,45 @@ export const registerTenant = asyncHandler(async (req: Request, res: Response) =
 });
 
 /**
+ * POST /api/tenants/features/toggle
+ * Activate or deactivate a single feature code for the current tenant
+ */
+export const toggleFeature = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+
+  const bodySchema = z.object({
+    feature_code: z.string().min(1),
+  });
+
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  const { feature_code } = parsed.data;
+  const repo = container.tenantFeatureRepository;
+
+  const existing = await repo.findByTenantAndFeature(tenantId, feature_code);
+
+  let updated;
+  if (!existing) {
+    updated = await repo.create({
+      tenantId,
+      featureCode: feature_code,
+      source: 'purchase',
+      isActive: true,
+    } as any);
+  } else {
+    updated = await repo.update(existing.id, { isActive: !existing.is_active } as any);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { feature_code: updated.feature_code, is_active: updated.is_active },
+  });
+});
+
+/**
  * PATCH /api/tenants/modules
  * Update module config flags for the current tenant
  */
