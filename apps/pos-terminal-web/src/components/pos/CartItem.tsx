@@ -1,5 +1,5 @@
 import type { CartItem as CartItemType } from "@/hooks/useCart";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 
 type CartItemProps = {
   item: CartItemType;
@@ -8,7 +8,7 @@ type CartItemProps = {
   getItemPrice: (item: CartItemType) => number;
 };
 
-export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItemProps) {
+export function CartItem({ item, onUpdateQty, getItemPrice }: CartItemProps) {
   const fmt = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
@@ -40,16 +40,8 @@ export function CartItem({ item, onUpdateQty, onRemove, getItemPrice }: CartItem
           </p>
         )}
 
-        {/* Row bawah: trash | harga | qty control */}
-        <div className="flex items-center justify-between mt-0.5">
-          <button
-            onClick={() => onRemove(item.id)}
-            className="text-slate-300 hover:text-red-500 transition-colors"
-            data-testid={`button-remove-${item.id}`}
-          >
-            <Trash2 size={13} />
-          </button>
-
+        {/* Row bawah: harga | qty control */}
+        <div className="flex items-center justify-end mt-0.5">
           <div className="flex items-center gap-2">
             {/* Harga sejajar dengan qty */}
             <span className="text-sm font-bold text-blue-600 tabular-nums" data-testid={`text-item-total-${item.id}`}>
