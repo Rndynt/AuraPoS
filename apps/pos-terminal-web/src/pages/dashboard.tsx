@@ -1,22 +1,13 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
-  ChevronLeft,
-  Calendar,
-  ChevronDown,
-  Wallet,
-  ShoppingBag,
-  ArrowDownRight,
-  AlertCircle,
-  TrendingUp,
-  CheckCircle,
-  AlertTriangle,
+  ChevronLeft, Calendar, ChevronDown, Wallet, ShoppingBag,
+  ArrowDownRight, AlertCircle, TrendingUp, CheckCircle, AlertTriangle,
 } from "lucide-react";
 import { SummaryCard } from "@/components/pos/shared/SummaryCard";
 import { DashboardChartPresenter, type ChartDataPoint } from "@/components/pos/shared/DashboardChartPresenter";
 import { useOrders } from "@/hooks/api/useOrders";
 import { useProducts } from "@/hooks/api/useProducts";
-import type { Order } from "@pos/domain/orders/types";
 
 const formatIDR = (price: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
@@ -49,9 +40,18 @@ function getPeriodRange(period: PeriodKey): { startDate: Date; endDate: Date } {
     startDate.setHours(0, 0, 0, 0);
     return { startDate, endDate };
   }
-  // month
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
   return { startDate, endDate };
+}
+
+// Normalize raw Drizzle camelCase response to consistent shape
+function norm(o: any) {
+  return {
+    id: o.id,
+    total: parseFloat(o.total ?? o.totalAmount ?? o.total_amount ?? 0),
+    status: o.status ?? "",
+    date: new Date(o.orderDate ?? o.createdAt ?? o.created_at ?? 0),
+  };
 }
 
 export default function DashboardPage() {
@@ -63,30 +63,35 @@ export default function DashboardPage() {
 
   const { data: orderRes, isLoading } = useOrders({ startDate, endDate, limit: 1000 });
   const { data: products = [] } = useProducts();
-  const orders: Order[] = (orderRes as any)?.data?.orders ?? (orderRes as any)?.orders ?? [];
+
+  const rawOrders: any[] = (orderRes as any)?.data?.orders ?? (orderRes as any)?.orders ?? [];
+  const orders = rawOrders.map(norm);
 
   const { chartData, revenue, transactions, avgBill, hasData } = useMemo(() => {
     const periodOrders = orders.filter((o) => o.status !== "cancelled");
     const map = new Map<string, { value: number; transactions: number }>();
+
     for (const o of periodOrders) {
-      const d = new Date(o.created_at);
       const label =
         selectedPeriod === "today" || selectedPeriod === "yesterday"
-          ? `${String(d.getHours()).padStart(2, "0")}:00`
-          : `${d.getDate()}/${d.getMonth() + 1}`;
+          ? `${String(o.date.getHours()).padStart(2, "0")}:00`
+          : `${o.date.getDate()}/${o.date.getMonth() + 1}`;
       const prev = map.get(label) ?? { value: 0, transactions: 0 };
-      prev.value += o.total_amount;
+      prev.value += o.total;
       prev.transactions += 1;
       map.set(label, prev);
     }
+
     const raw = Array.from(map.entries()).map(([label, v]) => ({ label, ...v }));
     const maxVal = Math.max(...raw.map((r) => r.value), 1);
     const chartData: ChartDataPoint[] = raw.map((r) => ({
       ...r,
       height: Math.max(8, Math.round((r.value / maxVal) * 100)),
     }));
-    const revenue = periodOrders.reduce((sum, o) => sum + o.total_amount, 0);
+
+    const revenue = periodOrders.reduce((sum, o) => sum + o.total, 0);
     const transactions = periodOrders.length;
+
     return {
       chartData,
       revenue,

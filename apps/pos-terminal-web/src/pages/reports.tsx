@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { List, Download, Printer } from "lucide-react";
 import { CustomSelect, PageHeader } from "@/components/design";
 import { useOrders } from "@/hooks/api/useOrders";
-import type { Order } from "@pos/domain/orders/types";
 
 const formatIDR = (price: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
@@ -26,9 +25,22 @@ function getPeriodRange(period: PeriodLabel): { startDate: Date; endDate: Date }
     startDate.setHours(0, 0, 0, 0);
     return { startDate, endDate };
   }
-  // Bulan Ini
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
   return { startDate, endDate };
+}
+
+// Normalize raw API order (camelCase from Drizzle) to consistent shape
+function norm(o: any) {
+  return {
+    id: o.id,
+    orderNumber: o.orderNumber ?? o.order_number ?? "",
+    customerName: o.customerName ?? o.customer_name ?? "",
+    tableNumber: o.tableNumber ?? o.table_number ?? "",
+    total: parseFloat(o.total ?? o.totalAmount ?? o.total_amount ?? 0),
+    paymentStatus: o.paymentStatus ?? o.payment_status ?? "unpaid",
+    status: o.status ?? "",
+    date: new Date(o.orderDate ?? o.createdAt ?? o.created_at ?? 0),
+  };
 }
 
 const ReportsPage = () => {
@@ -36,16 +48,14 @@ const ReportsPage = () => {
   const [period, setPeriod] = useState<PeriodLabel>("Hari Ini");
 
   const { startDate, endDate } = useMemo(() => getPeriodRange(period), [period]);
-
   const { data: orderRes, isLoading } = useOrders({ startDate, endDate, limit: 1000 });
-  const orders: Order[] = (orderRes as any)?.data?.orders ?? (orderRes as any)?.orders ?? [];
 
-  // All orders in period (API already filters by date)
-  const filteredOrders = orders;
+  const rawOrders: any[] = (orderRes as any)?.data?.orders ?? (orderRes as any)?.orders ?? [];
+  const orders = rawOrders.map(norm);
 
-  const gross = filteredOrders.reduce((s, o) => s + o.total_amount, 0);
-  const paid = filteredOrders.filter((o) => o.payment_status === "paid").length;
-  const avgOrder = filteredOrders.length ? gross / filteredOrders.length : 0;
+  const gross = orders.reduce((s, o) => s + o.total, 0);
+  const paid = orders.filter((o) => o.paymentStatus === "paid").length;
+  const avgOrder = orders.length ? gross / orders.length : 0;
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
@@ -77,7 +87,6 @@ const ReportsPage = () => {
       />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-xl border">
             <p className="text-xs text-slate-500 font-bold uppercase mb-1">Omset Kotor</p>
@@ -85,7 +94,7 @@ const ReportsPage = () => {
           </div>
           <div className="bg-white p-4 rounded-xl border">
             <p className="text-xs text-slate-500 font-bold uppercase mb-1">Total Transaksi</p>
-            <h3 className="text-2xl font-black text-slate-800">{filteredOrders.length}</h3>
+            <h3 className="text-2xl font-black text-slate-800">{orders.length}</h3>
           </div>
           <div className="bg-white p-4 rounded-xl border">
             <p className="text-xs text-slate-500 font-bold uppercase mb-1">Transaksi Lunas</p>
@@ -97,20 +106,19 @@ const ReportsPage = () => {
           </div>
         </div>
 
-        {/* Transaction table */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <List size={16} /> Riwayat Transaksi
             </h3>
             {!isLoading && (
-              <span className="text-xs text-slate-400 font-medium">{filteredOrders.length} transaksi</span>
+              <span className="text-xs text-slate-400 font-medium">{orders.length} transaksi</span>
             )}
           </div>
 
           {isLoading ? (
             <div className="p-6 text-sm text-slate-500">Memuat data laporan...</div>
-          ) : filteredOrders.length === 0 ? (
+          ) : orders.length === 0 ? (
             <div className="p-8 text-center text-slate-500">Belum ada transaksi pada periode ini.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -125,25 +133,27 @@ const ReportsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredOrders.map((trx) => (
+                  {orders.map((trx) => (
                     <tr key={trx.id} className="hover:bg-slate-50">
-                      <td className="p-4 font-bold text-blue-600">{trx.order_number}</td>
+                      <td className="p-4 font-bold text-blue-600">{trx.orderNumber}</td>
                       <td className="p-4 text-slate-500">
-                        {new Date(trx.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                        {isNaN(trx.date.getTime())
+                          ? "-"
+                          : trx.date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
                       </td>
                       <td className="p-4 font-medium text-slate-700">
-                        {trx.customer_name || trx.table_number || "Walk-in"}
+                        {trx.customerName || trx.tableNumber || "Walk-in"}
                       </td>
-                      <td className="p-4 text-right font-bold text-slate-800">{formatIDR(trx.total_amount)}</td>
+                      <td className="p-4 text-right font-bold text-slate-800">{formatIDR(trx.total)}</td>
                       <td className="p-4 text-center">
                         <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          trx.payment_status === "paid"
+                          trx.paymentStatus === "paid"
                             ? "bg-green-100 text-green-700"
-                            : trx.payment_status === "partial"
+                            : trx.paymentStatus === "partial"
                             ? "bg-orange-100 text-orange-700"
                             : "bg-yellow-100 text-yellow-700"
                         }`}>
-                          {trx.payment_status === "paid" ? "Lunas" : trx.payment_status === "partial" ? "Sebagian" : "Belum Bayar"}
+                          {trx.paymentStatus === "paid" ? "Lunas" : trx.paymentStatus === "partial" ? "Sebagian" : "Belum Bayar"}
                         </span>
                       </td>
                     </tr>
