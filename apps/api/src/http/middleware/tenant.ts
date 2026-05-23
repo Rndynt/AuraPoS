@@ -32,15 +32,19 @@ export async function tenantMiddleware(
   req: Request, res: Response, next: NextFunction,
 ): Promise<void> {
   try {
-    // req.hostname sudah handle x-forwarded-host jika trust proxy = true
-    // Tapi kita juga cek manual sebagai fallback
     const hostname =
       (req.headers['x-forwarded-host'] as string)?.split(',')[0]?.trim() ||
       req.hostname ||
       (req.headers.host as string) || '';
 
-    // ── 1. Subdomain: {slug}.aurapos.my.id ───────────────────────────────────
     const slug = extractSlugFromHost(hostname);
+
+    // Debug log (hapus setelah confirmed working)
+    if (process.env.NODE_ENV === 'development' || process.env.DEBUG_TENANT) {
+      console.log(`[tenant] host="${hostname}" slug="${slug}" path="${req.path}"`);
+    }
+
+    // ── 1. Subdomain: {slug}.aurapos.my.id ───────────────────────────────────
     if (slug) {
       const rows = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
       if (!rows.length) { res.status(404).json({ error: 'Tenant not found', slug }); return; }

@@ -1,0 +1,37 @@
+# AuraPOS — Coolify + Traefik Wildcard Config
+# 
+# Di Coolify UI:
+#   1. Service → Domains → tambahkan: aurapos.my.id, *.aurapos.my.id
+#   2. ATAU paste labels ini di "Advanced → Docker Compose Labels"
+#
+# Yang penting: SATU kali setup ini = semua subdomain tenant langsung jalan
+
+services:
+  app:
+    image: your-aurapos-image  # ganti sesuai image di Coolify
+    labels:
+      # ── Traefik enable ────────────────────────────────────────────────────
+      - "traefik.enable=true"
+
+      # ── Router: tangkap root domain DAN semua *.aurapos.my.id ─────────────
+      - "traefik.http.routers.aurapos.rule=Host(`aurapos.my.id`) || HostRegexp(`{subdomain:[a-z0-9][a-z0-9-]*}.aurapos.my.id`)"
+      - "traefik.http.routers.aurapos.entrypoints=web,websecure"
+      - "traefik.http.routers.aurapos.tls=true"
+      - "traefik.http.routers.aurapos.tls.certresolver=letsencrypt"
+
+      # ── Wildcard cert — cover *.aurapos.my.id sekaligus ───────────────────
+      - "traefik.http.routers.aurapos.tls.domains[0].main=aurapos.my.id"
+      - "traefik.http.routers.aurapos.tls.domains[0].sans=*.aurapos.my.id"
+
+      # ── Service ───────────────────────────────────────────────────────────
+      - "traefik.http.services.aurapos.loadbalancer.server.port=5000"
+
+      # ── Pass Host header ke app agar subdomain terbaca ───────────────────
+      - "traefik.http.middlewares.aurapos-headers.headers.customRequestHeaders.X-Forwarded-Host=$http_host"
+      - "traefik.http.routers.aurapos.middlewares=aurapos-headers"
+
+    environment:
+      - BASE_DOMAIN=aurapos.my.id
+      - DATABASE_URL=${DATABASE_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=https://aurapos.my.id

@@ -118,9 +118,9 @@ async function seedThamada(createdOrderTypes: any[]) {
 
   // Tenant dulu, baru owner account agar tenantId sudah tersedia
   const [tenant] = await db.insert(tenants).values({
-    id: 'thamada-coffee',
+    id: 'thamada',
     name: 'Thamada Coffee Shop',
-    slug: 'thamada-coffee',
+    slug: 'thamada',
     businessType: 'CAFE_RESTAURANT',
     businessName: 'Thamada Coffee Shop',
     businessAddress: 'Jl. Sudirman No. 45, Jakarta Pusat 10220',
@@ -367,9 +367,9 @@ async function seedNusantara(createdOrderTypes: any[]) {
 
   // Tenant dulu, baru owner account
   const [tenant] = await db.insert(tenants).values({
-    id: 'kopi-nusantara',
+    id: 'kopinusantara',
     name: 'Warung Kopi Nusantara',
-    slug: 'kopi-nusantara',
+    slug: 'kopinusantara',
     businessType: 'CAFE_RESTAURANT',
     businessName: 'Warung Kopi Nusantara',
     businessAddress: 'Jl. Braga No. 12, Bandung Kota 40111',
@@ -614,7 +614,7 @@ async function seed() {
     console.log('📋  Summary:');
     console.log('   Tenant 1: Thamada Coffee Shop');
     console.log(`     ID: ${thamadaId}`);
-    console.log('     Slug: thamada-coffee');
+    console.log('     Slug: thamada');
     console.log('     Owner login: thamada_owner / Thamada2024!');
     console.log('     Menu: 6 Coffee · 4 Non-Coffee · 3 Main Course · 3 Snack');
     console.log('     Tables: 12 (Ground Floor + 2nd Floor + Outdoor)');
