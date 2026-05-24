@@ -538,8 +538,13 @@ export const serverSyncConflicts = pgTable("server_sync_conflicts", {
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   terminalId: varchar("terminal_id"),
   localOrderId: varchar("local_order_id", { length: 128 }),
+  serverOrderId: varchar("server_order_id"),
   conflictType: varchar("conflict_type", { length: 50 }).notNull(),
   message: text("message").notNull(),
+  conflictData: jsonb("conflict_data"),
+  resolution: varchar("resolution", { length: 30 }).notNull().default("pending"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by", { length: 255 }),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => ({
   tenantIdx: index("server_sync_conflicts_tenant_idx").on(table.tenantId),
@@ -549,3 +554,29 @@ export const serverSyncConflicts = pgTable("server_sync_conflicts", {
 export const insertServerSyncConflictSchema = createInsertSchema(serverSyncConflicts).omit({ id: true, createdAt: true });
 export type InsertServerSyncConflict = z.infer<typeof insertServerSyncConflictSchema>;
 export type ServerSyncConflict = typeof serverSyncConflicts.$inferSelect;
+
+// ── Sprint 5: Inventory Movements Ledger ─────────────────────────────────────
+
+export const inventoryMovements = pgTable("inventory_movements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  orderId: varchar("order_id").references(() => orders.id, { onDelete: "set null" }),
+  terminalId: varchar("terminal_id", { length: 255 }),
+  movementType: varchar("movement_type", { length: 30 }).notNull(),
+  quantityDelta: integer("quantity_delta").notNull(),
+  quantityBefore: integer("quantity_before"),
+  quantityAfter: integer("quantity_after"),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  actorId: varchar("actor_id", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  tenantIdx: index("inventory_movements_tenant_idx").on(table.tenantId),
+  productIdx: index("inventory_movements_product_idx").on(table.productId),
+  orderIdx: index("inventory_movements_order_idx").on(table.orderId),
+}));
+
+export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).omit({ id: true, createdAt: true });
+export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;

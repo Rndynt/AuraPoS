@@ -11,3 +11,4 @@ export * from "./tenantCache";
 export * from "./idempotency";
 export * from "./orderNumber";
 export * from "./localOrderService";
+export * from "./conflictTypes";

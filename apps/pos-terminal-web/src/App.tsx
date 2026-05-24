@@ -21,6 +21,7 @@ import CustomerDisplayPage from "@/pages/customer-display";
 import PrintersPage from "@/pages/printers";
 import NotFound from "@/pages/not-found";
 import LocalOrdersPage from "@/pages/local-orders";
+import SyncConflictsPage from "@/pages/sync-conflicts";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import RegisterTenantPage from "@/pages/register-tenant";
@@ -108,6 +109,12 @@ const KitchenDisplayPageWithLayout = () => (
 const LocalOrdersPageWithLayout = () => (
   <MainLayout>
     <LocalOrdersPage />
+  </MainLayout>
+);
+
+const SyncConflictsPageWithLayout = () => (
+  <MainLayout>
+    <SyncConflictsPage />
   </MainLayout>
 );
 
@@ -252,6 +259,11 @@ function Router() {
       <Route path="/local-orders">
         <RequireAuth>
           <LocalOrdersPageWithLayout />
+        </RequireAuth>
+      </Route>
+      <Route path="/sync-conflicts">
+        <RequireAuth>
+          <SyncConflictsPageWithLayout />
         </RequireAuth>
       </Route>
       <Route path="/store-profile">

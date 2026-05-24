@@ -1,6 +1,7 @@
 /**
- * SyncController — Sprint 4
+ * SyncController — Sprint 4 + Sprint 5
  * Handles batch offline order sync from terminals.
+ * Sprint 5: adds conflict resolution endpoint.
  */
 
 import { Request, Response } from 'express';
@@ -9,7 +10,7 @@ import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { emitOrderQueueChanged } from '../services/orderQueueEvents';
 import { syncBatches, syncEvents, serverSyncConflicts } from '../../../../../shared/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 
 const selectedOptionSchema = z.object({
   group_id: z.string(),
@@ -135,7 +136,6 @@ export const listSyncConflicts = asyncHandler(async (req: Request, res: Response
 export const listSyncEvents = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
   const limitRaw = Math.min(parseInt(String(req.query.limit ?? '50'), 10), 200);
-  const batchId = req.query.batch_id as string | undefined;
 
   const rows = await container.db
     .select()
@@ -145,4 +145,45 @@ export const listSyncEvents = asyncHandler(async (req: Request, res: Response) =
     .limit(limitRaw);
 
   res.json({ success: true, data: { events: rows } });
+});
+
+const resolveConflictBodySchema = z.object({
+  resolution: z.enum(['resolved', 'ignored', 'pending']),
+  resolved_by: z.string().min(1).max(255).optional(),
+});
+
+/**
+ * PATCH /api/sync/conflicts/:id/resolve
+ * Mark a sync conflict as resolved or ignored (Sprint 5).
+ */
+export const resolveConflict = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenantId!;
+  const conflictId = req.params.id;
+
+  const parsed = resolveConflictBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
+  }
+
+  const existing = await container.db
+    .select({ id: serverSyncConflicts.id })
+    .from(serverSyncConflicts)
+    .where(and(eq(serverSyncConflicts.id, conflictId), eq(serverSyncConflicts.tenantId, tenantId)))
+    .limit(1);
+
+  if (!existing.length) {
+    throw createError('Conflict not found', 404, 'NOT_FOUND');
+  }
+
+  const [updated] = await container.db
+    .update(serverSyncConflicts)
+    .set({
+      resolution: parsed.data.resolution,
+      resolvedAt: parsed.data.resolution !== 'pending' ? new Date() : null,
+      resolvedBy: parsed.data.resolved_by ?? null,
+    })
+    .where(and(eq(serverSyncConflicts.id, conflictId), eq(serverSyncConflicts.tenantId, tenantId)))
+    .returning();
+
+  res.json({ success: true, data: { conflict: updated } });
 });

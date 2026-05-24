@@ -1,5 +1,5 @@
 /**
- * Sync Routes — Sprint 4
+ * Sync Routes — Sprint 4 + Sprint 5
  * Offline batch sync endpoints for terminals.
  */
 
@@ -14,8 +14,11 @@ router.post('/offline-orders', SyncController.syncOfflineOrders);
 // GET /api/sync/batches — list recent sync batches (admin/debug)
 router.get('/batches', SyncController.listSyncBatches);
 
-// GET /api/sync/conflicts — list recent sync conflicts (admin/debug)
+// GET /api/sync/conflicts — list recent sync conflicts
 router.get('/conflicts', SyncController.listSyncConflicts);
+
+// PATCH /api/sync/conflicts/:id/resolve — resolve or ignore a conflict (Sprint 5)
+router.patch('/conflicts/:id/resolve', SyncController.resolveConflict);
 
 // GET /api/sync/events — per-item sync audit log
 router.get('/events', SyncController.listSyncEvents);

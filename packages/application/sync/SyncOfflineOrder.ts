@@ -1,22 +1,29 @@
 /**
- * SyncOfflineOrder Use Case (Sprint 4)
+ * SyncOfflineOrder Use Case (Sprint 4 + Sprint 5)
  *
  * Accepts a batch of offline orders from a terminal and processes each atomically
  * via CreateAndPayOrder. Returns per-item results so the terminal can update its
  * local IndexedDB (serverId, serverOrderNumber, syncStatus).
  *
- * Error classification:
- *  - 'synced'   — created successfully on server for the first time
- *  - 'replayed' — idempotent replay of a previously synced order
- *  - 'conflict' — business rule violation (inactive product, etc.)
- *  - 'failed'   — unexpected server error (will be retried by the sync engine)
+ * Sprint 5 additions:
+ *  - Phase 10.2: Price conflict detection (PRICE_CHANGED) — accepts offline price + audit note
+ *  - Phase 10.3: Stock conflict detection (STOCK_INSUFFICIENT) — allows negative stock (configurable)
+ *  - Phase 17.1: Writes inventory_movements ledger after each successful sync
  */
 
 import type { Database } from '@pos/infrastructure/database';
 import { CreateAndPayOrder } from '../orders/CreateAndPayOrder';
 import type { CreateAndPayOrderItemInput } from '../orders/CreateAndPayOrder';
-import { syncBatches, syncEvents, serverSyncConflicts, orders } from '../../../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import {
+  syncBatches,
+  syncEvents,
+  serverSyncConflicts,
+  orders,
+  products,
+  inventoryMovements,
+} from '../../../shared/schema';
+import { eq, and, inArray } from 'drizzle-orm';
+import { ConflictType } from './conflictTypes';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -47,6 +54,7 @@ export interface SyncOrderItemResult {
   status: SyncItemStatus;
   server_order_id?: string;
   server_order_number?: string;
+  warnings?: string[];
   error?: string;
 }
 
@@ -108,6 +116,15 @@ export class SyncOfflineOrder {
       .returning();
     const batchId = batch?.id ?? 'unknown';
 
+    // ── Pre-fetch current product prices + stock for conflict detection ───────
+    const allProductIds = [...new Set(orderInputs.flatMap(o => o.items.map(i => i.product_id)))];
+    const serverProducts = await this.db
+      .select({ id: products.id, basePrice: products.basePrice, stockQty: products.stockQty, stockTrackingEnabled: products.stockTrackingEnabled, name: products.name })
+      .from(products)
+      .where(and(inArray(products.id, allProductIds), eq(products.tenantId, tenant_id)));
+
+    const productMap = new Map(serverProducts.map(p => [p.id, p]));
+
     // ── Process each order independently ─────────────────────────────────────
     const results: SyncOrderItemResult[] = [];
     let synced = 0;
@@ -117,8 +134,85 @@ export class SyncOfflineOrder {
 
     for (const item of orderInputs) {
       let result: SyncOrderItemResult;
+      const warnings: string[] = [];
 
       try {
+        // ── Phase 10.2: Price Conflict Detection ──────────────────────────────
+        const priceConflicts: Array<{ productId: string; productName: string; offlinePrice: number; serverPrice: number }> = [];
+
+        for (const orderItem of item.items) {
+          const serverProduct = productMap.get(orderItem.product_id);
+          if (!serverProduct) continue;
+          const serverPrice = parseFloat(serverProduct.basePrice);
+          const offlinePrice = orderItem.base_price;
+          const diff = Math.abs(serverPrice - offlinePrice);
+          // Flag if price differs by more than 1 unit (accounting for rounding)
+          if (diff > 1) {
+            priceConflicts.push({
+              productId: orderItem.product_id,
+              productName: orderItem.product_name,
+              offlinePrice,
+              serverPrice,
+            });
+          }
+        }
+
+        if (priceConflicts.length > 0) {
+          const warningMsg = `Harga berubah untuk: ${priceConflicts.map(c => `${c.productName} (offline: ${c.offlinePrice}, server: ${c.serverPrice})`).join('; ')}`;
+          warnings.push(warningMsg);
+          // Default policy: accept offline price + log audit conflict (non-blocking)
+          await this.db
+            .insert(serverSyncConflicts)
+            .values({
+              tenantId: tenant_id,
+              terminalId: terminal_id,
+              localOrderId: item.local_order_id,
+              conflictType: ConflictType.PRICE_CHANGED,
+              message: warningMsg,
+              conflictData: priceConflicts as any,
+              resolution: 'auto_resolved',
+              resolvedAt: new Date(),
+            })
+            .catch(() => undefined);
+        }
+
+        // ── Phase 10.3: Stock Conflict Detection ──────────────────────────────
+        const stockConflicts: Array<{ productId: string; productName: string; requested: number; available: number }> = [];
+
+        for (const orderItem of item.items) {
+          const serverProduct = productMap.get(orderItem.product_id);
+          if (!serverProduct || !serverProduct.stockTrackingEnabled) continue;
+          const available = serverProduct.stockQty ?? 0;
+          if (available < orderItem.quantity) {
+            stockConflicts.push({
+              productId: orderItem.product_id,
+              productName: orderItem.product_name,
+              requested: orderItem.quantity,
+              available,
+            });
+          }
+        }
+
+        if (stockConflicts.length > 0) {
+          const warningMsg = `Stok tidak cukup untuk: ${stockConflicts.map(c => `${c.productName} (diminta: ${c.requested}, tersedia: ${c.available})`).join('; ')}`;
+          warnings.push(warningMsg);
+          // Default policy: allow negative stock (offline sale goes through) + log warning
+          await this.db
+            .insert(serverSyncConflicts)
+            .values({
+              tenantId: tenant_id,
+              terminalId: terminal_id,
+              localOrderId: item.local_order_id,
+              conflictType: ConflictType.STOCK_INSUFFICIENT,
+              message: warningMsg,
+              conflictData: stockConflicts as any,
+              resolution: 'auto_resolved',
+              resolvedAt: new Date(),
+            })
+            .catch(() => undefined);
+        }
+
+        // ── Create order + payment ────────────────────────────────────────────
         const output = await this.createAndPay.execute({
           tenant_id,
           items: item.items,
@@ -142,6 +236,7 @@ export class SyncOfflineOrder {
           status,
           server_order_id: output.order?.id,
           server_order_number: output.order?.orderNumber,
+          warnings: warnings.length > 0 ? warnings : undefined,
         };
         if (status === 'replayed') replayed++;
         else synced++;
@@ -158,6 +253,17 @@ export class SyncOfflineOrder {
             .where(and(eq(orders.id, output.order.id), eq(orders.tenantId, tenant_id)))
             .catch(() => undefined);
         }
+
+        // ── Phase 17.1: Write inventory_movements ledger ──────────────────────
+        if (output.order?.id && !output.idempotent_replay) {
+          await this.writeInventoryMovements(
+            tenant_id,
+            terminal_id,
+            output.order.id,
+            item.items,
+            productMap,
+          );
+        }
       } catch (err) {
         const { status, message } = classifyError(err);
         result = {
@@ -170,7 +276,14 @@ export class SyncOfflineOrder {
           conflicts++;
           await this.db
             .insert(serverSyncConflicts)
-            .values({ tenantId: tenant_id, terminalId: terminal_id, localOrderId: item.local_order_id, conflictType: 'SYNC_CONFLICT', message })
+            .values({
+              tenantId: tenant_id,
+              terminalId: terminal_id,
+              localOrderId: item.local_order_id,
+              conflictType: ConflictType.SYNC_CONFLICT,
+              message,
+              resolution: 'pending',
+            })
             .catch(() => undefined);
         } else {
           failed++;
@@ -205,5 +318,53 @@ export class SyncOfflineOrder {
       .catch(() => undefined);
 
     return { batch_id: batchId, processed: orderInputs.length, synced, replayed, failed, conflicts, results };
+  }
+
+  /**
+   * Phase 17.1 — Write inventory_movements ledger rows after a successful sync.
+   * Decrements product.stock_qty for tracked products and records the movement.
+   * Default policy: allow negative stock (offline sales always go through).
+   */
+  private async writeInventoryMovements(
+    tenantId: string,
+    terminalId: string,
+    orderId: string,
+    items: CreateAndPayOrderItemInput[],
+    productMap: Map<string, { id: string; stockQty: number | null; stockTrackingEnabled: boolean; name: string; basePrice: string }>,
+  ): Promise<void> {
+    for (const item of items) {
+      const serverProduct = productMap.get(item.product_id);
+      if (!serverProduct?.stockTrackingEnabled) continue;
+
+      const quantityBefore = serverProduct.stockQty ?? 0;
+      const quantityDelta = -item.quantity;
+      const quantityAfter = quantityBefore + quantityDelta;
+
+      // Write ledger row
+      await this.db
+        .insert(inventoryMovements)
+        .values({
+          tenantId,
+          productId: item.product_id,
+          orderId,
+          terminalId,
+          movementType: 'offline_sale',
+          quantityDelta,
+          quantityBefore,
+          quantityAfter,
+          notes: `Offline sale sync — order ${orderId}`,
+        })
+        .catch(() => undefined);
+
+      // Update in-memory map so subsequent items in same batch see updated qty
+      serverProduct.stockQty = quantityAfter;
+
+      // Decrement product.stock_qty in DB
+      await this.db
+        .update(products)
+        .set({ stockQty: quantityAfter, updatedAt: new Date() })
+        .where(and(eq(products.id, item.product_id), eq(products.tenantId, tenantId)))
+        .catch(() => undefined);
+    }
   }
 }

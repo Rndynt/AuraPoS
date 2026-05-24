@@ -1,4 +1,4 @@
-import { ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip, LogOut } from "lucide-react";
+import { ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip, LogOut, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTenant } from "@/context/TenantContext";
 
@@ -80,6 +80,14 @@ export function Sidebar() {
         )}
 
         <SidebarItem
+          icon={AlertTriangle}
+          label="Konflik Sync"
+          isActive={location.startsWith("/sync-conflicts")}
+          onClick={() => nav("/sync-conflicts")}
+          testId="button-nav-sync-conflicts"
+        />
+
+        <SidebarItem
           icon={Grip}
           label="Hub / Manajemen"
           isActive={isHub}
@@ -112,10 +120,11 @@ export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const isHub = ["/hub", "/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile", "/orders"].some(p => location === p || location.startsWith(p));
 
   const items = [
-    { path: "/pos",      icon: LayoutGrid,       label: "Kasir / POS",      active: location === "/pos" || location === "/",   show: true         },
-    { path: "/tables",   icon: UtensilsCrossed,  label: "Meja",             active: location.startsWith("/tables"),            show: showTables   },
-    { path: "/kitchen",  icon: ChefHat,          label: "Dapur / Kitchen",  active: location.startsWith("/kitchen"),           show: showKitchen  },
-    { path: "/hub",      icon: Grip,             label: "Hub / Manajemen",  active: isHub,                                     show: true         },
+    { path: "/pos",             icon: LayoutGrid,     label: "Kasir / POS",      active: location === "/pos" || location === "/",   show: true         },
+    { path: "/tables",          icon: UtensilsCrossed,label: "Meja",             active: location.startsWith("/tables"),            show: showTables   },
+    { path: "/kitchen",         icon: ChefHat,        label: "Dapur / Kitchen",  active: location.startsWith("/kitchen"),           show: showKitchen  },
+    { path: "/sync-conflicts",  icon: AlertTriangle,  label: "Konflik Sync",     active: location.startsWith("/sync-conflicts"),    show: true         },
+    { path: "/hub",             icon: Grip,           label: "Hub / Manajemen",  active: isHub,                                     show: true         },
   ];
 
   return (
