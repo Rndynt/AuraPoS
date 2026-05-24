@@ -14,8 +14,13 @@ import {
   CheckCircle,
   Search,
   ShoppingBag,
+  Printer,
 } from "lucide-react";
 import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
+import { enqueuePrintJob, markPrinting, markPrinted, markPrintFailed, getOrCreateTerminalIdentity } from "@pos/offline";
+import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
+import { getActiveTenantId } from "@/lib/tenant";
+import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 
 const ORDER_STATUS_CONFIG = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-700" },
@@ -113,7 +118,12 @@ export default function OrdersPage() {
   const [filterStatus, setFilterStatus] = useState<OrderStatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
   const { toast } = useToast();
+
+  const tenantId = getActiveTenantId();
+  const { data: tenantProfile } = useTenantProfile(tenantId);
+  const tenantName = (tenantProfile?.tenant as any)?.name ?? "AuraPOS";
 
   const { data, isLoading } = useOrders();
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
@@ -185,6 +195,65 @@ export default function OrdersPage() {
     ready:     activeOrders.filter(o => o.status === "ready").length,
     served:    normalizedOrders.filter(o => o.status === "served").length,
     completed: normalizedOrders.filter(o => o.status === "completed").length,
+  };
+
+  const handleReprintReceipt = async () => {
+    if (!selectedOrder) return;
+    setIsPrinting(true);
+
+    const receiptPayload = {
+      orderNumber: selectedOrder.order_number,
+      tenantName,
+      customerName: selectedOrder.customer_name || "",
+      tableNumber: selectedOrder.table_number || "",
+      paymentMethod: (selectedOrder.payments as any)?.[0]?.payment_method || "cash",
+      createdAt: selectedOrder.created_at ? new Date(selectedOrder.created_at) : new Date(),
+      subtotal: selectedOrder.subtotal,
+      tax: selectedOrder.tax_amount,
+      serviceCharge: selectedOrder.service_charge_amount,
+      total: selectedOrder.total_amount,
+      items: (selectedOrder.items || []).map((item) => ({
+        name: item.product_name,
+        qty: item.quantity,
+        unitPrice: item.quantity > 0 ? Math.round(item.item_subtotal / item.quantity) : 0,
+        total: item.item_subtotal,
+      })),
+    };
+
+    let printJobId: string | null = null;
+    try {
+      const terminal = await getOrCreateTerminalIdentity(tenantId);
+      const job = await enqueuePrintJob({
+        tenantId,
+        terminalId: terminal.terminalId,
+        serverOrderId: selectedOrder.id,
+        orderNumber: selectedOrder.order_number,
+        type: "receipt",
+        payload: receiptPayload,
+      });
+      printJobId = job.id;
+    } catch {
+      // non-critical
+    }
+
+    try {
+      if (printJobId) await markPrinting(printJobId).catch(() => undefined);
+      await bluetoothReceiptPrinter.reconnectIfPossible().catch(() => false);
+      await bluetoothReceiptPrinter.print(receiptPayload);
+      if (printJobId) await markPrinted(printJobId).catch(() => undefined);
+      toast({ title: "Struk dicetak", description: `Order #${selectedOrder.order_number} berhasil dicetak.` });
+    } catch (err) {
+      if (printJobId) await markPrintFailed(printJobId, err instanceof Error ? err.message : "Print gagal").catch(() => undefined);
+      toast({
+        title: printJobId ? "Struk disimpan ke antrian cetak" : "Cetak struk gagal",
+        description: printJobId
+          ? "Buka Printer Hub untuk cetak ulang kapan saja."
+          : "Hubungkan printer Bluetooth terlebih dahulu.",
+        variant: printJobId ? "default" : "destructive",
+      });
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   const handleProcessTransaction = async () => {
@@ -488,7 +557,7 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Panel Footer */}
-                <div className="p-6 border-t border-slate-200 bg-white">
+                <div className="p-6 border-t border-slate-200 bg-white space-y-2">
                   <Button 
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg"
                     data-testid="button-process-transaction"
@@ -496,6 +565,16 @@ export default function OrdersPage() {
                     disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
                   >
                     {recordPaymentMutation.isPending ? "Memproses..." : "Proses Transaksi"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full font-semibold py-2.5 rounded-lg"
+                    data-testid="button-reprint-receipt"
+                    onClick={handleReprintReceipt}
+                    disabled={isPrinting}
+                  >
+                    <Printer size={15} className="mr-2" />
+                    {isPrinting ? "Mencetak…" : "Cetak Ulang Struk"}
                   </Button>
                 </div>
               </>
