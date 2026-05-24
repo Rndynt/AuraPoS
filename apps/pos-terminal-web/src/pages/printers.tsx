@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
-  ArrowLeft, Bluetooth, CheckCircle2, Link2Off,
+  Bluetooth, CheckCircle2, Link2Off,
   Printer, Globe, Wifi, WifiOff, RefreshCw,
 } from "lucide-react";
+import { PageHeader } from "@/components/design";
 import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
 import {
   ALL_PRINTER_PROVIDERS,
@@ -160,29 +161,21 @@ export default function PrintersPage() {
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-20">
-      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex items-center gap-3">
-        <button
-          onClick={() => setLocation("/hub")}
-          className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-          data-testid="button-back-printers"
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-800">Printer Hub</h1>
-          <p className="text-xs text-slate-500">
-            Manajemen printer & antrian cetak struk
-          </p>
-        </div>
-        <button
-          onClick={refreshBtState}
-          className="ml-auto p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
-          title="Refresh status"
-          data-testid="button-refresh-printer-status"
-        >
-          <RefreshCw size={15} />
-        </button>
-      </header>
+      <PageHeader
+        title="Printer Hub"
+        subtitle="Manajemen printer & antrian cetak struk"
+        onBack={() => setLocation("/hub")}
+        actions={
+          <button
+            onClick={refreshBtState}
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+            title="Refresh status"
+            data-testid="button-refresh-printer-status"
+          >
+            <RefreshCw size={15} />
+          </button>
+        }
+      />
 
       <div className="p-4 space-y-4">
 

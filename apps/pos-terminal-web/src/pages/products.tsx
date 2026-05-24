@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
-  ChevronLeft,
   Plus,
   ChevronDown,
   Layers,
@@ -10,6 +9,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { PageHeader } from "@/components/design";
 import { useProducts, useCreateProduct, useUpdateProduct } from "@/hooks/api/useProducts";
 import { useVariantsLibrary, useCreateOrUpdateVariant, type Variant } from "@/hooks/useVariants";
 import { useCategories, useCreateCategory, useRenameCategory, useDeleteCategory, useReorderCategories } from "@/hooks/api/useCategories";
@@ -537,21 +537,12 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
-      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setLocation("/hub")}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              data-testid="button-back"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <h1 className="text-xl font-extrabold text-slate-800" data-testid="text-page-title">
-              Produk & Varian
-            </h1>
-          </div>
-          {activeTab === "products" ? (
+      <PageHeader
+        title="Produk & Varian"
+        subtitle="Kelola katalog produk dan grup varian"
+        onBack={() => setLocation("/hub")}
+        actions={
+          activeTab === "products" ? (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsCategoryDialogOpen(true)}
@@ -562,48 +553,49 @@ export default function ProductsPage() {
               </button>
               <button
                 onClick={handleCreateProduct}
-                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-blue-700 transition-all"
                 data-testid="button-add-product"
               >
-                <Plus size={18} /> Produk
+                <Plus size={16} /> Produk
               </button>
             </div>
           ) : (
             <button
               onClick={handleCreateVariant}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-blue-700 transition-all"
               data-testid="button-add-variant"
             >
-              <Plus size={18} /> Grup Varian
+              <Plus size={16} /> Grup Varian
             </button>
-          )}
-        </div>
-
-        <div className="flex gap-6 border-b border-slate-100 -mb-4">
-          <button
-            onClick={() => setActiveTab("products")}
-            className={`pb-4 text-sm font-bold border-b-2 transition-all ${
-              activeTab === "products"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-400 hover:text-slate-600"
-            }`}
-            data-testid="tab-products"
-          >
-            Daftar Produk
-          </button>
-          <button
-            onClick={() => setActiveTab("variants")}
-            className={`pb-4 text-sm font-bold border-b-2 transition-all ${
-              activeTab === "variants"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-400 hover:text-slate-600"
-            }`}
-            data-testid="tab-variants"
-          >
-            Perpustakaan Varian
-          </button>
-        </div>
-      </header>
+          )
+        }
+        tabs={
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`py-3 text-sm font-bold border-b-2 transition-all ${
+                activeTab === "products"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              data-testid="tab-products"
+            >
+              Daftar Produk
+            </button>
+            <button
+              onClick={() => setActiveTab("variants")}
+              className={`py-3 text-sm font-bold border-b-2 transition-all ${
+                activeTab === "variants"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+              data-testid="tab-variants"
+            >
+              Perpustakaan Varian
+            </button>
+          </div>
+        }
+      />
 
       {activeTab === "products" && (
         <div className="px-4 pt-4">

@@ -6,8 +6,9 @@ import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { useToast } from "@/hooks/use-toast";
 import { getActiveTenantId } from "@/lib/tenant";
+import { PageHeader } from "@/components/design";
 import {
-  ArrowLeft, Crown, Sparkles, ChevronRight, X, Zap,
+  Crown, Sparkles, ChevronRight, X, Zap,
   ToggleLeft, ToggleRight, Lock, Info, CheckCircle2,
   LayoutGrid, ChefHat, Heart, Truck, CalendarDays, Package, MapPin,
   Layers, SplitSquareVertical, Tag, ClipboardList, Printer, QrCode,
@@ -579,52 +580,44 @@ export default function MarketplacePage() {
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-8">
 
-      {/* ── HEADER ── */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-10">
-        <div className="flex items-center gap-3 px-4 py-4">
-          <button
-            onClick={() => setLocation("/hub")}
-            className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-black text-slate-800">Marketplace Fitur</h1>
-            <p className="text-[11px] text-slate-400">Aktifkan modul & fitur sesuai kebutuhan bisnis</p>
-          </div>
+      <PageHeader
+        title="Marketplace Fitur"
+        subtitle="Aktifkan modul & fitur sesuai kebutuhan bisnis"
+        onBack={() => setLocation("/hub")}
+        actions={
           <button
             onClick={() => setShowPlans(true)}
             className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 text-violet-700 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-violet-100 transition-colors"
           >
             <Crown size={13} /> Paket
           </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex px-4 border-t border-slate-100 gap-1">
-          {(["modul", "fitur"] as TabType[]).map((tab) => {
-            const count = tab === "modul" ? activeModules : activeFeatures;
-            const total = tab === "modul" ? MODULE_CATALOG.length : FEATURE_CATALOG.length;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`relative px-4 py-3 text-sm font-bold transition-colors ${
-                  activeTab === tab ? "text-slate-800" : "text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                {tab === "modul" ? "Modul" : "Fitur Satuan"}
-                <span className={`ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  activeTab === tab ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-400"
-                }`}>{count}/{total}</span>
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-800 rounded-full" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+        }
+        tabs={
+          <div className="flex gap-1">
+            {(["modul", "fitur"] as TabType[]).map((tab) => {
+              const count = tab === "modul" ? activeModules : activeFeatures;
+              const total = tab === "modul" ? MODULE_CATALOG.length : FEATURE_CATALOG.length;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`relative px-4 py-3 text-sm font-bold transition-colors ${
+                    activeTab === tab ? "text-slate-800" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  {tab === "modul" ? "Modul" : "Fitur Satuan"}
+                  <span className={`ml-1.5 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                    activeTab === tab ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-400"
+                  }`}>{count}/{total}</span>
+                  {activeTab === tab && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-800 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        }
+      />
 
       <div className="px-4 pt-4 space-y-4">
 

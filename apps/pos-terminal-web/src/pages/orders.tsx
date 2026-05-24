@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
+import { PageHeader } from "@/components/design";
 import { 
   X, 
   Clock, 
@@ -292,69 +293,62 @@ export default function OrdersPage() {
     <div className="flex h-full overflow-hidden bg-slate-50 relative">
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative pb-[60px] md:pb-0">
-        {/* Header */}
-        <div className="bg-white border-b border-slate-200 p-4 md:p-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800" data-testid="heading-orders">
-                Pesanan
-              </h1>
-              <p className="text-slate-500 text-sm">
-                Kelola dan pantau semua pesanan Anda
-              </p>
-            </div>
+        <PageHeader
+          title="Pesanan"
+          subtitle="Kelola dan pantau semua pesanan"
+          actions={
             <div className="flex gap-2 text-xs font-bold">
-              <div className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">
+              <div className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg" data-testid="badge-confirmed-count">
                 {filterCounts.confirmed} Confirmed
               </div>
-              <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg">
+              <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg" data-testid="badge-preparing-count">
                 {filterCounts.preparing} Prep
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 justify-between">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Cari pesanan..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="input-search-orders"
-              />
+          }
+          bottomContent={
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Cari pesanan..."
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  data-testid="input-search-orders"
+                />
+              </div>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                {(["all", "confirmed", "preparing", "ready", "served", "completed"] as const).map((status) => {
+                  const labels: Record<string, string> = {
+                    all:       "Semua",
+                    confirmed: "Dikonfirmasi",
+                    preparing: "Diproses",
+                    ready:     "Siap Saji",
+                    served:    "Disajikan",
+                    completed: "Selesai",
+                  };
+                  return (
+                    <button
+                      key={status}
+                      onClick={() => setFilterStatus(status)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${
+                        filterStatus === status
+                          ? "bg-white text-slate-800 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                      data-testid={`filter-${status}`}
+                    >
+                      {labels[status] ?? status}
+                      {` (${filterCounts[status]})`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-              {(["all", "confirmed", "preparing", "ready", "served", "completed"] as const).map((status) => {
-                const labels: Record<string, string> = {
-                  all:       "Semua",
-                  confirmed: "Dikonfirmasi",
-                  preparing: "Diproses",
-                  ready:     "Siap Saji",
-                  served:    "Disajikan",
-                  completed: "Selesai",
-                };
-                return (
-                  <button
-                    key={status}
-                    onClick={() => setFilterStatus(status)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${
-                      filterStatus === status
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                    data-testid={`filter-${status}`}
-                  >
-                    {labels[status] ?? status}
-                    {` (${filterCounts[status]})`}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Content Area */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">

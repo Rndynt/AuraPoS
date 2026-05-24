@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Store } from "lucide-react";
-import { InputField } from "@/components/design/InputField";
+import { Store } from "lucide-react";
+import { InputField, PageHeader } from "@/components/design";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,28 +39,20 @@ export default function StoreProfilePage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title="Profil Toko"
+        subtitle="Informasi & identitas bisnis kamu"
+        onBack={handleBack}
+        actions={
           <button
-            onClick={handleBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-            data-testid="button-back"
+            onClick={handleSave}
+            className="text-blue-600 font-extrabold text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+            data-testid="button-save"
           >
-            <ChevronLeft size={20} />
+            Simpan
           </button>
-          <h1 className="text-lg font-bold text-slate-800" data-testid="text-page-title">
-            Profil Toko
-          </h1>
-        </div>
-        <button
-          onClick={handleSave}
-          className="text-blue-600 font-bold text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
-          data-testid="button-save"
-        >
-          Simpan
-        </button>
-      </header>
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full space-y-6">
