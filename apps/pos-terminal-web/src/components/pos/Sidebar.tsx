@@ -1,4 +1,4 @@
-import { ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip, LogOut, AlertTriangle } from "lucide-react";
+import { ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip, LogOut, AlertTriangle, Printer } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTenant } from "@/context/TenantContext";
 
@@ -80,6 +80,14 @@ export function Sidebar() {
         )}
 
         <SidebarItem
+          icon={Printer}
+          label="Printer Hub"
+          isActive={location.startsWith("/printers")}
+          onClick={() => nav("/printers")}
+          testId="button-nav-printers"
+        />
+
+        <SidebarItem
           icon={AlertTriangle}
           label="Konflik Sync"
           isActive={location.startsWith("/sync-conflicts")}
@@ -123,6 +131,7 @@ export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
     { path: "/pos",             icon: LayoutGrid,     label: "Kasir / POS",      active: location === "/pos" || location === "/",   show: true         },
     { path: "/tables",          icon: UtensilsCrossed,label: "Meja",             active: location.startsWith("/tables"),            show: showTables   },
     { path: "/kitchen",         icon: ChefHat,        label: "Dapur / Kitchen",  active: location.startsWith("/kitchen"),           show: showKitchen  },
+    { path: "/printers",        icon: Printer,        label: "Printer Hub",      active: location.startsWith("/printers"),          show: true         },
     { path: "/sync-conflicts",  icon: AlertTriangle,  label: "Konflik Sync",     active: location.startsWith("/sync-conflicts"),    show: true         },
     { path: "/hub",             icon: Grip,           label: "Hub / Manajemen",  active: isHub,                                     show: true         },
   ];

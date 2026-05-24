@@ -288,7 +288,7 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 
 ---
 
-## Phase 11 — Print Queue ✅ COMPLETE (Engine)
+## Phase 11 — Print Queue ✅ COMPLETE
 
 ### 11.1 Create Local Print Job Queue
 
@@ -297,14 +297,16 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 - [x] `enqueuePrintJob()`, `getPendingPrintJobs()`, `getAllPrintJobs()`, `getPrintJobStats()`
 - [x] Status: `pending → printing → printed | failed | cancelled`
 - [x] `markPrinting/Printed/PrintFailed()`, `retryPrintJob()`, `cancelPrintJob()`
-- [ ] `PrintQueuePanel.tsx` — UI to browse/reprint/cancel
-- [ ] Auto-print worker polling `getPendingPrintJobs()` on interval
+- [x] `PrintQueuePanel.tsx` — browse/reprint/cancel/delete with status badges
+- [x] Auto-print worker (`usePrintWorker`) polls every 8s, stops after 3 failures per job
 
-### 11.2 Improve Printer Support Matrix
+### 11.2 Improve Printer Support Matrix ✅ COMPLETE
 
-- [x] `BluetoothPrinterProvider` — existing Web Bluetooth implementation
-- [ ] `PrinterProvider` interface abstraction (Sprint 6)
-- [ ] `BrowserPrintProvider` — window.print() fallback
+- [x] `BluetoothPrinterProvider` — wraps existing `bluetoothReceiptPrinter`
+- [x] `PrinterProvider` interface abstraction — `apps/pos-terminal-web/src/lib/printerProvider.ts`
+- [x] `BrowserPrintProvider` — `window.print()` with styled 80mm HTML receipt popup
+- [x] `getActivePrinterProvider()` — auto-selects Bluetooth if paired, else Browser
+- [x] `ALL_PRINTER_PROVIDERS` registry for UI listing
 - [ ] `NetworkPrinterProvider` — LAN/IP (future)
 
 ---
@@ -546,13 +548,19 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 - [x] Inventory movement ledger on sync
 - [ ] Per-tenant conflict policy config
 
-### Sprint 6 — Printer and Kitchen [ ] PENDING
+### Sprint 6 — Printer and Kitchen ✅ COMPLETE (Printer), Kitchen Pending
 
-- [ ] `PrinterProvider` abstraction interface
-- [ ] `PrintQueuePanel.tsx` — browse/reprint/cancel
-- [ ] Auto-print worker
-- [ ] `BrowserPrintProvider` fallback
-- [ ] Offline kitchen queue
+- [x] `PrinterProvider` abstraction interface — `apps/pos-terminal-web/src/lib/printerProvider.ts`
+- [x] `BluetoothPrinterProvider` — wraps existing Bluetooth manager
+- [x] `BrowserPrintProvider` — `window.print()` 80mm HTML popup fallback
+- [x] `getActivePrinterProvider()` — auto-selects best provider
+- [x] `PrintQueuePanel.tsx` — browse/reprint/cancel/delete all print jobs
+- [x] `usePrintWorker` hook — background polling every 8s, max 3 auto-retries per job
+- [x] `usePrintWorker` wired into `MainLayout.tsx` — runs on all pages
+- [x] Print count badge in MainLayout header — taps to open `/printers`
+- [x] `/printers` sidebar link added to `Sidebar` and `SidebarContent`
+- [x] `/printers` page redesigned: provider cards with status, test print, pair/disconnect/forget
+- [ ] Offline kitchen queue (Phase 20 — separate sprint)
 
 ### Sprint 7 — Security and Production [ ] PENDING
 
