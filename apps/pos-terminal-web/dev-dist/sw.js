@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-cd40d911'], (function (workbox) { 'use strict';
+define(['./workbox-39f6cb97'], (function (workbox) { 'use strict';
 
   self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -85,11 +85,12 @@ define(['./workbox-cd40d911'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "/index.html",
-    "revision": "0.r716i322pn"
+    "revision": "0.040g0qnv8k8"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
-    allowlist: [/^\/$/]
+    allowlist: [/^\/$/],
+    denylist: [/^\/api\//]
   }));
   workbox.registerRoute(({
     request
@@ -97,6 +98,27 @@ define(['./workbox-cd40d911'], (function (workbox) { 'use strict';
     "cacheName": "pages-cache",
     "networkTimeoutSeconds": 3,
     plugins: []
+  }), 'GET');
+  workbox.registerRoute(/^\/api\/catalog\/products/, new workbox.NetworkFirst({
+    "cacheName": "api-catalog-cache",
+    "networkTimeoutSeconds": 4,
+    plugins: [new workbox.CacheableResponsePlugin({
+      statuses: [0, 200]
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^\/api\/tenant\/features/, new workbox.NetworkFirst({
+    "cacheName": "api-tenant-features-cache",
+    "networkTimeoutSeconds": 4,
+    plugins: [new workbox.CacheableResponsePlugin({
+      statuses: [0, 200]
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^\/api\/order-types/, new workbox.NetworkFirst({
+    "cacheName": "api-order-types-cache",
+    "networkTimeoutSeconds": 4,
+    plugins: [new workbox.CacheableResponsePlugin({
+      statuses: [0, 200]
+    })]
   }), 'GET');
 
 }));
