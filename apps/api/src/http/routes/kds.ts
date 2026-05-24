@@ -88,11 +88,12 @@ router.post('/generate-code', async (req, res) => {
 
     const code = String(Math.floor(1000 + Math.random() * 9000));
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAtIso = expiresAt.toISOString();
     const deviceId = nanoid();
 
     await authDb.execute(sql`
       INSERT INTO kds_devices (id, tenant_id, activation_code, activation_expires_at, status, created_at)
-      VALUES (${deviceId}, ${session.tenantId}, ${code}, ${expiresAt}, 'pending', now())
+      VALUES (${deviceId}, ${session.tenantId}, ${code}, ${expiresAtIso}, 'pending', now())
     `);
 
     res.json({ success: true, data: { code, expiresAt, deviceId } });
