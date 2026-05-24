@@ -410,12 +410,46 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 
 ---
 
-## Phase 20 — Kitchen Display Offline [ ] NOT STARTED
+## Phase 20 — Kitchen Display Offline ✅ COMPLETE
 
-- [ ] KDS reads local orders not yet synced
-- [ ] POS sends kitchen ticket to local queue
-- [ ] KDS updates local status → outbox
-- [ ] Fallback: printed kitchen ticket for separate device scenario
+### 20.1 Local Kitchen Ticket Queue
+
+- [x] `packages/offline/src/kitchenQueue.ts` — full local ticket engine
+- [x] `local_kitchen_tickets` table in IndexedDB (DB version 2 migration)
+- [x] `LocalKitchenTicket`, `LocalKitchenItem`, `KitchenTicketStatus` types in `types.ts`
+- [x] `enqueueLocalKitchenTicket()` — creates ticket with status `confirmed`
+- [x] `getLocalKitchenTickets()` — filter by active statuses
+- [x] `updateLocalKitchenTicketStatus()` — confirmed → preparing → ready → served
+- [x] `markKitchenTicketSynced()` — called by sync engine after server ticket created
+- [x] `purgeServedKitchenTickets()` — auto-purges served tickets older than 2h
+
+### 20.2 BroadcastChannel KDS Channel
+
+- [x] `apps/pos-terminal-web/src/hooks/useKitchenChannel.ts`
+- [x] `KDS_CHANNEL = 'aurapos-kds-v1'` — isolated from CFD channel
+- [x] `useKitchenChannelSender()` — sends `ticket_added` / `status_updated` / `ticket_removed`
+- [x] `useKitchenChannelReceiver()` — KDS page listens for instant same-device updates
+- [x] localStorage snapshot so KDS cold-starts with last 50 tickets
+
+### 20.3 POS Integration
+
+- [x] `handlePaymentMethodConfirm`: if `isLocal && hasKitchenTicket` → `enqueueLocalKitchenTicket` + `sendToKDS`
+- [x] `handleSendToKitchen`: offline branch → `enqueueLocalKitchenTicket` + `sendToKDS` (no server call)
+- [x] Online branch unchanged — server API call as before
+
+### 20.4 KDS Merged View
+
+- [x] `kitchen-display.tsx` rewritten with merged server + local tickets
+- [x] Server orders (when online): loaded via `useOrders`, realtime via EventSource
+- [x] Local tickets: polled from IndexedDB every 5s via `useQuery`
+- [x] Merge logic: local ticket hidden if its `serverOrderId` already in server orders (dedup)
+- [x] `localTicketToOrder()` — adapts `LocalKitchenTicket` to `Order` shape for `KitchenTicket` component
+- [x] "LOKAL" orange badge on each local ticket card
+- [x] Offline banner: "Mode offline — menampilkan N tiket lokal"
+- [x] Header subtitle shows `(N lokal)` count
+- [x] `handleUpdateStatus` routes local vs server based on ticket ID set
+- [x] `purgeServedKitchenTickets` runs on mount + every 5 min (auto-cleanup)
+- [ ] Cross-device offline KDS (requires LAN WebSocket — future scope)
 
 ---
 
@@ -548,7 +582,7 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 - [x] Inventory movement ledger on sync
 - [ ] Per-tenant conflict policy config
 
-### Sprint 6 — Printer and Kitchen ✅ COMPLETE (Printer), Kitchen Pending
+### Sprint 6 — Printer and Kitchen ✅ COMPLETE
 
 - [x] `PrinterProvider` abstraction interface — `apps/pos-terminal-web/src/lib/printerProvider.ts`
 - [x] `BluetoothPrinterProvider` — wraps existing Bluetooth manager
@@ -560,7 +594,11 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 - [x] Print count badge in MainLayout header — taps to open `/printers`
 - [x] `/printers` sidebar link added to `Sidebar` and `SidebarContent`
 - [x] `/printers` page redesigned: provider cards with status, test print, pair/disconnect/forget
-- [ ] Offline kitchen queue (Phase 20 — separate sprint)
+- [x] `local_kitchen_tickets` IndexedDB table (DB v2 migration)
+- [x] `kitchenQueue.ts` — enqueue, read, update status, purge
+- [x] `useKitchenChannel.ts` — BroadcastChannel sender + receiver
+- [x] KDS merged view: server tickets + local tickets with LOKAL badge
+- [x] Offline fallbacks in `pos.tsx`: auto-enqueue kitchen ticket on local pay + handleSendToKitchen
 
 ### Sprint 7 — Security and Production [ ] PENDING
 

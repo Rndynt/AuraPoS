@@ -13,3 +13,4 @@ export * from "./orderNumber";
 export * from "./localOrderService";
 export * from "./conflictTypes";
 export * from "./printQueue";
+export * from "./kitchenQueue";

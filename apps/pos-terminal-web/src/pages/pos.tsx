@@ -28,9 +28,10 @@ import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { useCustomerDisplaySender, toCFDItem } from "@/hooks/useCustomerDisplay";
 import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
 import { queryClient } from "@/lib/queryClient";
-import { saveLocalDraftOrder, enqueuePrintJob, markPrinting, markPrinted, markPrintFailed, getOrCreateTerminalIdentity } from "@pos/offline";
+import { saveLocalDraftOrder, enqueuePrintJob, markPrinting, markPrinted, markPrintFailed, getOrCreateTerminalIdentity, enqueueLocalKitchenTicket } from "@pos/offline";
 import { OfflineCacheBanner } from "@/components/offline/OfflineCacheBanner";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useKitchenChannelSender } from "@/hooks/useKitchenChannel";
 
 export default function POSPage() {
   const searchParams = useSearch();
@@ -60,6 +61,7 @@ export default function POSPage() {
   const isMobile = useIsMobile();
   const { isOnline } = useNetworkStatus();
   const { send: sendToCFD } = useCustomerDisplaySender();
+  const { sendToKDS } = useKitchenChannelSender();
   const { tenantId } = useTenant();
   const { data: tenantProfile } = useTenantProfile(tenantId);
   const tenantName = tenantProfile?.tenant?.name || 'AuraPOS';
@@ -523,6 +525,31 @@ export default function POSPage() {
           payload: receiptPayload,
         });
         printJobId = job.id;
+
+        // ── Offline kitchen ticket ──────────────────────────────────────────
+        // When the order was saved locally (isLocal) AND kitchen feature is on,
+        // enqueue a local kitchen ticket so the KDS tab on this device shows it.
+        if (isLocal && hasKitchenTicket) {
+          try {
+            const kitchenTicket = await enqueueLocalKitchenTicket({
+              tenantId: qTenantId,
+              terminalId: terminal.terminalId,
+              localOrderId: (orderResult.order as any)?.localId ?? String(orderNumber),
+              orderNumber: String(orderNumber ?? cfdOrderNumber),
+              items: cart.items.map((item) => ({
+                productId: item.product.id,
+                name: item.product.name + (item.variant ? ` (${item.variant.name})` : ""),
+                quantity: item.quantity,
+                variantName: item.variant?.name,
+              })),
+              customerName: cfdCustomerName,
+              tableNumber: cfdTableNumber,
+            });
+            sendToKDS({ type: "ticket_added", ticket: kitchenTicket });
+          } catch {
+            // Non-critical — KDS best-effort
+          }
+        }
       } catch {
         // Non-critical — print queue is best-effort
       }
@@ -827,17 +854,44 @@ export default function POSPage() {
       return;
     }
 
-    try {
-      await createKitchenTicketMutation.mutateAsync({
-        orderId,
-      });
+    // ── Offline fallback: save as local kitchen ticket ──────────────────────
+    if (!isOnline) {
+      try {
+        const qTenantId = getActiveTenantId();
+        const terminal = await getOrCreateTerminalIdentity(qTenantId);
+        const kitchenTicket = await enqueueLocalKitchenTicket({
+          tenantId: qTenantId,
+          terminalId: terminal.terminalId,
+          localOrderId: orderId,
+          orderNumber: cart.orderNumber || orderId.slice(0, 8),
+          items: cart.items.map((item) => ({
+            productId: item.product.id,
+            name: item.product.name + (item.variant ? ` (${item.variant.name})` : ""),
+            quantity: item.quantity,
+            variantName: item.variant?.name,
+          })),
+          customerName: cart.customerName || undefined,
+          tableNumber: cart.tableNumber || undefined,
+        });
+        sendToKDS({ type: "ticket_added", ticket: kitchenTicket });
+        toast({
+          title: "Tiket dapur disimpan lokal",
+          description: "Offline — tiket dikirim ke KDS di perangkat ini. Akan tersinkron saat online.",
+        });
+      } catch (err) {
+        toast({
+          title: "Gagal menyimpan tiket dapur",
+          description: err instanceof Error ? err.message : "Gagal membuat tiket lokal",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
 
-      toast({
-        title: "Dikirim ke Dapur",
-        description: "Pesanan berhasil dikirim ke dapur",
-      });
-      
-      // Refresh orders list
+    // ── Online: send to server ──────────────────────────────────────────────
+    try {
+      await createKitchenTicketMutation.mutateAsync({ orderId });
+      toast({ title: "Dikirim ke Dapur", description: "Pesanan berhasil dikirim ke dapur" });
       await refetchOrders();
     } catch (error) {
       toast({
