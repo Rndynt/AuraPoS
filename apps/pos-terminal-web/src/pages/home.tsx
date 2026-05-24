@@ -14,6 +14,7 @@ import {
   Download,
   CheckCircle2,
   Smartphone,
+  ClipboardList,
 } from "lucide-react";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { useToast } from "@/hooks/use-toast";
@@ -127,6 +128,13 @@ export default function HomePage() {
       color: 'bg-cyan-100 text-cyan-600',
       subtitle: 'Pairing & test print',
     },
+    {
+      id: 'local-orders',
+      title: 'Order Offline',
+      icon: ClipboardList,
+      color: 'bg-indigo-100 text-indigo-600',
+      subtitle: 'Transaksi & sinkronisasi',
+    },
   ];
 
   const handleNavigate = (menuId: string) => {
@@ -139,6 +147,7 @@ export default function HomePage() {
       reports: "/reports",
       store: "/store-profile",
       printers: "/printers",
+      "local-orders": "/local-orders",
     };
 
     const route = routes[menuId];
