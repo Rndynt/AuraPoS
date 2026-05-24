@@ -20,9 +20,10 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const isReplit = !!process.env.REPLIT_DEV_DOMAIN;
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: isReplit ? false : { server },
     allowedHosts: true as const,
     host: "0.0.0.0",
   };
