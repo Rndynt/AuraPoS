@@ -1,14 +1,18 @@
+/**
+ * Kitchen Display System (KDS) — Standalone Page
+ * Auth: API key stored in localStorage (paired via 4-digit activation code from /kitchen)
+ */
+
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChefHat, RefreshCcw, AlertCircle, Clock, CheckCircle,
-  Loader2, WifiOff, Maximize2, Minimize2, Lock, Delete,
+  Loader2, WifiOff, Maximize2, Minimize2, LogOut,
   Volume2, VolumeX,
 } from "lucide-react";
 import { useKDSSound } from "@/hooks/useKDSSound";
 import { KitchenTicket } from "@/components/kitchen-display/KitchenTicket";
-import { getActiveTenantId } from "@/lib/tenant";
-import { queryClient as globalQueryClient } from "@/lib/queryClient";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useKitchenChannelReceiver } from "@/hooks/useKitchenChannel";
 import type { KDSMessage } from "@/hooks/useKitchenChannel";
@@ -21,12 +25,15 @@ import {
 import type { LocalKitchenTicket, KitchenTicketStatus } from "@pos/offline";
 import type { Order } from "@pos/domain/orders/types";
 
+// ── localStorage keys ─────────────────────────────────────────────────────────
+const KDS_DEVICE_KEY  = "kds_device_key";
+const KDS_DEVICE_NAME = "kds_device_name";
+const KDS_TENANT_ID   = "kds_tenant_id";
+
 const ACTIVE_STATUSES = ["confirmed", "preparing", "ready"] as const;
 const AUTO_REFRESH_INTERVAL = 20_000;
-const KDS_PIN_KEY = "kds_pin";
-const KDS_UNLOCKED_KEY = "kds_unlocked_until";
-const UNLOCK_DURATION_MS = 8 * 60 * 60 * 1000;
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function localTicketToOrder(ticket: LocalKitchenTicket): Order {
   return {
     id: ticket.id,
@@ -79,125 +86,6 @@ function useClock() {
   return now;
 }
 
-function isUnlocked(): boolean {
-  const until = localStorage.getItem(KDS_UNLOCKED_KEY);
-  if (!until) return false;
-  return Date.now() < parseInt(until, 10);
-}
-
-function setUnlocked() {
-  localStorage.setItem(KDS_UNLOCKED_KEY, String(Date.now() + UNLOCK_DURATION_MS));
-}
-
-function getStoredPin(): string | null {
-  return localStorage.getItem(KDS_PIN_KEY);
-}
-
-function PinGate({ onUnlock }: { onUnlock: () => void }) {
-  const [input, setInput] = useState("");
-  const [shake, setShake] = useState(false);
-  const [hint, setHint] = useState("");
-  const storedPin = getStoredPin();
-
-  const submit = (pin: string) => {
-    if (!storedPin) {
-      setHint("PIN belum diatur. Hubungi kasir untuk mengatur PIN dari halaman Kitchen Display.");
-      return;
-    }
-    if (pin === storedPin) {
-      setUnlocked();
-      onUnlock();
-    } else {
-      setShake(true);
-      setInput("");
-      setHint("PIN salah, coba lagi.");
-      setTimeout(() => setShake(false), 600);
-    }
-  };
-
-  const handleKey = (k: string) => {
-    if (input.length >= 6) return;
-    const next = input + k;
-    setInput(next);
-    setHint("");
-    if (next.length === (storedPin?.length ?? 4)) {
-      setTimeout(() => submit(next), 100);
-    }
-  };
-
-  const handleDelete = () => setInput((p) => p.slice(0, -1));
-
-  return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-8 select-none">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-16 h-16 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-          <ChefHat size={32} className="text-white" />
-        </div>
-        <h1 className="text-2xl font-black text-white">Kitchen Display</h1>
-        <p className="text-slate-400 text-sm">Masukkan PIN untuk membuka akses dapur</p>
-      </div>
-
-      <div className={`flex gap-3 transition-transform ${shake ? "animate-[wiggle_0.5s_ease-in-out]" : ""}`}
-        style={shake ? { animation: "wiggle 0.5s ease-in-out" } : {}}>
-        {Array.from({ length: storedPin?.length ?? 4 }).map((_, i) => (
-          <div
-            key={i}
-            className={`w-5 h-5 rounded-full border-2 transition-all duration-150 ${
-              i < input.length
-                ? "bg-orange-400 border-orange-400 scale-110"
-                : "bg-transparent border-slate-600"
-            }`}
-          />
-        ))}
-      </div>
-
-      {hint && (
-        <p className="text-sm text-red-400 font-semibold -mt-4">{hint}</p>
-      )}
-
-      <div className="grid grid-cols-3 gap-3">
-        {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, i) => {
-          if (k === "") return <div key={i} />;
-          if (k === "⌫") return (
-            <button
-              key={i}
-              onClick={handleDelete}
-              className="w-20 h-20 rounded-2xl bg-slate-700 hover:bg-slate-600 active:scale-95 transition-all flex items-center justify-center text-slate-300"
-              data-testid="kds-pin-delete"
-            >
-              <Delete size={22} />
-            </button>
-          );
-          return (
-            <button
-              key={i}
-              onClick={() => handleKey(k)}
-              className="w-20 h-20 rounded-2xl bg-slate-700 hover:bg-slate-600 active:scale-95 transition-all text-2xl font-bold text-white"
-              data-testid={`kds-pin-key-${k}`}
-            >
-              {k}
-            </button>
-          );
-        })}
-      </div>
-
-      <p className="text-xs text-slate-600 mt-2 flex items-center gap-1.5">
-        <Lock size={11} /> Sesi otomatis terkunci setelah 8 jam
-      </p>
-
-      <style>{`
-        @keyframes wiggle {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-8px); }
-          80% { transform: translateX(8px); }
-        }
-      `}</style>
-    </div>
-  );
-}
-
 function StatusChip({ color, label, count }: { color: "orange" | "yellow" | "green"; label: string; count: number }) {
   const colorMap = {
     orange: "bg-orange-500/20 text-orange-300 border-orange-500/30",
@@ -214,43 +102,61 @@ function StatusChip({ color, label, count }: { color: "orange" | "yellow" | "gre
   );
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function KDSPage() {
-  const [unlocked, setUnlocked] = useState(() => isUnlocked());
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { isOnline } = useNetworkStatus();
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const now = useClock();
-  const tenantId = getActiveTenantId();
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [hasPinSet, setHasPinSet] = useState(() => !!getStoredPin());
-  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { play, isMuted, toggleMute, unlock: unlockAudio } = useKDSSound();
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!unlocked) return;
-    const until = localStorage.getItem(KDS_UNLOCKED_KEY);
-    if (!until) return;
-    const remaining = parseInt(until, 10) - Date.now();
-    if (remaining <= 0) { setUnlocked(false); return; }
-    lockTimerRef.current = setTimeout(() => setUnlocked(false), remaining);
-    return () => { if (lockTimerRef.current) clearTimeout(lockTimerRef.current); };
-  }, [unlocked]);
+  // Read device credentials from localStorage
+  const apiKey     = localStorage.getItem(KDS_DEVICE_KEY) ?? "";
+  const deviceName = localStorage.getItem(KDS_DEVICE_NAME) ?? "KDS";
+  const tenantId   = localStorage.getItem(KDS_TENANT_ID) ?? "";
 
+  // ── Redirect to activation if no key ──────────────────────────────────────
+  useEffect(() => {
+    if (!apiKey) {
+      setLocation("/kds/activate");
+    } else {
+      // Unlock audio context on first render (browser autoplay policy)
+      unlockAudio();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const deactivate = () => {
+    localStorage.removeItem(KDS_DEVICE_KEY);
+    localStorage.removeItem(KDS_DEVICE_NAME);
+    localStorage.removeItem(KDS_TENANT_ID);
+    localStorage.removeItem("kds_device_id");
+    setLocation("/kds/activate");
+  };
+
+  // ── Server orders query ───────────────────────────────────────────────────
   const { data: ordersData, isLoading, error, refetch } = useQuery<{ orders: Order[] }>({
-    queryKey: ["/api/orders"],
+    queryKey: ["/api/kds/orders", apiKey],
     queryFn: async () => {
-      const res = await fetch(`/api/orders?tenantId=${tenantId}`, {
-        headers: { "x-tenant-id": tenantId },
+      const res = await fetch("/api/kds/orders", {
+        headers: { "x-kds-key": apiKey },
       });
+      if (res.status === 401) {
+        // API key revoked or invalid — deactivate
+        deactivate();
+        throw new Error("KDS session expired");
+      }
       if (!res.ok) throw new Error("Failed to fetch orders");
       const json = await res.json();
       return json.data ?? json;
     },
     refetchInterval: AUTO_REFRESH_INTERVAL,
-    enabled: isOnline && unlocked,
+    enabled: isOnline && !!apiKey,
   });
 
   const serverOrders: Order[] = ordersData?.orders ?? [];
@@ -258,13 +164,15 @@ export default function KDSPage() {
     (ACTIVE_STATUSES as readonly string[]).includes(o.status)
   );
 
+  // ── Local offline tickets ─────────────────────────────────────────────────
   const { data: localTickets = [], refetch: refetchLocal } = useQuery<LocalKitchenTicket[]>({
     queryKey: ["local-kitchen-tickets", tenantId],
     queryFn: () => getLocalKitchenTickets(tenantId, ["confirmed", "preparing", "ready"]),
     refetchInterval: 5_000,
-    enabled: unlocked,
+    enabled: !!tenantId,
   });
 
+  // ── BroadcastChannel from POS ─────────────────────────────────────────────
   const handleKDSMessage = useCallback(
     (msg: KDSMessage) => {
       if (msg.type === "ticket_added") {
@@ -278,25 +186,17 @@ export default function KDSPage() {
   );
   useKitchenChannelReceiver(handleKDSMessage);
 
+  // ── Purge old served tickets ──────────────────────────────────────────────
   useEffect(() => {
-    if (!isOnline || !unlocked) return;
-    const es = new EventSource("/api/orders/queue/stream");
-    const onUpdate = () => {
-      globalQueryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-    };
-    es.addEventListener("order_queue_updated", onUpdate as EventListener);
-    return () => { es.removeEventListener("order_queue_updated", onUpdate as EventListener); es.close(); };
-  }, [isOnline, unlocked]);
-
-  useEffect(() => {
-    if (!unlocked) return;
+    if (!tenantId) return;
     purgeServedKitchenTickets(tenantId, 120).catch(() => {});
     const interval = setInterval(() => {
       purgeServedKitchenTickets(tenantId, 120).catch(() => {});
     }, 5 * 60_000);
     return () => clearInterval(interval);
-  }, [tenantId, unlocked]);
+  }, [tenantId]);
 
+  // ── Sound on new orders ───────────────────────────────────────────────────
   const serverOrderIds = new Set(serverActiveOrders.map((o) => o.id));
   const unseenLocalTickets = localTickets.filter(
     (t) => !t.serverOrderId || !serverOrderIds.has(t.serverOrderId)
@@ -313,19 +213,18 @@ export default function KDSPage() {
 
   const allActiveOrderIdKey = allActiveOrders.map((o) => o.id).join(",");
   useEffect(() => {
-    if (!unlocked) return;
+    if (!apiKey) return;
     const currentIds = new Set(allActiveOrders.map((o) => o.id));
     const prev = prevOrderIdsRef.current;
     if (prev.size > 0) {
       const newIds = [...currentIds].filter((id) => !prev.has(id));
-      if (newIds.length > 0) {
-        play("new_ticket");
-      }
+      if (newIds.length > 0) play("new_ticket");
     }
     prevOrderIdsRef.current = currentIds;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allActiveOrderIdKey, unlocked]);
+  }, [allActiveOrderIdKey]);
 
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleRefresh = async () => {
     await Promise.all([refetch(), refetchLocal()]);
     setLastRefresh(new Date());
@@ -340,11 +239,12 @@ export default function KDSPage() {
   const handleUpdateServerStatus = async (orderId: string, newStatus: string) => {
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/status?mode=kitchen`, {
+      const res = await fetch(`/api/kds/orders/${orderId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
+        headers: { "Content-Type": "application/json", "x-kds-key": apiKey },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (res.status === 401) { deactivate(); return; }
       if (!res.ok) throw new Error("Gagal update status");
       toast({ title: "Status diperbarui", description: STATUS_LABELS[newStatus] ?? newStatus });
       await refetch();
@@ -378,40 +278,17 @@ export default function KDSPage() {
     }
   };
 
-  if (!hasPinSet && !unlocked) {
+  // ── Guard: no API key ─────────────────────────────────────────────────────
+  if (!apiKey) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-6 text-center p-6">
-        <div className="w-16 h-16 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg">
-          <ChefHat size={32} className="text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black text-white mb-2">Kitchen Display</h1>
-          <p className="text-slate-400 text-sm max-w-sm">
-            PIN belum diatur. Buka halaman <strong className="text-white">Kitchen Display</strong> di aplikasi kasir,
-            atur PIN, lalu kembali ke halaman ini.
-          </p>
-        </div>
-        <button
-          onClick={() => { setHasPinSet(!!getStoredPin()); }}
-          className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors"
-        >
-          Cek Ulang
-        </button>
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-4">
+        <Loader2 size={32} className="animate-spin text-orange-400" />
+        <p className="text-slate-400 text-sm">Mengarahkan ke halaman aktivasi…</p>
       </div>
     );
   }
 
-  if (!unlocked) {
-    return (
-      <PinGate
-        onUnlock={() => {
-          unlockAudio();
-          setUnlocked(true);
-        }}
-      />
-    );
-  }
-
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-white">
       {!isOnline && (
@@ -427,7 +304,9 @@ export default function KDSPage() {
             <ChefHat size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-base font-black text-white leading-none">Kitchen Display</h1>
+            <h1 className="text-base font-black text-white leading-none">
+              {deviceName}
+            </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               {allActiveOrders.length} antrian aktif
               {unseenLocalTickets.length > 0 && (
@@ -484,19 +363,17 @@ export default function KDSPage() {
           </button>
 
           <button
-            onClick={() => {
-              localStorage.removeItem(KDS_UNLOCKED_KEY);
-              setUnlocked(false);
-            }}
+            onClick={deactivate}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 transition-colors"
-            title="Kunci layar"
-            data-testid="kds-button-lock"
+            title="Batalkan aktivasi perangkat ini"
+            data-testid="kds-button-deactivate"
           >
-            <Lock size={15} />
+            <LogOut size={15} />
           </button>
         </div>
       </header>
 
+      {/* Mobile status row */}
       <div className="md:hidden bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center gap-3 flex-shrink-0">
         <StatusChip color="orange" label="Menunggu" count={counts.confirmed} />
         <StatusChip color="yellow" label="Diproses"  count={counts.preparing} />

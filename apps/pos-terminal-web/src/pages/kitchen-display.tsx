@@ -1,14 +1,17 @@
-import { useState, useEffect } from "react";
+/**
+ * Kitchen Display — Admin Launcher
+ * Manage KDS devices: generate 4-digit activation codes, view connected devices.
+ */
+
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
-  ChefHat, QrCode, ExternalLink, Lock, Eye, EyeOff,
-  Copy, Check, Maximize2, Shield, RefreshCcw, Trash2,
+  ChefHat, QrCode, ExternalLink, Copy, Check,
+  Maximize2, RefreshCcw, Trash2, Monitor, Plus,
+  Clock, Wifi, WifiOff, KeyRound, Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/design";
 import { useToast } from "@/hooks/use-toast";
-
-const KDS_PIN_KEY = "kds_pin";
-const KDS_UNLOCKED_KEY = "kds_unlocked_until";
 
 function getKdsUrl(): string {
   return `${window.location.origin}/kds`;
@@ -27,40 +30,80 @@ function QRCodeImage({ url }: { url: string }) {
   );
 }
 
+type Device = {
+  id: string;
+  device_name: string;
+  status: "pending" | "active" | "revoked";
+  created_at: string;
+  activated_at: string | null;
+  last_seen_at: string | null;
+  activation_code: string | null;
+  activation_expires_at: string | null;
+};
+
+function useDevices() {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetch_ = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/kds/devices", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setDevices(data.data?.devices ?? []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+
+  return { devices, loading, refresh: fetch_ };
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "—";
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60)  return `${diff}d lalu`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
+  return `${Math.floor(diff / 86400)}h lalu`;
+}
+
+function CodeCountdown({ expiresAt }: { expiresAt: string }) {
+  const [remaining, setRemaining] = useState(() =>
+    Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+  );
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRemaining((r) => Math.max(0, r - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const expired = remaining === 0;
+  return (
+    <span className={`text-xs font-semibold tabular-nums ${expired ? "text-red-500" : "text-slate-500"}`}>
+      {expired ? "Kadaluarsa" : `${mins}:${String(secs).padStart(2, "0")}`}
+    </span>
+  );
+}
+
 export default function KitchenDisplayPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { devices, loading: devicesLoading, refresh: refreshDevices } = useDevices();
 
-  const [pin, setPin] = useState(() => localStorage.getItem(KDS_PIN_KEY) ?? "");
-  const [pinInput, setPinInput] = useState(pin);
-  const [showPin, setShowPin] = useState(false);
-  const [pinSaved, setPinSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [activeCode, setActiveCode] = useState<{ code: string; expiresAt: string; deviceId: string } | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const kdsUrl = getKdsUrl();
-  const isLocked = !localStorage.getItem(KDS_UNLOCKED_KEY) || Date.now() >= parseInt(localStorage.getItem(KDS_UNLOCKED_KEY) ?? "0", 10);
-
-  const handleSavePin = () => {
-    const trimmed = pinInput.trim();
-    if (trimmed.length < 4 || trimmed.length > 6 || !/^\d+$/.test(trimmed)) {
-      toast({ title: "PIN tidak valid", description: "PIN harus 4–6 angka.", variant: "destructive" });
-      return;
-    }
-    localStorage.setItem(KDS_PIN_KEY, trimmed);
-    localStorage.removeItem(KDS_UNLOCKED_KEY);
-    setPin(trimmed);
-    setPinSaved(true);
-    setTimeout(() => setPinSaved(false), 2000);
-    toast({ title: "PIN disimpan", description: "Sesi KDS yang aktif akan terkunci. PIN baru berlaku mulai sekarang." });
-  };
-
-  const handleResetPin = () => {
-    localStorage.removeItem(KDS_PIN_KEY);
-    localStorage.removeItem(KDS_UNLOCKED_KEY);
-    setPin("");
-    setPinInput("");
-    toast({ title: "PIN dihapus", description: "KDS tidak bisa dibuka sampai PIN baru diatur." });
-  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(kdsUrl).then(() => {
@@ -69,105 +112,232 @@ export default function KitchenDisplayPage() {
     });
   };
 
-  const handleOpenKds = () => {
-    window.open(kdsUrl, "_blank", "noopener");
+  const handleGenerateCode = async () => {
+    setGeneratingCode(true);
+    try {
+      const res = await fetch("/api/kds/generate-code", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Gagal", description: data.error ?? "Tidak dapat generate kode", variant: "destructive" });
+        return;
+      }
+      setActiveCode({ code: data.data.code, expiresAt: data.data.expiresAt, deviceId: data.data.deviceId });
+      await refreshDevices();
+    } catch {
+      toast({ title: "Error", description: "Tidak dapat terhubung ke server", variant: "destructive" });
+    } finally {
+      setGeneratingCode(false);
+    }
   };
 
-  const handleForceUnlock = () => {
-    if (!pin) {
-      toast({ title: "Belum ada PIN", description: "Atur PIN dulu sebelum membuka KDS.", variant: "destructive" });
-      return;
+  const handleRevoke = async (deviceId: string, deviceName: string) => {
+    setRevokingId(deviceId);
+    try {
+      const res = await fetch(`/api/kds/devices/${deviceId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        toast({ title: "Perangkat dicabut", description: `${deviceName || "KDS"} tidak lagi terhubung` });
+        await refreshDevices();
+        // Clear active code if it was for this device
+        if (activeCode?.deviceId === deviceId) setActiveCode(null);
+      } else {
+        toast({ title: "Gagal", description: "Tidak dapat mencabut perangkat", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Tidak dapat terhubung ke server", variant: "destructive" });
+    } finally {
+      setRevokingId(null);
     }
-    localStorage.setItem(KDS_UNLOCKED_KEY, String(Date.now() + 8 * 60 * 60 * 1000));
-    window.open(kdsUrl, "_blank", "noopener");
   };
+
+  const activeDevices  = devices.filter((d) => d.status === "active");
+  const pendingDevices = devices.filter(
+    (d) => d.status === "pending" && d.activation_expires_at && new Date(d.activation_expires_at) > new Date()
+  );
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
       <PageHeader
         title="Kitchen Display"
-        subtitle="Kelola akses layar dapur (KDS)"
+        subtitle="Kelola perangkat layar dapur (KDS)"
         onBack={() => setLocation("/hub")}
       />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-2xl mx-auto w-full">
 
-        {/* Status Card */}
+        {/* Status Banner */}
         <div className={`rounded-2xl border p-4 flex items-center gap-4 ${
-          pin ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
+          activeDevices.length > 0
+            ? "bg-green-50 border-green-200"
+            : "bg-slate-100 border-slate-200"
         }`}>
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            pin ? "bg-green-500" : "bg-amber-500"
+            activeDevices.length > 0 ? "bg-green-500" : "bg-slate-400"
           }`}>
-            <Shield size={20} className="text-white" />
+            <Monitor size={20} className="text-white" />
           </div>
           <div className="flex-1">
-            <p className={`text-sm font-extrabold ${pin ? "text-green-800" : "text-amber-800"}`}>
-              {pin ? "PIN sudah diatur" : "PIN belum diatur"}
+            <p className={`text-sm font-extrabold ${
+              activeDevices.length > 0 ? "text-green-800" : "text-slate-700"
+            }`}>
+              {activeDevices.length > 0
+                ? `${activeDevices.length} perangkat terhubung`
+                : "Belum ada perangkat KDS"}
             </p>
-            <p className={`text-xs mt-0.5 ${pin ? "text-green-600" : "text-amber-600"}`}>
-              {pin
-                ? `KDS dilindungi PIN ${pin.length} digit. Sesi aktif 8 jam setelah buka.`
-                : "KDS tidak bisa diakses sampai PIN diatur."}
+            <p className={`text-xs mt-0.5 ${
+              activeDevices.length > 0 ? "text-green-600" : "text-slate-500"
+            }`}>
+              {activeDevices.length > 0
+                ? "KDS aktif dan menerima pesanan"
+                : "Gunakan kode aktivasi di bawah untuk menghubungkan perangkat"}
             </p>
           </div>
-          {pin && (
-            <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-              isLocked ? "bg-slate-100 text-slate-500" : "bg-green-100 text-green-700"
-            }`}>
-              {isLocked ? "Terkunci" : "Aktif"}
+        </div>
+
+        {/* Generate Activation Code */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <KeyRound size={16} className="text-slate-500" />
+              <h2 className="text-sm font-extrabold text-slate-800">Kode Aktivasi</h2>
+            </div>
+            <button
+              onClick={handleGenerateCode}
+              disabled={generatingCode}
+              className="flex items-center gap-1.5 text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              data-testid="button-generate-code"
+            >
+              {generatingCode ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              Generate Kode
+            </button>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Buka <strong className="text-slate-700">{kdsUrl}</strong> di perangkat dapur,
+            lalu masukkan kode aktivasi 4 digit ini. Kode berlaku <strong>15 menit</strong>.
+          </p>
+
+          {activeCode && (
+            <div className="bg-slate-900 rounded-xl p-5 flex flex-col items-center gap-3"
+              data-testid="card-active-code">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Kode Aktivasi</p>
+              <div className="flex gap-3">
+                {activeCode.code.split("").map((digit, i) => (
+                  <div
+                    key={i}
+                    className="w-14 h-16 bg-orange-500 rounded-xl flex items-center justify-center"
+                  >
+                    <span className="text-3xl font-black text-white tabular-nums">{digit}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 text-slate-400">
+                <Clock size={13} />
+                <CodeCountdown expiresAt={activeCode.expiresAt} />
+              </div>
+              <p className="text-[10px] text-slate-500 text-center">
+                Masukkan kode ini di halaman <code className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">/kds/activate</code> pada perangkat dapur
+              </p>
+            </div>
+          )}
+
+          {!activeCode && pendingDevices.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+              <strong>{pendingDevices.length}</strong> kode aktif menunggu aktivasi.
+              Klik <strong>Generate Kode</strong> untuk membuat kode baru.
+            </div>
+          )}
+
+          {!activeCode && pendingDevices.length === 0 && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 text-center">
+              Klik <strong>Generate Kode</strong> untuk membuat kode aktivasi baru
             </div>
           )}
         </div>
 
-        {/* PIN Setting */}
+        {/* Connected Devices */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-          <div className="flex items-center gap-2 mb-1">
-            <Lock size={16} className="text-slate-500" />
-            <h2 className="text-sm font-extrabold text-slate-800">Pengaturan PIN</h2>
-          </div>
-          <p className="text-xs text-slate-500">
-            PIN 4–6 digit ini wajib dimasukkan setiap kali perangkat dapur membuka halaman KDS.
-          </p>
-
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showPin ? "text" : "password"}
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Masukkan PIN (4–6 digit)"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none pr-10"
-                data-testid="input-kds-pin"
-              />
-              <button
-                onClick={() => setShowPin((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                tabIndex={-1}
-              >
-                {showPin ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wifi size={16} className="text-slate-500" />
+              <h2 className="text-sm font-extrabold text-slate-800">Perangkat Terhubung</h2>
+              {activeDevices.length > 0 && (
+                <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  {activeDevices.length}
+                </span>
+              )}
             </div>
             <button
-              onClick={handleSavePin}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold rounded-xl transition-colors flex items-center gap-1.5"
-              data-testid="button-save-pin"
+              onClick={refreshDevices}
+              disabled={devicesLoading}
+              className="text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40"
+              title="Muat ulang daftar perangkat"
+              data-testid="button-refresh-devices"
             >
-              {pinSaved ? <Check size={15} /> : null}
-              {pinSaved ? "Tersimpan" : "Simpan"}
+              <RefreshCcw size={14} className={devicesLoading ? "animate-spin" : ""} />
             </button>
           </div>
 
-          {pin && (
-            <button
-              onClick={handleResetPin}
-              className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-semibold transition-colors"
-              data-testid="button-reset-pin"
-            >
-              <Trash2 size={13} /> Hapus PIN & kunci KDS
-            </button>
+          {devicesLoading && activeDevices.length === 0 ? (
+            <div className="flex items-center justify-center py-6 text-slate-400">
+              <Loader2 size={20} className="animate-spin" />
+            </div>
+          ) : activeDevices.length === 0 ? (
+            <div className="py-6 text-center text-slate-400 text-sm flex flex-col items-center gap-2">
+              <WifiOff size={24} strokeWidth={1.5} />
+              Belum ada perangkat yang aktif
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {activeDevices.map((device) => (
+                <div
+                  key={device.id}
+                  className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5"
+                  data-testid={`card-device-${device.id}`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                    <ChefHat size={16} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">
+                      {device.device_name || "KDS Tidak Bernama"}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Aktif sejak {device.activated_at
+                        ? new Date(device.activated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
+                        : "—"}
+                      {device.last_seen_at && (
+                        <> · Terakhir aktif {timeAgo(device.last_seen_at)}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      Aktif
+                    </span>
+                    <button
+                      onClick={() => handleRevoke(device.id, device.device_name)}
+                      disabled={revokingId === device.id}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                      title="Cabut akses perangkat ini"
+                      data-testid={`button-revoke-device-${device.id}`}
+                    >
+                      {revokingId === device.id
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <Trash2 size={14} />
+                      }
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
@@ -178,8 +348,8 @@ export default function KitchenDisplayPage() {
             <h2 className="text-sm font-extrabold text-slate-800">Buka di Perangkat Dapur</h2>
           </div>
           <p className="text-xs text-slate-500">
-            Scan QR code di bawah dari tablet/layar dapur, atau salin link-nya.
-            Setelah terbuka, masukkan PIN untuk akses.
+            Scan QR code dari tablet/layar dapur untuk membuka halaman KDS.
+            Perangkat baru akan diminta memasukkan kode aktivasi.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -199,7 +369,7 @@ export default function KitchenDisplayPage() {
               </div>
 
               <button
-                onClick={handleOpenKds}
+                onClick={() => window.open(kdsUrl, "_blank", "noopener")}
                 className="w-full flex items-center justify-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold py-2.5 rounded-xl transition-colors"
                 data-testid="button-open-kds-new-tab"
               >
@@ -207,24 +377,27 @@ export default function KitchenDisplayPage() {
               </button>
 
               <button
-                onClick={handleForceUnlock}
+                onClick={() => {
+                  window.open(`${kdsUrl}/activate`, "_blank", "noopener");
+                }}
                 className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors"
-                data-testid="button-open-kds-unlocked"
+                data-testid="button-open-kds-activate"
               >
-                <Maximize2 size={15} /> Buka & Lewati PIN (perangkat ini)
+                <Maximize2 size={15} /> Buka Halaman Aktivasi
               </button>
             </div>
           </div>
         </div>
 
-        {/* Info */}
+        {/* How to use */}
         <div className="bg-slate-100 rounded-2xl p-4 space-y-2">
           <h3 className="text-xs font-extrabold text-slate-600 uppercase tracking-wide">Cara pakai</h3>
           <ol className="text-xs text-slate-500 space-y-1.5 list-decimal list-inside">
-            <li>Atur PIN 4–6 digit di atas, klik <strong className="text-slate-700">Simpan</strong></li>
-            <li>Di tablet dapur, scan QR code atau ketik URL: <code className="bg-white px-1 rounded text-slate-700">{kdsUrl}</code></li>
-            <li>Masukkan PIN — sesi aktif selama 8 jam tanpa perlu login ulang</li>
-            <li>Tekan ikon fullscreen di KDS agar tampil maksimal di layar dapur</li>
+            <li>Klik <strong className="text-slate-700">Generate Kode</strong> untuk membuat kode aktivasi 4 digit (berlaku 15 menit)</li>
+            <li>Di tablet dapur, buka <code className="bg-white px-1 rounded text-slate-700">{kdsUrl}</code> atau scan QR code</li>
+            <li>Masukkan kode aktivasi → beri nama stasiun (mis. <em>Dapur Utama</em>)</li>
+            <li>Perangkat terhubung dan menerima pesanan secara otomatis</li>
+            <li>Gunakan tombol <strong className="text-red-600">cabut</strong> untuk mencabut akses perangkat</li>
           </ol>
         </div>
 

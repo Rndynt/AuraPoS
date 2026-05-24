@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { admin, username } from 'better-auth/plugins';
+import { admin, username, anonymous } from 'better-auth/plugins';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as authSchema from './auth-schema';
@@ -85,7 +85,13 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  plugins: [username(), admin()],
+  plugins: [
+    username(),
+    admin(),
+    anonymous({
+      generateName: async () => `Display-${Math.floor(1000 + Math.random() * 9000)}`,
+    }),
+  ],
   basePath: '/api/auth',
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: BASE_URL,

@@ -65,6 +65,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.path.startsWith('/tenants/by-slug/')) return next();  // public slug lookup
     if (req.path === '/tenants/register') return next();
     if (req.path === '/cfd/update') return next();
+    // KDS public + device-key routes bypass tenant middleware
+    if (req.path === '/kds/check-code') return next();
+    if (req.path === '/kds/verify-code') return next();
+    if (req.path.startsWith('/kds/orders')) return next(); // uses X-KDS-Key
+    if (req.path === '/kds/generate-code') return next(); // uses Better Auth session
+    if (req.path === '/kds/devices') return next();       // uses Better Auth session
+    if (req.path.startsWith('/kds/devices/')) return next();
     return tenantMiddleware(req, res, next);
   });
 

@@ -20,6 +20,7 @@ import EmployeesPage from "@/pages/employees";
 import StoreProfilePage from "@/pages/store-profile";
 import KitchenDisplayPage from "@/pages/kitchen-display";
 import KDSPage from "@/pages/kds";
+import KdsActivatePage from "@/pages/kds-activate";
 import CustomerDisplayPage from "@/pages/customer-display";
 import PrintersPage from "@/pages/printers";
 import NotFound from "@/pages/not-found";
@@ -277,7 +278,8 @@ function Router() {
       </Route>
       {/* Customer Facing Display — tidak butuh auth, full-screen tanpa layout */}
       <Route path="/display" component={CustomerDisplayPage} />
-      {/* Kitchen Display Standalone — publik, dilindungi PIN, tanpa layout app */}
+      {/* Kitchen Display Standalone — publik, API key auth, tanpa layout app */}
+      <Route path="/kds/activate" component={KdsActivatePage} />
       <Route path="/kds" component={KDSPage} />
       {/* Pendaftaran tenant baru — public, no auth */}
       <Route path="/register-tenant" component={RegisterTenantPage} />

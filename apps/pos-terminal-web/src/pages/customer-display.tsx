@@ -11,6 +11,27 @@ import {
 } from '@/hooks/useCustomerDisplay';
 import { getActiveTenantId } from '@/lib/tenant';
 
+/**
+ * Anonymous auth: sign in silently on mount so the CFD has a server-side
+ * session identity. Non-fatal — existing WebSocket push still works without it.
+ */
+async function ensureAnonymousSession(): Promise<void> {
+  try {
+    // Already have a session? Skip.
+    const check = await fetch('/api/auth/me', { credentials: 'include' });
+    if (check.ok) return;
+    // Sign in anonymously
+    await fetch('/api/auth/sign-in/anonymous', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+  } catch {
+    // Non-fatal — CFD still works via WebSocket push
+  }
+}
+
 const fmt = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
@@ -781,6 +802,11 @@ function FullscreenButton({ onClick }: { onClick: () => void }) {
 export default function CustomerDisplayPage() {
   const [msg, setMsg] = useState<CFDMessage>({ type: 'idle', tenantName: 'AuraPOS' });
   const { isFullscreen, enter } = useFullscreen();
+
+  // CFD anonymous session — gives this display a server-side identity
+  useEffect(() => {
+    ensureAnonymousSession();
+  }, []);
 
   // Ambil tenantId dari URL (?tenantId=xxx) agar Device B tanpa login bisa sync
   const tenantIdFromUrl = new URLSearchParams(window.location.search).get('tenantId') ?? undefined;

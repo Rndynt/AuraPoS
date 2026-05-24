@@ -99,7 +99,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-tenant-id');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-tenant-id,x-kds-key');
   }
   if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
   next();
@@ -159,6 +159,7 @@ app.use((req, res, next) => {
       log("Existing DB detected — ensuring Better Auth schema...", "warn");
       try {
         await authDb.execute(sql`
+          -- Better Auth core tables
           CREATE TABLE IF NOT EXISTS "user" (
             "id" text PRIMARY KEY NOT NULL,
             "name" text NOT NULL,
@@ -209,6 +210,28 @@ app.use((req, res, next) => {
             "created_at" timestamp DEFAULT now(),
             "updated_at" timestamp DEFAULT now()
           );
+        `);
+        // Add is_anonymous column if missing (anonymous plugin)
+        await authDb.execute(sql`
+          ALTER TABLE IF EXISTS "user"
+            ADD COLUMN IF NOT EXISTS "is_anonymous" boolean DEFAULT false;
+        `);
+        // KDS device pairing table
+        await authDb.execute(sql`
+          CREATE TABLE IF NOT EXISTS kds_devices (
+            id                   text PRIMARY KEY,
+            tenant_id            text NOT NULL,
+            device_name          text,
+            api_key              text UNIQUE,
+            activation_code      text,
+            activation_expires_at timestamp,
+            status               text NOT NULL DEFAULT 'pending',
+            created_at           timestamp NOT NULL DEFAULT now(),
+            activated_at         timestamp,
+            last_seen_at         timestamp
+          );
+          CREATE INDEX IF NOT EXISTS kds_devices_tenant_idx ON kds_devices (tenant_id);
+          CREATE INDEX IF NOT EXISTS kds_devices_api_key_idx ON kds_devices (api_key);
         `);
         log("Better Auth schema ensured.");
       } catch (authErr) {

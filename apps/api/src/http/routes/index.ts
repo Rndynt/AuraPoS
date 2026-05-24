@@ -7,6 +7,7 @@ import { createTablesRouter } from './tables';
 import registrationRoutes from './registration';
 import syncRoutes from './sync';
 import terminalsRoutes from './terminals';
+import kdsRoutes from './kds';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use('/tenants', tenantsRoutes);
 router.use('/tables', createTablesRouter(db));
 router.use('/sync', syncRoutes);
 router.use('/terminals', terminalsRoutes);
+router.use('/kds', kdsRoutes);
 
 router.get('/health', (_req, res) => {
   res.json({ success: true, timestamp: new Date().toISOString() });

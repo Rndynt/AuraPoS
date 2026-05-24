@@ -16,6 +16,8 @@ export const user = pgTable('user', {
   banExpires: timestamp('ban_expires'),
   // Link user to their tenant
   tenantId: text('tenant_id'),
+  // Anonymous users (CFD, kiosk) flag
+  isAnonymous: boolean('is_anonymous').$defaultFn(() => false),
 });
 
 export const session = pgTable('session', {
