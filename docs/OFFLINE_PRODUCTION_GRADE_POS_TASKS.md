@@ -75,10 +75,11 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 - [x] `VitePWA` configured in `vite.config.ts`: workbox, NetworkFirst cache, navigateFallback
 - [x] `manifest.webmanifest` — standalone, landscape, blue theme, `/pos` start URL
 - [x] PWA icons: `icon.svg` (any/maskable), `icon-192.png` (192×192), `icon-512.png` (512×512)
-- [x] Service worker registered in `main.tsx` with `updatefound` listener
+- [x] Service worker registered in `main.tsx` — clean registration, no duplicate `window.confirm`
 - [x] `PwaUpdatePrompt.tsx` — "Versi baru tersedia. Perbarui aplikasi?" toast with Perbarui/Dismiss
 - [x] `PwaUpdatePrompt` wired into `App.tsx` (renders outside router, always visible)
 - [x] `devOptions.enabled: true` for dev testing
+- [x] `<link rel="manifest" href="/manifest.webmanifest">` added to `index.html` (PWA installable)
 - [ ] Dedicated offline fallback HTML page (currently `navigateFallback: "/index.html"`)
 
 ### 2.2 Add Offline Detection
@@ -317,9 +318,11 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 
 - [x] `/local-orders` page and route in `App.tsx`
 - [x] `LocalOrderList.tsx` — filter by status, search by order number
+- [x] Per-order retry sync button (resets failed outbox items → pending, triggers sync)
+- [x] Per-order reprint button (resets print job status → pending for usePrintWorker)
+- [x] Batch "Sync Semua" button with pending count
+- [x] Currency and date formatting for Indonesian locale
 - [ ] Detail view per order (items, payment, sync history)
-- [ ] Per-order retry sync button
-- [ ] Per-order reprint button
 - [ ] Cancel local order before sync
 
 ### 12.2 Add Sync Status Widget ✅ COMPLETE
