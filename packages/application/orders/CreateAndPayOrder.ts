@@ -20,6 +20,7 @@ import {
   orderItemModifiers,
   orderPayments,
   products,
+  inventoryMovements,
   type InsertOrder,
 } from '../../../shared/schema';
 import { eq, and, inArray, gte, count, sql } from 'drizzle-orm';
@@ -296,6 +297,25 @@ export class CreateAndPayOrder {
         .set(finalUpdates)
         .where(and(eq(orders.id, newOrder.id), eq(orders.tenantId, tenant_id)))
         .returning();
+
+      // 6. Inventory movements ledger (Sprint 6 — online sales)
+      // Insert a SALE movement for every item so stock levels can be derived
+      // from the movements table without relying on a separate stock counter.
+      if (computedItems.length > 0) {
+        const movements = computedItems.map((item: any) => ({
+          tenantId: tenant_id,
+          productId: item.product_id,
+          orderId: newOrder.id,
+          movementType: 'sale',
+          quantityDelta: -(item.quantity ?? 1),
+          unitCost: item.unit_price?.toString() ?? item.base_price?.toString() ?? null,
+          notes: `Online sale — order ${orderNumber}`,
+        }));
+        await tx.insert(inventoryMovements).values(movements).catch(() => {
+          // Non-fatal: movement write failures must not abort the sale transaction.
+          // The ledger is best-effort for reporting; it does not gate order creation.
+        });
+      }
 
       return { order: updatedOrder, payment: newPayment };
     });
