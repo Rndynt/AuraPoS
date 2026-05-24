@@ -175,13 +175,7 @@ export default function HomePage() {
   const { canInstall, isInstalled, install } = usePwaInstall();
 
   const handleInstall = async () => {
-    const outcome = await install();
-    if (outcome === "unavailable") {
-      toast({
-        title: "Install tidak tersedia",
-        description: "Buka aplikasi di Chrome lalu pilih menu ⋮ → 'Tambahkan ke layar utama'.",
-      });
-    }
+    await install();
   };
 
   return (
@@ -280,7 +274,7 @@ export default function HomePage() {
               <p className="text-[11px] text-emerald-600">AuraPoS berjalan sebagai aplikasi native di perangkat ini.</p>
             </div>
           </div>
-        ) : (
+        ) : canInstall ? (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-4" data-testid="card-pwa-install">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
@@ -301,6 +295,16 @@ export default function HomePage() {
               <Download size={16} />
               Pasang Aplikasi
             </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3" data-testid="card-pwa-pending">
+            <Smartphone size={20} className="text-slate-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-600">Pasang sebagai Aplikasi</p>
+              <p className="text-[11px] text-slate-400">
+                Buka halaman ini di Chrome, lalu ketuk ⋮ → <strong>Tambahkan ke layar utama</strong>.
+              </p>
+            </div>
           </div>
         )}
       </div>
