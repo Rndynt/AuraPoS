@@ -11,12 +11,16 @@ import {
   LogOut,
   Printer,
   ShoppingBag,
+  Download,
+  CheckCircle2,
+  Smartphone,
 } from "lucide-react";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 
 type CurrentUser = {
   id: string;
@@ -168,6 +172,17 @@ export default function HomePage() {
   };
 
   const isLoading = profileLoading || userLoading;
+  const { canInstall, isInstalled, install } = usePwaInstall();
+
+  const handleInstall = async () => {
+    const outcome = await install();
+    if (outcome === "unavailable") {
+      toast({
+        title: "Install tidak tersedia",
+        description: "Buka aplikasi di Chrome lalu pilih menu ⋮ → 'Tambahkan ke layar utama'.",
+      });
+    }
+  };
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-20">
@@ -255,7 +270,42 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="p-4">
+      {/* Install App Card */}
+      <div className="px-4 pb-3">
+        {isInstalled ? (
+          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3" data-testid="card-pwa-installed">
+            <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-emerald-800">Aplikasi sudah terpasang</p>
+              <p className="text-[11px] text-emerald-600">AuraPoS berjalan sebagai aplikasi native di perangkat ini.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-4" data-testid="card-pwa-install">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+                <Smartphone size={18} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-blue-900">Pasang di Perangkat Ini</p>
+                <p className="text-[11px] text-blue-600 mt-0.5">
+                  Install AuraPoS agar bisa dipakai offline langsung dari layar utama, tanpa buka browser.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleInstall}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold py-2.5 rounded-xl transition-all"
+              data-testid="button-pwa-install"
+            >
+              <Download size={16} />
+              {canInstall ? "Pasang Sekarang" : "Cara Install Aplikasi"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 pt-0">
         <button 
           onClick={handleLogout}
           className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors border border-red-200"

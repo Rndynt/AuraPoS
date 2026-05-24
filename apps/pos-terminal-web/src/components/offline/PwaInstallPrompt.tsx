@@ -1,36 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Download, X, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 
 export function PwaInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem("pwa-install-dismissed");
-    if (stored === "1") { setDismissed(true); return; }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  const { canInstall, install } = usePwaInstall();
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem("pwa-install-dismissed") === "1");
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted" || outcome === "dismissed") {
-      setDeferredPrompt(null);
-    }
+    const outcome = await install();
+    if (outcome === "accepted" || outcome === "dismissed") setDismissed(true);
   };
 
   const handleDismiss = () => {
@@ -38,7 +17,7 @@ export function PwaInstallPrompt() {
     sessionStorage.setItem("pwa-install-dismissed", "1");
   };
 
-  if (!deferredPrompt || dismissed) return null;
+  if (!canInstall || dismissed) return null;
 
   return (
     <div
