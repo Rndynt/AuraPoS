@@ -299,7 +299,7 @@ export default function HomePage() {
               data-testid="button-pwa-install"
             >
               <Download size={16} />
-              {canInstall ? "Pasang Sekarang" : "Cara Install Aplikasi"}
+              Pasang Aplikasi
             </button>
           </div>
         )}
