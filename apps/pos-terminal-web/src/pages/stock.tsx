@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
-import { ChevronLeft, Package, AlertCircle, History } from "lucide-react";
+import { Package, AlertCircle, History } from "lucide-react";
+import { PageHeader } from "@/components/design";
 
 const MOCK_PRODUCTS = [
   {
@@ -76,30 +77,20 @@ export default function StockPage() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
-      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title="Stok & Inventaris"
+        subtitle="Kelola ketersediaan produk"
+        onBack={handleBack}
+        actions={
           <button
-            onClick={handleBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-            data-testid="button-back"
+            onClick={handleHistory}
+            className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-100"
+            data-testid="button-history"
           >
-            <ChevronLeft size={20} />
+            <History size={16} /> Riwayat
           </button>
-          <div>
-            <h1 className="text-lg font-bold text-slate-800" data-testid="text-page-title">
-              Stok & Inventaris
-            </h1>
-            <p className="text-xs text-slate-500">Kelola ketersediaan produk</p>
-          </div>
-        </div>
-        <button
-          onClick={handleHistory}
-          className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-100"
-          data-testid="button-history"
-        >
-          <History size={16} /> Riwayat
-        </button>
-      </header>
+        }
+      />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">

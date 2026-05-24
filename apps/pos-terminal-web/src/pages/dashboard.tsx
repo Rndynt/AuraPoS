@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
-  ChevronLeft, Calendar, ChevronDown, Wallet, ShoppingBag,
+  Calendar, ChevronDown, Wallet, ShoppingBag,
   ArrowDownRight, AlertCircle, TrendingUp, CheckCircle, AlertTriangle,
 } from "lucide-react";
+import { PageHeader } from "@/components/design";
 import { SummaryCard } from "@/components/pos/shared/SummaryCard";
 import { DashboardChartPresenter, type ChartDataPoint } from "@/components/pos/shared/DashboardChartPresenter";
 import { useOrders } from "@/hooks/api/useOrders";
@@ -108,31 +109,27 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-24 md:pb-8">
-      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-20 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setLocation("/hub")} className="p-2 hover:bg-slate-100 rounded-full transition-colors" data-testid="button-back">
-            <ChevronLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-lg font-extrabold text-slate-800">Dashboard</h1>
-            <p className="text-[10px] text-slate-500 font-medium">Analisa Performa</p>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Analisa Performa"
+        onBack={() => setLocation("/hub")}
+        actions={
+          <div className="relative">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => { setSelectedPeriod(e.target.value as PeriodKey); setActiveChartItem(null); }}
+              className="appearance-none bg-white border border-slate-200 pl-9 pr-8 py-2 rounded-xl text-xs font-bold"
+            >
+              <option value="today">Hari Ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="week">7 Hari</option>
+              <option value="month">Bulan Ini</option>
+            </select>
+            <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" />
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2" />
           </div>
-        </div>
-        <div className="relative">
-          <select
-            value={selectedPeriod}
-            onChange={(e) => { setSelectedPeriod(e.target.value as PeriodKey); setActiveChartItem(null); }}
-            className="appearance-none bg-white border border-slate-200 pl-9 pr-8 py-2 rounded-xl text-xs font-bold"
-          >
-            <option value="today">Hari Ini</option>
-            <option value="yesterday">Kemarin</option>
-            <option value="week">7 Hari</option>
-            <option value="month">Bulan Ini</option>
-          </select>
-          <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" />
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2" />
-        </div>
-      </header>
+        }
+      />
 
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

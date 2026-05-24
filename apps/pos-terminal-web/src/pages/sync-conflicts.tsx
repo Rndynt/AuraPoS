@@ -20,6 +20,7 @@ import { AlertTriangle, CheckCircle2, Clock, RefreshCw, XCircle, ChevronDown, Ch
 import { useTenant } from "@/context/TenantContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { PageHeader } from "@/components/design";
 import {
   conflictLabel,
   getSeverity,
@@ -209,18 +210,11 @@ export default function SyncConflictsPage() {
   const blocking = conflicts.filter(c => getSeverity(c.conflictType) === "blocking").length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 py-6">
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <AlertTriangle size={20} className="text-amber-500" />
-              Konflik Sinkronisasi
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">Kelola konflik dari terminal offline</p>
-          </div>
+    <div className="flex flex-col h-full bg-slate-50">
+      <PageHeader
+        title="Konflik Sinkronisasi"
+        subtitle="Kelola konflik dari terminal offline"
+        actions={
           <Button
             variant="outline"
             size="sm"
@@ -232,7 +226,10 @@ export default function SyncConflictsPage() {
             <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
             Refresh
           </Button>
-        </div>
+        }
+      />
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-3xl mx-auto px-4 py-6">
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-3 mb-6">
@@ -330,6 +327,7 @@ export default function SyncConflictsPage() {
             Menampilkan {filtered.length} dari {conflicts.length} konflik
           </p>
         )}
+        </div>
       </div>
     </div>
   );
