@@ -12,6 +12,7 @@ import { queryClient as globalQueryClient } from "@/lib/queryClient";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useKitchenChannelReceiver } from "@/hooks/useKitchenChannel";
 import type { KDSMessage } from "@/hooks/useKitchenChannel";
+import { useToast } from "@/hooks/use-toast";
 import {
   getLocalKitchenTickets,
   updateLocalKitchenTicketStatus,
@@ -226,6 +227,7 @@ export default function KDSPage() {
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { play, isMuted, toggleMute, unlock: unlockAudio } = useKDSSound();
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!unlocked) return;
@@ -329,6 +331,12 @@ export default function KDSPage() {
     setLastRefresh(new Date());
   };
 
+  const STATUS_LABELS: Record<string, string> = {
+    preparing: "Sedang Diproses",
+    ready: "Siap Saji",
+    served: "Sudah Disajikan",
+  };
+
   const handleUpdateServerStatus = async (orderId: string, newStatus: string) => {
     setIsUpdating(true);
     try {
@@ -338,8 +346,11 @@ export default function KDSPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error("Gagal update status");
+      toast({ title: "Status diperbarui", description: STATUS_LABELS[newStatus] ?? newStatus });
       await refetch();
       setLastRefresh(new Date());
+    } catch {
+      toast({ title: "Gagal", description: "Tidak dapat memperbarui status order", variant: "destructive" });
     } finally {
       setIsUpdating(false);
     }
@@ -349,8 +360,11 @@ export default function KDSPage() {
     setIsUpdating(true);
     try {
       await updateLocalKitchenTicketStatus(ticketId, newStatus as KitchenTicketStatus);
+      toast({ title: "Status lokal diperbarui", description: STATUS_LABELS[newStatus] ?? newStatus });
       await refetchLocal();
       setLastRefresh(new Date());
+    } catch {
+      toast({ title: "Gagal", description: "Tidak dapat memperbarui status lokal", variant: "destructive" });
     } finally {
       setIsUpdating(false);
     }
