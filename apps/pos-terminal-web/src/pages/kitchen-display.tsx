@@ -1,419 +1,234 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
-  ChefHat,
-  ChevronLeft,
-  RefreshCcw,
-  AlertCircle,
-  Clock,
-  CheckCircle,
-  Loader2,
-  WifiOff,
+  ChefHat, QrCode, ExternalLink, Lock, Eye, EyeOff,
+  Copy, Check, Maximize2, Shield, RefreshCcw, Trash2,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageHeader } from "@/components/design";
 import { useToast } from "@/hooks/use-toast";
-import { useOrders } from "@/lib/api/hooks";
-import { KitchenTicket } from "@/components/kitchen-display/KitchenTicket";
-import { useTenant } from "@/context/TenantContext";
-import { useFeatures } from "@/hooks/useFeatures";
-import type { Order } from "@pos/domain/orders/types";
-import { getActiveTenantId } from "@/lib/tenant";
-import { queryClient as globalQueryClient } from "@/lib/queryClient";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { useKitchenChannelReceiver } from "@/hooks/useKitchenChannel";
-import type { KDSMessage } from "@/hooks/useKitchenChannel";
-import {
-  getLocalKitchenTickets,
-  updateLocalKitchenTicketStatus,
-  deleteLocalKitchenTicket,
-  purgeServedKitchenTickets,
-} from "@pos/offline";
-import type { LocalKitchenTicket, KitchenTicketStatus } from "@pos/offline";
 
-const ACTIVE_STATUSES = ["confirmed", "preparing", "ready"] as const;
-const AUTO_REFRESH_INTERVAL = 20_000;
+const KDS_PIN_KEY = "kds_pin";
+const KDS_UNLOCKED_KEY = "kds_unlocked_until";
 
-// ─── Convert local ticket → minimal Order shape for KitchenTicket component ──
-
-function localTicketToOrder(ticket: LocalKitchenTicket): Order {
-  return {
-    id: ticket.id,
-    order_number: ticket.orderNumber,
-    status: ticket.status,
-    payment_status: "unpaid",
-    customer_name: ticket.customerName ?? null,
-    table_number: ticket.tableNumber ?? null,
-    order_type_name: ticket.orderTypeName ?? null,
-    items: ticket.items.map((item, idx) => ({
-      id: `${ticket.id}-${idx}`,
-      product_id: item.productId,
-      product_name: item.name,
-      quantity: item.quantity,
-      unit_price: 0,
-      total_price: 0,
-      variant_name: item.variantName ?? null,
-      modifiers: [],
-    })),
-    subtotal: 0,
-    tax: 0,
-    service_charge: 0,
-    total: 0,
-    payments: [],
-    created_at: ticket.createdAt,
-    updated_at: ticket.updatedAt,
-  } as unknown as Order;
+function getKdsUrl(): string {
+  return `${window.location.origin}/kds`;
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+function QRCodeImage({ url }: { url: string }) {
+  const encoded = encodeURIComponent(url);
+  const src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encoded}&qzone=1&color=1e293b&bgcolor=ffffff&format=png`;
+  return (
+    <img
+      src={src}
+      alt="QR Code KDS"
+      className="w-40 h-40 rounded-xl border border-slate-200"
+      data-testid="img-kds-qr"
+    />
+  );
+}
 
 export default function KitchenDisplayPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { hasModule } = useTenant();
-  const { hasFeature } = useFeatures();
-  const queryClient = useQueryClient();
-  const isEnabled = hasModule("enable_kitchen_ticket");
-  const isOrderQueueEnabled = hasFeature("order_queue");
-  const { isOnline } = useNetworkStatus();
 
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [pin, setPin] = useState(() => localStorage.getItem(KDS_PIN_KEY) ?? "");
+  const [pinInput, setPinInput] = useState(pin);
+  const [showPin, setShowPin] = useState(false);
+  const [pinSaved, setPinSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // ── Server orders (online) ────────────────────────────────────────────────
-  const { data, isLoading, error, refetch } = useOrders(undefined, {
-    refetchInterval: isOrderQueueEnabled ? 5000 : AUTO_REFRESH_INTERVAL,
-    enabled: isOnline,
-  });
-  const serverOrders: Order[] = data?.orders ?? [];
-  const serverActiveOrders = serverOrders.filter((o) =>
-    (ACTIVE_STATUSES as readonly string[]).includes(o.status)
-  );
+  const kdsUrl = getKdsUrl();
+  const isLocked = !localStorage.getItem(KDS_UNLOCKED_KEY) || Date.now() >= parseInt(localStorage.getItem(KDS_UNLOCKED_KEY) ?? "0", 10);
 
-  // ── Local kitchen tickets (offline + same-device local orders) ─────────────
-  const tenantId = getActiveTenantId();
-
-  const { data: localTickets = [], refetch: refetchLocal } = useQuery<LocalKitchenTicket[]>({
-    queryKey: ["local-kitchen-tickets", tenantId],
-    queryFn: () => getLocalKitchenTickets(tenantId, ["confirmed", "preparing", "ready"]),
-    refetchInterval: 5_000,
-  });
-
-  // ── BroadcastChannel — instant updates when POS sends a new offline ticket ─
-  const handleKDSMessage = useCallback(
-    (msg: KDSMessage) => {
-      if (msg.type === "ticket_added" || msg.type === "status_updated" || msg.type === "ticket_removed") {
-        queryClient.invalidateQueries({ queryKey: ["local-kitchen-tickets", tenantId] });
-      }
-    },
-    [queryClient, tenantId]
-  );
-  useKitchenChannelReceiver(handleKDSMessage);
-
-  // ── EventSource for server order queue (when online) ──────────────────────
-  useEffect(() => {
-    if (!isOrderQueueEnabled || !isOnline) return;
-    const es = new EventSource("/api/orders/queue/stream", { withCredentials: true });
-    const onUpdate = () => {
-      globalQueryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-    };
-    es.addEventListener("order_queue_updated", onUpdate as EventListener);
-    return () => {
-      es.removeEventListener("order_queue_updated", onUpdate as EventListener);
-      es.close();
-    };
-  }, [isOrderQueueEnabled, isOnline]);
-
-  // ── Purge old served tickets periodically ────────────────────────────────
-  useEffect(() => {
-    purgeServedKitchenTickets(tenantId, 120).catch(() => {});
-    const interval = setInterval(() => {
-      purgeServedKitchenTickets(tenantId, 120).catch(() => {});
-    }, 5 * 60_000); // every 5 min
-    return () => clearInterval(interval);
-  }, [tenantId]);
-
-  // ── Merge: local tickets only shown if no matching server order exists ─────
-  // A local ticket is "superseded" once its serverOrderId appears in server orders.
-  const serverOrderIds = new Set(serverActiveOrders.map((o) => o.id));
-  const unseenLocalTickets = localTickets.filter(
-    (t) => !t.serverOrderId || !serverOrderIds.has(t.serverOrderId)
-  );
-
-  const handleRefresh = async () => {
-    await Promise.all([refetch(), refetchLocal()]);
-    setLastRefresh(new Date());
-  };
-
-  // ── Server status update ──────────────────────────────────────────────────
-  const handleUpdateServerStatus = async (orderId: string, newStatus: string) => {
-    setIsUpdating(true);
-    try {
-      const res = await fetch(`/api/orders/${orderId}/status?mode=kitchen`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId },
-        body: JSON.stringify({ status: newStatus }),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Gagal update status");
-      const labels: Record<string, string> = {
-        preparing: "Sedang Diproses",
-        ready: "Siap Saji",
-        served: "Sudah Disajikan",
-      };
-      toast({ title: "Status diperbarui", description: labels[newStatus] ?? newStatus });
-      await refetch();
-      setLastRefresh(new Date());
-    } catch {
-      toast({ title: "Gagal", description: "Tidak dapat memperbarui status order", variant: "destructive" });
-    } finally {
-      setIsUpdating(false);
+  const handleSavePin = () => {
+    const trimmed = pinInput.trim();
+    if (trimmed.length < 4 || trimmed.length > 6 || !/^\d+$/.test(trimmed)) {
+      toast({ title: "PIN tidak valid", description: "PIN harus 4–6 angka.", variant: "destructive" });
+      return;
     }
+    localStorage.setItem(KDS_PIN_KEY, trimmed);
+    localStorage.removeItem(KDS_UNLOCKED_KEY);
+    setPin(trimmed);
+    setPinSaved(true);
+    setTimeout(() => setPinSaved(false), 2000);
+    toast({ title: "PIN disimpan", description: "Sesi KDS yang aktif akan terkunci. PIN baru berlaku mulai sekarang." });
   };
 
-  // ── Local status update ───────────────────────────────────────────────────
-  const handleUpdateLocalStatus = async (ticketId: string, newStatus: string) => {
-    setIsUpdating(true);
-    try {
-      const s = newStatus as KitchenTicketStatus;
-      await updateLocalKitchenTicketStatus(ticketId, s);
-      if (s === "served") {
-        // Keep ticket around briefly for KDS UX, then let purge handle it
-      }
-      await refetchLocal();
-      setLastRefresh(new Date());
-      const labels: Record<string, string> = {
-        preparing: "Sedang Diproses",
-        ready: "Siap Saji",
-        served: "Sudah Disajikan",
-      };
-      toast({ title: "Status lokal diperbarui", description: labels[newStatus] ?? newStatus });
-    } catch {
-      toast({ title: "Gagal", description: "Tidak dapat memperbarui status lokal", variant: "destructive" });
-    } finally {
-      setIsUpdating(false);
+  const handleResetPin = () => {
+    localStorage.removeItem(KDS_PIN_KEY);
+    localStorage.removeItem(KDS_UNLOCKED_KEY);
+    setPin("");
+    setPinInput("");
+    toast({ title: "PIN dihapus", description: "KDS tidak bisa dibuka sampai PIN baru diatur." });
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(kdsUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleOpenKds = () => {
+    window.open(kdsUrl, "_blank", "noopener");
+  };
+
+  const handleForceUnlock = () => {
+    if (!pin) {
+      toast({ title: "Belum ada PIN", description: "Atur PIN dulu sebelum membuka KDS.", variant: "destructive" });
+      return;
     }
+    localStorage.setItem(KDS_UNLOCKED_KEY, String(Date.now() + 8 * 60 * 60 * 1000));
+    window.open(kdsUrl, "_blank", "noopener");
   };
 
-  // ── Combined update handler ───────────────────────────────────────────────
-  // The KitchenTicket component calls onUpdateStatus(orderId, newStatus).
-  // We use a prefix to tell local vs server: local IDs are nanoid (not UUIDs).
-  // We track which IDs are local via a Set.
-  const localTicketIds = new Set(unseenLocalTickets.map((t) => t.id));
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
-    if (localTicketIds.has(orderId)) {
-      await handleUpdateLocalStatus(orderId, newStatus);
-    } else {
-      await handleUpdateServerStatus(orderId, newStatus);
-    }
-  };
+  return (
+    <div className="flex flex-col h-full bg-slate-50">
+      <PageHeader
+        title="Kitchen Display"
+        subtitle="Kelola akses layar dapur (KDS)"
+        onBack={() => setLocation("/hub")}
+      />
 
-  // ── Build combined active order list ──────────────────────────────────────
-  const localAsOrders = unseenLocalTickets.map(localTicketToOrder);
-  const allActiveOrders: Order[] = [...serverActiveOrders, ...localAsOrders];
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-2xl mx-auto w-full">
 
-  const counts = {
-    confirmed: allActiveOrders.filter((o) => o.status === "confirmed").length,
-    preparing: allActiveOrders.filter((o) => o.status === "preparing").length,
-    ready:     allActiveOrders.filter((o) => o.status === "ready").length,
-  };
-
-  // ── Feature gate ──────────────────────────────────────────────────────────
-  if (!isEnabled) {
-    return (
-      <div className="flex flex-col h-screen bg-slate-50 items-center justify-center p-6">
-        <div className="flex flex-col items-center gap-4 text-center max-w-md">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-100">
-            <AlertCircle size={32} className="text-slate-400" />
+        {/* Status Card */}
+        <div className={`rounded-2xl border p-4 flex items-center gap-4 ${
+          pin ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
+        }`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            pin ? "bg-green-500" : "bg-amber-500"
+          }`}>
+            <Shield size={20} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Kitchen Display Tidak Aktif</h1>
-          <p className="text-slate-500">
-            Fitur ini belum diaktifkan. Hubungi administrator untuk mengaktifkan Kitchen Display.
+          <div className="flex-1">
+            <p className={`text-sm font-extrabold ${pin ? "text-green-800" : "text-amber-800"}`}>
+              {pin ? "PIN sudah diatur" : "PIN belum diatur"}
+            </p>
+            <p className={`text-xs mt-0.5 ${pin ? "text-green-600" : "text-amber-600"}`}>
+              {pin
+                ? `KDS dilindungi PIN ${pin.length} digit. Sesi aktif 8 jam setelah buka.`
+                : "KDS tidak bisa diakses sampai PIN diatur."}
+            </p>
+          </div>
+          {pin && (
+            <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+              isLocked ? "bg-slate-100 text-slate-500" : "bg-green-100 text-green-700"
+            }`}>
+              {isLocked ? "Terkunci" : "Aktif"}
+            </div>
+          )}
+        </div>
+
+        {/* PIN Setting */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Lock size={16} className="text-slate-500" />
+            <h2 className="text-sm font-extrabold text-slate-800">Pengaturan PIN</h2>
+          </div>
+          <p className="text-xs text-slate-500">
+            PIN 4–6 digit ini wajib dimasukkan setiap kali perangkat dapur membuka halaman KDS.
           </p>
-          <button
-            onClick={() => setLocation("/")}
-            className="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors"
-          >
-            Kembali ke POS
-          </button>
-        </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="flex flex-col h-screen bg-slate-100">
-
-      {/* ── Offline banner ──────────────────────────────────────────────────── */}
-      {!isOnline && (
-        <div className="bg-amber-500 text-white text-xs font-semibold px-4 py-2 flex items-center gap-2">
-          <WifiOff size={13} />
-          Mode offline — menampilkan {unseenLocalTickets.length} tiket lokal.
-          Tiket dari terminal lain tidak tampil saat offline.
-        </div>
-      )}
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between sticky top-0 z-20 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setLocation("/")}
-            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-500"
-            data-testid="button-back"
-            title="Kembali ke POS"
-          >
-            <ChevronLeft size={22} />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shadow-sm">
-              <ChefHat size={20} className="text-white" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type={showPin ? "text" : "password"}
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Masukkan PIN (4–6 digit)"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none pr-10"
+                data-testid="input-kds-pin"
+              />
+              <button
+                onClick={() => setShowPin((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                tabIndex={-1}
+              >
+                {showPin ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
-            <div>
-              <h1 className="text-lg font-black text-slate-800 leading-none">Kitchen Display</h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {allActiveOrders.length} antrian aktif
-                {unseenLocalTickets.length > 0 && (
-                  <span className="ml-1 text-amber-600 font-semibold">
-                    ({unseenLocalTickets.length} lokal)
-                  </span>
-                )}
-              </p>
+            <button
+              onClick={handleSavePin}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold rounded-xl transition-colors flex items-center gap-1.5"
+              data-testid="button-save-pin"
+            >
+              {pinSaved ? <Check size={15} /> : null}
+              {pinSaved ? "Tersimpan" : "Simpan"}
+            </button>
+          </div>
+
+          {pin && (
+            <button
+              onClick={handleResetPin}
+              className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 font-semibold transition-colors"
+              data-testid="button-reset-pin"
+            >
+              <Trash2 size={13} /> Hapus PIN & kunci KDS
+            </button>
+          )}
+        </div>
+
+        {/* QR & Link */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <QrCode size={16} className="text-slate-500" />
+            <h2 className="text-sm font-extrabold text-slate-800">Buka di Perangkat Dapur</h2>
+          </div>
+          <p className="text-xs text-slate-500">
+            Scan QR code di bawah dari tablet/layar dapur, atau salin link-nya.
+            Setelah terbuka, masukkan PIN untuk akses.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex-shrink-0">
+              <QRCodeImage url={kdsUrl} />
+            </div>
+            <div className="flex-1 space-y-3 w-full">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                <code className="text-xs text-slate-600 flex-1 truncate font-mono">{kdsUrl}</code>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex-shrink-0 text-slate-400 hover:text-blue-600 transition-colors"
+                  data-testid="button-copy-kds-link"
+                >
+                  {copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                </button>
+              </div>
+
+              <button
+                onClick={handleOpenKds}
+                className="w-full flex items-center justify-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold py-2.5 rounded-xl transition-colors"
+                data-testid="button-open-kds-new-tab"
+              >
+                <ExternalLink size={15} /> Buka di Tab Baru
+              </button>
+
+              <button
+                onClick={handleForceUnlock}
+                className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors"
+                data-testid="button-open-kds-unlocked"
+              >
+                <Maximize2 size={15} /> Buka & Lewati PIN (perangkat ini)
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Status summary chips */}
-        <div className="hidden md:flex items-center gap-2">
-          <StatusChip color="orange" label="Menunggu" count={counts.confirmed} />
-          <StatusChip color="yellow" label="Diproses"  count={counts.preparing} />
-          <StatusChip color="green"  label="Siap Saji" count={counts.ready} />
+        {/* Info */}
+        <div className="bg-slate-100 rounded-2xl p-4 space-y-2">
+          <h3 className="text-xs font-extrabold text-slate-600 uppercase tracking-wide">Cara pakai</h3>
+          <ol className="text-xs text-slate-500 space-y-1.5 list-decimal list-inside">
+            <li>Atur PIN 4–6 digit di atas, klik <strong className="text-slate-700">Simpan</strong></li>
+            <li>Di tablet dapur, scan QR code atau ketik URL: <code className="bg-white px-1 rounded text-slate-700">{kdsUrl}</code></li>
+            <li>Masukkan PIN — sesi aktif selama 8 jam tanpa perlu login ulang</li>
+            <li>Tekan ikon fullscreen di KDS agar tampil maksimal di layar dapur</li>
+          </ol>
         </div>
 
-        {/* Refresh */}
-        <div className="flex items-center gap-3">
-          <span className="hidden sm:flex items-center gap-1 text-xs text-slate-400">
-            <Clock size={11} />
-            {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-          </span>
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-            data-testid="button-refresh"
-          >
-            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      {/* ── Mobile status legend ────────────────────────────────────────────── */}
-      <div className="md:hidden bg-white border-b border-slate-100 px-4 py-2 flex items-center gap-3">
-        <StatusChip color="orange" label="Menunggu" count={counts.confirmed} />
-        <StatusChip color="yellow" label="Diproses"  count={counts.preparing} />
-        <StatusChip color="green"  label="Siap Saji" count={counts.ready} />
       </div>
-
-      {/* ── Ticket Grid ─────────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-5">
-        {isLoading && allActiveOrders.length === 0 ? (
-          <LoadingState />
-        ) : error && isOnline ? (
-          <ErrorState onRetry={handleRefresh} />
-        ) : allActiveOrders.length === 0 ? (
-          <EmptyState isOffline={!isOnline} />
-        ) : (
-          <>
-            {(["confirmed", "preparing", "ready"] as const).map((status) => {
-              const group = allActiveOrders.filter((o) => o.status === status);
-              if (group.length === 0) return null;
-              const sectionLabel = {
-                confirmed: "🟠 Menunggu",
-                preparing: "🟡 Sedang Diproses",
-                ready:     "🟢 Siap Saji",
-              }[status];
-              return (
-                <section key={status} className="mb-6">
-                  <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-0.5">
-                    {sectionLabel}{" "}
-                    <span className="font-bold text-slate-400 normal-case tracking-normal">({group.length})</span>
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                    {group.map((order) => (
-                      <div key={order.id} className="relative">
-                        {localTicketIds.has(order.id) && (
-                          <div className="absolute -top-1.5 left-3 z-10">
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow">
-                              <WifiOff size={9} /> LOKAL
-                            </span>
-                          </div>
-                        )}
-                        <KitchenTicket
-                          order={order}
-                          onUpdateStatus={handleUpdateStatus}
-                          isLoading={isUpdating}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function StatusChip({ color, label, count }: { color: "orange" | "yellow" | "green"; label: string; count: number }) {
-  const colorMap = {
-    orange: "bg-orange-50 text-orange-700 border-orange-200",
-    yellow: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    green:  "bg-green-50 text-green-700 border-green-200",
-  };
-  const dotMap = { orange: "bg-orange-500", yellow: "bg-yellow-400", green: "bg-green-500" };
-  return (
-    <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${colorMap[color]}`}>
-      <span className={`w-2 h-2 rounded-full ${dotMap[color]}`} />
-      {label}
-      <span className="font-black">{count}</span>
-    </span>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div className="h-full min-h-[300px] flex flex-col items-center justify-center gap-3 text-slate-400">
-      <Loader2 size={40} className="animate-spin opacity-40" />
-      <p className="text-sm font-medium">Memuat antrian pesanan…</p>
-    </div>
-  );
-}
-
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className="h-full min-h-[300px] flex flex-col items-center justify-center gap-3 text-slate-400">
-      <AlertCircle size={40} className="opacity-40" />
-      <p className="text-sm font-medium">Gagal memuat data server</p>
-      <button onClick={onRetry} className="text-sm font-bold text-blue-600 hover:underline">Coba lagi</button>
-    </div>
-  );
-}
-
-function EmptyState({ isOffline }: { isOffline: boolean }) {
-  return (
-    <div className="h-full min-h-[300px] flex flex-col items-center justify-center gap-3 text-slate-400">
-      <CheckCircle size={48} className="opacity-20 text-green-500" />
-      <h3 className="text-lg font-bold text-slate-500">
-        {isOffline ? "Tidak ada tiket lokal" : "Semua Selesai!"}
-      </h3>
-      <p className="text-sm">
-        {isOffline
-          ? "Tiket lokal akan muncul saat POS membuat order offline di perangkat ini."
-          : "Tidak ada pesanan aktif di dapur saat ini."}
-      </p>
     </div>
   );
 }
