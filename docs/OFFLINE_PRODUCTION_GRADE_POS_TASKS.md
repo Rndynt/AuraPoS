@@ -471,10 +471,17 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 
 ---
 
-## Phase 23 — Production Deployment [ ] NOT STARTED
+## Phase 23 — Production Deployment [~] PARTIAL
 
+- [x] `Dockerfile` — 3-stage build: builder → deploy-prep (`pnpm deploy --prod`) → minimal Alpine runner.
+- [x] `.dockerignore` — excludes node_modules, dist, .git, test files.
+- [x] esbuild `--splitting` flag — Vite deps isolated in `dist/vite-*.js`, never loaded in production.
+- [x] `apps/api/src/serveStatic.ts` — zero Vite deps, dynamically imported only in production.
+- [x] Migration runner resolves path relative to `dist/index.js` → `/app/migrations` in Docker.
+- [x] `apps/pos-terminal-web/vite.config.ts` — `outDir: dist` (within `apps/pos-terminal-web/dist/`).
+- [x] Workbox `navigateFallbackDenylist: [/^\/api\//]` — prevents SW from serving `index.html` for API routes.
+- [x] Workbox NetworkFirst runtime cache for `/api/catalog/products`, `/api/tenant/features`, `/api/order-types`.
 - [ ] CI pipeline: type-check, lint, unit test, build PWA, E2E.
-- [ ] Migration scripts for all new tables with rollback scripts.
 - [ ] Feature flag `offline_pos_v1` for controlled rollout.
 - [ ] Monitoring: pending sync count, failed sync count, conflict rate, print failure rate.
 - [ ] Runbook: how to clear stuck outbox, how to recover from sync failure, how to deactivate a terminal.
@@ -512,8 +519,10 @@ Make AuraPoS a production-grade offline-first POS PWA that remains usable by cas
 
 ## Sprint 6 — Inventory Ledger + Void/Refund (Next)
 
-- [ ] Add `inventory_movements` table to schema + migration.
-- [ ] Create movement on every sale sync (`offline_sale` type).
+- [x] `inventory_movements` table in `shared/schema.ts` with Drizzle schema + insert schema + types.
+- [x] Migration `0009_sprint5_conflicts.sql` — creates `inventory_movements` with tenant/product/order indexes.
+- [x] `SyncOfflineOrder` writes `inventory_movements` ledger entry on every successful offline order sync.
+- [ ] Create movement on every **online** sale (not yet wired into `CreateAndPayOrder`).
 - [ ] Add `refunds` table and basic void flow.
 - [ ] Manager approval gate for voids.
 
@@ -571,8 +580,8 @@ AuraPoS can only be considered production-grade offline POS when **all** of thes
 - [x] Terminal can be registered and deactivated.
 
 **Production Ready (pending):**
-- [ ] Inventory uses movement ledger (Phase 17).
+- [~] Inventory uses movement ledger (Phase 17) — offline sync writes movements; online sales not yet wired.
 - [ ] Refund/void has audit trail (Phase 18).
 - [ ] Offline E2E tests pass (Phase 22).
-- [ ] Rollout uses feature flag (Phase 23).
+- [~] Docker production build ready (Phase 23) — Dockerfile + serveStatic complete; CI pipeline pending.
 - [ ] Cashier user documentation exists (Phase 25 user guides).

@@ -15,6 +15,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === "navigate",
@@ -22,6 +23,33 @@ export default defineConfig({
             options: {
               cacheName: "pages-cache",
               networkTimeoutSeconds: 3,
+            },
+          },
+          {
+            urlPattern: /^\/api\/catalog\/products/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-catalog-cache",
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^\/api\/tenant\/features/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-tenant-features-cache",
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^\/api\/order-types/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-order-types-cache",
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],
@@ -55,7 +83,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, "..", "..", "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
   },
   server: {
