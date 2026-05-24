@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChefHat, RefreshCcw, AlertCircle, Clock, CheckCircle,
   Loader2, WifiOff, Maximize2, Minimize2, Lock, Delete,
+  Volume2, VolumeX,
 } from "lucide-react";
+import { useKDSSound } from "@/hooks/useKDSSound";
 import { KitchenTicket } from "@/components/kitchen-display/KitchenTicket";
 import { getActiveTenantId } from "@/lib/tenant";
 import { queryClient as globalQueryClient } from "@/lib/queryClient";
@@ -222,6 +224,8 @@ export default function KDSPage() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [hasPinSet, setHasPinSet] = useState(() => !!getStoredPin());
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { play, isMuted, toggleMute, unlock: unlockAudio } = useKDSSound();
+  const prevOrderIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!unlocked) return;
@@ -261,11 +265,14 @@ export default function KDSPage() {
 
   const handleKDSMessage = useCallback(
     (msg: KDSMessage) => {
-      if (msg.type === "ticket_added" || msg.type === "status_updated" || msg.type === "ticket_removed") {
+      if (msg.type === "ticket_added") {
+        queryClient.invalidateQueries({ queryKey: ["local-kitchen-tickets", tenantId] });
+        play("new_ticket");
+      } else if (msg.type === "status_updated" || msg.type === "ticket_removed") {
         queryClient.invalidateQueries({ queryKey: ["local-kitchen-tickets", tenantId] });
       }
     },
-    [queryClient, tenantId]
+    [queryClient, tenantId, play]
   );
   useKitchenChannelReceiver(handleKDSMessage);
 
@@ -301,6 +308,21 @@ export default function KDSPage() {
     preparing: allActiveOrders.filter((o) => o.status === "preparing").length,
     ready:     allActiveOrders.filter((o) => o.status === "ready").length,
   };
+
+  const allActiveOrderIdKey = allActiveOrders.map((o) => o.id).join(",");
+  useEffect(() => {
+    if (!unlocked) return;
+    const currentIds = new Set(allActiveOrders.map((o) => o.id));
+    const prev = prevOrderIdsRef.current;
+    if (prev.size > 0) {
+      const newIds = [...currentIds].filter((id) => !prev.has(id));
+      if (newIds.length > 0) {
+        play("new_ticket");
+      }
+    }
+    prevOrderIdsRef.current = currentIds;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allActiveOrderIdKey, unlocked]);
 
   const handleRefresh = async () => {
     await Promise.all([refetch(), refetchLocal()]);
@@ -366,7 +388,14 @@ export default function KDSPage() {
   }
 
   if (!unlocked) {
-    return <PinGate onUnlock={() => setUnlocked(true)} />;
+    return (
+      <PinGate
+        onUnlock={() => {
+          unlockAudio();
+          setUnlocked(true);
+        }}
+      />
+    );
   }
 
   return (
@@ -416,6 +445,19 @@ export default function KDSPage() {
           >
             {isLoading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
             Refresh
+          </button>
+
+          <button
+            onClick={toggleMute}
+            className={`p-1.5 rounded-lg transition-colors ${
+              isMuted
+                ? "bg-red-900/40 hover:bg-red-900/60 text-red-400"
+                : "bg-slate-800 hover:bg-slate-700 text-slate-400"
+            }`}
+            title={isMuted ? "Aktifkan suara notifikasi" : "Matikan suara notifikasi"}
+            data-testid="kds-button-mute"
+          >
+            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
 
           <button
