@@ -1,0 +1,302 @@
+2026-May-25 13:52:49.964941 Docker 29.4.3 with BuildKit and Buildx detected on deployment server (localhost).
+2026-May-25 13:52:49.982407 Starting deployment of Rndynt/AuraPoS:main to localhost.
+2026-May-25 13:52:50.358557 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-May-25 13:52:54.224433 ----------------------------------------
+2026-May-25 13:52:54.276644 Importing Rndynt/AuraPoS:main (commit sha 743fba678039b57e053a8a622c84073c2e12ba65) to /artifacts/n12b806llcjycxizufvo4oaz.
+2026-May-25 13:53:04.090973 Generating nixpacks configuration with: nixpacks plan -f json --env 'NIXPACKS_NODE_VERSION=22' --env 'COOLIFY_URL=https://n12lywn11oyw1wz0ziv0corq.69.197.164.221.sslip.io' --env 'COOLIFY_FQDN=n12lywn11oyw1wz0ziv0corq.69.197.164.221.sslip.io' --env 'COOLIFY_BRANCH=main' --env 'COOLIFY_RESOURCE_UUID=n12lywn11oyw1wz0ziv0corq' --build-cmd 'pnpm build' --start-cmd 'mkdir -p apps/api/dist/public; cp -r dist/public/* apps/api/dist/public/ 2>/dev/null||true; NODE_ENV=production node apps/api/dist/index.js' --install-cmd 'npm install -g pnpm@10.28.1 && pnpm install --frozen-lockfile' /artifacts/n12b806llcjycxizufvo4oaz
+2026-May-25 13:53:05.486626 Found application type: node.
+2026-May-25 13:53:05.526795 If you need further customization, please check the documentation of Nixpacks: https://nixpacks.com/docs/providers/node
+2026-May-25 13:53:07.453183 ----------------------------------------
+2026-May-25 13:53:07.475103 ⚠️ Build-time environment variable warning: NODE_ENV=production
+2026-May-25 13:53:07.495126 Affects: Node.js/npm/yarn/bun/pnpm
+2026-May-25 13:53:07.536509 Issue: Skips devDependencies installation which are often required for building (webpack, typescript, etc.)
+2026-May-25 13:53:07.564373 Recommendation: Uncheck "Available at Buildtime" or use "development" during build
+2026-May-25 13:53:07.586102
+2026-May-25 13:53:07.608867 💡 Tips to resolve build issues:
+2026-May-25 13:53:07.632862 1. Set these variables as "Runtime only" in the environment variables settings
+2026-May-25 13:53:07.659726 2. Use different values for build-time (e.g., NODE_ENV=development for build)
+2026-May-25 13:53:07.687725 3. Consider using multi-stage Docker builds to separate build and runtime environments
+2026-May-25 13:53:07.723384 ----------------------------------------
+2026-May-25 13:53:07.745343 Building docker image started.
+2026-May-25 13:53:07.769113 To check the current progress, click on Show Debug Logs.
+2026-May-25 13:59:12.268653 ========================================
+2026-May-25 13:59:12.330695 Deployment failed: Command execution failed (exit code 1): docker exec n12b806llcjycxizufvo4oaz bash -c 'bash /artifacts/build.sh'
+2026-May-25 13:59:12.330695 Error: #0 building with "default" instance using docker driver
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #1 [internal] load build definition from Dockerfile
+2026-May-25 13:59:12.330695 #1 transferring dockerfile: 2.14kB 0.0s done
+2026-May-25 13:59:12.330695 #1 DONE 0.0s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #2 [internal] load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+2026-May-25 13:59:12.330695 #2 DONE 0.5s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #3 [internal] load .dockerignore
+2026-May-25 13:59:12.330695 #3 transferring context: 544B done
+2026-May-25 13:59:12.330695 #3 DONE 0.0s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #4 [internal] load build context
+2026-May-25 13:59:12.330695 #4 ...
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #5 [ 1/16] FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067@sha256:d45c89d80e13d7ad0fd555b5130f22a866d9dd10e861f589932303ef2314c7de
+2026-May-25 13:59:12.330695 #5 resolve ghcr.io/railwayapp/nixpacks:ubuntu-1745885067@sha256:d45c89d80e13d7ad0fd555b5130f22a866d9dd10e861f589932303ef2314c7de 0.1s done
+2026-May-25 13:59:12.330695 #5 DONE 0.1s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #4 [internal] load build context
+2026-May-25 13:59:12.330695 #4 ...
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #6 [ 2/16] WORKDIR /app/
+2026-May-25 13:59:12.330695 #6 CACHED
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #4 [internal] load build context
+2026-May-25 13:59:12.330695 #4 transferring context: 6.20MB 0.7s done
+2026-May-25 13:59:12.330695 #4 DONE 0.7s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #7 [ 3/16] COPY .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix
+2026-May-25 13:59:12.330695 #7 DONE 0.6s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #8 [ 4/16] RUN nix-env -if .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix && nix-collect-garbage -d
+2026-May-25 13:59:12.330695 #8 0.474 unpacking 'https://github.com/NixOS/nixpkgs/archive/ba913eda2df8eb72147259189d55932012df6301.tar.gz' into the Git cache...
+2026-May-25 13:59:12.330695 #8 90.32 installing 'ba913eda2df8eb72147259189d55932012df6301-env'
+2026-May-25 13:59:12.330695 #8 92.67 these 3 derivations will be built:<REDACTED>@10.28.1 && pnpm install --frozen-lockfile
+2026-May-25 13:59:12.330695 #16 0.546 npm warn config production Use `--omit=dev` instead.
+2026-May-25 13:59:12.330695 #16 4.377
+2026-May-25 13:59:12.330695 #16 4.377 added 1 package in 4s
+2026-May-25 13:59:12.330695 #16 4.377
+2026-May-25 13:59:12.330695 #16 4.377 1 package is looking for funding
+2026-May-25 13:59:12.330695 #16 4.377 run `npm fund` for details
+2026-May-25 13:59:12.330695 #16 10.60 Scope: all 11 workspace projects
+2026-May-25 13:59:12.330695 #16 10.97 Lockfile is up to date, resolution step is skipped
+2026-May-25 13:59:12.330695 #16 11.26 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-May-25 13:59:12.330695 #16 11.62 Packages: +738
+2026-May-25 13:59:12.330695 #16 11.62 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-May-25 13:59:12.330695 #16 12.26 Progress: resolved 738, reused 0, downloaded 0, added 0
+2026-May-25 13:59:12.330695 #16 13.28 Progress: resolved 738, reused 0, downloaded 123, added 64
+2026-May-25 13:59:12.330695 #16 14.28 Progress: resolved 738, reused 0, downloaded 272, added 129
+2026-May-25 13:59:12.330695 #16 15.30 Progress: resolved 738, reused 0, downloaded 319, added 146
+2026-May-25 13:59:12.330695 #16 16.36 Progress: resolved 738, reused 0, downloaded 339, added 151
+2026-May-25 13:59:12.330695 #16 17.50 Progress: resolved 738, reused 0, downloaded 352, added 159
+2026-May-25 13:59:12.330695 #16 18.49 Progress: resolved 738, reused 0, downloaded 372, added 166
+2026-May-25 13:59:12.330695 #16 19.53 Progress: resolved 738, reused 0, downloaded 398, added 176
+2026-May-25 13:59:12.330695 #16 20.65 Progress: resolved 738, reused 0, downloaded 435, added 198
+2026-May-25 13:59:12.330695 #16 21.73 Progress: resolved 738, reused 0, downloaded 508, added 256
+2026-May-25 13:59:12.330695 #16 23.06 Progress: resolved 738, reused 0, downloaded 556, added 284
+2026-May-25 13:59:12.330695 #16 24.05 Progress: resolved 738, reused 0, downloaded 625, added 306
+2026-May-25 13:59:12.330695 #16 25.06 Progress: resolved 738, reused 0, downloaded 702, added 333
+2026-May-25 13:59:12.330695 #16 26.06 Progress: resolved 738, reused 0, downloaded 736, added 418
+2026-May-25 13:59:12.330695 #16 27.06 Progress: resolved 738, reused 0, downloaded 737, added 690
+2026-May-25 13:59:12.330695 #16 27.85 Progress: resolved 738, reused 0, downloaded 738, added 738, done
+2026-May-25 13:59:12.330695 #16 30.18
+2026-May-25 13:59:12.330695 #16 30.18 dependencies:
+2026-May-25 13:59:12.330695 #16 30.18 + @hookform/resolvers 5.2.2
+2026-May-25 13:59:12.330695 #16 30.18 + @jridgewell/trace-mapping 0.3.31
+2026-May-25 13:59:12.330695 #16 30.18 + @neondatabase/serverless 0.10.4
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-checkbox 1.3.3
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-dialog 1.1.15
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-label 2.1.8
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-radio-group 1.3.8
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-scroll-area 1.2.10
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-select 2.2.6
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-separator 1.1.8
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-slot 1.2.4
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-tabs 1.1.13
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-toast 1.2.15
+2026-May-25 13:59:12.330695 #16 30.18 + @radix-ui/react-tooltip 1.2.8
+2026-May-25 13:59:12.330695 #16 30.18 + @replit/vite-plugin-cartographer 0.4.11
+2026-May-25 13:59:12.330695 #16 30.18 + @replit/vite-plugin-dev-banner 0.1.2
+2026-May-25 13:59:12.330695 #16 30.18 + @replit/vite-plugin-runtime-error-modal 0.0.3
+2026-May-25 13:59:12.330695 #16 30.18 + @tanstack/react-query 5.100.10
+2026-May-25 13:59:12.330695 #16 30.18 + @types/connect-pg-simple 7.0.3
+2026-May-25 13:59:12.330695 #16 30.18 + @types/express 5.0.6
+2026-May-25 13:59:12.330695 #16 30.18 + @types/express-session 1.19.0
+2026-May-25 13:59:12.330695 #16 30.18 + @types/passport 1.0.17
+2026-May-25 13:59:12.330695 #16 30.18 + @types/passport-local 1.0.38
+2026-May-25 13:59:12.330695 #16 30.18 + @types/react 18.3.28
+2026-May-25 13:59:12.330695 #16 30.18 + @types/react-dom 18.3.7
+2026-May-25 13:59:12.330695 #16 30.18 + @types/ws 8.18.1
+2026-May-25 13:59:12.330695 #16 30.18 + @vitejs/plugin-react 5.2.0
+2026-May-25 13:59:12.330695 #16 30.18 + class-variance-authority 0.7.1
+2026-May-25 13:59:12.330695 #16 30.18 + clsx 2.1.1
+2026-May-25 13:59:12.330695 #16 30.18 + connect-pg-simple 10.0.0
+2026-May-25 13:59:12.330695 #16 30.18 + dotenv 17.4.2
+2026-May-25 13:59:12.330695 #16 30.18 + drizzle-orm 0.39.3
+2026-May-25 13:59:12.330695 #16 30.18 + drizzle-zod 0.7.1
+2026-May-25 13:59:12.330695 #16 30.18 + express 4.22.2
+2026-May-25 13:59:12.330695 #16 30.18 + express-session 1.19.0
+2026-May-25 13:59:12.330695 #16 30.18 + lucide-react 0.553.0
+2026-May-25 13:59:12.330695 #16 30.18 + memorystore 1.6.8
+2026-May-25 13:59:12.330695 #16 30.18 + nanoid 5.1.11
+2026-May-25 13:59:12.330695 #16 30.18 + passport 0.7.0
+2026-May-25 13:59:12.330695 #16 30.18 + passport-local 1.0.0
+2026-May-25 13:59:12.330695 #16 30.18 + postgres 3.4.9
+2026-May-25 13:59:12.330695 #16 30.18 + react 18.3.1
+2026-May-25 13:59:12.330695 #16 30.18 + react-dom 18.3.1
+2026-May-25 13:59:12.330695 #16 30.18 + react-hook-form 7.76.0
+2026-May-25 13:59:12.330695 #16 30.18 + tailwind-merge 3.6.0
+2026-May-25 13:59:12.330695 #16 30.18 + tailwindcss-animate 1.0.7
+2026-May-25 13:59:12.330695 #16 30.18 + tsconfig-paths 4.2.0
+2026-May-25 13:59:12.330695 #16 30.18 + vaul 1.1.2
+2026-May-25 13:59:12.330695 #16 30.18 + wouter 3.9.0
+2026-May-25 13:59:12.330695 #16 30.18 + ws 8.20.1
+2026-May-25 13:59:12.330695 #16 30.18 + zod 3.25.76
+2026-May-25 13:59:12.330695 #16 30.18 + zod-validation-error 5.0.0
+2026-May-25 13:59:12.330695 #16 30.18
+2026-May-25 13:59:12.330695 #16 30.18 devDependencies:
+2026-May-25 13:59:12.330695 #16 30.18 + @tailwindcss/typography 0.5.19
+2026-May-25 13:59:12.330695 #16 30.18 + @types/node 20.16.11
+2026-May-25 13:59:12.330695 #16 30.18 + autoprefixer 10.5.0
+2026-May-25 13:59:12.330695 #16 30.18 + drizzle-kit 0.31.10
+2026-May-25 13:59:12.330695 #16 30.18 + esbuild 0.25.12
+2026-May-25 13:59:12.330695 #16 30.18 + postcss 8.5.14
+2026-May-25 13:59:12.330695 #16 30.18 + prettier 3.8.3
+2026-May-25 13:59:12.330695 #16 30.18 + tailwindcss 3.4.19
+2026-May-25 13:59:12.330695 #16 30.18 + tsx 4.22.2
+2026-May-25 13:59:12.330695 #16 30.18 + turbo 1.13.4
+2026-May-25 13:59:12.330695 #16 30.18 + typescript 5.6.3
+2026-May-25 13:59:12.330695 #16 30.18 + vite 5.4.21
+2026-May-25 13:59:12.330695 #16 30.18
+2026-May-25 13:59:12.330695 #16 30.68 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-May-25 13:59:12.330695 #16 30.68 │ │
+2026-May-25 13:59:12.330695 #16 30.68 │ Ignored build scripts: esbuild@0.18.20, esbuild@0.21.5, esbuild@0.25.12, │
+2026-May-25 13:59:12.330695 #16 30.68 │ esbuild@0.28.0. │
+2026-May-25 13:59:12.330695 #16 30.68 │ Run "pnpm approve-builds" to pick which dependencies should be allowed │
+2026-May-25 13:59:12.330695 #16 30.68 │ to run scripts. │
+2026-May-25 13:59:12.330695 #16 30.68 │ │
+2026-May-25 13:59:12.330695 #16 30.68 ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-May-25 13:59:12.330695 #16 30.94 Done in 21.8s using pnpm v10.26.1
+2026-May-25 13:59:12.330695 #16 DONE 32.6s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #17 [13/16] COPY . /app/.
+2026-May-25 13:59:12.330695 #17 DONE 2.3s
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 #18 [14/16] RUN pnpm build
+2026-May-25 13:59:12.330695 #18 2.539
+2026-May-25 13:59:12.330695 #18 2.539 > @pos/root@1.0.0 build /app
+2026-May-25 13:59:12.330695 #18 2.539 > turbo run build && pnpm run build:static:api
+2026-May-25 13:59:12.330695 #18 2.539
+2026-May-25 13:59:12.330695 #18 2.792
+2026-May-25 13:59:12.330695 #18 2.792 Attention:
+2026-May-25 13:59:12.330695 #18 2.792 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-May-25 13:59:12.330695 #18 2.792 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-May-25 13:59:12.330695 #18 2.792 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-May-25 13:59:12.330695 #18 2.792 https://turbo.build/repo/docs/telemetry
+2026-May-25 13:59:12.330695 #18 2.792
+2026-May-25 13:59:12.330695 #18 2.962 • Packages in scope:<REDACTED>@pos/api, @pos/application, @pos/core, @pos/domain, @pos/features, @pos/infrastructure, @pos/offline, @pos/shared, @pos/terminal-web, @pos/web
+2026-May-25 13:59:12.330695 #18 2.962 • Running build in 10 packages
+2026-May-25 13:59:12.330695 #18 2.962 • Remote caching disabled
+2026-May-25 13:59:12.330695 #18 3.086 @pos/web:build: cache miss, executing 95dabff4932abb39
+2026-May-25 13:59:12.330695 #18 3.113 @pos/api:build: cache miss, executing a6003ea331eeca9c
+2026-May-25 13:59:12.330695 #18 3.117 @pos/terminal-web:build: cache miss, executing 026ddca4a4046738
+2026-May-25 13:59:12.330695 #18 4.242 @pos/web:build:
+2026-May-25 13:59:12.330695 #18 4.242 @pos/web:build: > @pos/web@1.0.0 build /app/apps/web
+2026-May-25 13:59:12.330695 #18 4.242 @pos/web:build: > next build
+2026-May-25 13:59:12.330695 #18 4.242 @pos/web:build:
+2026-May-25 13:59:12.330695 #18 4.349 @pos/terminal-web:build:
+2026-May-25 13:59:12.330695 #18 4.349 @pos/terminal-web:build: > @pos/terminal-web@1.0.0 build /app/apps/pos-terminal-web
+2026-May-25 13:59:12.330695 #18 4.349 @pos/terminal-web:build: > tsc && vite build
+2026-May-25 13:59:12.330695 #18 4.349 @pos/terminal-web:build:
+2026-May-25 13:59:12.330695 #18 4.389 @pos/api:build:
+2026-May-25 13:59:12.330695 #18 4.389 @pos/api:build: > @pos/api@1.0.0 build /app/apps/api
+2026-May-25 13:59:12.330695 #18 4.389 @pos/api:build: > esbuild src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --splitting
+2026-May-25 13:59:12.330695 #18 4.389 @pos/api:build:
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build:
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/routes-4UT3NJ2F.js 231.1kb
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/chunk-HG22VEPV.js 33.3kb
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/index.js 31.8kb
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/vite-YKTPJM3U.js 5.5kb
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/chunk-36H2K5YY.js 4.9kb
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/schema-ZKVQ2JCZ.js 3.0kb
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/chunk-NG4KNR52.js 806b
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/serveStatic-KAGGA42I.js 785b
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/chunk-MLKGABMK.js 191b
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: dist/database-IYK3OIH7.js 121b
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build:
+2026-May-25 13:59:12.330695 #18 4.572 @pos/api:build: ⚡ Done in 69ms
+2026-May-25 13:59:12.330695 #18 5.935 @pos/web:build: ⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+2026-May-25 13:59:12.330695 #18 5.947 @pos/web:<REDACTED>@pos/web:build: This information is used to shape Next.js' roadmap and prioritize features.
+2026-May-25 13:59:12.330695 #18 5.947 @pos/web:build: You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-May-25 13:59:12.330695 #18 5.948 @pos/web:build: https://nextjs.org/telemetry
+2026-May-25 13:59:12.330695 #18 5.948 @pos/web:<REDACTED>@pos/web:build: ▲ Next.js 14.2.35
+2026-May-25 13:59:12.330695 #18 6.161 @pos/web:build:
+2026-May-25 13:59:12.330695 #18 6.319 @pos/web:build: Creating an optimized production build ...
+2026-May-25 13:59:12.330695 #18 46.04 @pos/web:build: ✓ Compiled successfully
+2026-May-25 13:59:12.330695 #18 46.04 @pos/web:build: Linting and checking validity of types ...
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: src/hooks/useFeatures.ts(6,26): error TS2339: Property 'features' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: src/hooks/useFeatures.ts(10,26): error TS7006: Parameter 'f' implicitly has an 'any' type.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: src/lib/api/hooks.ts(544,5): error TS2769: No overload matches this call.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Overload 1 of 3, '(options: DefinedInitialDataOptions<{ features: FeatureCheck[]; total: number; }, Error, { features: FeatureCheck[]; total: number; }, readonly unknown[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '() => Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'QueryFunction<{ features: FeatureCheck[]; total: number; }, readonly unknown[]>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type '{ features: FeatureCheck[]; total: number; } | Promise<{ features: FeatureCheck[]; total: number; }>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'Promise<{ features: FeatureCheck[]; total: number; }>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }' is not assignable to type '{ features: FeatureCheck[]; total: number; }'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '{ features: TenantFeature[]; total: number; }' is not assignable to type '{ features: FeatureCheck[]; total: number; }'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Types of property 'features' are incompatible.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'TenantFeature[]' is not assignable to type 'FeatureCheck[]'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Property 'enabled' is missing in type 'TenantFeature' but required in type 'FeatureCheck'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Overload 2 of 3, '(options: UndefinedInitialDataOptions<{ features: FeatureCheck[]; total: number; }, Error, { features: FeatureCheck[]; total: number; }, readonly unknown[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '() => Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'unique symbol | QueryFunction<{ features: FeatureCheck[]; total: number; }, readonly unknown[], never> | undefined'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '() => Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'QueryFunction<{ features: FeatureCheck[]; total: number; }, readonly unknown[], never>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type '{ features: FeatureCheck[]; total: number; } | Promise<{ features: FeatureCheck[]; total: number; }>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'Promise<{ features: FeatureCheck[]; total: number; }>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }' is not assignable to type '{ features: FeatureCheck[]; total: number; }'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '{ features: TenantFeature[]; total: number; }' is not assignable to type '{ features: FeatureCheck[]; total: number; }'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Types of property 'features' are incompatible.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'TenantFeature[]' is not assignable to type 'FeatureCheck[]'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Property 'enabled' is missing in type 'TenantFeature' but required in type 'FeatureCheck'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Overload 3 of 3, '(options: UseQueryOptions<{ features: FeatureCheck[]; total: number; }, Error, { features: FeatureCheck[]; total: number; }, readonly unknown[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '() => Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'unique symbol | QueryFunction<{ features: FeatureCheck[]; total: number; }, readonly unknown[], never> | undefined'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '() => Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'QueryFunction<{ features: FeatureCheck[]; total: number; }, readonly unknown[], never>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type '{ features: FeatureCheck[]; total: number; } | Promise<{ features: FeatureCheck[]; total: number; }>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'Promise<{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }>' is not assignable to type 'Promise<{ features: FeatureCheck[]; total: number; }>'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '{ features: FeatureCheck[]; total: number; } | { features: TenantFeature[]; total: number; }' is not assignable to type '{ features: FeatureCheck[]; total: number; }'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type '{ features: TenantFeature[]; total: number; }' is not assignable to type '{ features: FeatureCheck[]; total: number; }'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Types of property 'features' are incompatible.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Type 'TenantFeature[]' is not assignable to type 'FeatureCheck[]'.
+2026-May-25 13:59:12.330695 #18 50.21 @pos/terminal-web:build: Property 'enabled' is missing in type 'TenantFeature' but required in type 'FeatureCheck'.
+2026-May-25 13:59:12.330695 #18 50.35 @pos/terminal-web:build: ELIFECYCLE Command failed with exit code 2.
+2026-May-25 13:59:12.330695 #18 50.43 @pos/terminal-web:build: ERROR: command finished with error: command (/app/apps/pos-terminal-web) /root/.local/share/pnpm/.tools/pnpm/10.26.1/bin/pnpm run build exited (2)
+2026-May-25 13:59:12.330695 #18 50.48 @pos/web:build: ELIFECYCLE Command failed.
+2026-May-25 13:59:12.330695 #18 50.49 @pos/terminal-web#build: command (/app/apps/pos-terminal-web) /root/.local/share/pnpm/.tools/pnpm/10.26.1/bin/pnpm run build exited (2)
+2026-May-25 13:59:12.330695 #18 50.49
+2026-May-25 13:59:12.330695 #18 50.49 Tasks: 1 successful, 3 total
+2026-May-25 13:59:12.330695 #18 50.49 Cached: 0 cached, 3 total
+2026-May-25 13:59:12.330695 #18 50.49 Time: 47.691s
+2026-May-25 13:59:12.330695 #18 50.49 Failed: @pos/terminal-web#build
+2026-May-25 13:59:12.330695 #18 50.49
+2026-May-25 13:59:12.330695 #18 50.50 ERROR run failed: command exited (2)
+2026-May-25 13:59:12.330695 #18 50.81 ELIFECYCLE Command failed with exit code 2.
+2026-May-25 13:59:12.330695 #18 ERROR: process "/bin/bash -ol pipefail -c pnpm build" did not complete successfully: exit code: 2
+2026-May-25 13:59:12.330695 ------
+2026-May-25 13:59:12.330695 > [14/16] RUN pnpm build:
+2026-May-25 13:59:12.330695 50.48 @pos/web:build: ELIFECYCLE Command failed.
+2026-May-25 13:59:12.330695 50.49 @pos/terminal-web#build: command (/app/apps/pos-terminal-web) /root/.local/share/pnpm/.tools/pnpm/10.26.1/bin/pnpm run build exited (2)
+2026-May-25 13:59:12.330695 50.49
+2026-May-25 13:59:12.330695 50.49 Tasks: 1 successful, 3 total
+2026-May-25 13:59:12.330695 50.49 Cached: 0 cached, 3 total
+2026-May-25 13:59:12.330695 50.49 Time: 47.691s
+2026-May-25 13:59:12.330695 50.49 Failed: @pos/terminal-web#build
+2026-May-25 13:59:12.330695 50.49
+2026-May-25 13:59:12.330695 50.50 ERROR run failed: command exited (2)
+2026-May-25 13:59:12.330695 50.81 ELIFECYCLE Command failed with exit code 2.
+2026-May-25 13:59:12.330695 ------
+2026-May-25 13:59:12.330695
+2026-May-25 13:59:12.330695 7 warnings found (use docker --debug to expand):
+2026-May-25 13:59:12.330695 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 13)
+2026-May-25 13:59:12.330695 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 13)
+2026-May-25 13:59:12.330695 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 13)
+2026-May-25 13:59:12.330695 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "BETTER_AUTH_SECRET") (line 14)
+2026-May-25 13:59:12.330695 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "BETTER_AUTH_TRUSTED_ORIGINS") (line 14)
+2026-May-25 13:59:12.330695 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "BETTER_AUTH_URL") (line 14)
+2026-May-25 13:59:12.330695 - UndefinedVar: Usage of undefined variable '$NIXPACKS_PATH' (line 24)
+2026-May-25 13:59:12.330695 Dockerfile:30
+2026-May-25 13:59:12.330695 --------------------
+2026-May-25 13:59:12.330695 28 | # build phase
+2026-May-25 13:59:12.330695 29 | COPY . /app/.
+2026-May-25 13:59:12.330695 30 | >>> RUN pnpm build
+2026-May-25 13:59:12.330695 31 |
+2026-May-25 13:59:12.330695 32 |
+2026-May-25 13:59:12.330695 --------------------
+2026-May-25 13:59:12.330695 ERROR: failed to build: failed to solve: process "/bin/bash -ol pipefail -c pnpm build" did not complete successfully: exit code: 2
+2026-May-25 13:59:12.330695 exit status 1
+2026-May-25 13:59:12.764897 ========================================
+2026-May-25 13:59:12.795323 Deployment failed. Removing the new version of your application.
+2026-May-25 13:59:13.641574 Gracefully shutting down build container: n12b806llcjycxizufvo4oaz
