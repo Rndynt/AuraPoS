@@ -178,7 +178,7 @@ const MODULE_CATALOG: ModuleItem[] = [
     icon: MapPin,
     iconBg: "bg-cyan-100",
     iconColor: "text-cyan-600",
-    requiredPlan: "free",
+    requiredPlan: "pro",
     badge: "Pro",
     bundledFeatures: [],
   },
@@ -266,7 +266,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     title: "Dashboard Analitik", category: "Laporan & Analitik",
     description: "Grafik real-time, KPI bisnis, & insight penjualan interaktif.",
     longDesc: "Dashboard visual dengan grafik omzet, chart produk terlaris, rata-rata nilai transaksi, dan insight bisnis. Update real-time, bisa filter per periode.",
-    icon: PieChart, iconBg: "bg-violet-100", iconColor: "text-violet-600", requiredPlan: "free", badge: "Baru",
+    icon: PieChart, iconBg: "bg-violet-100", iconColor: "text-violet-600", requiredPlan: "growth", badge: "Baru",
   },
   // Integrasi Eksternal
   {

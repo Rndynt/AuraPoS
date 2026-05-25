@@ -388,7 +388,7 @@ export default function StockPage() {
   const [, setLocation] = useLocation();
   const { tenantId } = useTenant();
   const { data: profile } = useTenantProfile(tenantId);
-  const isAdvanced = profile?.moduleConfig?.enableInventory === true;
+  const isAdvanced = profile?.moduleConfig?.enable_inventory === true;
 
   const { data, isLoading, refetch, isFetching } = useStockProducts();
   const items = data?.data.items ?? [];

@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 interface FeatureGateProps {
   enabled: boolean;
   featureName: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function FeatureGate({ enabled, featureName, children }: FeatureGateProps) {
