@@ -428,9 +428,7 @@ function ModuleCard({
         {comingSoon ? (
           <span className="text-[10px] font-bold text-slate-400 italic">Coming soon</span>
         ) : isCore ? (
-          <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-            <ShieldCheck size={10} /> Inti Sistem
-          </span>
+        ""
         ) : unlocked ? (
           <button
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -523,9 +521,7 @@ function FeatureCard({
         {comingSoon ? (
           <span className="text-[10px] font-bold text-slate-400 italic">Coming soon</span>
         ) : isCore ? (
-          <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-            <ShieldCheck size={10} /> Inti Sistem
-          </span>
+      ""
         ) : unlocked ? (
           <button
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
