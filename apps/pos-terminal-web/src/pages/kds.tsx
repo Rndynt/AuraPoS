@@ -146,7 +146,7 @@ export default function KDSPage() {
   const { isOnline } = useNetworkStatus();
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const now = useClock();
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const { play, isMuted, toggleMute, unlock: unlockAudio } = useKDSSound();
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
@@ -274,7 +274,7 @@ export default function KDSPage() {
   };
 
   const handleUpdateServerStatus = async (orderId: string, newStatus: string) => {
-    setIsUpdating(true);
+    setUpdatingOrderId(orderId);
     try {
       const res = await fetch(`/api/kds/orders/${orderId}/status`, {
         method: "PATCH",
@@ -289,12 +289,12 @@ export default function KDSPage() {
     } catch {
       toast({ title: "Gagal", description: "Tidak dapat memperbarui status order", variant: "destructive" });
     } finally {
-      setIsUpdating(false);
+      setUpdatingOrderId(null);
     }
   };
 
   const handleUpdateLocalStatus = async (ticketId: string, newStatus: string) => {
-    setIsUpdating(true);
+    setUpdatingOrderId(ticketId);
     try {
       await updateLocalKitchenTicketStatus(ticketId, newStatus as KitchenTicketStatus);
       toast({ title: "Status lokal diperbarui", description: STATUS_LABELS[newStatus] ?? newStatus });
@@ -303,7 +303,7 @@ export default function KDSPage() {
     } catch {
       toast({ title: "Gagal", description: "Tidak dapat memperbarui status lokal", variant: "destructive" });
     } finally {
-      setIsUpdating(false);
+      setUpdatingOrderId(null);
     }
   };
 
@@ -470,7 +470,7 @@ export default function KDSPage() {
                         <KitchenTicket
                           order={order}
                           onUpdateStatus={handleUpdateStatus}
-                          isLoading={isUpdating}
+                          isLoading={updatingOrderId === order.id}
                         />
                       </div>
                     ))}
