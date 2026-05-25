@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
-import { Box, Layers, Save, ChevronLeft, Trash2 } from "lucide-react";
+import { Box, Layers, Save, ChevronLeft, Trash2, Store } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+
+interface OutletAvailability {
+  outletId: string;
+  outletName: string;
+  isAvailable: boolean;
+  isToggling?: boolean;
+}
 
 interface ProductFormProps {
   product?: any | null;
@@ -10,6 +17,8 @@ interface ProductFormProps {
   onNavigateToVariants?: () => void;
   onDelete?: () => void;
   categories?: Array<{ id: string; name: string }>;
+  outletAvailability?: OutletAvailability[];
+  onToggleOutlet?: (outletId: string, isAvailable: boolean) => void;
 }
 
 const InputField = ({
@@ -45,6 +54,8 @@ export default function ProductForm({
   onNavigateToVariants,
   onDelete,
   categories = [],
+  outletAvailability = [],
+  onToggleOutlet,
 }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -90,6 +101,7 @@ export default function ProductForm({
     : categories.find((c) => c.name === formData.category) ?? null;
 
   const variantsCount = product?.option_groups?.length || 0;
+  const showOutletSection = product && outletAvailability.length > 1;
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in">
@@ -129,6 +141,7 @@ export default function ProductForm({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-3xl mx-auto w-full space-y-6 pb-20">
+        {/* Informasi Dasar */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
             <Box size={18} /> Informasi Dasar
@@ -212,6 +225,64 @@ export default function ProductForm({
           </div>
         </div>
 
+        {/* Ketersediaan per Outlet — hanya muncul jika tenant punya 2+ outlet */}
+        {showOutletSection && (
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="font-bold text-slate-700 mb-1 flex items-center gap-2">
+              <Store size={18} /> Ketersediaan per Outlet
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Atur apakah produk ini tersedia di masing-masing cabang.
+            </p>
+            <div className="space-y-3">
+              {outletAvailability.map((oa) => (
+                <div
+                  key={oa.outletId}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"
+                  data-testid={`outlet-row-${oa.outletId}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        oa.isAvailable ? "bg-emerald-500" : "bg-slate-300"
+                      }`}
+                    />
+                    <span className="text-sm font-semibold text-slate-700">{oa.outletName}</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        oa.isAvailable
+                          ? "bg-emerald-50 text-emerald-600"
+                          : "bg-slate-100 text-slate-400"
+                      }`}
+                    >
+                      {oa.isAvailable ? "Tersedia" : "Tidak tersedia"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => onToggleOutlet?.(oa.outletId, !oa.isAvailable)}
+                    disabled={oa.isToggling}
+                    data-testid={`toggle-outlet-${oa.outletId}`}
+                    className={`w-12 h-6 rounded-full p-1 transition-colors flex-shrink-0 ${
+                      oa.isToggling
+                        ? "opacity-50 cursor-wait"
+                        : oa.isAvailable
+                        ? "bg-emerald-500"
+                        : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
+                        oa.isAvailable ? "translate-x-6" : ""
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Varian */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm opacity-80">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-slate-700 flex items-center gap-2">

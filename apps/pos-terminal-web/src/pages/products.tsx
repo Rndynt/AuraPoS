@@ -528,6 +528,17 @@ export default function ProductsPage() {
   };
 
   if (viewState === "form_product") {
+    // Build outlet availability list for the product being edited
+    const formOutletAvailability = allOutlets.map((outlet) => {
+      const key = `${outlet.id}:${editingProduct?.id}`;
+      return {
+        outletId: outlet.id,
+        outletName: outlet.name,
+        isAvailable: outletConfigMap.has(key) ? outletConfigMap.get(key)! : true,
+        isToggling: togglingOutletProduct.has(key),
+      };
+    });
+
     return (
       <ProductForm
         product={editingProduct}
@@ -537,6 +548,10 @@ export default function ProductsPage() {
         isLoading={updateProduct.isPending || createProduct.isPending}
         onNavigateToVariants={handleNavigateToVariants}
         onDelete={editingProduct ? handleDeleteProduct : undefined}
+        outletAvailability={formOutletAvailability}
+        onToggleOutlet={(outletId, newValue) =>
+          handleToggleOutletProduct(outletId, editingProduct?.id, !newValue)
+        }
       />
     );
   }
