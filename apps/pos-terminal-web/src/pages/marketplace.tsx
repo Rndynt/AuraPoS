@@ -90,7 +90,7 @@ const MODULE_CATALOG: ModuleItem[] = [
     category: "Restoran & Meja",
     description: "Tiket dapur, layar KDS, & printer dapur — satu paket lengkap.",
     longDesc:
-      "Satu modul, tiga fitur terintegrasi: tiket pesanan otomatis (kitchen_ticket), layar display staf dapur (kitchen_display), dan dukungan printer thermal dapur (kitchen_printer). Ketiganya harus aktif bersama agar workflow dapur bekerja.",
+      "Satu modul, tiga fitur terintegrasi: tiket pesanan otomatis ke dapur, layar display khusus staf dapur, dan dukungan printer thermal dapur. Ketiganya aktif bersama agar alur kerja dapur berjalan lancar.",
     icon: ChefHat,
     iconBg: "bg-orange-100",
     iconColor: "text-orange-600",
@@ -157,7 +157,7 @@ const MODULE_CATALOG: ModuleItem[] = [
     category: "Inventori",
     description: "Stok otomatis berkurang + laporan inventori — satu paket.",
     longDesc:
-      "Dua fitur dalam satu: tracking stok otomatis per transaksi (inventory_tracking) dan laporan pergerakan stok harian/mingguan (inventory_reports). Notifikasi saat stok hampir habis.",
+      "Dua fitur dalam satu: stok otomatis berkurang setiap transaksi, plus laporan pergerakan stok harian dan mingguan. Notifikasi otomatis saat stok hampir habis.",
     icon: Package,
     iconBg: "bg-amber-100",
     iconColor: "text-amber-600",
