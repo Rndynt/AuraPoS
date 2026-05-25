@@ -45,8 +45,8 @@ function mapApiOrder(raw: Record<string, any>): Order {
     created_at: new Date(raw.createdAt),
     updated_at: raw.updatedAt ? new Date(raw.updatedAt) : undefined,
     completed_at: raw.completedAt ? new Date(raw.completedAt) : undefined,
-    items: Array.isArray(raw.orderItems)
-      ? raw.orderItems.map((item: Record<string, any>) => ({
+    items: Array.isArray(raw.items ?? raw.orderItems)
+      ? (raw.items ?? raw.orderItems).map((item: Record<string, any>) => ({
           id: item.id,
           product_id: item.productId,
           product_name: item.productName,
