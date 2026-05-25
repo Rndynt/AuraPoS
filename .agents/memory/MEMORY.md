@@ -1,2 +1,2 @@
-- [Plan tier naming mismatch](plan-tier-naming.md) — marketplace uses free/growth/pro; domain type uses free/starter/professional/enterprise; standardized on free/growth/pro in API
-- [Tenant plan_tier field casing](tenant-field-casing.md) — domain Tenant type uses snake_case plan_tier, not planTier; always access as profile.tenant.plan_tier in frontend
+- [UUID migration pattern](uuid-migration.md) — FK constraint names in this DB use Drizzle pattern {table}_{col}_{ref_table}_{ref_col}_fk, not the _fkey PostgreSQL default; always drop both variants with IF EXISTS.
+- [Tenant ID design](tenant-id-design.md) — tenants.id uses slug strings (e.g. "thamada"), NOT uuid; never change to uuid type. All other business entity id columns are uuid.

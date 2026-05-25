@@ -287,6 +287,192 @@ app.use((req, res, next) => {
           );
         `);
 
+        // Fix outlets whose id is not a valid UUID (e.g. slug-based ids from old code).
+        // Strategy: insert new row with UUID, cascade-update all FK children, delete old row.
+        // This avoids FK constraint violations that occur when updating a PK in-place.
+        await authDb.execute(sql`
+          DO $$
+          DECLARE
+            bad RECORD;
+            new_uuid TEXT;
+          BEGIN
+            FOR bad IN
+              SELECT id, tenant_id, name, slug, address, phone, is_default, is_active, created_at, updated_at
+              FROM outlets
+              WHERE id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            LOOP
+              new_uuid := gen_random_uuid()::text;
+              -- Insert new row with proper UUID; use temp slug to avoid unique constraint collision
+              INSERT INTO outlets (id, tenant_id, name, slug, address, phone, is_default, is_active, created_at, updated_at)
+              VALUES (new_uuid, bad.tenant_id, bad.name, '__migrating_' || new_uuid, bad.address, bad.phone, bad.is_default, bad.is_active, bad.created_at, bad.updated_at);
+              -- Cascade update all FK children to point to new UUID
+              UPDATE outlet_product_configs  SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE "tables"                SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE orders                  SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE kitchen_tickets         SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE terminals               SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE user_outlet_assignments SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE inventory_movements     SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE sync_batches            SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE sync_events             SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE server_sync_conflicts   SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              UPDATE tenant_order_types      SET outlet_id = new_uuid WHERE outlet_id = bad.id;
+              -- Remove old row (no FK references remain)
+              DELETE FROM outlets WHERE id = bad.id;
+              -- Restore original slug
+              UPDATE outlets SET slug = bad.slug WHERE id = new_uuid;
+              RAISE NOTICE 'Fixed outlet id: % -> %', bad.id, new_uuid;
+            END LOOP;
+          END;
+          $$;
+        `);
+
+        // Migrate all uuid-intended id/FK columns from varchar to uuid type.
+        // Guard: skip if outlets.id is already uuid type.
+        await authDb.execute(sql`
+          DO $$
+          DECLARE col_type text;
+          BEGIN
+            SELECT data_type INTO col_type FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'outlets' AND column_name = 'id';
+            IF col_type <> 'character varying' THEN
+              RAISE NOTICE 'UUID column migration already applied, skipping.';
+              RETURN;
+            END IF;
+
+            -- Drop FK constraints (Drizzle naming: {table}_{col}_{ref_table}_{ref_col}_fk)
+            -- Also try legacy _fkey variants with IF EXISTS so both name styles are handled
+            ALTER TABLE outlet_product_configs  DROP CONSTRAINT IF EXISTS outlet_product_configs_outlet_id_outlets_id_fk;
+            ALTER TABLE outlet_product_configs  DROP CONSTRAINT IF EXISTS outlet_product_configs_outlet_id_fkey;
+            ALTER TABLE outlet_product_configs  DROP CONSTRAINT IF EXISTS outlet_product_configs_product_id_products_id_fk;
+            ALTER TABLE outlet_product_configs  DROP CONSTRAINT IF EXISTS outlet_product_configs_product_id_fkey;
+            ALTER TABLE user_outlet_assignments DROP CONSTRAINT IF EXISTS user_outlet_assignments_outlet_id_outlets_id_fk;
+            ALTER TABLE user_outlet_assignments DROP CONSTRAINT IF EXISTS user_outlet_assignments_outlet_id_fkey;
+            ALTER TABLE "tables"               DROP CONSTRAINT IF EXISTS tables_outlet_id_outlets_id_fk;
+            ALTER TABLE "tables"               DROP CONSTRAINT IF EXISTS tables_outlet_id_fkey;
+            ALTER TABLE tenant_order_types     DROP CONSTRAINT IF EXISTS tenant_order_types_outlet_id_outlets_id_fk;
+            ALTER TABLE tenant_order_types     DROP CONSTRAINT IF EXISTS tenant_order_types_outlet_id_fkey;
+            ALTER TABLE tenant_order_types     DROP CONSTRAINT IF EXISTS tenant_order_types_order_type_id_order_types_id_fk;
+            ALTER TABLE tenant_order_types     DROP CONSTRAINT IF EXISTS tenant_order_types_order_type_id_fkey;
+            ALTER TABLE orders                 DROP CONSTRAINT IF EXISTS orders_outlet_id_outlets_id_fk;
+            ALTER TABLE orders                 DROP CONSTRAINT IF EXISTS orders_outlet_id_fkey;
+            ALTER TABLE orders                 DROP CONSTRAINT IF EXISTS orders_order_type_id_order_types_id_fk;
+            ALTER TABLE orders                 DROP CONSTRAINT IF EXISTS orders_order_type_id_fkey;
+            ALTER TABLE order_items            DROP CONSTRAINT IF EXISTS order_items_order_id_orders_id_fk;
+            ALTER TABLE order_items            DROP CONSTRAINT IF EXISTS order_items_order_id_fkey;
+            ALTER TABLE order_items            DROP CONSTRAINT IF EXISTS order_items_product_id_products_id_fk;
+            ALTER TABLE order_items            DROP CONSTRAINT IF EXISTS order_items_product_id_fkey;
+            ALTER TABLE order_item_modifiers   DROP CONSTRAINT IF EXISTS order_item_modifiers_order_item_id_order_items_id_fk;
+            ALTER TABLE order_item_modifiers   DROP CONSTRAINT IF EXISTS order_item_modifiers_order_item_id_fkey;
+            ALTER TABLE order_payments         DROP CONSTRAINT IF EXISTS order_payments_order_id_orders_id_fk;
+            ALTER TABLE order_payments         DROP CONSTRAINT IF EXISTS order_payments_order_id_fkey;
+            ALTER TABLE kitchen_tickets        DROP CONSTRAINT IF EXISTS kitchen_tickets_outlet_id_outlets_id_fk;
+            ALTER TABLE kitchen_tickets        DROP CONSTRAINT IF EXISTS kitchen_tickets_outlet_id_fkey;
+            ALTER TABLE kitchen_tickets        DROP CONSTRAINT IF EXISTS kitchen_tickets_order_id_orders_id_fk;
+            ALTER TABLE kitchen_tickets        DROP CONSTRAINT IF EXISTS kitchen_tickets_order_id_fkey;
+            ALTER TABLE terminals              DROP CONSTRAINT IF EXISTS terminals_outlet_id_outlets_id_fk;
+            ALTER TABLE terminals              DROP CONSTRAINT IF EXISTS terminals_outlet_id_fkey;
+            ALTER TABLE inventory_movements    DROP CONSTRAINT IF EXISTS inventory_movements_outlet_id_outlets_id_fk;
+            ALTER TABLE inventory_movements    DROP CONSTRAINT IF EXISTS inventory_movements_outlet_id_fkey;
+            ALTER TABLE inventory_movements    DROP CONSTRAINT IF EXISTS inventory_movements_product_id_products_id_fk;
+            ALTER TABLE inventory_movements    DROP CONSTRAINT IF EXISTS inventory_movements_product_id_fkey;
+            ALTER TABLE inventory_movements    DROP CONSTRAINT IF EXISTS inventory_movements_order_id_orders_id_fk;
+            ALTER TABLE inventory_movements    DROP CONSTRAINT IF EXISTS inventory_movements_order_id_fkey;
+            ALTER TABLE sync_batches           DROP CONSTRAINT IF EXISTS sync_batches_outlet_id_outlets_id_fk;
+            ALTER TABLE sync_batches           DROP CONSTRAINT IF EXISTS sync_batches_outlet_id_fkey;
+            ALTER TABLE sync_events            DROP CONSTRAINT IF EXISTS sync_events_outlet_id_outlets_id_fk;
+            ALTER TABLE sync_events            DROP CONSTRAINT IF EXISTS sync_events_outlet_id_fkey;
+            ALTER TABLE server_sync_conflicts  DROP CONSTRAINT IF EXISTS server_sync_conflicts_outlet_id_outlets_id_fk;
+            ALTER TABLE server_sync_conflicts  DROP CONSTRAINT IF EXISTS server_sync_conflicts_outlet_id_fkey;
+            ALTER TABLE product_option_groups  DROP CONSTRAINT IF EXISTS product_option_groups_product_id_products_id_fk;
+            ALTER TABLE product_option_groups  DROP CONSTRAINT IF EXISTS product_option_groups_product_id_fkey;
+            ALTER TABLE product_options        DROP CONSTRAINT IF EXISTS product_options_option_group_id_product_option_groups_id_fk;
+            ALTER TABLE product_options        DROP CONSTRAINT IF EXISTS product_options_option_group_id_fkey;
+            ALTER TABLE products               DROP CONSTRAINT IF EXISTS products_category_id_product_categories_id_fk;
+            ALTER TABLE products               DROP CONSTRAINT IF EXISTS products_category_id_fkey;
+
+            -- Alter all PK id columns to uuid type
+            ALTER TABLE outlets               ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE user_outlet_assignments ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE "tables"              ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE product_categories    ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE products              ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE outlet_product_configs ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE product_option_groups  ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE product_options        ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE order_types            ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE tenant_order_types     ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE orders                 ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE order_items            ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE order_item_modifiers   ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE order_payments         ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE kitchen_tickets        ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE tenant_features        ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE terminals              ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE sync_batches           ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE sync_events            ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE server_sync_conflicts  ALTER COLUMN id TYPE uuid USING id::uuid;
+            ALTER TABLE inventory_movements    ALTER COLUMN id TYPE uuid USING id::uuid;
+
+            -- Alter FK columns (outlet_id, product_id, order_id, etc.) to uuid
+            ALTER TABLE user_outlet_assignments ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE "tables"               ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE tenant_order_types     ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE tenant_order_types     ALTER COLUMN order_type_id TYPE uuid USING order_type_id::uuid;
+            ALTER TABLE orders                 ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE orders                 ALTER COLUMN order_type_id TYPE uuid USING order_type_id::uuid;
+            ALTER TABLE order_items            ALTER COLUMN order_id TYPE uuid USING order_id::uuid;
+            ALTER TABLE order_items            ALTER COLUMN product_id TYPE uuid USING product_id::uuid;
+            ALTER TABLE order_item_modifiers   ALTER COLUMN order_item_id TYPE uuid USING order_item_id::uuid;
+            ALTER TABLE order_payments         ALTER COLUMN order_id TYPE uuid USING order_id::uuid;
+            ALTER TABLE kitchen_tickets        ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE kitchen_tickets        ALTER COLUMN order_id TYPE uuid USING order_id::uuid;
+            ALTER TABLE terminals              ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE inventory_movements    ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE inventory_movements    ALTER COLUMN product_id TYPE uuid USING product_id::uuid;
+            ALTER TABLE inventory_movements    ALTER COLUMN order_id TYPE uuid USING order_id::uuid;
+            ALTER TABLE sync_batches           ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE sync_events            ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE server_sync_conflicts  ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE outlet_product_configs ALTER COLUMN outlet_id TYPE uuid USING outlet_id::uuid;
+            ALTER TABLE outlet_product_configs ALTER COLUMN product_id TYPE uuid USING product_id::uuid;
+            ALTER TABLE product_option_groups  ALTER COLUMN product_id TYPE uuid USING product_id::uuid;
+            ALTER TABLE product_options        ALTER COLUMN option_group_id TYPE uuid USING option_group_id::uuid;
+            ALTER TABLE products               ALTER COLUMN category_id TYPE uuid USING category_id::uuid;
+
+            -- Re-add FK constraints
+            ALTER TABLE outlet_product_configs  ADD CONSTRAINT outlet_product_configs_outlet_id_fkey  FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE CASCADE;
+            ALTER TABLE outlet_product_configs  ADD CONSTRAINT outlet_product_configs_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
+            ALTER TABLE user_outlet_assignments ADD CONSTRAINT user_outlet_assignments_outlet_id_fkey FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE CASCADE;
+            ALTER TABLE "tables"               ADD CONSTRAINT tables_outlet_id_fkey               FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE CASCADE;
+            ALTER TABLE tenant_order_types     ADD CONSTRAINT tenant_order_types_outlet_id_fkey    FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE CASCADE;
+            ALTER TABLE tenant_order_types     ADD CONSTRAINT tenant_order_types_order_type_id_fkey FOREIGN KEY (order_type_id) REFERENCES order_types(id) ON DELETE CASCADE;
+            ALTER TABLE orders                 ADD CONSTRAINT orders_outlet_id_fkey               FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE CASCADE;
+            ALTER TABLE orders                 ADD CONSTRAINT orders_order_type_id_fkey            FOREIGN KEY (order_type_id) REFERENCES order_types(id);
+            ALTER TABLE order_items            ADD CONSTRAINT order_items_order_id_fkey            FOREIGN KEY (order_id)   REFERENCES orders(id) ON DELETE CASCADE;
+            ALTER TABLE order_items            ADD CONSTRAINT order_items_product_id_fkey          FOREIGN KEY (product_id) REFERENCES products(id);
+            ALTER TABLE order_item_modifiers   ADD CONSTRAINT order_item_modifiers_order_item_id_fkey FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE;
+            ALTER TABLE order_payments         ADD CONSTRAINT order_payments_order_id_fkey         FOREIGN KEY (order_id)   REFERENCES orders(id) ON DELETE CASCADE;
+            ALTER TABLE kitchen_tickets        ADD CONSTRAINT kitchen_tickets_outlet_id_fkey       FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE CASCADE;
+            ALTER TABLE kitchen_tickets        ADD CONSTRAINT kitchen_tickets_order_id_fkey        FOREIGN KEY (order_id)   REFERENCES orders(id) ON DELETE CASCADE;
+            ALTER TABLE terminals              ADD CONSTRAINT terminals_outlet_id_fkey             FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE SET NULL;
+            ALTER TABLE inventory_movements    ADD CONSTRAINT inventory_movements_outlet_id_fkey   FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE SET NULL;
+            ALTER TABLE inventory_movements    ADD CONSTRAINT inventory_movements_product_id_fkey  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
+            ALTER TABLE inventory_movements    ADD CONSTRAINT inventory_movements_order_id_fkey    FOREIGN KEY (order_id)   REFERENCES orders(id) ON DELETE SET NULL;
+            ALTER TABLE sync_batches           ADD CONSTRAINT sync_batches_outlet_id_fkey          FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE SET NULL;
+            ALTER TABLE sync_events            ADD CONSTRAINT sync_events_outlet_id_fkey           FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE SET NULL;
+            ALTER TABLE server_sync_conflicts  ADD CONSTRAINT server_sync_conflicts_outlet_id_fkey FOREIGN KEY (outlet_id)  REFERENCES outlets(id) ON DELETE SET NULL;
+            ALTER TABLE product_option_groups  ADD CONSTRAINT product_option_groups_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
+            ALTER TABLE product_options        ADD CONSTRAINT product_options_option_group_id_fkey FOREIGN KEY (option_group_id) REFERENCES product_option_groups(id) ON DELETE CASCADE;
+            ALTER TABLE products               ADD CONSTRAINT products_category_id_fkey            FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE SET NULL;
+
+            RAISE NOTICE 'UUID column migration completed successfully.';
+          EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'UUID column migration failed: %. Manual intervention may be needed.', SQLERRM;
+          END;
+          $$;
+        `);
+
         // Add outlet_id columns to operational tables (all nullable, safe to re-run)
         await authDb.execute(sql`
           ALTER TABLE "tables"              ADD COLUMN IF NOT EXISTS outlet_id varchar REFERENCES outlets(id) ON DELETE CASCADE;

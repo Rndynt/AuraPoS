@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, json, jsonb, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, uuid, integer, decimal, boolean, timestamp, json, jsonb, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
 });
@@ -65,7 +65,7 @@ export type Tenant = typeof tenants.$inferSelect;
 // Additional outlets require purchasing the multi_outlet feature (Rp 10.000/month each).
 
 export const outlets = pgTable("outlets", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   name: text("name").notNull().default("Cabang Utama"),
   slug: varchar("slug", { length: 100 }).notNull().default("main"),
@@ -94,9 +94,9 @@ export type Outlet = typeof outlets.$inferSelect;
 // Manager/Cashier/Staff are locked to their assigned outlet(s).
 
 export const userOutletAssignments = pgTable("user_outlet_assignments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: varchar("user_id").notNull(),
-  outletId: varchar("outlet_id").notNull().references(() => outlets.id, { onDelete: "cascade" }),
+  outletId: uuid("outlet_id").notNull().references(() => outlets.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 50 }).notNull().default("staff"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -120,9 +120,9 @@ export type UserOutletAssignment = typeof userOutletAssignments.$inferSelect;
 // ── Tables (Dine-in) ──────────────────────────────────────────────────────────
 
 export const tables = pgTable("tables", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
   tableNumber: varchar("table_number").notNull(),
   tableName: text("table_name"),
   floor: varchar("floor"),
@@ -173,7 +173,7 @@ export type InsertTenantModuleConfig = z.infer<typeof insertTenantModuleConfigSc
 export type TenantModuleConfig = typeof tenantModuleConfigs.$inferSelect;
 
 export const productCategories = pgTable("product_categories", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
@@ -187,9 +187,9 @@ export const productCategories = pgTable("product_categories", {
 }));
 
 export const products = pgTable("products", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  categoryId: varchar("category_id").references(() => productCategories.id, { onDelete: "set null" }),
+  categoryId: uuid("category_id").references(() => productCategories.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   description: text("description"),
   basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
@@ -221,9 +221,9 @@ export type Product = typeof products.$inferSelect;
 // ── Outlet Product Configs (Hybrid catalog — disable a product per outlet) ────
 
 export const outletProductConfigs = pgTable("outlet_product_configs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  outletId: varchar("outlet_id").notNull().references(() => outlets.id, { onDelete: "cascade" }),
-  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().defaultRandom(),
+  outletId: uuid("outlet_id").notNull().references(() => outlets.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   isAvailable: boolean("is_available").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -242,9 +242,9 @@ export type InsertOutletProductConfig = z.infer<typeof insertOutletProductConfig
 export type OutletProductConfig = typeof outletProductConfigs.$inferSelect;
 
 export const productOptionGroups = pgTable("product_option_groups", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   selectionType: varchar("selection_type", { length: 20 }).notNull(),
   minSelections: integer("min_selections").notNull().default(0),
@@ -271,9 +271,9 @@ export type InsertProductOptionGroup = z.infer<typeof insertProductOptionGroupSc
 export type ProductOptionGroup = typeof productOptionGroups.$inferSelect;
 
 export const productOptions = pgTable("product_options", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  optionGroupId: varchar("option_group_id").notNull().references(() => productOptionGroups.id, { onDelete: "cascade" }),
+  optionGroupId: uuid("option_group_id").notNull().references(() => productOptionGroups.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   priceDelta: decimal("price_delta", { precision: 10, scale: 2 }).notNull().default("0"),
   inventorySku: text("inventory_sku"),
@@ -297,7 +297,7 @@ export type InsertProductOption = z.infer<typeof insertProductOptionSchema>;
 export type ProductOption = typeof productOptions.$inferSelect;
 
 export const orderTypes = pgTable("order_types", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   code: varchar("code", { length: 50 }).notNull().unique(),
   name: text("name").notNull(),
   description: text("description"),
@@ -326,10 +326,10 @@ export type OrderType = typeof orderTypes.$inferSelect;
 
 // outlet_id nullable — NULL means applies to all outlets of that tenant
 export const tenantOrderTypes = pgTable("tenant_order_types", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
-  orderTypeId: varchar("order_type_id").notNull().references(() => orderTypes.id, { onDelete: "cascade" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
+  orderTypeId: uuid("order_type_id").notNull().references(() => orderTypes.id, { onDelete: "cascade" }),
   isEnabled: boolean("is_enabled").notNull().default(true),
   config: json("config"),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -353,10 +353,10 @@ export type InsertTenantOrderType = z.infer<typeof insertTenantOrderTypeSchema>;
 export type TenantOrderType = typeof tenantOrderTypes.$inferSelect;
 
 export const orders = pgTable("orders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
-  orderTypeId: varchar("order_type_id").references(() => orderTypes.id),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
+  orderTypeId: uuid("order_type_id").references(() => orderTypes.id),
   salesChannel: varchar("sales_channel", { length: 50 }),
   orderNumber: text("order_number").notNull(),
   orderDate: timestamp("order_date").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -407,9 +407,9 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 
 export const orderItems = pgTable("order_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  productId: varchar("product_id").notNull().references(() => products.id),
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id),
   productName: text("product_name").notNull(),
   variantId: varchar("variant_id"),
   variantName: text("variant_name"),
@@ -438,8 +438,8 @@ export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
 
 export const orderItemModifiers = pgTable("order_item_modifiers", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  orderItemId: varchar("order_item_id").notNull().references(() => orderItems.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderItemId: uuid("order_item_id").notNull().references(() => orderItems.id, { onDelete: "cascade" }),
   optionGroupId: varchar("option_group_id").notNull(),
   optionGroupName: text("option_group_name").notNull(),
   optionId: varchar("option_id").notNull(),
@@ -460,8 +460,8 @@ export type InsertOrderItemModifier = z.infer<typeof insertOrderItemModifierSche
 export type OrderItemModifier = typeof orderItemModifiers.$inferSelect;
 
 export const orderPayments = pgTable("order_payments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   paymentDate: timestamp("payment_date").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -486,10 +486,10 @@ export type InsertOrderPayment = z.infer<typeof insertOrderPaymentSchema>;
 export type OrderPayment = typeof orderPayments.$inferSelect;
 
 export const kitchenTickets = pgTable("kitchen_tickets", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "cascade" }),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
   ticketNumber: text("ticket_number").notNull(),
   tableNumber: text("table_number"),
   status: varchar("status", { length: 50 }).notNull().default("pending"),
@@ -519,7 +519,7 @@ export type InsertKitchenTicket = z.infer<typeof insertKitchenTicketSchema>;
 export type KitchenTicket = typeof kitchenTickets.$inferSelect;
 
 export const tenantFeatures = pgTable("tenant_features", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   featureCode: text("feature_code").notNull(),
   activatedAt: timestamp("activated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -551,9 +551,9 @@ export type TenantFeature = typeof tenantFeatures.$inferSelect;
 // ── Sprint 4: Terminal Registry ───────────────────────────────────────────────
 
 export const terminals = pgTable("terminals", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
   terminalCode: varchar("terminal_code", { length: 128 }).notNull(),
   name: text("name").notNull().default("Cashier"),
   deviceFingerprint: text("device_fingerprint"),
@@ -574,9 +574,9 @@ export type Terminal = typeof terminals.$inferSelect;
 // ── Sprint 4: Sync Batches ────────────────────────────────────────────────────
 
 export const syncBatches = pgTable("sync_batches", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
   terminalId: varchar("terminal_id"),
   batchSize: integer("batch_size").notNull().default(0),
   syncedCount: integer("synced_count").notNull().default(0),
@@ -598,9 +598,9 @@ export type SyncBatch = typeof syncBatches.$inferSelect;
 // ── Sprint 4: Sync Events ─────────────────────────────────────────────────────
 
 export const syncEvents = pgTable("sync_events", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
   terminalId: varchar("terminal_id"),
   batchId: varchar("batch_id"),
   entityType: varchar("entity_type", { length: 50 }).notNull().default("order"),
@@ -625,9 +625,9 @@ export type SyncEvent = typeof syncEvents.$inferSelect;
 // ── Sprint 4: Server-Side Sync Conflicts ─────────────────────────────────────
 
 export const serverSyncConflicts = pgTable("server_sync_conflicts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
   terminalId: varchar("terminal_id"),
   localOrderId: varchar("local_order_id", { length: 128 }),
   serverOrderId: varchar("server_order_id"),
@@ -651,11 +651,11 @@ export type ServerSyncConflict = typeof serverSyncConflicts.$inferSelect;
 // ── Sprint 5: Inventory Movements Ledger ─────────────────────────────────────
 
 export const inventoryMovements = pgTable("inventory_movements", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  outletId: varchar("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
-  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-  orderId: varchar("order_id").references(() => orders.id, { onDelete: "set null" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
   terminalId: varchar("terminal_id", { length: 255 }),
   movementType: varchar("movement_type", { length: 30 }).notNull(),
   quantityDelta: integer("quantity_delta").notNull(),
