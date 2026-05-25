@@ -549,7 +549,7 @@ export function useTenantFeatures() {
         updateTenantCachedAt(tenantId).catch(() => undefined);
         return { features, total: features.length };
       } catch (err) {
-        const cached = await getCachedFeatures(tenantId) as TenantFeature[];
+        const cached = await getCachedFeatures(tenantId) as FeatureCheck[];
         if (cached.length > 0) return { features: cached, total: cached.length };
         throw err;
       }
