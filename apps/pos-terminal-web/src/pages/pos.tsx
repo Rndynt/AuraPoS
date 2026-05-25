@@ -18,7 +18,8 @@ import { useOfflineOrderSubmit } from "@/hooks/useOfflineOrderSubmit";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption, Order } from "@pos/domain/orders/types";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ShoppingCart, ShoppingBag, Loader2, ChefHat, ListOrdered } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -43,6 +44,7 @@ export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [combinedDraftOpen, setCombinedDraftOpen] = useState(false);
+  const [postSaveDialog, setPostSaveDialog] = useState<{ open: boolean; orderId: string | null }>({ open: false, orderId: null });
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
@@ -793,12 +795,19 @@ export default function POSPage() {
         });
       }
 
-      cart.clearCart();
-      setMobileCartOpen(false);
-      
-      // Clear the URL parameter if we were continuing an order
-      if (continueOrderId) {
-        setLocation("/pos");
+      const savedOrderId: string | null = orderResult?.order?.id ?? null;
+      const showPostDialog = savedOrderId && (hasKitchenTicket || isOrderQueueEnabled);
+
+      if (showPostDialog) {
+        // Keep cart items in memory for offline kitchen ticket path, but close mobile drawer
+        setMobileCartOpen(false);
+        setPostSaveDialog({ open: true, orderId: savedOrderId });
+        // Clear URL param now if updating
+        if (continueOrderId) setLocation("/pos");
+      } else {
+        cart.clearCart();
+        setMobileCartOpen(false);
+        if (continueOrderId) setLocation("/pos");
       }
     } catch (error) {
       const isNetworkError = error instanceof TypeError || (error instanceof Error && /network|fetch/i.test(error.message));
@@ -1068,6 +1077,72 @@ export default function POSPage() {
         isSubmitting={isProcessingQuickCharge}
         defaultPaymentMethod={cart.paymentMethod}
       />
+
+      {/* Post-Save Action Dialog */}
+      <Dialog
+        open={postSaveDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            cart.clearCart();
+            setPostSaveDialog({ open: false, orderId: null });
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm" data-testid="dialog-post-save-action">
+          <DialogHeader>
+            <DialogTitle className="text-base font-black text-slate-800">Pesanan Disimpan</DialogTitle>
+            <DialogDescription className="text-sm text-slate-500">
+              Pilih tindakan selanjutnya untuk pesanan ini
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-1">
+            {hasKitchenTicket && (
+              <Button
+                className="w-full justify-start gap-3 h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                data-testid="button-post-save-send-kitchen"
+                onClick={async () => {
+                  if (postSaveDialog.orderId) {
+                    await handleSendToKitchen(postSaveDialog.orderId);
+                  }
+                  cart.clearCart();
+                  setPostSaveDialog({ open: false, orderId: null });
+                }}
+              >
+                <ChefHat size={18} />
+                Kirim ke Dapur
+              </Button>
+            )}
+            {isOrderQueueEnabled && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 h-12 border-slate-200 text-slate-700 font-bold hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                data-testid="button-post-save-add-queue"
+                onClick={async () => {
+                  if (postSaveDialog.orderId) {
+                    await handleUpdateOrderStatus(postSaveDialog.orderId, "confirmed");
+                  }
+                  cart.clearCart();
+                  setPostSaveDialog({ open: false, orderId: null });
+                }}
+              >
+                <ListOrdered size={18} />
+                Tambah ke Antrian
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              className="w-full h-10 text-slate-500 font-medium"
+              data-testid="button-post-save-done"
+              onClick={() => {
+                cart.clearCart();
+                setPostSaveDialog({ open: false, orderId: null });
+              }}
+            >
+              Selesai
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Charge Processing Overlay */}
       {isProcessingQuickCharge && (

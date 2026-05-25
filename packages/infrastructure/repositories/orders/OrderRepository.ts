@@ -186,7 +186,7 @@ export class OrderRepository
       // Attach items to each order
       return orderList.map((order) => ({
         ...order,
-        orderItems: itemsMap.get(order.id) || [],
+        items: itemsMap.get(order.id) || [],
       }));
     } catch (error) {
       this.handleError('find orders by tenant', error);
