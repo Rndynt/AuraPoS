@@ -49,6 +49,7 @@ export default function ProductsPage() {
   const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<string | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOutletId, setSelectedOutletId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [insertBeforeId, setInsertBeforeId] = useState<string | "end" | null>(null);
   const [localCategories, setLocalCategories] = useState<Array<{ id: string; name: string; items: any[] }>>([]);
@@ -644,7 +645,8 @@ export default function ProductsPage() {
       />
 
       {activeTab === "products" && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 space-y-2">
+          {/* Search */}
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -665,6 +667,38 @@ export default function ProductsPage() {
               </button>
             )}
           </div>
+
+          {/* Outlet filter — only shown when tenant has 2+ outlets */}
+          {hasMultiOutlet && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <Store size={14} className="text-slate-400 flex-shrink-0" />
+              <button
+                onClick={() => setSelectedOutletId(null)}
+                data-testid="filter-outlet-all"
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                  selectedOutletId === null
+                    ? "bg-slate-800 text-white border-slate-800"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-700"
+                }`}
+              >
+                Semua Cabang
+              </button>
+              {allOutlets.map((outlet) => (
+                <button
+                  key={outlet.id}
+                  onClick={() => setSelectedOutletId(outlet.id)}
+                  data-testid={`filter-outlet-${outlet.id}`}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    selectedOutletId === outlet.id
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600"
+                  }`}
+                >
+                  {outlet.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -898,45 +932,32 @@ export default function ProductsPage() {
                                     )}
                                   </div>
 
-                                  {/* Outlet availability chips — only shown when tenant has 2+ outlets */}
-                                  {hasMultiOutlet && (
-                                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                                      <Store size={10} className="text-slate-400 flex-shrink-0" />
-                                      {allOutlets.map((outlet) => {
-                                        const key = `${outlet.id}:${product.id}`;
-                                        const isAvailable = outletConfigMap.has(key)
-                                          ? outletConfigMap.get(key)!
-                                          : true;
-                                        const isToggling = togglingOutletProduct.has(key);
-                                        return (
-                                          <button
-                                            key={outlet.id}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleToggleOutletProduct(outlet.id, product.id, isAvailable);
-                                            }}
-                                            disabled={isToggling}
-                                            title={`${outlet.name}: ${isAvailable ? "Tersedia — klik untuk nonaktifkan" : "Tidak tersedia — klik untuk aktifkan"}`}
-                                            data-testid={`outlet-chip-${outlet.id}-${product.id}`}
-                                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border transition-all cursor-pointer select-none ${
-                                              isToggling
-                                                ? "opacity-50 cursor-wait"
-                                                : isAvailable
-                                                ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                                                : "bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200 line-through"
-                                            }`}
-                                          >
-                                            <span
-                                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                                                isAvailable ? "bg-emerald-500" : "bg-slate-300"
-                                              }`}
-                                            />
-                                            {outlet.name}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                  {/* Outlet availability — single badge when a filter is active */}
+                                  {hasMultiOutlet && selectedOutletId && (() => {
+                                    const key = `${selectedOutletId}:${product.id}`;
+                                    const isAvail = outletConfigMap.has(key) ? outletConfigMap.get(key)! : true;
+                                    const isToggling = togglingOutletProduct.has(key);
+                                    return (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleOutletProduct(selectedOutletId, product.id, isAvail);
+                                        }}
+                                        disabled={isToggling}
+                                        data-testid={`outlet-badge-${selectedOutletId}-${product.id}`}
+                                        className={`mt-1.5 inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer select-none ${
+                                          isToggling
+                                            ? "opacity-50 cursor-wait bg-slate-50 border-slate-200 text-slate-400"
+                                            : isAvail
+                                            ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                            : "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
+                                        }`}
+                                      >
+                                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isAvail ? "bg-emerald-500" : "bg-red-400"}`} />
+                                        {isAvail ? "Tersedia" : "Tidak tersedia"}
+                                      </button>
+                                    );
+                                  })()}
                                 </div>
                               </div>
 
