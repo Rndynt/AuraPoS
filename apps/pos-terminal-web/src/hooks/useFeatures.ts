@@ -7,7 +7,7 @@ export function useFeatures() {
 
   const hasFeature = (code: string): boolean => {
     if (isLoading) return true;
-    return features.some(f => f.feature_code === code && f.is_active);
+    return features.some(f => f.feature_code === code);
   };
 
   return {

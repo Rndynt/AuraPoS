@@ -540,9 +540,7 @@ export default function MarketplacePage() {
   const currentPlan: PlanTier = (profile?.tenant?.plan_tier as PlanTier) ?? "free";
 
   const activeFeatureCodes = new Set(
-    (featuresData?.features ?? [])
-      .filter((f: any) => f.is_active)
-      .map((f: any) => f.feature_code)
+    (featuresData?.features ?? []).map((f: any) => f.feature_code)
   );
 
   // Module active check: moduleConfig from API uses snake_case keys

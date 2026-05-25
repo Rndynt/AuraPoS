@@ -539,12 +539,12 @@ export function useCancelOrder() {
  */
 export function useTenantFeatures() {
   const tenantId = getActiveTenantId();
-  return useQuery<{ features: TenantFeature[]; total: number }>({
+  return useQuery<{ features: FeatureCheck[]; total: number }>({
     queryKey: ["/api/tenants/features", tenantId],
     queryFn: async () => {
       try {
         const data = await fetchWithTenantHeader("/api/tenants/features");
-        const features: TenantFeature[] = data?.features ?? [];
+        const features: FeatureCheck[] = data?.features ?? [];
         saveCachedFeatures(tenantId, features).catch(() => undefined);
         updateTenantCachedAt(tenantId).catch(() => undefined);
         return { features, total: features.length };
