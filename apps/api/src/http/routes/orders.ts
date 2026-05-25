@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import * as OrdersController from '../controllers/OrdersController';
 import * as OrderTypesController from '../controllers/OrderTypesController';
+import { requireModule } from '../middleware/featureGuard';
 
 const router = Router();
 
@@ -62,7 +63,7 @@ router.post('/:id/cancel', OrdersController.cancelOrder);
 // POST /api/orders/:id/payments - Record payment
 router.post('/:id/payments', OrdersController.recordPayment);
 
-// POST /api/orders/:id/kitchen-ticket - Create kitchen ticket
-router.post('/:id/kitchen-ticket', OrdersController.createKitchenTicket);
+// POST /api/orders/:id/kitchen-ticket - Create kitchen ticket (requires kitchen module)
+router.post('/:id/kitchen-ticket', requireModule('enableKitchenTicket'), OrdersController.createKitchenTicket);
 
 export default router;

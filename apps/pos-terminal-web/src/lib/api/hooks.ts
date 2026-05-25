@@ -540,11 +540,11 @@ export function useCancelOrder() {
 export function useTenantFeatures() {
   const tenantId = getActiveTenantId();
   return useQuery<{ features: TenantFeature[]; total: number }>({
-    queryKey: ["/api/tenants/features"],
+    queryKey: ["/api/tenants/features", tenantId],
     queryFn: async () => {
       try {
         const data = await fetchWithTenantHeader("/api/tenants/features");
-        const features: TenantFeature[] = data?.features ?? (Array.isArray(data) ? data : []);
+        const features: TenantFeature[] = data?.features ?? [];
         saveCachedFeatures(tenantId, features).catch(() => undefined);
         updateTenantCachedAt(tenantId).catch(() => undefined);
         return { features, total: features.length };
@@ -554,6 +554,7 @@ export function useTenantFeatures() {
         throw err;
       }
     },
+    staleTime: 30_000,
   });
 }
 

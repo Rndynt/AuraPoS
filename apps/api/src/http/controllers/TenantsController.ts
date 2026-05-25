@@ -172,7 +172,8 @@ export const registerTenant = asyncHandler(async (req: Request, res: Response) =
 
 /**
  * POST /api/tenants/features/toggle
- * Activate or deactivate a single feature code for the current tenant
+ * Activate or deactivate a single feature code for the current tenant.
+ * Enforces plan tier — a tenant cannot activate a feature that requires a higher plan.
  */
 export const toggleFeature = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
@@ -187,8 +188,26 @@ export const toggleFeature = asyncHandler(async (req: Request, res: Response) =>
   }
 
   const { feature_code } = parsed.data;
-  const repo = container.tenantFeatureRepository;
 
+  // ── Plan tier enforcement ──────────────────────────────────────────────────
+  const [tenantRow] = await db
+    .select({ planTier: tenants.planTier })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  const planTier = tenantRow?.planTier ?? 'free';
+  const allowedFeatures = PLAN_FEATURE_MAP[planTier] ?? PLAN_FEATURE_MAP.free;
+
+  if (!allowedFeatures.includes(feature_code)) {
+    throw createError(
+      `Fitur '${feature_code}' tidak tersedia pada paket ${planTier}. Upgrade paket untuk mengaktifkan fitur ini.`,
+      403,
+      'PLAN_RESTRICTION',
+    );
+  }
+
+  const repo = container.tenantFeatureRepository;
   const existing = await repo.findByTenantAndFeature(tenantId, feature_code);
 
   let updated;

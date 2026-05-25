@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
+import { useTenantFeatures } from "@/lib/api/hooks";
 import { useToast } from "@/hooks/use-toast";
 import { getActiveTenantId } from "@/lib/tenant";
 import { PageHeader } from "@/components/design";
@@ -325,24 +326,6 @@ const PLAN_RANK: Record<PlanTier, number> = { free: 0, growth: 1, pro: 2 };
 const MODULE_CATS = ["Semua", "Restoran & Meja", "Pelanggan", "Inventori", "Ekspansi"];
 const FEATURE_CATS = ["Semua", "Kasir & Transaksi", "Notifikasi", "Hardware & Cetak", "Laporan & Analitik", "Integrasi Eksternal"];
 
-// ─── Hooks ─────────────────────────────────────────────────────────────────────
-
-function useActiveFeatures(tenantId: string) {
-  return useQuery({
-    queryKey: ["/api/tenants/features", tenantId],
-    queryFn: async () => {
-      const res = await fetch("/api/tenants/features", {
-        headers: { "x-tenant-id": tenantId },
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch features");
-      const json = await res.json();
-      return (json.data?.features ?? []) as Array<{ feature_code: string; is_active: boolean }>;
-    },
-    enabled: !!tenantId,
-  });
-}
-
 // ─── Card Components ───────────────────────────────────────────────────────────
 
 function ModuleCard({
@@ -541,7 +524,7 @@ export default function MarketplacePage() {
   const [, setLocation] = useLocation();
   const { tenantId, moduleConfig } = useTenant();
   const { data: profile } = useTenantProfile(tenantId);
-  const { data: activeFeaturesList = [], isLoading: featuresLoading } = useActiveFeatures(tenantId);
+  const { data: featuresData, isLoading: featuresLoading } = useTenantFeatures();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -556,12 +539,10 @@ export default function MarketplacePage() {
   // plan_tier uses snake_case in the domain type — planTier (camelCase) is the DB column alias
   const currentPlan: PlanTier = (profile?.tenant?.plan_tier as PlanTier) ?? "free";
 
-  // Build active feature codes Set from API.
-  // getActiveFeatures endpoint already filters to is_active=true records only —
-  // the FeatureCheck domain type uses `enabled`, not `is_active`, so we must NOT
-  // re-filter here or the Set would always be empty.
   const activeFeatureCodes = new Set(
-    activeFeaturesList.map((f: any) => f.feature_code)
+    (featuresData?.features ?? [])
+      .filter((f: any) => f.is_active)
+      .map((f: any) => f.feature_code)
   );
 
   // Module active check: moduleConfig from API uses snake_case keys
@@ -635,10 +616,7 @@ export default function MarketplacePage() {
           body: JSON.stringify({ feature_code: fItem.featureCode }),
         });
         if (!res.ok) throw new Error();
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["/api/tenants/features", tenantId] }),
-          queryClient.invalidateQueries({ queryKey: ["/api/tenants/features"] }),
-        ]);
+        await queryClient.invalidateQueries({ queryKey: ["/api/tenants/features", tenantId] });
         const wasActive = isFeatureActive(fItem);
         toast({ title: !wasActive ? `${item.title} diaktifkan` : `${item.title} dinonaktifkan` });
       }
