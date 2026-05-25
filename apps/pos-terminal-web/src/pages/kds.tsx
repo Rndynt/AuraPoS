@@ -25,6 +25,43 @@ import {
 import type { LocalKitchenTicket, KitchenTicketStatus } from "@pos/offline";
 import type { Order } from "@pos/domain/orders/types";
 
+// ── Normalize server response (camelCase) → domain Order type (snake_case) ────
+function normalizeServerOrder(raw: any): Order {
+  const items = (raw.items ?? []).map((item: any) => ({
+    id: item.id,
+    product_id: item.productId ?? item.product_id ?? '',
+    product_name: item.productName ?? item.product_name ?? '(tanpa nama)',
+    base_price: Number(item.unitPrice ?? item.base_price ?? 0),
+    quantity: item.quantity ?? 1,
+    item_subtotal: Number(item.itemSubtotal ?? item.item_subtotal ?? 0),
+    variant_name: item.variantName ?? item.variant_name ?? null,
+    selected_options: item.selected_options ?? item.selectedOptions ?? [],
+    notes: item.notes ?? null,
+    status: item.status ?? 'pending',
+  }));
+
+  return {
+    id: raw.id,
+    tenant_id: raw.tenantId ?? raw.tenant_id,
+    order_number: raw.orderNumber ?? raw.order_number ?? raw.id,
+    status: raw.status,
+    payment_status: raw.paymentStatus ?? raw.payment_status ?? 'unpaid',
+    customer_name: raw.customerName ?? raw.customer_name ?? null,
+    table_number: raw.tableNumber ?? raw.table_number ?? null,
+    order_type_name: raw.orderTypeName ?? raw.order_type_name ?? null,
+    items,
+    subtotal: Number(raw.subtotal ?? 0),
+    tax_amount: Number(raw.taxAmount ?? raw.tax_amount ?? 0),
+    service_charge_amount: Number(raw.serviceChargeAmount ?? raw.service_charge_amount ?? 0),
+    discount_amount: Number(raw.discountAmount ?? raw.discount_amount ?? 0),
+    total_amount: Number(raw.totalAmount ?? raw.total_amount ?? 0),
+    paid_amount: Number(raw.paidAmount ?? raw.paid_amount ?? 0),
+    notes: raw.notes ?? null,
+    created_at: raw.createdAt ?? raw.created_at,
+    updated_at: raw.updatedAt ?? raw.updated_at ?? null,
+  } as Order;
+}
+
 // ── localStorage keys ─────────────────────────────────────────────────────────
 const KDS_DEVICE_KEY  = "kds_device_key";
 const KDS_DEVICE_NAME = "kds_device_name";
@@ -159,7 +196,7 @@ export default function KDSPage() {
     enabled: isOnline && !!apiKey,
   });
 
-  const serverOrders: Order[] = ordersData?.orders ?? [];
+  const serverOrders: Order[] = (ordersData?.orders ?? []).map(normalizeServerOrder);
   const serverActiveOrders = serverOrders.filter((o) =>
     (ACTIVE_STATUSES as readonly string[]).includes(o.status)
   );
