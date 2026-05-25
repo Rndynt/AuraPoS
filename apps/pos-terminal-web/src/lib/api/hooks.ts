@@ -9,6 +9,7 @@ import type { Product } from "@pos/domain/catalog/types";
 import type { Order, OrderItem, OrderPayment, KitchenTicket, SelectedOption, OrderType, TenantOrderType } from "@pos/domain/orders/types";
 import type { TenantFeature, FeatureCheck } from "@pos/domain/tenants/types";
 import { getActiveTenantId } from "@/lib/tenant";
+import { getActiveOutletId } from "@/lib/outlet";
 import {
   getCachedOrderTypes,
   saveCachedOrderTypes,
@@ -123,6 +124,7 @@ export type UseProductsFilters = {
 
 export function useProducts(filters?: UseProductsFilters) {
   const tenantId = getActiveTenantId();
+  const outletId = getActiveOutletId();
   const queryParams = new URLSearchParams();
   if (filters?.category) {
     queryParams.append("category", filters.category);
@@ -134,7 +136,7 @@ export function useProducts(filters?: UseProductsFilters) {
   const url = `/api/catalog/products${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
   return useQuery<{ products: Product[]; total: number }>({
-    queryKey: ["/api/catalog/products", JSON.stringify(filters || {})],
+    queryKey: ["/api/catalog/products", tenantId, outletId, JSON.stringify(filters || {})],
     queryFn: async () => {
       try {
         const data = await fetchWithTenantHeader(url);
@@ -184,6 +186,8 @@ export type UseOrdersOptions = {
 };
 
 export function useOrders(filters?: UseOrdersFilters, options?: UseOrdersOptions) {
+  const tenantId = getActiveTenantId();
+  const outletId = getActiveOutletId();
   const queryParams = new URLSearchParams();
   if (filters?.status) {
     queryParams.append("status", filters.status);
@@ -207,7 +211,7 @@ export function useOrders(filters?: UseOrdersFilters, options?: UseOrdersOptions
   const url = `/api/orders${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
   return useQuery<{ orders: Order[]; pagination: { page: number; limit: number; total: number } }>({
-    queryKey: ["/api/orders", JSON.stringify(filters || {})],
+    queryKey: ["/api/orders", tenantId, outletId, JSON.stringify(filters || {})],
     queryFn: async () => {
       const data = await fetchWithTenantHeader(url);
       return {

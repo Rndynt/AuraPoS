@@ -41,8 +41,9 @@ export type CategoryItem = { id: string; name: string; is_active: boolean; displ
 
 export function useCategories() {
   const tenantId = getActiveTenantId();
+  const outletId = getActiveOutletId();
   return useQuery<CategoryItem[]>({
-    queryKey: ['/api/catalog/categories'],
+    queryKey: ['/api/catalog/categories', tenantId, outletId],
     queryFn: async () => {
       try {
         const data = await req('/api/catalog/categories');

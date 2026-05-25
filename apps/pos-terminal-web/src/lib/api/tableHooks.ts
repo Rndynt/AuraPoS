@@ -41,9 +41,10 @@ interface ApiResponse<T> {
 
 export function useTables(status?: string, floor?: string) {
   const { tenantId } = useTenant();
+  const outletId = getActiveOutletId();
 
   return useQuery({
-    queryKey: ["/api/tables", tenantId, status, floor],
+    queryKey: ["/api/tables", tenantId, outletId, status, floor],
     queryFn: async (): Promise<TablesResponse> => {
       const params = new URLSearchParams();
       if (status) params.append("status", status);
@@ -66,9 +67,10 @@ export function useTables(status?: string, floor?: string) {
 
 export function useOpenOrders() {
   const { tenantId } = useTenant();
+  const outletId = getActiveOutletId();
 
   return useQuery({
-    queryKey: ["/api/orders/open", tenantId],
+    queryKey: ["/api/orders/open", tenantId, outletId],
     queryFn: async (): Promise<OpenOrdersResponse> => {
       const outletIdForOrders = getActiveOutletId();
       const ordersHeaders: Record<string, string> = { "x-tenant-id": tenantId };

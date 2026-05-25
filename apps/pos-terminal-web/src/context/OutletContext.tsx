@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useTenant } from "@/context/TenantContext";
+import { queryClient } from "@/lib/queryClient";
 import {
   resolveInitialOutletId,
   setActiveOutletId,
@@ -79,6 +80,8 @@ export function OutletProvider({ children }: { children: React.ReactNode }) {
   const setActiveOutlet = useCallback((outlet: Outlet) => {
     setActiveOutletIdState(outlet.id);
     setActiveOutletId(outlet.id);
+    // Invalidate ALL cached queries sehingga data re-fetch dengan outlet header baru
+    queryClient.invalidateQueries();
   }, []);
 
   const activeOutlet = outlets.find((o) => o.id === activeOutletId) ?? null;

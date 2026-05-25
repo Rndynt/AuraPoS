@@ -63,8 +63,9 @@ interface ProductsResponse {
 
 export function useProducts() {
   const tenantId = getActiveTenantId();
+  const outletId = getActiveOutletId();
   return useQuery<Product[]>({
-    queryKey: ["/api/catalog/products"],
+    queryKey: ["/api/catalog/products", tenantId, outletId],
     queryFn: async () => {
       try {
         const response: ProductsResponse = await fetchWithTenantHeader("/api/catalog/products");

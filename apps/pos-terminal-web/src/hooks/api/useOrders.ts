@@ -58,15 +58,17 @@ export function useOrders(filters?: OrderFilters) {
   const queryString = queryParams.toString();
   const url = queryString ? `/api/orders?${queryString}` : "/api/orders";
 
+  const outletId = getActiveOutletId();
   return useQuery<{ orders: Order[] }>({
-    queryKey: ["/api/orders", filters],
+    queryKey: ["/api/orders", getActiveTenantId(), outletId, filters],
     queryFn: () => fetchWithTenantHeader(url),
   });
 }
 
 export function useOpenOrders() {
+  const outletId = getActiveOutletId();
   return useQuery<{ orders: Order[]; total: number }>({
-    queryKey: ["/api/orders/open"],
+    queryKey: ["/api/orders/open", getActiveTenantId(), outletId],
     queryFn: () => fetchWithTenantHeader("/api/orders/open"),
   });
 }
