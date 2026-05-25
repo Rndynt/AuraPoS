@@ -562,12 +562,10 @@ export default function MarketplacePage() {
     activeFeaturesList.map((f: any) => f.feature_code)
   );
 
-  // Module active check: moduleConfig uses camelCase keys
+  // Module active check: moduleConfig from API uses snake_case keys
   const isModuleActive = (item: ModuleItem): boolean => {
     if (!moduleConfig) return false;
-    // Convert snake_case to camelCase for lookup
-    const camel = item.moduleKey.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
-    return !!(moduleConfig as any)[camel];
+    return !!(moduleConfig as any)[item.moduleKey];
   };
 
   const isFeatureActive = (item: FeatureItem) => activeFeatureCodes.has(item.featureCode);
