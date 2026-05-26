@@ -55,9 +55,13 @@ export async function tenantMiddleware(
     }
 
     // ── 2. Header / query fallback (dev, API client) ─────────────────────────
-    const tenantId =
-      (req.headers['x-tenant-id'] as string) ||
-      (req.query.tenant_id as string);
+    // Block header-based tenant resolution in production when flag is set.
+    // Set ALLOW_TENANT_HEADER=false in production environment variables.
+    const allowTenantHeader = process.env.ALLOW_TENANT_HEADER !== 'false';
+
+    const tenantId = allowTenantHeader
+      ? (req.headers['x-tenant-id'] as string) || (req.query.tenant_id as string)
+      : (req.query.tenant_id as string);
 
     if (!tenantId) {
       res.status(400).json({ error: 'Missing tenant', message: 'Use {slug}.aurapos.my.id or provide x-tenant-id header' });

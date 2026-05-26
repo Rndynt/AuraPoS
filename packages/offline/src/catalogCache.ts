@@ -71,3 +71,45 @@ export function isCatalogStale(cachedAt: string | null, maxAgeMs = 24 * 60 * 60 
   if (!cachedAt) return true;
   return Date.now() - new Date(cachedAt).getTime() > maxAgeMs;
 }
+
+// ── Table Cache ───────────────────────────────────────────────────────────────
+
+const META_KEY_TABLES = "tables_cached_at";
+
+export async function saveCachedTables(tenantId: string, tables: unknown[]): Promise<void> {
+  const now = nowIso();
+  const rows = (tables as Array<Record<string, unknown>>).map((t) => ({
+    id: String(t.id ?? ""),
+    tenantId,
+    name: String(t.tableNumber ?? t.table_number ?? ""),
+    status: String(t.status ?? "available"),
+    syncStatus: "synced" as const,
+    updatedAt: now,
+    rawData: t,
+  }));
+  await offlineDb.local_tables.bulkPut(rows as any);
+  await updateTablesCachedAt(tenantId);
+}
+
+export async function getCachedTables(tenantId: string): Promise<unknown[]> {
+  const rows = await offlineDb.local_tables.where("tenantId").equals(tenantId).toArray();
+  return rows.map((r: any) => r.rawData ?? {
+    id: r.id,
+    tableNumber: r.name,
+    status: r.status,
+    floor: null,
+    capacity: null,
+  });
+}
+
+export async function updateTablesCachedAt(tenantId: string): Promise<void> {
+  const key = `${META_KEY_TABLES}:${tenantId}`;
+  const now = nowIso();
+  await offlineDb.sync_meta.put({ key, value: now, updatedAt: now });
+}
+
+export async function getTablesCachedAt(tenantId: string): Promise<string | null> {
+  const key = `${META_KEY_TABLES}:${tenantId}`;
+  const row = await offlineDb.sync_meta.get(key);
+  return row?.value ?? null;
+}

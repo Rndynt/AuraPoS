@@ -326,7 +326,7 @@ export class CreateAndPayOrder {
               soldQtyMap[item.product_id] = (soldQtyMap[item.product_id] ?? 0) + (item.quantity ?? 1);
             }
           }
-          const orderLabel = result.order.orderNumber ?? result.order.order_number;
+          const orderLabel = result.order.orderNumber;
           for (const product of trackedProducts) {
             const soldQty = soldQtyMap[product.id] ?? 0;
             if (soldQty === 0) continue;

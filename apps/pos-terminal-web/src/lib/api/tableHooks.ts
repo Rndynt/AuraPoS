@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/context/TenantContext";
 import { getActiveOutletId } from "@/lib/outlet";
 import type { Table } from "@shared/schema";
+import { saveCachedTables } from "@pos/offline";
 
 interface TablesResponse {
   tables: Table[];
@@ -59,7 +60,10 @@ export function useTables(status?: string, floor?: string) {
       );
       if (!response.ok) throw new Error("Failed to fetch tables");
       const json = await response.json();
-      return json.data ?? json;
+      const result: TablesResponse = json.data ?? json;
+      // Populate offline cache (fire-and-forget)
+      saveCachedTables(tenantId, result.tables ?? []).catch(() => undefined);
+      return result;
     },
     enabled: !!tenantId,
   });

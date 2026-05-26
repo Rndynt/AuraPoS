@@ -16,6 +16,20 @@ export type LocalPrintJob = { id: string; tenantId: string; terminalId: string; 
 export type SyncOutboxItem = { id: string; tenantId: string; terminalId: string; entityType: "order" | "payment" | "order_status" | "print_job" | "table_status"; operation: "create" | "update" | "delete"; localEntityId: string; endpoint: string; method: "POST" | "PATCH" | "PUT" | "DELETE"; payload: unknown; idempotencyKey: string; status: "pending" | "syncing" | "synced" | "failed" | "conflict"; attemptCount: number; lastError?: string; createdAt: string; updatedAt: string; nextRetryAt?: string };
 export type SyncConflict = { id: string; tenantId: string; localEntityId: string; conflictType: string; message: string; syncStatus: SyncStatus; createdAt: string };
 
+export type LocalTable = {
+  id: string;
+  tenantId: string;
+  tableNumber: string;
+  tableName?: string;
+  floor?: string;
+  capacity?: number;
+  status: "available" | "occupied" | "reserved" | "unknown";
+  currentOrderId?: string;
+  syncStatus: SyncStatus;
+  updatedAt: string;
+  rawData?: unknown;
+};
+
 export type KitchenTicketStatus = "confirmed" | "preparing" | "ready" | "served";
 
 export type LocalKitchenItem = {

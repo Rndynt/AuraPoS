@@ -20,9 +20,10 @@ import {
   serverSyncConflicts,
   orders,
   products,
+  tables,
   inventoryMovements,
 } from '../../../shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, ne } from 'drizzle-orm';
 import { ConflictType } from './conflictTypes';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -125,6 +126,24 @@ export class SyncOfflineOrder {
 
     const productMap = new Map(serverProducts.map(p => [p.id, p]));
 
+    // ── Phase 15.2: Pre-fetch occupied tables for conflict detection ──────────
+    const allTableNumbers = [...new Set(
+      orderInputs.map(o => o.table_number).filter((t): t is string => !!t)
+    )];
+    const occupiedTableNumbers = new Set<string>();
+
+    if (allTableNumbers.length > 0) {
+      const occupiedTables = await this.db
+        .select({ tableNumber: tables.tableNumber })
+        .from(tables)
+        .where(and(
+          eq(tables.tenantId, tenant_id),
+          inArray(tables.tableNumber, allTableNumbers),
+          ne(tables.status, 'available'),
+        ));
+      for (const t of occupiedTables) occupiedTableNumbers.add(t.tableNumber);
+    }
+
     // ── Process each order independently ─────────────────────────────────────
     const results: SyncOrderItemResult[] = [];
     let synced = 0;
@@ -208,6 +227,24 @@ export class SyncOfflineOrder {
               conflictData: stockConflicts as any,
               resolution: 'auto_resolved',
               resolvedAt: new Date(),
+            })
+            .catch(() => undefined);
+        }
+
+        // ── Phase 15.2: Table Availability Conflict Detection ─────────────────
+        if (item.table_number && occupiedTableNumbers.has(item.table_number)) {
+          const tableMsg = `Meja ${item.table_number} sedang terisi. Order offline tetap diproses — tinjau penugasan meja.`;
+          warnings.push(tableMsg);
+          await this.db
+            .insert(serverSyncConflicts)
+            .values({
+              tenantId: tenant_id,
+              terminalId: terminal_id,
+              localOrderId: item.local_order_id,
+              conflictType: ConflictType.TABLE_UNAVAILABLE,
+              message: tableMsg,
+              conflictData: { tableNumber: item.table_number } as any,
+              resolution: 'pending',
             })
             .catch(() => undefined);
         }
