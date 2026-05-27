@@ -111,15 +111,9 @@ export class RecordPayment {
       const updatedOrders = await tx.execute(sql`
         UPDATE orders
         SET
-          paid_amount = ${orderUpdates.paid_amount},
+          paid_amount    = ${orderUpdates.paid_amount},
           payment_status = ${orderUpdates.payment_status},
-          updated_at = ${orderUpdates.updated_at},
-          status = CASE WHEN ${orderUpdates.status ?? null} IS NOT NULL
-                        THEN ${orderUpdates.status ?? orderRow.status}
-                        ELSE status END,
-          closed_at = CASE WHEN ${orderUpdates.closed_at ?? null} IS NOT NULL
-                           THEN ${orderUpdates.closed_at ?? null}
-                           ELSE closed_at END
+          updated_at     = ${orderUpdates.updated_at}
         WHERE id = ${input.order_id}
           AND tenant_id = ${input.tenant_id}
         RETURNING *
