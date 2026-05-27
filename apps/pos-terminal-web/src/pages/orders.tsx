@@ -39,7 +39,7 @@ const PAYMENT_STATUS_CONFIG = {
   unpaid: { label: "UNPAID", color: "bg-gray-100 text-gray-700" },
 };
 
-type OrderStatusFilter = "all" | "confirmed" | "preparing" | "ready" | "served" | "completed";
+type OrderStatusFilter = "all" | "draft" | "confirmed" | "preparing" | "ready" | "served" | "completed";
 
 type NormalizedMoneyFields = {
   subtotal: number;
@@ -191,6 +191,7 @@ export default function OrdersPage() {
 
   const filterCounts = {
     all:       activeOrders.length,
+    draft:     activeOrders.filter(o => o.status === "draft").length,
     confirmed: activeOrders.filter(o => o.status === "confirmed").length,
     preparing: activeOrders.filter(o => o.status === "preparing").length,
     ready:     activeOrders.filter(o => o.status === "ready").length,
@@ -320,9 +321,10 @@ export default function OrdersPage() {
                 />
               </div>
               <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                {(["all", "confirmed", "preparing", "ready", "served", "completed"] as const).map((status) => {
+                {(["all", "draft", "confirmed", "preparing", "ready", "served", "completed"] as const).map((status) => {
                   const labels: Record<string, string> = {
                     all:       "Semua",
+                    draft:     "Ditunda",
                     confirmed: "Dikonfirmasi",
                     preparing: "Diproses",
                     ready:     "Siap Saji",

@@ -2,7 +2,7 @@
 import type { CartItem as CartItemType, PaymentMethod, OrderType, ItemDiscount } from "@/hooks/useCart";
 import type { OrderType as DomainOrderType } from "@pos/domain/orders/types";
 import { CartItem } from "./CartItem";
-import { ShoppingBag, Banknote, ChevronUp, User, Trash2, Tag, X, Loader2 } from "lucide-react";
+import { ShoppingBag, Banknote, ChevronUp, User, Trash2, Tag, X, Loader2, ChefHat } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from "@/context/TenantContext";
 import { useState, useCallback } from "react";
@@ -24,6 +24,9 @@ type CartPanelProps = {
   onPartialPayment?: () => void;
   onSaveDraft?: () => void;
   isDraftSaving?: boolean;
+  onConfirmAndKitchen?: () => void;
+  hasKitchen?: boolean;
+  isKitchenSending?: boolean;
   onUpdateNote?: (id: string, note: string) => void;
   hasPartialPayment?: boolean;
   isProcessing?: boolean;
@@ -50,7 +53,7 @@ type CartPanelProps = {
 export function CartPanel({
   items, onUpdateQty, onRemove, onClear, getItemPrice,
   subtotal, taxRate, tax, serviceChargeRate, serviceCharge, total,
-  onCharge, onSaveDraft, isDraftSaving = false, onUpdateNote, isProcessing = false,
+  onCharge, onSaveDraft, isDraftSaving = false, onConfirmAndKitchen, hasKitchen = false, isKitchenSending = false, onUpdateNote, isProcessing = false,
   customerName, setCustomerName, orderNumber,
   tableNumber, setTableNumber,
   orderType, setOrderType,
@@ -376,13 +379,29 @@ export function CartPanel({
               disabled={isProcessing || isDraftSaving || items.length === 0}
               className="w-10 h-10 flex-shrink-0 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-500 hover:text-slate-700 rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
               data-testid="button-save-draft"
-              title={isDraftSaving ? "Menyimpan..." : "Simpan Draft"}
+              title={isDraftSaving ? "Menyimpan..." : "Tunda — simpan draft, lanjut nanti"}
             >
               {isDraftSaving
                 ? <Loader2 size={16} className="animate-spin text-blue-500" />
                 : <ShoppingBag size={16} />
               }
             </button>
+
+            {hasKitchen && (
+              <button
+                onClick={onConfirmAndKitchen}
+                disabled={isProcessing || isKitchenSending || items.length === 0}
+                className="flex-1 h-10 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                data-testid="button-confirm-and-kitchen"
+                title="Konfirmasi pesanan & kirim ke dapur — bayar belakangan"
+              >
+                {isKitchenSending
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : <ChefHat size={16} />
+                }
+                Kirim ke Dapur
+              </button>
+            )}
 
             <button
               onClick={onCharge}

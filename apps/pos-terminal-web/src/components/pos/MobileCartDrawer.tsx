@@ -3,7 +3,7 @@ import type { CartItem as CartItemType, PaymentMethod, OrderType, ItemDiscount }
 import type { OrderType as DomainOrderType } from "@pos/domain/orders/types";
 import { CartItem } from "./CartItem";
 import { Drawer } from "vaul";
-import { ShoppingBag, Banknote, X, User, ChevronDown, ChevronUp, Trash2, Tag, Loader2 } from "lucide-react";
+import { ShoppingBag, Banknote, X, User, ChevronDown, ChevronUp, Trash2, Tag, Loader2, ChefHat } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from "@/context/TenantContext";
 import { useState, useCallback, useEffect } from "react";
@@ -48,6 +48,9 @@ type MobileCartDrawerProps = {
   onPartialPayment?: () => void;
   onSaveDraft?: () => void;
   isDraftSaving?: boolean;
+  onConfirmAndKitchen?: () => void;
+  hasKitchen?: boolean;
+  isKitchenSending?: boolean;
   onUpdateNote?: (id: string, note: string) => void;
   hasPartialPayment?: boolean;
   isProcessing?: boolean;
@@ -88,6 +91,9 @@ export function MobileCartDrawer({
   onCharge,
   onSaveDraft,
   isDraftSaving = false,
+  onConfirmAndKitchen,
+  hasKitchen = false,
+  isKitchenSending = false,
   onUpdateNote,
   isProcessing = false,
   customerName,
@@ -490,36 +496,49 @@ export function MobileCartDrawer({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex gap-2">
                     <button
                       onClick={onSaveDraft}
                       disabled={isProcessing || isDraftSaving || items.length === 0}
-                      className="bg-white border-2 border-slate-200 text-slate-600 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                      className="w-14 flex-shrink-0 bg-white border-2 border-slate-200 text-slate-600 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
                       data-testid="button-save-draft"
+                      title="Tunda — simpan draft, lanjut nanti"
                     >
                       {isDraftSaving ? (
-                        <>
-                          <div className="flex items-center gap-2 text-sm text-blue-600">
-                            <Loader2 size={18} className="animate-spin" />
-                            <span>Menyimpan...</span>
-                          </div>
-                          <span className="text-[9px] font-normal opacity-70">Mohon tunggu</span>
-                        </>
+                        <Loader2 size={18} className="animate-spin text-blue-500" />
                       ) : (
                         <>
-                          <div className="flex items-center gap-2 text-sm">
-                            <ShoppingBag size={18} />
-                            <span>Simpan</span>
-                          </div>
-                          <span className="text-[9px] font-normal opacity-70">Simpan Draft</span>
+                          <ShoppingBag size={18} />
+                          <span className="text-[9px] font-normal opacity-70">Tunda</span>
                         </>
                       )}
                     </button>
 
+                    {hasKitchen && (
+                      <button
+                        onClick={onConfirmAndKitchen}
+                        disabled={isProcessing || isKitchenSending || items.length === 0}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                        data-testid="button-confirm-and-kitchen"
+                      >
+                        {isKitchenSending ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <ChefHat size={18} />
+                              <span>Kirim ke Dapur</span>
+                            </div>
+                            <span className="text-[9px] opacity-80 font-normal">Bayar belakangan</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
                     <button
                       onClick={onCharge}
                       disabled={isProcessing || items.length === 0}
-                      className="bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
                       data-testid="button-complete-payment"
                     >
                       <div className="flex items-center gap-2 text-sm">

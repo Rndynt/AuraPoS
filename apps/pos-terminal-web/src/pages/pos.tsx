@@ -17,9 +17,7 @@ import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, us
 import { useOfflineOrderSubmit } from "@/hooks/useOfflineOrderSubmit";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption, Order } from "@pos/domain/orders/types";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ShoppingCart, ShoppingBag, Loader2, ChefHat, ListOrdered } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -44,7 +42,7 @@ export default function POSPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [combinedDraftOpen, setCombinedDraftOpen] = useState(false);
-  const [postSaveDialog, setPostSaveDialog] = useState<{ open: boolean; orderId: string | null }>({ open: false, orderId: null });
+  const [isKitchenSending, setIsKitchenSending] = useState(false);
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
   const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
@@ -797,20 +795,9 @@ export default function POSPage() {
         });
       }
 
-      const savedOrderId: string | null = orderResult?.order?.id ?? null;
-      const showPostDialog = savedOrderId && (hasKitchenTicket || isOrderQueueEnabled);
-
-      if (showPostDialog) {
-        // Keep cart items in memory for offline kitchen ticket path, but close mobile drawer
-        setMobileCartOpen(false);
-        setPostSaveDialog({ open: true, orderId: savedOrderId });
-        // Clear URL param now if updating
-        if (continueOrderId) setLocation("/pos");
-      } else {
-        cart.clearCart();
-        setMobileCartOpen(false);
-        if (continueOrderId) setLocation("/pos");
-      }
+      cart.clearCart();
+      setMobileCartOpen(false);
+      if (continueOrderId) setLocation("/pos");
     } catch (error) {
       const isNetworkError = error instanceof TypeError || (error instanceof Error && /network|fetch/i.test(error.message));
 
@@ -847,7 +834,54 @@ export default function POSPage() {
     }
   };
   
-  // Send to Kitchen - Separate action, only available when kitchen feature is enabled
+  // Confirm & Send to Kitchen — saves order then immediately sends to kitchen, no dialog
+  const handleConfirmAndKitchen = async () => {
+    if (!ensureCartHasItems()) return;
+    setIsKitchenSending(true);
+
+    if (!cart.selectedOrderTypeId && activeOrderTypes.length > 0) {
+      cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
+    }
+
+    if (!cart.selectedOrderTypeId) {
+      toast({
+        title: "Tipe pesanan diperlukan",
+        description: "Tidak ada tipe pesanan tersedia. Hubungi administrator.",
+        variant: "destructive",
+      });
+      setIsKitchenSending(false);
+      return;
+    }
+
+    try {
+      let orderResult;
+      if (continueOrderId) {
+        orderResult = await updateOrderMutation.mutateAsync({
+          orderId: continueOrderId,
+          ...buildOrderPayload(),
+        });
+      } else {
+        orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+      }
+
+      const savedOrderId: string | null = orderResult?.order?.id ?? null;
+      if (savedOrderId) {
+        await handleSendToKitchen(savedOrderId);
+      }
+
+      cart.clearCart();
+      setMobileCartOpen(false);
+      if (continueOrderId) setLocation("/pos");
+    } catch (error) {
+      toast({
+        title: "Gagal kirim ke dapur",
+        description: error instanceof Error ? error.message : "Gagal mengirim pesanan ke dapur",
+        variant: "destructive",
+      });
+    } finally {
+      setIsKitchenSending(false);
+    }
+  };
 
   const handleResumeLocalDraft = (draft: any) => {
     cart.clearCart();
@@ -953,6 +987,9 @@ export default function POSPage() {
           onPartialPayment={handlePartialPayment}
           onSaveDraft={handleSaveDraft}
           isDraftSaving={isDraftSaving}
+          onConfirmAndKitchen={handleConfirmAndKitchen}
+          hasKitchen={hasKitchenTicket}
+          isKitchenSending={isKitchenSending}
           onUpdateNote={cart.updateNote}
           hasPartialPayment={hasPartialPayment}
           isProcessing={isProcessingQuickCharge}
@@ -1009,6 +1046,9 @@ export default function POSPage() {
         onPartialPayment={handlePartialPayment}
         onSaveDraft={handleSaveDraft}
         isDraftSaving={isDraftSaving}
+        onConfirmAndKitchen={handleConfirmAndKitchen}
+        hasKitchen={hasKitchenTicket}
+        isKitchenSending={isKitchenSending}
         onUpdateNote={cart.updateNote}
         hasPartialPayment={hasPartialPayment}
         isProcessing={isProcessingQuickCharge}
@@ -1083,96 +1123,6 @@ export default function POSPage() {
         isSubmitting={isProcessingQuickCharge}
         defaultPaymentMethod={cart.paymentMethod}
       />
-
-      {/* Post-Save Action Dialog */}
-      <Dialog
-        open={postSaveDialog.open}
-        onOpenChange={(open) => {
-          if (!open) {
-            cart.clearCart();
-            setPostSaveDialog({ open: false, orderId: null });
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm" data-testid="dialog-post-save-action">
-          <DialogHeader>
-            <DialogTitle className="text-base font-black text-slate-800">Pesanan Disimpan</DialogTitle>
-            <DialogDescription className="text-sm text-slate-500">
-              Pilih tindakan selanjutnya untuk pesanan ini
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2 pt-1">
-            {/* Case: both kitchen_ticket + order_queue active → satu aksi gabungan */}
-            {hasKitchenTicket && isOrderQueueEnabled && (
-              <Button
-                className="w-full justify-start gap-3 h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold"
-                data-testid="button-post-save-confirm-and-kitchen"
-                onClick={async () => {
-                  if (postSaveDialog.orderId) {
-                    // handleSendToKitchen → backend auto-confirm + buat KOT + emit SSE
-                    // queue panel update otomatis via SSE invalidation
-                    await handleSendToKitchen(postSaveDialog.orderId);
-                  }
-                  cart.clearCart();
-                  setPostSaveDialog({ open: false, orderId: null });
-                }}
-              >
-                <ChefHat size={18} />
-                Konfirmasi &amp; Kirim ke Dapur
-              </Button>
-            )}
-
-            {/* Case: hanya kitchen_ticket aktif (tanpa queue) */}
-            {hasKitchenTicket && !isOrderQueueEnabled && (
-              <Button
-                className="w-full justify-start gap-3 h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold"
-                data-testid="button-post-save-send-kitchen"
-                onClick={async () => {
-                  if (postSaveDialog.orderId) {
-                    await handleSendToKitchen(postSaveDialog.orderId);
-                  }
-                  cart.clearCart();
-                  setPostSaveDialog({ open: false, orderId: null });
-                }}
-              >
-                <ChefHat size={18} />
-                Kirim ke Dapur
-              </Button>
-            )}
-
-            {/* Case: hanya order_queue aktif (tanpa kitchen) → konfirmasi ke antrian */}
-            {!hasKitchenTicket && isOrderQueueEnabled && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3 h-12 border-slate-200 text-slate-700 font-bold hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-                data-testid="button-post-save-add-queue"
-                onClick={async () => {
-                  if (postSaveDialog.orderId) {
-                    await handleUpdateOrderStatus(postSaveDialog.orderId, "confirmed");
-                  }
-                  cart.clearCart();
-                  setPostSaveDialog({ open: false, orderId: null });
-                }}
-              >
-                <ListOrdered size={18} />
-                Tambah ke Antrian
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              className="w-full h-10 text-slate-500 font-medium"
-              data-testid="button-post-save-done"
-              onClick={() => {
-                cart.clearCart();
-                setPostSaveDialog({ open: false, orderId: null });
-              }}
-            >
-              Selesai
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Quick Charge Processing Overlay */}
       {isProcessingQuickCharge && (
