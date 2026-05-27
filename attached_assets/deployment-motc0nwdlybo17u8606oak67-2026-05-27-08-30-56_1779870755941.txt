@@ -1,0 +1,293 @@
+2026-May-27 08:26:54.643589 Docker 29.4.3 with BuildKit and Buildx detected on deployment server (localhost).
+2026-May-27 08:26:54.667236 Starting deployment of Rndynt/AuraPoS:main to localhost.
+2026-May-27 08:26:55.014402 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-May-27 08:26:58.656593 ----------------------------------------
+2026-May-27 08:26:58.676126 Importing Rndynt/AuraPoS:main (commit sha 91d14e8e2560a7a99c033a9745a4b37c04204200) to /artifacts/motc0nwdlybo17u8606oak67.
+2026-May-27 08:27:09.572309 ----------------------------------------
+2026-May-27 08:27:09.593905 ⚠️ Build-time environment variable warning: NODE_ENV=production
+2026-May-27 08:27:09.612356 Affects: Node.js/npm/yarn/bun/pnpm
+2026-May-27 08:27:09.630664 Issue: Skips devDependencies installation which are often required for building (webpack, typescript, etc.)
+2026-May-27 08:27:09.648579 Recommendation: Uncheck "Available at Buildtime" or use "development" during build
+2026-May-27 08:27:09.669396
+2026-May-27 08:27:09.686842 💡 Tips to resolve build issues:
+2026-May-27 08:27:09.704562 1. Set these variables as "Runtime only" in the environment variables settings
+2026-May-27 08:27:09.725186 2. Use different values for build-time (e.g., NODE_ENV=development for build)
+2026-May-27 08:27:09.752228 3. Consider using multi-stage Docker builds to separate build and runtime environments
+2026-May-27 08:27:10.910277 ----------------------------------------
+2026-May-27 08:27:10.936409 Building docker image started.
+2026-May-27 08:27:10.963282 To check the current progress, click on Show Debug Logs.
+2026-May-27 08:29:09.186842 ========================================
+2026-May-27 08:29:09.205667 Deployment failed: Command execution failed (exit code 1): docker exec motc0nwdlybo17u8606oak67 bash -c 'bash /artifacts/build.sh'
+2026-May-27 08:29:09.205667 Error: #0 building with "default" instance using docker driver
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #1 [internal] load build definition from Dockerfile
+2026-May-27 08:29:09.205667 #1 transferring dockerfile: 4.15kB 0.0s done
+2026-May-27 08:29:09.205667 #1 DONE 0.1s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #2 [internal] load metadata for docker.io/library/node:20-alpine
+2026-May-27 08:29:09.205667 #2 DONE 0.7s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #3 [internal] load .dockerignore
+2026-May-27 08:29:09.205667 #3 transferring context: 544B done
+2026-May-27 08:29:09.205667 #3 DONE 0.0s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #4 [builder 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-May-27 08:29:09.205667 #4 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+2026-May-27 08:29:09.205667 #4 DONE 0.1s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #5 [builder 2/6] RUN corepack enable
+2026-May-27 08:29:09.205667 #5 ...
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #6 [runner 2/5] WORKDIR /app
+2026-May-27 08:29:09.205667 #6 DONE 0.3s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #7 [internal] load build context
+2026-May-27 08:29:09.205667 #7 transferring context: 6.25MB 0.3s done
+2026-May-27 08:29:09.205667 #7 DONE 0.4s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #5 [builder 2/6] RUN corepack enable
+2026-May-27 08:29:09.205667 #5 DONE 0.9s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #8 [builder 3/6] WORKDIR /app
+2026-May-27 08:29:09.205667 #8 DONE 0.1s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #9 [builder 4/6] COPY . .
+2026-May-27 08:29:09.205667 #9 DONE 0.2s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #10 [builder 5/6] RUN pnpm install --frozen-lockfile
+2026-May-27 08:29:09.205667 #10 0.329 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.26.1.tgz
+2026-May-27 08:29:09.205667 #10 5.642 Scope:<REDACTED>@11.3.0 │
+2026-May-27 08:29:09.205667 #10 8.569 │ │
+2026-May-27 08:29:09.205667 #10 8.569 ╰──────────────────────────────────────────────╯
+2026-May-27 08:29:09.205667 #10 8.569
+2026-May-27 08:29:09.205667 #10 8.598 Progress: resolved 738, reused 0, downloaded 55, added 12
+2026-May-27 08:29:09.205667 #10 9.615 Progress: resolved 738, reused 0, downloaded 141, added 63
+2026-May-27 08:29:09.205667 #10 10.63 Progress: resolved 738, reused 0, downloaded 185, added 81
+2026-May-27 08:29:09.205667 #10 11.68 Progress: resolved 738, reused 0, downloaded 301, added 126
+2026-May-27 08:29:09.205667 #10 12.68 Progress: resolved 738, reused 0, downloaded 359, added 154
+2026-May-27 08:29:09.205667 #10 13.73 Progress: resolved 738, reused 0, downloaded 406, added 180
+2026-May-27 08:29:09.205667 #10 14.77 Progress: resolved 738, reused 0, downloaded 450, added 200
+2026-May-27 08:29:09.205667 #10 15.78 Progress: resolved 738, reused 0, downloaded 553, added 256
+2026-May-27 08:29:09.205667 #10 16.78 Progress: resolved 738, reused 0, downloaded 665, added 296
+2026-May-27 08:29:09.205667 #10 17.82 Progress: resolved 738, reused 0, downloaded 732, added 376
+2026-May-27 08:29:09.205667 #10 18.82 Progress: resolved 738, reused 0, downloaded 735, added 606
+2026-May-27 08:29:09.205667 #10 19.82 Progress: resolved 738, reused 0, downloaded 736, added 735
+2026-May-27 08:29:09.205667 #10 20.82 Progress: resolved 738, reused 0, downloaded 737, added 737
+2026-May-27 08:29:09.205667 #10 22.70 Progress: resolved 738, reused 0, downloaded 738, added 737
+2026-May-27 08:29:09.205667 #10 22.70 Progress: resolved 738, reused 0, downloaded 738, added 738, done
+2026-May-27 08:29:09.205667 #10 24.44
+2026-May-27 08:29:09.205667 #10 24.44 dependencies:
+2026-May-27 08:29:09.205667 #10 24.44 + @hookform/resolvers 5.2.2
+2026-May-27 08:29:09.205667 #10 24.44 + @jridgewell/trace-mapping 0.3.31
+2026-May-27 08:29:09.205667 #10 24.44 + @neondatabase/serverless 0.10.4
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-checkbox 1.3.3
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-dialog 1.1.15
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-label 2.1.8
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-radio-group 1.3.8
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-scroll-area 1.2.10
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-select 2.2.6
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-separator 1.1.8
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-slot 1.2.4
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-tabs 1.1.13
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-toast 1.2.15
+2026-May-27 08:29:09.205667 #10 24.44 + @radix-ui/react-tooltip 1.2.8
+2026-May-27 08:29:09.205667 #10 24.44 + @replit/vite-plugin-cartographer 0.4.11
+2026-May-27 08:29:09.205667 #10 24.44 + @replit/vite-plugin-dev-banner 0.1.2
+2026-May-27 08:29:09.205667 #10 24.44 + @replit/vite-plugin-runtime-error-modal 0.0.3
+2026-May-27 08:29:09.205667 #10 24.44 + @tanstack/react-query 5.100.10
+2026-May-27 08:29:09.205667 #10 24.44 + @types/connect-pg-simple 7.0.3
+2026-May-27 08:29:09.205667 #10 24.44 + @types/express 5.0.6
+2026-May-27 08:29:09.205667 #10 24.44 + @types/express-session 1.19.0
+2026-May-27 08:29:09.205667 #10 24.44 + @types/passport 1.0.17
+2026-May-27 08:29:09.205667 #10 24.44 + @types/passport-local 1.0.38
+2026-May-27 08:29:09.205667 #10 24.44 + @types/react 18.3.28
+2026-May-27 08:29:09.205667 #10 24.44 + @types/react-dom 18.3.7
+2026-May-27 08:29:09.205667 #10 24.44 + @types/ws 8.18.1
+2026-May-27 08:29:09.205667 #10 24.44 + @vitejs/plugin-react 5.2.0
+2026-May-27 08:29:09.205667 #10 24.44 + class-variance-authority 0.7.1
+2026-May-27 08:29:09.205667 #10 24.44 + clsx 2.1.1
+2026-May-27 08:29:09.205667 #10 24.44 + connect-pg-simple 10.0.0
+2026-May-27 08:29:09.205667 #10 24.44 + dotenv 17.4.2
+2026-May-27 08:29:09.205667 #10 24.44 + drizzle-orm 0.39.3
+2026-May-27 08:29:09.205667 #10 24.44 + drizzle-zod 0.7.1
+2026-May-27 08:29:09.205667 #10 24.44 + express 4.22.2
+2026-May-27 08:29:09.205667 #10 24.44 + express-session 1.19.0
+2026-May-27 08:29:09.205667 #10 24.44 + lucide-react 0.553.0
+2026-May-27 08:29:09.205667 #10 24.44 + memorystore 1.6.8
+2026-May-27 08:29:09.205667 #10 24.44 + nanoid 5.1.11
+2026-May-27 08:29:09.205667 #10 24.44 + passport 0.7.0
+2026-May-27 08:29:09.205667 #10 24.44 + passport-local 1.0.0
+2026-May-27 08:29:09.205667 #10 24.44 + postgres 3.4.9
+2026-May-27 08:29:09.205667 #10 24.44 + react 18.3.1
+2026-May-27 08:29:09.205667 #10 24.44 + react-dom 18.3.1
+2026-May-27 08:29:09.205667 #10 24.44 + react-hook-form 7.76.0
+2026-May-27 08:29:09.205667 #10 24.44 + tailwind-merge 3.6.0
+2026-May-27 08:29:09.205667 #10 24.44 + tailwindcss-animate 1.0.7
+2026-May-27 08:29:09.205667 #10 24.44 + tsconfig-paths 4.2.0
+2026-May-27 08:29:09.205667 #10 24.44 + vaul 1.1.2
+2026-May-27 08:29:09.205667 #10 24.44 + wouter 3.9.0
+2026-May-27 08:29:09.205667 #10 24.44 + ws 8.20.1
+2026-May-27 08:29:09.205667 #10 24.44 + zod 3.25.76
+2026-May-27 08:29:09.205667 #10 24.44 + zod-validation-error 5.0.0
+2026-May-27 08:29:09.205667 #10 24.44
+2026-May-27 08:29:09.205667 #10 24.44 devDependencies:
+2026-May-27 08:29:09.205667 #10 24.44 + @tailwindcss/typography 0.5.19
+2026-May-27 08:29:09.205667 #10 24.44 + @types/node 20.16.11
+2026-May-27 08:29:09.205667 #10 24.44 + autoprefixer 10.5.0
+2026-May-27 08:29:09.205667 #10 24.44 + drizzle-kit 0.31.10
+2026-May-27 08:29:09.205667 #10 24.44 + esbuild 0.25.12
+2026-May-27 08:29:09.205667 #10 24.44 + postcss 8.5.14
+2026-May-27 08:29:09.205667 #10 24.44 + prettier 3.8.3
+2026-May-27 08:29:09.205667 #10 24.44 + tailwindcss 3.4.19
+2026-May-27 08:29:09.205667 #10 24.44 + tsx 4.22.2
+2026-May-27 08:29:09.205667 #10 24.44 + turbo 1.13.4
+2026-May-27 08:29:09.205667 #10 24.44 + typescript 5.6.3
+2026-May-27 08:29:09.205667 #10 24.44 + vite 5.4.21
+2026-May-27 08:29:09.205667 #10 24.44
+2026-May-27 08:29:09.205667 #10 24.74 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-May-27 08:29:09.205667 #10 24.74 │ │
+2026-May-27 08:29:09.205667 #10 24.74 │ Ignored build scripts: esbuild@0.18.20, esbuild@0.21.5, esbuild@0.25.12, │
+2026-May-27 08:29:09.205667 #10 24.74 │ esbuild@0.28.0. │
+2026-May-27 08:29:09.205667 #10 24.74 │ Run "pnpm approve-builds" to pick which dependencies should be allowed │
+2026-May-27 08:29:09.205667 #10 24.74 │ to run scripts. │
+2026-May-27 08:29:09.205667 #10 24.74 │ │
+2026-May-27 08:29:09.205667 #10 24.74 ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-May-27 08:29:09.205667 #10 24.88 Done in 20.9s using pnpm v10.26.1
+2026-May-27 08:29:09.205667 #10 DONE 27.2s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #11 [builder 6/6] RUN pnpm run build
+2026-May-27 08:29:09.205667 #11 2.725
+2026-May-27 08:29:09.205667 #11 2.725 > @pos/root@1.0.0 build /app
+2026-May-27 08:29:09.205667 #11 2.725 > turbo run build && pnpm run build:static:api
+2026-May-27 08:29:09.205667 #11 2.725
+2026-May-27 08:29:09.205667 #11 2.866
+2026-May-27 08:29:09.205667 #11 2.866 Attention:
+2026-May-27 08:29:09.205667 #11 2.866 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-May-27 08:29:09.205667 #11 2.866 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-May-27 08:29:09.205667 #11 2.866 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-May-27 08:29:09.205667 #11 2.866 https://turbo.build/repo/docs/telemetry
+2026-May-27 08:29:09.205667 #11 2.866
+2026-May-27 08:29:09.205667 #11 2.962 • Packages in scope:<REDACTED>@pos/api, @pos/application, @pos/core, @pos/domain, @pos/features, @pos/infrastructure, @pos/offline, @pos/shared, @pos/terminal-web, @pos/web
+2026-May-27 08:29:09.205667 #11 2.962 • Running build in 10 packages
+2026-May-27 08:29:09.205667 #11 2.962 • Remote caching disabled
+2026-May-27 08:29:09.205667 #11 3.033 @pos/web:build: cache miss, executing 95dabff4932abb39
+2026-May-27 08:29:09.205667 #11 3.046 @pos/terminal-web:build: cache miss, executing baf61a11143b9506
+2026-May-27 08:29:09.205667 #11 3.051 @pos/api:build: cache miss, executing 97bfaf000b0649e8
+2026-May-27 08:29:09.205667 #11 4.466 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 4.466 @pos/web:build: > @pos/web@1.0.0 build /app/apps/web
+2026-May-27 08:29:09.205667 #11 4.466 @pos/web:build: > next build
+2026-May-27 08:29:09.205667 #11 4.466 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 4.550 @pos/api:build:
+2026-May-27 08:29:09.205667 #11 4.550 @pos/api:build: > @pos/api@1.0.0 build /app/apps/api
+2026-May-27 08:29:09.205667 #11 4.550 @pos/api:build: > esbuild src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --splitting
+2026-May-27 08:29:09.205667 #11 4.550 @pos/api:build:
+2026-May-27 08:29:09.205667 #11 4.608 @pos/terminal-web:build:
+2026-May-27 08:29:09.205667 #11 4.608 @pos/terminal-web:build: > @pos/terminal-web@1.0.0 build /app/apps/pos-terminal-web
+2026-May-27 08:29:09.205667 #11 4.608 @pos/terminal-web:build: > tsc && vite build
+2026-May-27 08:29:09.205667 #11 4.608 @pos/terminal-web:build:
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build:
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/routes-EKVHJZ4Z.js 239.0kb
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/chunk-HG22VEPV.js 33.3kb
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/index.js 31.9kb
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/vite-YOD6JUMU.js 5.5kb
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/chunk-36H2K5YY.js 4.9kb
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/schema-ZKVQ2JCZ.js 3.0kb
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/chunk-NG4KNR52.js 806b
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/serveStatic-KAGGA42I.js 785b
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/chunk-MLKGABMK.js 191b
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: dist/database-IYK3OIH7.js 121b
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build:
+2026-May-27 08:29:09.205667 #11 4.862 @pos/api:build: ⚡ Done in 156ms
+2026-May-27 08:29:09.205667 #11 7.068 @pos/web:build: Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2026-May-27 08:29:09.205667 #11 7.070 @pos/web:build: This information is used to shape Next.js' roadmap and prioritize features.
+2026-May-27 08:29:09.205667 #11 7.070 @pos/web:build: You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-May-27 08:29:09.205667 #11 7.070 @pos/web:build: https://nextjs.org/telemetry
+2026-May-27 08:29:09.205667 #11 7.070 @pos/web:<REDACTED>@pos/web:build: ▲ Next.js 14.2.35
+2026-May-27 08:29:09.205667 #11 7.286 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 7.539 @pos/web:build: Creating an optimized production build ...
+2026-May-27 08:29:09.205667 #11 42.43 @pos/web:build: ✓ Compiled successfully
+2026-May-27 08:29:09.205667 #11 42.43 @pos/web:build: Linting and checking validity of types ...
+2026-May-27 08:29:09.205667 #11 50.22 @pos/web:build: Collecting page data ...
+2026-May-27 08:29:09.205667 #11 51.64 @pos/web:build: Generating static pages (0/4) ...
+2026-May-27 08:29:09.205667 #11 53.24 @pos/web:build: Generating static pages (1/4)
+2026-May-27 08:29:09.205667 #11 53.24 @pos/web:build: Generating static pages (2/4)
+2026-May-27 08:29:09.205667 #11 53.24 @pos/web:build: Generating static pages (3/4)
+2026-May-27 08:29:09.205667 #11 53.25 @pos/web:build: ✓ Generating static pages (4/4)
+2026-May-27 08:29:09.205667 #11 54.35 @pos/web:build: Finalizing page optimization ...
+2026-May-27 08:29:09.205667 #11 54.35 @pos/web:build: Collecting build traces ...
+2026-May-27 08:29:09.205667 #11 55.72 @pos/terminal-web:build: vite v5.4.21 building for production...
+2026-May-27 08:29:09.205667 #11 55.92 @pos/terminal-web:build: transforming...
+2026-May-27 08:29:09.205667 #11 63.69 @pos/terminal-web:build:
+2026-May-27 08:29:09.205667 #11 63.69 @pos/terminal-web:build: A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+2026-May-27 08:29:09.205667 #11 79.40 @pos/terminal-web:build: ✓ 1837 modules transformed.
+2026-May-27 08:29:09.205667 #11 80.52 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: Route (app) Size First Load JS
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: ┌ ○ / 142 B 87.3 kB
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: └ ○ /_not-found 869 B 88.1 kB
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: + First Load JS shared by all 87.2 kB
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: ├ chunks/591-0b055990cb6dc1c8.js 31.7 kB
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: ├ chunks/7e609c37-66f26d30086ed9b7.js 53.6 kB
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build: └ other shared chunks (total) 1.84 kB
+2026-May-27 08:29:09.205667 #11 80.57 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 80.58 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 80.58 @pos/web:build: ○ (Static) prerendered as static content
+2026-May-27 08:29:09.205667 #11 80.58 @pos/web:build:
+2026-May-27 08:29:09.205667 #11 81.86 @pos/terminal-web:build: [plugin:vite:reporter] [plugin vite:reporter]
+2026-May-27 08:29:09.205667 #11 81.86 @pos/terminal-web:build: (!) /app/apps/pos-terminal-web/src/lib/outlet.ts is dynamically imported by /app/apps/pos-terminal-web/src/lib/api/hooks.ts, /app/apps/pos-terminal-web/src/lib/api/hooks.ts but also statically imported by /app/apps/pos-terminal-web/src/context/OutletContext.tsx, /app/apps/pos-terminal-web/src/hooks/api/useCategories.ts, /app/apps/pos-terminal-web/src/hooks/api/useOrders.ts, /app/apps/pos-terminal-web/src/hooks/api/useProducts.ts, /app/apps/pos-terminal-web/src/lib/api/hooks.ts, /app/apps/pos-terminal-web/src/lib/api/tableHooks.ts, /app/apps/pos-terminal-web/src/pages/pos.tsx, /app/apps/pos-terminal-web/src/pages/tables-management.tsx, dynamic import will not move module into another chunk.
+2026-May-27 08:29:09.205667 #11 81.86 @pos/terminal-web:build:
+2026-May-27 08:29:09.205667 #11 81.86 @pos/terminal-web:build: rendering chunks...
+2026-May-27 08:29:09.205667 #11 81.92 @pos/terminal-web:build: computing gzip size...
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build: ../../dist/public/index.html 2.21 kB │ gzip: 0.82 kB
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build: ../../dist/public/assets/index-CnLohmpR.css 127.75 kB │ gzip: 19.31 kB
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build: ../../dist/public/assets/index-B1TEc-R0.js 952.78 kB │ gzip: 268.30 kB
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build:
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build: (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build: - Using dynamic import() to code-split the application
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2026-May-27 08:29:09.205667 #11 82.00 @pos/terminal-web:<REDACTED>@pos/terminal-web:build: ✓ built in 26.20s
+2026-May-27 08:29:09.205667 #11 82.22
+2026-May-27 08:29:09.205667 #11 82.22 Tasks: 3 successful, 3 total
+2026-May-27 08:29:09.205667 #11 82.22 Cached: 0 cached, 3 total
+2026-May-27 08:29:09.205667 #11 82.22 Time: 1m19.346s
+2026-May-27 08:29:09.205667 #11 82.22
+2026-May-27 08:29:09.205667 #11 83.69
+2026-May-27 08:29:09.205667 #11 83.69 > @pos/root@1.0.0 build:static:api /app
+2026-May-27 08:29:09.205667 #11 83.69 > mkdir -p apps/api/dist/public && if [ -d apps/pos-terminal-web/dist ]; then cp -r apps/pos-terminal-web/dist/* apps/api/dist/public/; elif [ -d dist/public ]; then cp -r dist/public/* apps/api/dist/public/; else echo 'Missing terminal web build output' >&2; find . -path '*/index.html' -o -path '*/assets/index-*.js' | sort >&2; exit 1; fi
+2026-May-27 08:29:09.205667 #11 83.69
+2026-May-27 08:29:09.205667 #11 DONE 84.1s
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 #12 [deploy-prep 1/1] RUN pnpm --filter @pos/api deploy --prod /standalone
+2026-May-27 08:29:09.205667 #12 1.771 ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE By default, starting from pnpm v10, we only deploy from workspaces that have "inject-workspace-packages=true" set
+2026-May-27 08:29:09.205667 #12 1.771
+2026-May-27 08:29:09.205667 #12 1.771 If you want to deploy without using injected dependencies, run "pnpm deploy" with the "--legacy" flag or set "force-legacy-deploy" to true
+2026-May-27 08:29:09.205667 #12 ERROR: process "/bin/sh -c pnpm --filter @pos/api deploy --prod /standalone" did not complete successfully: exit code: 1
+2026-May-27 08:29:09.205667 ------
+2026-May-27 08:29:09.205667 > [deploy-prep 1/1] RUN pnpm --filter @pos/api deploy --prod /standalone:
+2026-May-27 08:29:09.205667 1.771 ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE By default, starting from pnpm v10, we only deploy from workspaces that have "inject-workspace-packages=true" set
+2026-May-27 08:29:09.205667 1.771
+2026-May-27 08:29:09.205667 1.771 If you want to deploy without using injected dependencies, run "pnpm deploy" with the "--legacy" flag or set "force-legacy-deploy" to true
+2026-May-27 08:29:09.205667 ------
+2026-May-27 08:29:09.205667
+2026-May-27 08:29:09.205667 9 warnings found (use docker --debug to expand):
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 4)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 6)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 8)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 39)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 41)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 37)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 54)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 56)
+2026-May-27 08:29:09.205667 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 58)
+2026-May-27 08:29:09.205667 Dockerfile:50
+2026-May-27 08:29:09.205667 --------------------
+2026-May-27 08:29:09.205667 48 | ARG COOLIFY_BRANCH=main
+2026-May-27 08:29:09.205667 49 | ARG COOLIFY_RESOURCE_UUID=n12lywn11oyw1wz0ziv0corq
+2026-May-27 08:29:09.205667 50 | >>> RUN pnpm --filter @pos/api deploy --prod /standalone
+2026-May-27 08:29:09.205667 51 |
+2026-May-27 08:29:09.205667 52 | # ── Stage 3: minimal runner ───────────────────────────────────────────────────
+2026-May-27 08:29:09.205667 --------------------
+2026-May-27 08:29:09.205667 ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm --filter @pos/api deploy --prod /standalone" did not complete successfully: exit code: 1
+2026-May-27 08:29:09.205667 exit status 1
+2026-May-27 08:29:09.428470 ========================================
+2026-May-27 08:29:09.449737 Deployment failed. Removing the new version of your application.
+2026-May-27 08:29:10.206753 Gracefully shutting down build container: motc0nwdlybo17u8606oak67

@@ -21,7 +21,7 @@ RUN pnpm run build
 # Workspace packages (@pos/*) are already inlined into apps/api/dist/index.js
 # by esbuild, so they do NOT need to be present at runtime.
 FROM builder AS deploy-prep
-RUN pnpm --filter @pos/api deploy --prod /standalone
+RUN pnpm --filter @pos/api deploy --prod --legacy /standalone
 
 # ── Stage 3: minimal runner ───────────────────────────────────────────────────
 FROM node:20-alpine AS runner
