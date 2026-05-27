@@ -28,6 +28,16 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: /\/api\/auth\/me/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "auth-session-cache",
+              networkTimeoutSeconds: 3,
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 1, maxAgeSeconds: 7 * 24 * 60 * 60 },
+            },
+          },
+          {
             urlPattern: /\/api\/catalog\/products/,
             handler: "NetworkFirst",
             options: {

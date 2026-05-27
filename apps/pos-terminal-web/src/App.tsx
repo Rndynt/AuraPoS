@@ -147,6 +147,8 @@ function ProtectedTablesRoute() {
   return hasModule("enable_table_management") ? <TablesManagementPageWithLayout /> : <NotFoundWithLayout />;
 }
 
+const OFFLINE_SESSION_KEY = "aurapos_session_cached";
+
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -157,12 +159,27 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     fetch("/api/auth/me", { credentials: "include" })
       .then((r) => {
         if (r.ok) {
+          r.json().then((body) => {
+            try {
+              localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(body));
+            } catch {
+              // storage quota exceeded — non-fatal
+            }
+          }).catch(() => {});
+          setStatus("authenticated");
+        } else {
+          localStorage.removeItem(OFFLINE_SESSION_KEY);
+          setStatus("unauthenticated");
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem(OFFLINE_SESSION_KEY);
+        if (cached) {
           setStatus("authenticated");
         } else {
           setStatus("unauthenticated");
         }
-      })
-      .catch(() => setStatus("unauthenticated"));
+      });
   }, []);
 
   useEffect(() => {
