@@ -126,7 +126,7 @@ export default function OrdersPage() {
   const { data: tenantProfile } = useTenantProfile(tenantId);
   const tenantName = (tenantProfile?.tenant as any)?.name ?? "AuraPOS";
 
-  const { data, isLoading } = useOrders();
+  const { data, isLoading } = useOrders({ limit: 100 });
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
   const recordPaymentMutation = useRecordPayment();
 
@@ -136,13 +136,18 @@ export default function OrdersPage() {
   );
 
   const filteredOrders = useMemo(() => {
-    const activeOrders = normalizedOrders.filter(o => 
-      ["draft", "confirmed", "preparing", "ready"].includes(o.status)
-    );
+    // When viewing "completed" or "served" tabs, filter from ALL orders
+    // When viewing "all" or active status tabs, show only active orders
+    const isActiveStatus = ["draft", "confirmed", "preparing", "ready"].includes(filterStatus);
+    const showAll = filterStatus === "all";
     
-    let result = activeOrders;
+    let result = (showAll || isActiveStatus)
+      ? normalizedOrders.filter(o => 
+          ["draft", "confirmed", "preparing", "ready"].includes(o.status)
+        )
+      : normalizedOrders.filter(o => o.status === filterStatus);
     
-    if (filterStatus !== "all") {
+    if (!showAll && isActiveStatus) {
       result = result.filter(o => o.status === filterStatus);
     }
     

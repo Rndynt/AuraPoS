@@ -236,7 +236,7 @@ export const listOrders = asyncHandler(async (req: Request, res: Response) => {
     startDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
     endDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
     page: z.string().optional().transform(val => val ? parseInt(val, 10) : 1),
-    limit: z.string().optional().transform(val => val ? parseInt(val, 10) : 20),
+    limit: z.string().optional().transform(val => val ? parseInt(val, 10) : 100),
   });
 
   const parsed = querySchema.safeParse(req.query);

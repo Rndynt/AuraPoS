@@ -94,14 +94,9 @@ export function useOfflineOrderSubmit() {
 
         if (serverResult) {
           const order = serverResult.order as any;
-          mirrorServerOrderLocally(
-            tenantId,
-            terminal.terminalId,
-            order?.id ?? "",
-            order?.order_number ?? "",
-            idempotencyKey
-          ).catch(() => undefined);
-
+          // Don't mirror to IndexedDB when online — it pollutes offline orders page
+          // Only mirror if we want offline order history caching (future feature)
+          
           queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
           return { ...serverResult, isLocal: false };
         }
