@@ -48,5 +48,4 @@ ENV PORT=5000
 EXPOSE 5000
 
 # Run from /app so Node's module resolution finds ./node_modules
-# Use cluster.ts in production (multi-core), index.ts for development
-CMD ["node", "apps/api/dist/cluster.js"]
+CMD ["node", "apps/api/dist/index.js"]
