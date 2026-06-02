@@ -43,6 +43,7 @@ export interface SyncOrderItemInput {
   payment_method: 'cash' | 'card' | 'ewallet' | 'other';
   transaction_ref?: string;
   payment_notes?: string;
+  fulfillment_mode?: 'standard' | 'instant';
   client_created_at?: string;
   source_terminal_id?: string;
 }
@@ -266,6 +267,7 @@ export class SyncOfflineOrder {
           transaction_ref: item.transaction_ref ?? item.idempotency_key,
           payment_notes: item.payment_notes,
           idempotency_key: item.idempotency_key,
+          fulfillment_mode: item.fulfillment_mode,
         });
 
         const status: SyncItemStatus = output.idempotent_replay ? 'replayed' : 'synced';

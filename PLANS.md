@@ -1127,3 +1127,151 @@ Continue by adding schema/migration, implementing policy/error/retry helpers, th
 ### Continuation Notes
 
 Next safest follow-up is to make standalone `/api/orders/:id/confirm` status transition and stock movement share one DB transaction in strict mode, then clean the existing API type-check blockers.
+
+## Plan: Create-and-pay order/payment lifecycle decoupling
+
+### Source
+
+- Tasklist: User request (4 numbered lifecycle tasks)
+- User request: Prevent full payment from auto-completing orders, preserve operational fulfillment states, add explicit instant-fulfillment flag if needed, sync docs/frontend/tests.
+- Date started: 2026-06-02
+- Current status: Completed for this batch
+
+### Goal
+
+Ensure `POST /api/orders/create-and-pay` records payment status/paid amount atomically without closing the operational order lifecycle unless an explicit validated instant-fulfillment mode is requested.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active user tasklist
+- [x] Relevant docs (`docs/ORDER_LIFECYCLE.md`)
+- [x] Relevant source files (`CreateAndPayOrder`, order status use cases/controllers, frontend open queue, offline sync, lifecycle tests)
+
+### Workstreams
+
+#### Backend/API Workstream
+
+- Scope: Create-and-pay lifecycle behavior and request validation.
+- Files inspected: `packages/application/orders/CreateAndPayOrder.ts`, `apps/api/src/http/controllers/OrdersController.ts`, `packages/application/orders/RecordPayment.ts`, `packages/application/orders/CompleteOrder.ts`, `packages/domain/orders/OrderStateValidator.ts`.
+- Findings: Create-and-pay set `status='completed'` and `closedAt` whenever payment became `paid`; RecordPayment already kept payment separate from fulfillment.
+- Tasks: Remove implicit full-payment completion; add validated explicit `fulfillment_mode='instant'` request mode for intentional non-kitchen auto-completion.
+- Risks: Paid-but-unfulfilled orders must remain visible in operational queues.
+- Validation: Targeted API lifecycle test passed; application package type-check passed.
+
+#### Frontend/UI Workstream
+
+- Scope: Open order queue labels and filters.
+- Files inspected: `apps/pos-terminal-web/src/components/pos/OrderQueuePanel.tsx`, `apps/pos-terminal-web/src/components/kitchen-display/OrderQueue.tsx`, `apps/pos-terminal-web/src/lib/api/tableHooks.ts`, `apps/pos-terminal-web/src/lib/api/hooks.ts`.
+- Findings: One panel still used legacy `status === 'open'` pending filter/label; backend open query already includes draft/confirmed/preparing/ready/served.
+- Tasks: Align frontend active/pending status filters with current lifecycle and expose `fulfillment_mode` in create-and-pay input type.
+- Risks: Avoid hiding paid-but-unfulfilled confirmed orders.
+- Validation: Terminal web type-check passed.
+
+#### Tests/Validation Workstream
+
+- Scope: Lifecycle regression coverage.
+- Files inspected: `apps/api/src/__tests__/create-and-pay-stock-concurrency.test.ts`.
+- Findings: Existing test covered stock transaction but not lifecycle status after full payment.
+- Tasks: Added tests for full-payment confirmed status and explicit instant mode completion.
+- Risks: None remaining in this batch.
+- Validation: Targeted node test passed.
+
+#### Documentation Workstream
+
+- Scope: Order lifecycle docs.
+- Files inspected: `docs/ORDER_LIFECYCLE.md`.
+- Findings: Docs described separate payment/fulfillment but quick-pay wording could imply completion.
+- Tasks: Updated atomic quick-pay and workflows to state full payment does not auto-complete unless `fulfillment_mode='instant'` is explicitly validated.
+- Risks: None remaining in this batch.
+- Validation: Manual documentation review.
+
+#### Offline/Sync Workstream
+
+- Scope: Offline local order and sync payload lifecycle parity.
+- Files inspected: `packages/offline/src/localOrderService.ts`, `apps/pos-terminal-web/src/hooks/useOfflineOrderSubmit.ts`, `packages/application/sync/SyncOfflineOrder.ts`.
+- Findings: Offline quick-pay mirrored local orders as `completed` by default.
+- Tasks: Keep offline quick-pay local orders `confirmed` by default, preserve explicit `instant` fulfillment mode through queued sync.
+- Risks: Existing local orders are not migrated; new offline orders follow the corrected lifecycle.
+- Validation: Offline package and terminal web type-check passed.
+
+### Execution Order
+
+1. Backend lifecycle fix.
+2. Frontend/offline queue and payload sync.
+3. Tests lifecycle coverage.
+4. Documentation sync.
+5. Validation and commit.
+
+### Progress
+
+#### Completed
+
+- [x] Task: Full payment no longer implicitly completes create-and-pay orders.
+  - Files changed: `packages/application/orders/CreateAndPayOrder.ts`, `apps/api/src/http/controllers/OrdersController.ts`.
+  - Validation: targeted lifecycle test and application type-check passed.
+  - Docs updated: `docs/ORDER_LIFECYCLE.md`.
+- [x] Task: Explicit instant fulfillment path added.
+  - Files changed: `packages/application/orders/CreateAndPayOrder.ts`, `apps/api/src/http/controllers/OrdersController.ts`, `apps/pos-terminal-web/src/lib/api/hooks.ts`, `packages/offline/src/localOrderService.ts`, `packages/application/sync/SyncOfflineOrder.ts`.
+  - Validation: targeted lifecycle test and package type-checks passed.
+  - Docs updated: `docs/ORDER_LIFECYCLE.md`.
+- [x] Task: Frontend/offline status lifecycle sync.
+  - Files changed: `apps/pos-terminal-web/src/components/pos/OrderQueuePanel.tsx`, `apps/pos-terminal-web/src/hooks/useOfflineOrderSubmit.ts`, `packages/offline/src/localOrderService.ts`.
+  - Validation: terminal web/offline type-check passed.
+  - Docs updated: `docs/ORDER_LIFECYCLE.md`.
+- [x] Task: Tests status lifecycle.
+  - Files changed: `apps/api/src/__tests__/create-and-pay-stock-concurrency.test.ts`.
+  - Validation: targeted node test passed.
+  - Docs updated: none.
+
+#### Partially Completed
+
+- [ ] Task: Full monorepo `pnpm type-check` green.
+  - Completed: Relevant packages (`@pos/application`, `@pos/offline`, `@pos/terminal-web`) type-check green.
+  - Remaining: Existing `@pos/api` type-check blockers remain.
+  - Reason: Failures are unrelated pre-existing Express/rate-limit/compression/featureGuard typing issues.
+
+#### Blocked
+
+- [ ] Task: Full root `pnpm type-check`.
+  - Blocker: Existing `@pos/api` type errors in `src/http/middleware/featureGuard.ts`, `src/http/routes/index.ts`, and missing declaration for `compression`.
+  - Required next step: API dependency/type hygiene pass.
+
+#### Not Attempted
+
+- [ ] Task: Database `fulfillment_mode` persistence column.
+  - Reason: User allowed a request flag alternative; this batch added a validated request flag and avoided schema churn.
+
+### Validation Log
+
+- Command: `pnpm exec tsx --tsconfig apps/api/tsconfig.node.json apps/api/src/__tests__/create-and-pay-stock-concurrency.test.ts`
+- Result: pass
+- Notes: 3 lifecycle/stock tests passed.
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Notes: Application package compiles.
+- Command: `pnpm --filter @pos/offline type-check`
+- Result: pass
+- Notes: Offline package compiles.
+- Command: `pnpm --filter @pos/terminal-web type-check`
+- Result: pass
+- Notes: Terminal web package compiles.
+- Command: `pnpm type-check`
+- Result: fail
+- Notes: unrelated existing API type issues in `featureGuard.ts`, `routes/index.ts`, and missing `@types/compression` declaration.
+
+### Documentation Updates
+
+- File: `docs/ORDER_LIFECYCLE.md`
+- Change: Documented payment/fulfillment separation for quick-pay, explicit `fulfillment_mode="instant"`, queue-visible paid orders, and updated workflows/state diagram.
+
+### Checklist Updates
+
+- File: `PLANS.md`
+- Change: Added active execution plan and completed status for lifecycle task.
+
+### Continuation Notes
+
+Next safest follow-up is to clean existing API type-check blockers so root `pnpm type-check` can be used as the final monorepo gate.

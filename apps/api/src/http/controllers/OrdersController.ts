@@ -784,6 +784,7 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
     transaction_ref: z.string().optional(),
     payment_notes: z.string().optional(),
     idempotency_key: z.string().min(8).max(128).optional(),
+    fulfillment_mode: z.enum(['standard', 'instant']).optional(),
   });
 
   const parsed = bodySchema.safeParse(req.body);
@@ -806,6 +807,7 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
     transaction_ref: parsed.data.transaction_ref,
     payment_notes: parsed.data.payment_notes,
     idempotency_key: parsed.data.idempotency_key,
+    fulfillment_mode: parsed.data.fulfillment_mode,
   });
 
   emitOrderQueueChanged(tenantId, { source: 'create_and_pay', orderId: result.order.id });

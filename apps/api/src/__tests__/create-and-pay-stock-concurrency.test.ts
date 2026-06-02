@@ -271,6 +271,8 @@ const orderInput = (idempotencyKey: string) => ({
       quantity: 1,
     },
   ],
+  tax_rate: 0,
+  service_charge_rate: 0,
   amount: 10,
   payment_method: 'cash' as const,
   idempotency_key: idempotencyKey,
@@ -300,4 +302,30 @@ describe('CreateAndPayOrder stock concurrency', () => {
     assert.equal(store.movements[0].quantityBefore, 1);
     assert.equal(store.movements[0].quantityAfter, 0);
   });
+
+  it('keeps a fully paid quick-pay order operationally confirmed by default', async () => {
+    const { store, useCase } = buildUseCase(2);
+
+    const result = await useCase.execute(orderInput('paid-confirmed-default'));
+
+    assert.equal(result.order.paymentStatus, 'paid');
+    assert.equal(result.order.paidAmount, '10');
+    assert.equal(result.order.status, 'confirmed');
+    assert.equal(result.order.closedAt, undefined);
+    assert.equal(store.orders.length, 1);
+  });
+
+  it('only auto-completes create-and-pay when explicit instant fulfillment mode is requested', async () => {
+    const { useCase } = buildUseCase(2);
+
+    const result = await useCase.execute({
+      ...orderInput('paid-instant-fulfillment'),
+      fulfillment_mode: 'instant',
+    });
+
+    assert.equal(result.order.paymentStatus, 'paid');
+    assert.equal(result.order.status, 'completed');
+    assert.ok(result.order.closedAt instanceof Date);
+  });
+
 });
