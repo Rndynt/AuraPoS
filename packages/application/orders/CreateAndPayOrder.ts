@@ -10,7 +10,7 @@
  * Idempotency:
  *  - Caller supplies `idempotency_key` (UUID or similar, 8–128 chars).
  *  - If a payment with that key already exists for this tenant, the prior result is replayed.
- *  - Idempotency check happens BEFORE the transaction to avoid unnecessary locking.
+ *  - Idempotency check happens inside the transaction to serialize concurrent retries.
  */
 
 import type { Database } from '@pos/infrastructure/database';
@@ -20,14 +20,14 @@ import {
   orderItemModifiers,
   orderPayments,
   products,
-  inventoryMovements,
   type InsertOrder,
 } from '../../../shared/schema';
-import { eq, and, inArray, gte, count, sql } from 'drizzle-orm';
+import { eq, and, inArray, gte, count } from 'drizzle-orm';
 import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from './mappers';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
 import { calculateSelectedOptionsDelta, flattenSelectedOptions } from '../catalog';
 import type { SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
+import { deductStockForItems } from '../inventory/stockMovements';
 
 // ---------------------------------------------------------------------------
 // Input / Output types
@@ -309,74 +309,26 @@ export class CreateAndPayOrder {
         .where(and(eq(orders.id, newOrder.id), eq(orders.tenantId, tenant_id)))
         .returning();
 
+      // 6. Deduct stock and record inventory movement inside the same
+      // transaction as order creation and payment. Quick-pay should either
+      // commit the order, payment, product stock, and movement together, or
+      // roll them all back (for example when tracked stock is insufficient).
+      await deductStockForItems(
+        tenant_id,
+        computedItems.map((item) => ({
+          productId: item.product_id,
+          quantity: item.quantity,
+        })),
+        {
+          orderId: updatedOrder.id,
+          orderNumber: updatedOrder.orderNumber,
+          outletId: outlet_id ?? null,
+        },
+        { tx, allowNegativeStock: false },
+      );
+
       return { order: updatedOrder, payment: newPayment };
     });
-
-    // Stock deduction runs AFTER the transaction is committed.
-    // create-and-pay creates the order as "confirmed" directly, so stock
-    // must be deducted here. outletId is tagged on movements for per-outlet
-    // sales reporting while the stock pool remains global (shared across outlets).
-    if (computedItems.length > 0) {
-      const productIds = [...new Set(computedItems.map((i: any) => i.product_id).filter(Boolean))];
-      if (productIds.length > 0) {
-        const trackedProducts = await this.db
-          .select({ id: products.id, stockQty: products.stockQty })
-          .from(products)
-          .where(and(
-            eq(products.tenantId, tenant_id),
-            inArray(products.id, productIds),
-            eq(products.stockTrackingEnabled, true),
-          ));
-
-        if (trackedProducts.length > 0) {
-          const soldQtyMap: Record<string, number> = {};
-          for (const item of computedItems as any[]) {
-            if (item.product_id) {
-              soldQtyMap[item.product_id] = (soldQtyMap[item.product_id] ?? 0) + (item.quantity ?? 1);
-            }
-          }
-          const orderLabel = result.order.orderNumber;
-          for (const product of trackedProducts) {
-            const soldQty = soldQtyMap[product.id] ?? 0;
-            if (soldQty === 0) continue;
-
-            // Use SELECT ... FOR UPDATE to prevent race condition
-            const [locked] = await this.db
-              .select({ id: products.id, stockQty: products.stockQty })
-              .from(products)
-              .where(and(eq(products.id, product.id), eq(products.tenantId, tenant_id)))
-              .for('update');
-
-            if (!locked) continue;
-
-            const before = locked.stockQty ?? 0;
-            const after = before - soldQty;
-
-            if (after < 0) {
-              console.warn(`[CreateAndPay] Stock would go negative for product ${product.id}: ${before} - ${soldQty} = ${after}`);
-            }
-
-            await this.db
-              .update(products)
-              .set({ stockQty: after, updatedAt: new Date() })
-              .where(and(eq(products.id, product.id), eq(products.tenantId, tenant_id)));
-            await this.db.insert(inventoryMovements).values({
-              tenantId: tenant_id,
-              productId: product.id,
-              orderId: result.order.id,
-              outletId: outlet_id ?? null,
-              movementType: 'SALE',
-              quantityDelta: -soldQty,
-              quantityBefore: before,
-              quantityAfter: after,
-              notes: `Penjualan — Order ${orderLabel}`,
-            }).catch((err) => {
-              console.error(`[CreateAndPay] Failed to record inventory movement for product ${product.id}:`, err);
-            });
-          }
-        }
-      }
-    }
 
     return {
       order: result.order,

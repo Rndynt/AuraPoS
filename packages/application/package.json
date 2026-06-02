@@ -14,7 +14,9 @@
     "./seating/*": "./seating/*.ts",
     "./tenants": "./tenants/index.ts",
     "./tenants/*": "./tenants/*.ts",
-    "./sync/*": "./sync/*.ts"
+    "./sync/*": "./sync/*.ts",
+    "./inventory": "./inventory/index.ts",
+    "./inventory/*": "./inventory/*.ts"
   },
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit"
