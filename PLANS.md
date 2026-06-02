@@ -776,3 +776,145 @@ Ensure KDS API keys can only drive kitchen fulfillment transitions for their own
 
 ### Continuation Notes
 Recommended next batch: fix existing API type-check blockers (`featureGuard.ts`, Express/rate-limit type mismatch, and missing `@types/compression`) so `pnpm --filter @pos/api type-check` can pass cleanly.
+
+## Plan: Atomic quick-pay stock deduction and concurrency tests
+
+### Source
+- Tasklist: User request with 5 inventory/order integrity tasks.
+- User request: Move stock deduction/reversal into transactions, allow helper tx injection, make CreateAndPay quick-pay atomic with stock movement, use conditional stock update when negative stock is disallowed, and add concurrency tests.
+- Date started: 2026-06-02
+- Current status: Implemented; API-wide type-check still has unrelated pre-existing errors.
+
+### Goal
+Make quick-pay order creation, payment recording, stock deduction, and inventory ledger writes commit or roll back together while preserving tenant filters and preventing oversell under concurrent requests on tracked products.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist (user prompt)
+- [x] Relevant docs (`docs/ORDER_LIFECYCLE.md`)
+- [x] Relevant source files (`stockDeduction.ts`, `CreateAndPayOrder.ts`, orders controller, schema, database types, existing tests)
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: Stock helper and quick-pay use case.
+- Files inspected: apps/api/src/http/helpers/stockDeduction.ts; packages/application/orders/CreateAndPayOrder.ts; apps/api/src/http/controllers/OrdersController.ts.
+- Findings: Helper used global db for lock/update/movement and swallowed movement insert errors; quick-pay deducted stock after the order/payment transaction committed.
+- Tasks: Completed by adding application inventory helpers with optional tx and moving quick-pay deduction into the existing CreateAndPayOrder transaction.
+- Risks: Online quick-pay for tracked products now rejects insufficient stock instead of allowing negative stock.
+- Validation: `pnpm --filter @pos/application type-check`; `pnpm --filter @pos/api test`.
+
+#### Database/Schema Workstream
+- Scope: Existing product stock and inventory movement schema.
+- Files inspected: shared/schema.ts; packages/infrastructure/database.ts.
+- Findings: products.stockQty is nullable integer; stockTrackingEnabled gates stock mutation; inventory_movements stores before/after quantities.
+- Tasks: No schema change needed; implemented transactional row locks and conditional stock updates.
+- Risks: `SELECT ... FOR UPDATE` correctness depends on PostgreSQL transaction context, now provided by helper-owned transactions or caller tx.
+- Validation: Type-check and fake transactional concurrency test.
+
+#### Frontend/UI Workstream
+- Scope: None.
+- Files inspected: README.md for app context.
+- Findings: No UI changes required.
+- Tasks: Not applicable.
+- Risks: None.
+- Validation: Not applicable.
+
+#### Tests/Validation Workstream
+- Scope: Concurrency coverage for limited stock.
+- Files inspected: apps/api/src/__tests__ patterns; package scripts.
+- Findings: API uses Node test runner; existing tests avoid live DB by stubbing.
+- Tasks: Added a fake transactional DB test that runs two create-and-pay calls concurrently against one tracked unit and verifies one rollback.
+- Risks: Fake DB covers the use-case chains involved in this path, not all Drizzle behavior.
+- Validation: `pnpm --filter @pos/api test` passed.
+
+#### Documentation Workstream
+- Scope: Order lifecycle docs and PLANS progress.
+- Files inspected: docs/ORDER_LIFECYCLE.md.
+- Findings: Existing docs claimed create-and-pay is atomic for order/payment but did not mention stock.
+- Tasks: Updated docs to include stock deduction and inventory movement atomicity for quick-pay.
+- Risks: None.
+- Validation: Reviewed with implementation.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Tenant-aware stock/product access.
+- Files inspected: stock helper, quick-pay product validation.
+- Findings: Existing stock queries filter by tenant and product IDs.
+- Tasks: Preserved tenant filters on validation, locks, conditional update, and movement inserts.
+- Risks: None identified.
+- Validation: API test suite includes tenant guard tests; new stock code type-checks in application package.
+
+### Execution Order
+1. Safety/security/data-integrity/tenant-isolation blockers.
+2. Build/type/test blockers.
+3. Dependency prerequisites.
+4. Highest priority actionable tasks.
+5. Lower priority actionable tasks.
+6. Documentation sync.
+7. Validation.
+8. Final checklist update.
+
+### Progress
+
+#### Completed
+- [x] Move stock deduction/reversal into transactions with the same tx for `SELECT ... FOR UPDATE`, product stock update, and inventory movement insert.
+  - Files changed: packages/application/inventory/stockMovements.ts; apps/api/src/http/helpers/stockDeduction.ts.
+  - Validation: `pnpm --filter @pos/application type-check`; `pnpm --filter @pos/api test`.
+  - Docs updated: docs/ORDER_LIFECYCLE.md.
+- [x] Allow stock helper to accept optional tx.
+  - Files changed: packages/application/inventory/stockMovements.ts; apps/api/src/http/helpers/stockDeduction.ts; packages/application/package.json.
+  - Validation: `pnpm --filter @pos/application type-check`; `pnpm --filter @pos/api test`.
+  - Docs updated: PLANS.md.
+- [x] Make quick-pay order creation, payment, stock deduction, and inventory movement atomic.
+  - Files changed: packages/application/orders/CreateAndPayOrder.ts.
+  - Validation: `pnpm --filter @pos/application type-check`; `pnpm --filter @pos/api test`.
+  - Docs updated: docs/ORDER_LIFECYCLE.md.
+- [x] Add non-negative stock conditional update path.
+  - Files changed: packages/application/inventory/stockMovements.ts.
+  - Validation: `pnpm --filter @pos/application type-check`; `pnpm --filter @pos/api test`.
+  - Docs updated: PLANS.md.
+- [x] Add concurrency tests for two parallel orders on limited stock.
+  - Files changed: apps/api/src/__tests__/create-and-pay-stock-concurrency.test.ts.
+  - Validation: `pnpm --filter @pos/api test`.
+  - Docs updated: PLANS.md.
+
+#### Partially Completed
+- [ ] API package type-check cleanup.
+  - Completed: Ran API type-check to verify current state.
+  - Remaining: Fix unrelated existing Express/rate-limit/compression declaration errors.
+  - Reason: Errors are outside the changed stock/order files and pre-existing in the broader API package.
+
+#### Blocked
+- [ ] None.
+  - Blocker: None.
+  - Required next step: None.
+
+#### Not Attempted
+- [ ] Frontend/UI changes.
+  - Reason: No frontend behavior requested or required.
+
+### Validation Log
+- Command: `pnpm --filter @pos/application type-check`
+- Result: Pass
+- Notes: Application package including new inventory helper and quick-pay changes type-checks.
+- Command: `pnpm --filter @pos/api test`
+- Result: Pass
+- Notes: Includes new create-and-pay stock concurrency test and existing API tests.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: Fail (unrelated existing errors)
+- Notes: Fails in `featureGuard.ts`, `routes/index.ts`, and missing `@types/compression`, not in the changed inventory/order files.
+
+### Documentation Updates
+- File: docs/ORDER_LIFECYCLE.md
+- Change: Quick-pay atomicity now documents order, payment, product stock, and inventory movement ledger behavior.
+- File: PLANS.md
+- Change: Added and completed this execution plan with validation results.
+
+### Checklist Updates
+- File: User prompt / PLANS.md
+- Change: All 5 requested tasks implemented and tracked as completed; unrelated API type-check issue noted separately.
+
+### Continuation Notes
+Next recommended batch is to fix the pre-existing API type-check errors in `featureGuard.ts`, `routes/index.ts`, and compression typings so `pnpm --filter @pos/api type-check` can pass cleanly.

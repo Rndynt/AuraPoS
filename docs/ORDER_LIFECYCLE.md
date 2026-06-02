@@ -113,14 +113,15 @@ To prevent "orphaned orders" (order created but payment fails), AuraPoS uses ato
 ```
 Customer clicks "Charge"
   ↓
-Create Order + Record Payment in single endpoint (`/api/orders/create-and-pay`)
+Create Order + Record Payment + Deduct tracked stock + Insert inventory movement
+  in single endpoint (`/api/orders/create-and-pay`)
   ↓
-Both succeed → Order with payment recorded ✅
-Both fail → Nothing created, cart stays intact, retry ✅
-(Payment fails) → Order exists but marked UNPAID, customer can retry payment later ⚠️
+All succeed → Order with payment recorded and inventory ledger updated ✅
+Any transactional step fails → Nothing created, stock unchanged, cart can retry ✅
+(Insufficient tracked stock) → Transaction rolls back instead of overselling ✅
 ```
 
-**Result**: Order and payment are always in sync, no orphaned orders.
+**Result**: Order, payment, product stock, and inventory movement ledger stay in sync for quick-pay, with no orphaned orders or post-commit stock deduction gap.
 
 ---
 

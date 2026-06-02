@@ -1,0 +1,303 @@
+import '../../register-paths';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL ||= 'postgres://user:pass@127.0.0.1:5432/aurapos_test';
+process.env.BETTER_AUTH_SECRET ||= 'test-secret-with-at-least-32-characters';
+
+const { CreateAndPayOrder } = await import('@pos/application/orders/CreateAndPayOrder');
+const { inventoryMovements, orderItems, orderPayments, orders, products } = await import('@shared/schema');
+
+type ProductRow = {
+  id: string;
+  tenantId: string;
+  isActive: boolean;
+  stockTrackingEnabled: boolean;
+  stockQty: number;
+};
+
+type Store = {
+  product: ProductRow;
+  orders: any[];
+  orderItems: any[];
+  payments: any[];
+  movements: any[];
+};
+
+class AsyncMutex {
+  private current = Promise.resolve();
+
+  async runExclusive<T>(work: () => Promise<T>): Promise<T> {
+    const previous = this.current;
+    let release!: () => void;
+    this.current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await work();
+    } finally {
+      release();
+    }
+  }
+}
+
+class FakeDb {
+  readonly mutex = new AsyncMutex();
+
+  constructor(readonly store: Store) {}
+
+  async transaction<T>(work: (tx: FakeTx) => Promise<T>): Promise<T> {
+    return this.mutex.runExclusive(async () => {
+      const snapshot: Store = structuredClone(this.store);
+      const tx = new FakeTx(this.store);
+      try {
+        return await work(tx);
+      } catch (error) {
+        this.store.product = snapshot.product;
+        this.store.orders = snapshot.orders;
+        this.store.orderItems = snapshot.orderItems;
+        this.store.payments = snapshot.payments;
+        this.store.movements = snapshot.movements;
+        throw error;
+      }
+    });
+  }
+
+  select(fields: Record<string, unknown>) {
+    return new FakeSelect(this.store, fields);
+  }
+
+  insert(table: unknown) {
+    return new FakeInsert(this.store, table);
+  }
+
+  update(table: unknown) {
+    return new FakeUpdate(this.store, table);
+  }
+}
+
+class FakeTx extends FakeDb {
+  async transaction<T>(work: (tx: FakeTx) => Promise<T>): Promise<T> {
+    return work(this);
+  }
+}
+
+class FakeSelect {
+  private table: unknown;
+  private limitCount: number | undefined;
+
+  constructor(private readonly store: Store, private readonly fields: Record<string, unknown> = {}) {}
+
+  from(table: unknown) {
+    this.table = table;
+    return this;
+  }
+
+  innerJoin() {
+    return this;
+  }
+
+  where() {
+    return this;
+  }
+
+  limit(count: number) {
+    this.limitCount = count;
+    return this;
+  }
+
+  for() {
+    return this.execute();
+  }
+
+  then<TResult1 = any[], TResult2 = never>(
+    onfulfilled?: ((value: any[]) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+  ) {
+    return this.execute().then(onfulfilled, onrejected);
+  }
+
+  private async execute(): Promise<any[]> {
+    let rows: any[];
+
+    if (this.table === products) {
+      rows = [this.store.product].map((product) => ({
+        id: product.id,
+        isActive: product.isActive,
+        stockQty: product.stockQty,
+      }));
+    } else if (this.table === orders) {
+      if ('value' in this.fields) {
+        rows = [{ value: this.store.orders.length }];
+      } else {
+        rows = [...this.store.orders];
+      }
+    } else if (this.table === orderPayments) {
+      rows = [];
+    } else {
+      rows = [];
+    }
+
+    if (this.limitCount !== undefined) return rows.slice(0, this.limitCount);
+    return rows;
+  }
+}
+
+class FakeInsert {
+  private pendingValues: any;
+
+  constructor(private readonly store: Store, private readonly table: unknown) {}
+
+  values(value: any) {
+    this.pendingValues = value;
+    return this;
+  }
+
+  async returning() {
+    if (this.table === orders) {
+      const row = {
+        id: `order-${this.store.orders.length + 1}`,
+        ...this.pendingValues,
+        orderNumber: this.pendingValues.orderNumber,
+      };
+      this.store.orders.push(row);
+      return [row];
+    }
+
+    if (this.table === orderItems) {
+      const rows = this.pendingValues.map((value: any, index: number) => ({
+        id: `item-${this.store.orderItems.length + index + 1}`,
+        ...value,
+      }));
+      this.store.orderItems.push(...rows);
+      return rows;
+    }
+
+    if (this.table === orderPayments) {
+      const row = { id: `payment-${this.store.payments.length + 1}`, ...this.pendingValues };
+      this.store.payments.push(row);
+      return [row];
+    }
+
+    return [];
+  }
+
+  async then<TResult1 = void, TResult2 = never>(
+    onfulfilled?: ((value: void) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+  ) {
+    return this.execute().then(onfulfilled, onrejected);
+  }
+
+  private async execute(): Promise<void> {
+    if (this.table === inventoryMovements) {
+      this.store.movements.push({ id: `movement-${this.store.movements.length + 1}`, ...this.pendingValues });
+    }
+  }
+}
+
+class FakeUpdate {
+  private pendingSet: Record<string, any> = {};
+
+  constructor(private readonly store: Store, private readonly table: unknown) {}
+
+  set(value: Record<string, any>) {
+    this.pendingSet = value;
+    return this;
+  }
+
+  where() {
+    return this;
+  }
+
+  async returning() {
+    if (this.table === products) {
+      const quantityDelta = this.extractQuantityDelta(this.pendingSet.stockQty);
+      if (this.store.product.stockQty + quantityDelta < 0) return [];
+      this.store.product.stockQty += quantityDelta;
+      return [{ stockQty: this.store.product.stockQty }];
+    }
+
+    if (this.table === orders) {
+      const order = this.store.orders.at(-1);
+      Object.assign(order, this.pendingSet);
+      return [order];
+    }
+
+    return [];
+  }
+
+  private extractQuantityDelta(sqlExpression: any): number {
+    const chunks = sqlExpression?.queryChunks ?? [];
+    const operator = chunks.some((chunk: any) => Array.isArray(chunk.value) && chunk.value.some((value: string) => value.includes('+')))
+      ? 1
+      : -1;
+    const amount = chunks.find((chunk: any) => typeof chunk === 'number') ?? 0;
+    return operator * amount;
+  }
+}
+
+function buildUseCase(initialStockQty: number) {
+  const store: Store = {
+    product: {
+      id: 'product-1',
+      tenantId: 'tenant-1',
+      isActive: true,
+      stockTrackingEnabled: true,
+      stockQty: initialStockQty,
+    },
+    orders: [],
+    orderItems: [],
+    payments: [],
+    movements: [],
+  };
+
+  return {
+    store,
+    useCase: new CreateAndPayOrder(new FakeDb(store) as any),
+  };
+}
+
+const orderInput = (idempotencyKey: string) => ({
+  tenant_id: 'tenant-1',
+  outlet_id: null,
+  items: [
+    {
+      product_id: 'product-1',
+      product_name: 'Limited Product',
+      base_price: 10,
+      quantity: 1,
+    },
+  ],
+  amount: 10,
+  payment_method: 'cash' as const,
+  idempotency_key: idempotencyKey,
+});
+
+describe('CreateAndPayOrder stock concurrency', () => {
+  it('allows only one of two parallel quick-pay orders when tracked stock has one unit', async () => {
+    const { store, useCase } = buildUseCase(1);
+
+    const results = await Promise.allSettled([
+      useCase.execute(orderInput('parallel-order-a')),
+      useCase.execute(orderInput('parallel-order-b')),
+    ]);
+
+    const fulfilled = results.filter((result) => result.status === 'fulfilled');
+    const rejected = results.filter((result) => result.status === 'rejected');
+
+    assert.equal(fulfilled.length, 1);
+    assert.equal(rejected.length, 1);
+    const rejectionReason = (rejected[0] as PromiseRejectedResult).reason;
+    assert.equal(rejectionReason?.name, 'InsufficientStockError');
+    assert.equal(rejectionReason?.code, 'INSUFFICIENT_STOCK');
+    assert.equal(store.product.stockQty, 0);
+    assert.equal(store.orders.length, 1);
+    assert.equal(store.payments.length, 1);
+    assert.equal(store.movements.length, 1);
+    assert.equal(store.movements[0].quantityBefore, 1);
+    assert.equal(store.movements[0].quantityAfter, 0);
+  });
+});
