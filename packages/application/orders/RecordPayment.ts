@@ -10,18 +10,17 @@
  *    preventing concurrent payment race conditions.
  *
  * Idempotency:
- *  - Caller can supply a unique `transaction_ref`; the controller layer handles
- *    replay detection before calling this use case.
+ *  - Caller can supply `idempotency_key`; this use case replays the existing
+ *    payment for the same order inside the transaction before inserting.
+ *  - `transaction_ref` remains a separate business reference.
  */
 
 import type { Database } from '@pos/infrastructure/database';
 import {
-  orders,
   orderPayments,
   type InsertOrderPayment,
 } from '../../../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import type { OrderPayment } from '@pos/domain/orders/types';
 
 export interface RecordPaymentInput {
   order_id: string;
@@ -30,12 +29,14 @@ export interface RecordPaymentInput {
   payment_method: 'cash' | 'card' | 'ewallet' | 'other';
   transaction_ref?: string;
   notes?: string;
+  idempotency_key?: string;
 }
 
 export interface RecordPaymentOutput {
   payment: any;
   order: any;
   remainingAmount: number;
+  idempotent_replay?: boolean;
 }
 
 export class RecordPayment {
@@ -73,6 +74,29 @@ export class RecordPayment {
       const orderPaid = parseFloat(orderRow.paid_amount ?? '0');
       const remaining = orderTotal - orderPaid;
 
+      if (input.idempotency_key) {
+        const existingPayments = await tx
+          .select()
+          .from(orderPayments)
+          .where(
+            and(
+              eq(orderPayments.orderId, input.order_id),
+              eq(orderPayments.idempotencyKey, input.idempotency_key)
+            )
+          )
+          .limit(1)
+          .for('update');
+
+        if (existingPayments[0]) {
+          return {
+            payment: existingPayments[0],
+            order: orderRow,
+            remainingAmount: Math.max(0, remaining),
+            idempotent_replay: true,
+          };
+        }
+      }
+
       if (input.amount > remaining + 0.001) {
         throw new Error(
           `Payment amount (${input.amount}) exceeds remaining balance (${remaining.toFixed(2)})`
@@ -87,6 +111,7 @@ export class RecordPayment {
         paymentDate: new Date(),
         referenceNumber: input.transaction_ref,
         notes: input.notes,
+        idempotencyKey: input.idempotency_key,
       };
 
       const [createdPayment] = await tx.insert(orderPayments).values(paymentData).returning();

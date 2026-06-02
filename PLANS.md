@@ -1275,3 +1275,134 @@ Ensure `POST /api/orders/create-and-pay` records payment status/paid amount atom
 ### Continuation Notes
 
 Next safest follow-up is to clean existing API type-check blockers so root `pnpm type-check` can be used as the final monorepo gate.
+
+## Plan: Payment idempotency key hardening for record payment
+
+### Source
+- Tasklist: User request with 5 payment idempotency/migration/test tasks.
+- User request: Add partial unique index for `order_payments` idempotency, wire schema/use case, keep `transaction_ref` separate, add retry tests.
+- Date started: 2026-06-02
+- Current status: Implemented; API type-check still has unrelated pre-existing blockers.
+
+### Goal
+Make `POST /api/orders/:id/payments` safe to retry with the same idempotency key by storing that key on `order_payments`, replaying the existing payment inside the transaction, and enforcing a database uniqueness guard without conflating business transaction references.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist from user prompt
+- [x] Relevant docs searched for payment/idempotency references
+- [x] Relevant source files inspected (`shared/schema.ts`, `RecordPayment.ts`, orders controller/routes, migrations, API tests)
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: Orders payment endpoint and RecordPayment/CreateAndPay use cases.
+- Files inspected: apps/api/src/http/controllers/OrdersController.ts, apps/api/src/http/routes/orders.ts, packages/application/orders/RecordPayment.ts, packages/application/orders/CreateAndPayOrder.ts
+- Findings: Controller defaulted `transaction_ref` to `idempotency_key`; payment idempotency replay used business reference rather than the dedicated key.
+- Tasks: Completed: added `idempotency_key` input, transactional replay lookup, replay status 200, dedicated payment key storage, and separate business reference storage.
+- Risks: Cross-tenant replay remains guarded by locking the tenant-owned order first, then looking up payments scoped to that order.
+- Validation: API tests pass; application package type-check passes.
+
+#### Database/Schema Workstream
+- Scope: Migrations and Drizzle schema indexes.
+- Files inspected: migrations/0000_conscious_invisible_woman.sql, migrations/0004_orders_idempotency_key.sql, migrations/0006_auth_tables.sql, shared/schema.ts
+- Findings: `order_payments.idempotency_key` existed in later migration/schema but no unique partial index was present.
+- Tasks: Completed: added migration `0007_order_payments_idempotency_unique.sql` and mirrored partial unique index in Drizzle schema.
+- Risks: Existing duplicate `(order_id, idempotency_key)` non-null rows would block migration and must be cleaned before applying in such environments.
+- Validation: SQL/schema inspection and TypeScript validation attempted.
+
+#### Tests/Validation Workstream
+- Scope: API/use-case tests for payment retry behavior.
+- Files inspected: apps/api/src/__tests__/create-and-pay-stock-concurrency.test.ts, apps/api/src/__tests__/record-payment-idempotency.test.ts
+- Findings: A dedicated Express/controller test with fake RecordPayment DB covers the retry behavior.
+- Tasks: Completed: added retry test verifying same key returns same payment, returns 200 on replay, preserves business `transaction_ref`, stores `idempotencyKey`, and does not increment paid amount twice.
+- Risks: Test uses an in-memory fake DB; database unique index enforcement is covered by migration/schema rather than live DB integration.
+- Validation: `pnpm --filter @pos/api test` pass.
+
+#### Documentation Workstream
+- Scope: PLANS.md and final report.
+- Files inspected: README.md, docs payment/idempotency search results.
+- Findings: No dedicated API docs found requiring sync for payment endpoint behavior.
+- Tasks: Completed: PLANS.md updated with implementation and validation status.
+- Risks: N/A.
+- Validation: N/A.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Tenant-aware payment replay and order locking.
+- Files inspected: RecordPayment use case, orders controller.
+- Findings: Order row lock uses order id + tenant id; replay now happens only after that tenant-owned order is confirmed.
+- Tasks: Completed: existing payment lookup is scoped to the same `order_id`; unique partial index is also order scoped.
+- Risks: None known for this batch.
+- Validation: API retry test verifies same-order replay behavior.
+
+### Execution Order
+1. [x] Add schema/migration unique partial index.
+2. [x] Update `RecordPayment` input and transactional replay/insert behavior.
+3. [x] Update orders controller to pass idempotency key and not default business reference to key.
+4. [x] Update create-and-pay payment storage/replay to use dedicated payment idempotency key.
+5. [x] Add/adjust tests for same-key retry.
+6. [x] Run validation and update PLANS.md.
+
+### Progress
+
+#### Completed
+- [x] Add unique partial index migration for `order_payments(order_id, idempotency_key)`.
+  - Files changed: migrations/0007_order_payments_idempotency_unique.sql, shared/schema.ts
+  - Validation: `pnpm --filter @pos/application type-check` pass; API test suite pass.
+  - Docs updated: PLANS.md
+- [x] Use `orderPayments.idempotencyKey` for RecordPayment.
+  - Files changed: packages/application/orders/RecordPayment.ts, apps/api/src/http/controllers/OrdersController.ts
+  - Validation: `pnpm --filter @pos/api test` pass.
+  - Docs updated: PLANS.md
+- [x] Replay existing payment before insert inside RecordPayment transaction.
+  - Files changed: packages/application/orders/RecordPayment.ts
+  - Validation: `pnpm --filter @pos/api exec tsx --test src/__tests__/record-payment-idempotency.test.ts` pass.
+  - Docs updated: PLANS.md
+- [x] Keep `transaction_ref` as a separate business reference.
+  - Files changed: apps/api/src/http/controllers/OrdersController.ts, packages/application/orders/RecordPayment.ts, packages/application/orders/CreateAndPayOrder.ts
+  - Validation: `pnpm --filter @pos/api test` pass.
+  - Docs updated: PLANS.md
+- [x] Add retry test for `POST /api/orders/:id/payments` with the same key.
+  - Files changed: apps/api/src/__tests__/record-payment-idempotency.test.ts
+  - Validation: `pnpm --filter @pos/api test` pass.
+  - Docs updated: PLANS.md
+- [x] Prevent SSE maintenance timers from keeping API tests alive.
+  - Files changed: apps/api/src/http/services/orderQueueEvents.ts
+  - Validation: `pnpm --filter @pos/api test` exits cleanly.
+  - Docs updated: PLANS.md
+
+#### Partially Completed
+
+#### Blocked
+- [ ] Full API type-check clean status
+  - Blocker: Existing unrelated TypeScript errors remain in `apps/api/src/http/middleware/featureGuard.ts`, `apps/api/src/http/routes/index.ts`, and missing `compression` declarations in `apps/api/src/index.ts`.
+  - Required next step: Clean pre-existing API typing/dependency issues in a separate batch.
+
+#### Not Attempted
+
+### Validation Log
+- Command: `pnpm --filter @pos/api exec tsx --test src/__tests__/record-payment-idempotency.test.ts`
+- Result: Pass
+- Notes: Targeted retry test passed.
+- Command: `pnpm --filter @pos/api test`
+- Result: Pass
+- Notes: All API tests passed (22 tests).
+- Command: `pnpm --filter @pos/application type-check`
+- Result: Pass
+- Notes: Application package type-check passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: Fail (pre-existing/unrelated blockers)
+- Notes: Existing errors in featureGuard table cast, express-rate-limit/@types Express mismatch in route mounting, and missing `@types/compression` declaration.
+
+### Documentation Updates
+- File: PLANS.md
+- Change: Added and completed active plan for payment idempotency hardening.
+
+### Checklist Updates
+- File: User prompt tasklist (not a repository file)
+- Change: All five requested items implemented and validated where practical; full API type-check blocker documented as unrelated.
+
+### Continuation Notes
+Next safest follow-up is to fix existing API type-check blockers so `pnpm --filter @pos/api type-check` can be restored as a clean gate.

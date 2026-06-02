@@ -213,7 +213,7 @@ export class CreateAndPayOrder {
           .where(
             and(
               eq(orders.tenantId, tenant_id),
-              eq(orderPayments.referenceNumber, idempotency_key)
+              eq(orderPayments.idempotencyKey, idempotency_key)
             )
           )
           .limit(1)
@@ -292,14 +292,14 @@ export class CreateAndPayOrder {
       }
 
       // 4. Record payment
-      const paymentRef = transaction_ref ?? idempotency_key;
       const [newPayment] = await tx.insert(orderPayments).values({
         orderId: newOrder.id,
         amount: amount.toString(),
         paymentMethod: payment_method as any,
         paymentDate: new Date(),
-        referenceNumber: paymentRef,
+        referenceNumber: transaction_ref,
         notes: payment_notes,
+        idempotencyKey: idempotency_key,
       }).returning();
 
       // 5. Update order payment status

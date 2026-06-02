@@ -142,7 +142,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
  * POST /api/orders/:id/payments
  * Record payment (supports partial payments).
  * P1.2: RecordPayment use case now wraps everything in a DB transaction with row lock.
- * Idempotency: if transaction_ref already exists for this order+tenant, replays prior result.
+ * Idempotency: if idempotency_key already exists for this order, replays prior result.
  */
 export const recordPayment = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
@@ -166,7 +166,7 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
   }
 
   const idempotencyKey = parsed.data.idempotency_key?.trim();
-  const transactionRef = parsed.data.transaction_ref ?? idempotencyKey;
+  const transactionRef = parsed.data.transaction_ref?.trim();
 
   // Execute use case (P1.2: transaction-safe with row lock inside use case)
   const result = await container.recordPayment.execute({
@@ -176,16 +176,19 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     payment_method: parsed.data.payment_method,
     notes: parsed.data.notes,
     transaction_ref: transactionRef,
+    idempotency_key: idempotencyKey,
   });
 
   emitOrderQueueChanged(tenantId, { source: 'record_payment', orderId: result.order.id });
 
-  res.status(201).json({
+  const status = result.idempotent_replay ? 200 : 201;
+  res.status(status).json({
     success: true,
     data: {
       payment: result.payment,
       order: result.order,
       remainingAmount: result.remainingAmount,
+      idempotent_replay: result.idempotent_replay ?? false,
     },
   });
 });

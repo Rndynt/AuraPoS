@@ -476,6 +476,9 @@ export const orderPayments = pgTable("order_payments", {
 }, (table) => ({
   orderIdx: index("order_payments_order_idx").on(table.orderId),
   paymentDateIdx: index("order_payments_payment_date_idx").on(table.paymentDate),
+  orderIdempotencyUnique: uniqueIndex("order_payments_order_id_idempotency_unique")
+    .on(table.orderId, table.idempotencyKey)
+    .where(sql`${table.idempotencyKey} IS NOT NULL`),
 }));
 
 export const insertOrderPaymentSchema = createInsertSchema(orderPayments).omit({
