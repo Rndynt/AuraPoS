@@ -8,11 +8,17 @@ declare global {
     interface Request {
       tenantId?: string;
       tenantSlug?: string;
+      authTenantUser?: {
+        id: string;
+        tenantId: string | null;
+        role: string | null;
+      };
     }
   }
 }
 
 const BASE_DOMAIN = process.env.BASE_DOMAIN || 'aurapos.my.id';
+const TENANT_HEADER_SERVICE_TOKEN_HEADER = 'x-tenant-service-token';
 
 const RESERVED_SLUGS = new Set([
   'www','api','app','admin','mail','ftp','ssh','dev','staging','test','demo',
@@ -59,6 +65,133 @@ function setCachedTenant(key: string, entry: TenantCacheEntry): void {
   tenantCache.set(key, entry);
 }
 
+function getFirstHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+function isTenantHeaderFallbackAllowed(req: Request): boolean {
+  if (!isProduction()) return process.env.ALLOW_TENANT_HEADER !== 'false';
+
+  const serviceToken = process.env.TENANT_HEADER_SERVICE_TOKEN?.trim();
+  if (!serviceToken) return false;
+
+  const providedToken = getFirstHeaderValue(req.headers[TENANT_HEADER_SERVICE_TOKEN_HEADER])?.trim();
+  return providedToken === serviceToken;
+}
+
+function tenantHeaderDisabledMessage(): string {
+  return 'x-tenant-id/tenant_id fallback is disabled in production; use tenant subdomain or a configured tenant service token';
+}
+
+interface AuthSessionLike {
+  user?: {
+    id?: string;
+  } | null;
+}
+
+interface TenantAuthUser {
+  id: string;
+  tenantId: string | null;
+  role: string | null;
+}
+
+interface TenantAuthGuardDeps {
+  getSession?: (req: Request) => Promise<AuthSessionLike | null>;
+  getUserById?: (userId: string) => Promise<TenantAuthUser | null>;
+}
+
+async function defaultGetSession(req: Request): Promise<AuthSessionLike | null> {
+  const { fromNodeHeaders } = await import('better-auth/node');
+  const { auth } = await import('../../lib/auth');
+
+  return auth.api.getSession({ headers: fromNodeHeaders(req.headers) }) as Promise<AuthSessionLike | null>;
+}
+
+async function defaultGetUserById(userId: string): Promise<TenantAuthUser | null> {
+  const { sql } = await import('drizzle-orm');
+  const { authDb } = await import('../../lib/auth');
+
+  const rows = await authDb.execute(
+    sql`SELECT id, tenant_id, role FROM "user" WHERE id = ${userId} LIMIT 1`,
+  );
+  const row = (rows as any[])[0];
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    tenantId: row.tenant_id ?? null,
+    role: row.role ?? null,
+  };
+}
+
+function isPlatformAdmin(role: string | null | undefined): boolean {
+  return role === 'platform-admin';
+}
+
+export function createTenantAuthGuard(deps: TenantAuthGuardDeps = {}) {
+  const getSession = deps.getSession ?? defaultGetSession;
+  const getUserById = deps.getUserById ?? defaultGetUserById;
+
+  return async function tenantAuthGuard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const session = await getSession(req);
+      const userId = session?.user?.id;
+
+      // Only authenticated requests are tenant-compared. Existing public/device
+      // tenant-scoped routes can continue to use their own auth mechanisms.
+      if (!userId) {
+        next();
+        return;
+      }
+
+      const user = await getUserById(userId);
+      if (!user) {
+        res.status(401).json({
+          error: 'Unauthenticated',
+          message: 'Authenticated session user was not found',
+          code: 'AUTH_USER_NOT_FOUND',
+        });
+        return;
+      }
+
+      req.authTenantUser = user;
+
+      if (isPlatformAdmin(user.role)) {
+        next();
+        return;
+      }
+
+      if (!user.tenantId) {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: 'Authenticated user is not linked to a tenant',
+          code: 'AUTH_USER_TENANT_MISSING',
+        });
+        return;
+      }
+
+      if (req.tenantId !== user.tenantId) {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: 'Authenticated user cannot access a different tenant',
+          code: 'TENANT_MISMATCH',
+        });
+        return;
+      }
+
+      next();
+    } catch (err) {
+      console.error('Tenant auth guard error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+}
+
+export const tenantAuthGuard = createTenantAuthGuard();
+
 /** Call this after updating a tenant to invalidate cache */
 export function invalidateTenantCache(slugOrId: string): void {
   tenantCache.delete(slugOrId);
@@ -97,12 +230,22 @@ export async function tenantMiddleware(
       return next();
     }
 
-    // ── 2. Header / query fallback (dev, API client) ─────────────────────────
-    const allowTenantHeader = process.env.ALLOW_TENANT_HEADER !== 'false';
+    // ── 2. Header / query fallback (dev, service/device client) ─────────────
+    const headerTenantId = getFirstHeaderValue(req.headers['x-tenant-id'])?.trim();
+    const queryTenantId = typeof req.query.tenant_id === 'string' ? req.query.tenant_id.trim() : undefined;
+    const requestedFallbackTenantId = headerTenantId || queryTenantId;
+    const allowTenantHeader = isTenantHeaderFallbackAllowed(req);
 
-    const tenantId = allowTenantHeader
-      ? (req.headers['x-tenant-id'] as string) || (req.query.tenant_id as string)
-      : (req.query.tenant_id as string);
+    if (requestedFallbackTenantId && !allowTenantHeader) {
+      res.status(403).json({
+        error: 'Tenant header disabled',
+        message: tenantHeaderDisabledMessage(),
+        code: 'TENANT_HEADER_DISABLED',
+      });
+      return;
+    }
+
+    const tenantId = allowTenantHeader ? requestedFallbackTenantId : undefined;
 
     if (!tenantId) {
       res.status(400).json({ error: 'Missing tenant', message: 'Use {slug}.aurapos.my.id or provide x-tenant-id header' });

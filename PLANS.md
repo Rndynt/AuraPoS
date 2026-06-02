@@ -409,3 +409,155 @@ Next safest batch: implement catalog cache adapters + outbox primitives, then wi
 
 ### Continuation Update (2026-05-23 - local orders page baseline)
 - Added `/local-orders` page and `LocalOrderList` component to inspect local order sync status with filter/search.
+
+## Plan: Tenant Auth Cross-Tenant Guard
+
+### Source
+
+- Tasklist: User numbered request for tenant middleware/session enforcement.
+- User request: Enforce Better Auth session tenant ownership after tenant resolution, restrict production x-tenant-id fallback, apply to tenant-scoped routes, and add cross-tenant tests for orders/catalog/inventory/tenants/outlets.
+- Date started: 2026-06-02
+- Current status: Implemented; API test passed; API type-check attempted and blocked by pre-existing unrelated errors.
+
+### Goal
+
+Prevent authenticated users from accessing tenant-scoped API resources for a tenant that differs from their Better Auth `"user".tenant_id`, while preserving explicit platform-admin access and safe non-production/device tenant resolution behavior.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist from user request
+- [x] Relevant docs (`docs/CODEBASE_AUDIT_AND_IMPROVEMENT_CHECKLIST.md`, `docs/migration-report.md` search results)
+- [x] Relevant source files (`apps/api/src/http/middleware/tenant.ts`, `apps/api/src/routes.ts`, API tenant-scoped route files, Better Auth config/schema)
+
+### Workstreams
+
+#### Backend/API Workstream
+
+- Scope: Tenant resolution middleware, route registration ordering, Better Auth session lookup.
+- Files inspected: `apps/api/src/http/middleware/tenant.ts`, `apps/api/src/routes.ts`, `apps/api/src/http/routes/index.ts`, `apps/api/src/lib/auth.ts`, `apps/api/src/lib/auth-schema.ts`.
+- Findings: Tenant resolution trusted `x-tenant-id` by default and did not compare authenticated session user tenant to resolved request tenant.
+- Tasks: Implemented post-resolution auth guard and wired it before the tenant-scoped router.
+- Risks: Existing unauthenticated/device routes still pass through when no Better Auth session is present; route-specific/device auth remains responsible for those flows.
+- Validation: Focused API tests passed; API type-check attempted.
+
+#### Database/Schema Workstream
+
+- Scope: Better Auth `"user"` table fields.
+- Files inspected: `apps/api/src/lib/auth-schema.ts`.
+- Findings: `tenant_id` and `role` already exist on `"user"`; no schema migration required.
+- Tasks: Guard now queries `id`, `tenant_id`, and `role` by `session.user.id`.
+- Risks: None requiring schema changes.
+- Validation: Covered by injected test doubles and type-check attempt.
+
+#### Frontend/UI Workstream
+
+- Scope: No UI changes expected.
+- Files inspected: Not applicable beyond route consumers.
+- Findings: No perceptible web application UI change.
+- Tasks: None.
+- Risks: Production clients relying on `x-tenant-id` without service token must switch to subdomain/session-aligned access.
+- Validation: Not applicable.
+
+#### Tests/Validation Workstream
+
+- Scope: Cross-tenant rejection coverage for requested path families.
+- Files inspected: `turbo.json`, package scripts.
+- Findings: API package did not previously expose a test script.
+- Tasks: Added a lightweight `node:test`/`tsx` test suite for `/api/orders/:id`, `/api/catalog/products`, `/api/inventory/products`, `/api/inventory/movements`, `/api/tenants/features`, `/api/outlets`, plus same-tenant, platform-admin, and unauthenticated passthrough cases.
+- Risks: Tests focus on middleware behavior with injected dependencies, not full DB integration.
+- Validation: `pnpm --filter @pos/api test` passed.
+
+#### Documentation Workstream
+
+- Scope: README env vars and PLANS progress.
+- Files inspected: `README.md`, `PLANS.md`.
+- Findings: README documented Better Auth env but not tenant header service-token behavior.
+- Tasks: Added tenant resolution env documentation.
+- Risks: None.
+- Validation: Diff reviewed.
+
+#### Security/Tenant Isolation Workstream
+
+- Scope: Authenticated tenant mismatch prevention and tenant header hardening.
+- Files inspected: tenant middleware and Better Auth user schema/config.
+- Findings: Cross-tenant access by authenticated users could occur if `x-tenant-id`/subdomain selected another tenant.
+- Tasks: Implemented 403 `TENANT_MISMATCH` rejection except exact `platform-admin`; disabled production fallback unless `TENANT_HEADER_SERVICE_TOKEN` matches `x-tenant-service-token`.
+- Risks: Platform-admin bypass is exact/explicit.
+- Validation: Cross-tenant tests passed.
+
+### Execution Order
+
+1. Safety/security/data-integrity/tenant-isolation blockers — completed.
+2. Build/type/test blockers — focused tests pass; broader type-check has pre-existing unrelated blockers.
+3. Dependency prerequisites — no schema migration required.
+4. Highest priority actionable tasks — completed.
+5. Lower priority actionable tasks — not applicable.
+6. Documentation sync — README and PLANS updated.
+7. Validation — test pass, type-check attempted.
+8. Final checklist update — source checklist was in user prompt; final response reports status.
+
+### Progress
+
+#### Completed
+
+- [x] Add Better Auth tenant ownership guard after tenant resolution.
+  - Files changed: `apps/api/src/http/middleware/tenant.ts`, `apps/api/src/routes.ts`, `apps/api/src/index.ts`.
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: `README.md`, `PLANS.md`.
+- [x] Restrict production `x-tenant-id`/`tenant_id` fallback to configured service/device token.
+  - Files changed: `apps/api/src/http/middleware/tenant.ts`, `apps/api/src/index.ts`, `README.md`.
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: `README.md`.
+- [x] Add cross-tenant guard tests for requested route families.
+  - Files changed: `apps/api/src/__tests__/tenant-auth-guard.test.ts`, `apps/api/package.json`.
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: `PLANS.md`.
+
+#### Partially Completed
+
+- [ ] API type-check validation.
+  - Completed: Ran `pnpm --filter @pos/api type-check` and a narrower `pnpm exec tsc -p apps/api/tsconfig.json --noEmit --pretty false` check.
+  - Remaining: Fix unrelated existing type errors in `featureGuard.ts`, `routes/index.ts`, and missing `@types/compression`.
+  - Reason: Failures are not introduced by this tenant-auth change.
+
+#### Blocked
+
+- [ ] Full green API type-check.
+  - Blocker: Pre-existing unrelated TypeScript errors in feature guard/rate limiter typing and missing compression declaration.
+  - Required next step: Separate cleanup batch for API TypeScript baseline.
+
+#### Not Attempted
+
+- [ ] Full integration tests against a real database.
+  - Reason: No test database setup is present for this batch; focused middleware tests cover the requested cross-tenant decision logic without DB dependency.
+
+### Validation Log
+
+- Command: `pnpm --filter @pos/api test`
+- Result: pass
+- Notes: 10 middleware tests passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: fail
+- Notes: Existing unrelated errors in `src/http/middleware/featureGuard.ts`, `src/http/routes/index.ts`, and missing `compression` declaration.
+- Command: `pnpm exec tsc -p apps/api/tsconfig.json --noEmit --pretty false | rg "tenant|__tests__|routes.ts"`
+- Result: only unrelated `featureGuard.ts` output matched `tenant_module_configs`; no tenant guard/test type errors were reported before existing blockers.
+- Notes: Used to check whether this batch introduced tenant/test-specific type errors.
+
+### Documentation Updates
+
+- File: `README.md`
+- Change: Documented `BASE_DOMAIN`, `ALLOW_TENANT_HEADER`, and `TENANT_HEADER_SERVICE_TOKEN` behavior.
+- File: `PLANS.md`
+- Change: Added and completed the Tenant Auth Cross-Tenant Guard execution plan.
+
+### Checklist Updates
+
+- File: User prompt tasklist
+- Change: All requested items implemented and validated with focused tests; type-check validation is blocked by unrelated existing failures.
+
+### Continuation Notes
+
+Recommended next batch: fix existing API type-check blockers (`featureGuard.ts`, Express/rate-limit type mismatch, and `@types/compression`) so the full API type-check can become green.

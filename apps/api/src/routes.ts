@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { tenantMiddleware } from "./http/middleware/tenant";
+import { tenantAuthGuard, tenantMiddleware } from "./http/middleware/tenant";
 import { errorHandler } from "./http/middleware/errorHandler";
 import routes from "./http/routes";
 
@@ -75,7 +75,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.path === '/kds/generate-code') return next(); // uses Better Auth session
     if (req.path === '/kds/devices') return next();       // uses Better Auth session
     if (req.path.startsWith('/kds/devices/')) return next();
-    return tenantMiddleware(req, res, next);
+    return tenantMiddleware(req, res, (err?: unknown) => {
+      if (err) return next(err);
+      return tenantAuthGuard(req, res, next);
+    });
   });
 
   app.use('/api', routes);

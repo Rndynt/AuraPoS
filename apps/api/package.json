@@ -8,7 +8,8 @@
     "build": "esbuild src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --splitting",
     "start": "NODE_ENV=production node dist/index.js",
     "type-check": "tsc --noEmit",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "test": "tsx --test src/__tests__/**/*.test.ts"
   },
   "dependencies": {
     "@jridgewell/trace-mapping": "^0.3.25",
