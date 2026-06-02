@@ -22,6 +22,7 @@ import {
 import { eq, and, desc, asc, gte, lte, sql } from 'drizzle-orm';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { z } from 'zod';
+import { requireManager } from '../middleware/rbac';
 
 const router = Router();
 
@@ -127,7 +128,7 @@ router.get('/products', asyncHandler(async (req, res) => {
  * Simple direct adjustment — langsung update stock_qty.
  * Requires: enable_inventory (Stok Dasar). Also logs movement if Stok Lanjutan aktif.
  */
-router.put('/products/:id/adjust', asyncHandler(async (req, res) => {
+router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
   if (!(await isBasicInventoryEnabled(tenantId))) {
     throw createError('Fitur ini memerlukan modul Stok Dasar. Aktifkan dari Marketplace.', 403, 'MODULE_REQUIRED');
@@ -184,7 +185,7 @@ router.put('/products/:id/adjust', asyncHandler(async (req, res) => {
  * POST /api/inventory/movements
  * Catat pergerakan stok dengan tipe dan catatan. Advanced only.
  */
-router.post('/movements', asyncHandler(async (req, res) => {
+router.post('/movements', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
   if (!(await isAdvancedInventoryEnabled(tenantId))) {
