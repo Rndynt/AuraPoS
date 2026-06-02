@@ -7,6 +7,7 @@ import { Router } from 'express';
 import * as OrdersController from '../controllers/OrdersController';
 import * as OrderTypesController from '../controllers/OrderTypesController';
 import { requireModule } from '../middleware/featureGuard';
+import { requireCashier, requireKitchen, requireManager } from '../middleware/rbac';
 
 const router = Router();
 
@@ -18,20 +19,20 @@ router.get('/order-types', OrderTypesController.listOrderTypes);
 router.get('/order-types/all', OrderTypesController.listAllOrderTypes);
 
 // POST /api/orders/order-types/:orderTypeId/enable - Enable order type for tenant
-router.post('/order-types/:orderTypeId/enable', OrderTypesController.enableOrderType);
+router.post('/order-types/:orderTypeId/enable', requireManager, OrderTypesController.enableOrderType);
 
 // POST /api/orders/order-types/:orderTypeId/disable - Disable order type for tenant
-router.post('/order-types/:orderTypeId/disable', OrderTypesController.disableOrderType);
+router.post('/order-types/:orderTypeId/disable', requireManager, OrderTypesController.disableOrderType);
 
 // Order Routes (MUST be before /:id routes)
 // GET /api/orders/queue/stream - SSE order queue updates
 router.get('/queue/stream', OrdersController.streamOrderQueue);
 
 // POST /api/orders/create-and-pay - Create order and record payment atomically [P3]
-router.post('/create-and-pay', OrdersController.createAndPay);
+router.post('/create-and-pay', requireCashier, OrdersController.createAndPay);
 
 // POST /api/orders - Create new order
-router.post('/', OrdersController.createOrder);
+router.post('/', requireCashier, OrdersController.createOrder);
 
 // GET /api/orders/open - List open orders (must be before /:id)
 router.get('/open', OrdersController.listOpenOrders);
@@ -46,24 +47,24 @@ router.get('/', OrdersController.listOrders);
 router.get('/:id', OrdersController.getOrderById);
 
 // PATCH /api/orders/:id - Update order
-router.patch('/:id', OrdersController.updateOrder);
+router.patch('/:id', requireCashier, OrdersController.updateOrder);
 
 // PATCH /api/orders/:id/status - Update only the status (kitchen display use)
-router.patch('/:id/status', OrdersController.updateOrderStatus);
+router.patch('/:id/status', requireKitchen, OrdersController.updateOrderStatus);
 
 // POST /api/orders/:id/confirm - Confirm draft order
-router.post('/:id/confirm', OrdersController.confirmOrder);
+router.post('/:id/confirm', requireCashier, OrdersController.confirmOrder);
 
 // POST /api/orders/:id/complete - Complete order
-router.post('/:id/complete', OrdersController.completeOrder);
+router.post('/:id/complete', requireCashier, OrdersController.completeOrder);
 
 // POST /api/orders/:id/cancel - Cancel order
-router.post('/:id/cancel', OrdersController.cancelOrder);
+router.post('/:id/cancel', requireCashier, OrdersController.cancelOrder);
 
 // POST /api/orders/:id/payments - Record payment
-router.post('/:id/payments', OrdersController.recordPayment);
+router.post('/:id/payments', requireCashier, OrdersController.recordPayment);
 
 // POST /api/orders/:id/kitchen-ticket - Create kitchen ticket (requires kitchen module)
-router.post('/:id/kitchen-ticket', requireModule('enableKitchenTicket'), OrdersController.createKitchenTicket);
+router.post('/:id/kitchen-ticket', requireCashier, requireModule('enableKitchenTicket'), OrdersController.createKitchenTicket);
 
 export default router;

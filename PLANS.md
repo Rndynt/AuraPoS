@@ -561,3 +561,116 @@ Prevent authenticated users from accessing tenant-scoped API resources for a ten
 ### Continuation Notes
 
 Recommended next batch: fix existing API type-check blockers (`featureGuard.ts`, Express/rate-limit type mismatch, and `@types/compression`) so the full API type-check can become green.
+
+## Plan: Harden API RBAC middleware and sensitive route guards
+
+### Source
+- Tasklist: User request with RBAC/session/route/test items
+- User request: Enforce unauthenticated handling, remove cashier fallback, verify user/tenant match, guard sensitive routes, add tests.
+- Date started: 2026-06-02
+- Current status: Implemented; API test suite passed; API type-check still blocked by pre-existing unrelated type errors.
+
+### Goal
+Make API RBAC production-safer by requiring a real authenticated Better Auth session for protected routes, preventing cross-tenant role use, applying guards to sensitive orders/inventory/catalog/outlets/terminals/sync conflict endpoints, and validating unauthenticated/insufficient-role behavior with automated tests.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active user tasklist
+- [x] Relevant docs (`docs/OFFLINE_PRODUCTION_GRADE_POS_TASKS.md`, `docs/dev/SYNC_PROTOCOL.md`, `docs/OFFLINE_ARCHITECTURE.md` via targeted RBAC/conflict search)
+- [x] Relevant source files (`rbac.ts`, tenant middleware, route files, existing tenant guard tests)
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: RBAC middleware and route guards.
+- Files inspected: apps/api/src/http/middleware/rbac.ts, apps/api/src/http/routes/orders.ts, inventory.ts, catalog.ts, outlets.ts, terminals.ts, sync.ts.
+- Findings: Existing RBAC defaulted unauthenticated/invalid sessions to `cashier` and no sensitive route file used requireRole guards.
+- Tasks: Added authenticated role resolution, user tenant match checks, no-session 401, invalid/low-role 403, and route guards.
+- Risks: Read-only tenant-scoped routes remain unguarded unless they are admin/debug sync reads; this avoids breaking POS browsing while protecting sensitive mutations/admin conflict endpoints.
+- Validation: `pnpm --filter @pos/api test` passed; `pnpm --filter @pos/api type-check` failed on existing unrelated type errors.
+
+#### Tests/Validation Workstream
+- Scope: Node test coverage for RBAC no-session and insufficient-role responses.
+- Files inspected: apps/api/src/__tests__/tenant-auth-guard.test.ts.
+- Findings: Existing tests use dependency injection pattern for tenant guard; RBAC now exposes injected factories for test isolation.
+- Tasks: Added RBAC tests for unauthenticated access, no valid role, insufficient role, tenant mismatch, and sufficient role.
+- Risks: None identified in the test seam; production exports still use default Better Auth/auth DB dependencies.
+- Validation: `pnpm --filter @pos/api test` passed.
+
+#### Documentation Workstream
+- Scope: PLANS.md progress and final reporting.
+- Files inspected: README.md, PLANS.md, RBAC references in docs.
+- Findings: Existing docs mention RBAC skeleton; source checklist was the direct user list.
+- Tasks: Updated PLANS.md with implementation status and validation outcomes.
+- Risks: Full API type-check remains blocked by unrelated repository type issues that predate this batch.
+- Validation: N/A.
+
+### Execution Order
+1. Safety/security/data-integrity/tenant-isolation blockers: completed.
+2. Build/type/test blockers: tests pass; type-check blocker documented as unrelated/pre-existing.
+3. Dependency prerequisites: no new dependencies needed.
+4. Highest priority actionable tasks: completed.
+5. Lower priority actionable tasks: completed for requested files/endpoints.
+6. Documentation sync: PLANS.md updated.
+7. Validation: API tests passed; API type-check attempted.
+8. Final checklist update: completed in this plan.
+
+### Progress
+
+#### Completed
+- [x] Task: Return unauthenticated when `auth.api.getSession` has no user.
+  - Files changed: apps/api/src/http/middleware/rbac.ts
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: PLANS.md.
+- [x] Task: Remove default `cashier`; return `401 UNAUTHENTICATED` for no session and `403 INSUFFICIENT_ROLE` for low/invalid role.
+  - Files changed: apps/api/src/http/middleware/rbac.ts, apps/api/src/__tests__/rbac.test.ts
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: PLANS.md.
+- [x] Task: Ensure `requireRole` verifies `req.userId` and `req.tenantId` against the authenticated user's tenant.
+  - Files changed: apps/api/src/http/middleware/rbac.ts, apps/api/src/__tests__/rbac.test.ts
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: PLANS.md.
+- [x] Task: Add role guards to sensitive orders, inventory, catalog, outlets, terminals, and sync conflict routes.
+  - Files changed: apps/api/src/http/routes/orders.ts, inventory.ts, catalog.ts, outlets.ts, terminals.ts, sync.ts
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: PLANS.md.
+- [x] Task: Add tests for unauthenticated access and insufficient role.
+  - Files changed: apps/api/src/__tests__/rbac.test.ts
+  - Validation: `pnpm --filter @pos/api test` passed.
+  - Docs updated: PLANS.md.
+
+#### Partially Completed
+- [ ] Task: Full API type-check green.
+  - Completed: Ran `pnpm --filter @pos/api type-check`.
+  - Remaining: Fix unrelated existing errors in `featureGuard.ts`, Express/rate-limit type version mismatch, and missing compression declarations.
+  - Reason: Failures are outside this RBAC change set and were already documented as the recommended next batch in the prior active plan.
+
+#### Blocked
+- [ ] Task: None for requested RBAC implementation.
+  - Blocker: N/A
+  - Required next step: N/A
+
+#### Not Attempted
+- [ ] Task: Full monorepo test/build.
+  - Reason: API-scoped RBAC changes were validated with API tests; API type-check already identifies unrelated blockers.
+
+### Validation Log
+- Command: `pnpm --filter @pos/api test`
+- Result: Pass
+- Notes: 15 tests passed, including 5 new RBAC tests.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: Fail (unrelated/pre-existing type errors)
+- Notes: Errors reported in `src/http/middleware/featureGuard.ts`, `src/http/routes/index.ts` rate limiter typings, and missing `compression` declaration.
+
+### Documentation Updates
+- File: PLANS.md
+- Change: Added and completed RBAC hardening execution plan with validation outcomes.
+
+### Checklist Updates
+- File: PLANS.md
+- Change: Marked all requested RBAC items implemented/validated; recorded type-check blocker separately as partial/unrelated.
+
+### Continuation Notes
+Recommended next batch: fix existing API type-check blockers (`featureGuard.ts`, Express/rate-limit type mismatch, and `@types/compression`) so `pnpm --filter @pos/api type-check` can pass, then consider whether read-only admin/reporting routes should also require authenticated viewer/cashier access.

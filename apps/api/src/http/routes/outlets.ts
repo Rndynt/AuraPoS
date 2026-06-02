@@ -4,6 +4,7 @@ import { outlets, userOutletAssignments, tenantFeatures, insertOutletSchema, out
 import { eq, and, count, inArray } from 'drizzle-orm';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { z } from 'zod';
+import { requireManager } from '../middleware/rbac';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.get('/current', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/outlets — create new outlet (checks slot limit)
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
   const allowedSlots = await getPurchasedOutletSlots(tenantId);
@@ -76,7 +77,7 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // PATCH /api/outlets/:id — update outlet name/address/etc
-router.patch('/:id', asyncHandler(async (req, res) => {
+router.patch('/:id', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
   const { id } = req.params;
 
@@ -100,7 +101,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/outlets/:id — soft delete (cannot delete default outlet)
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
   const { id } = req.params;
 
@@ -132,7 +133,7 @@ router.get('/:id/staff', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/outlets/:id/staff — assign user to outlet
-router.post('/:id/staff', asyncHandler(async (req, res) => {
+router.post('/:id/staff', requireManager, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const body = z.object({
     userId: z.string(),
@@ -152,7 +153,7 @@ router.post('/:id/staff', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/outlets/:id/staff/:userId — remove staff from outlet
-router.delete('/:id/staff/:userId', asyncHandler(async (req, res) => {
+router.delete('/:id/staff/:userId', requireManager, asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
   await db
     .update(userOutletAssignments)
@@ -191,7 +192,7 @@ router.get('/product-configs', asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/outlets/:outletId/product-configs/:productId — set product availability at outlet
-router.put('/:outletId/product-configs/:productId', asyncHandler(async (req, res) => {
+router.put('/:outletId/product-configs/:productId', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
   const { outletId, productId } = req.params;
 
