@@ -387,6 +387,7 @@ export type CreateAndPayInput = CreateOrderInput & {
   payment_method: "cash" | "card" | "ewallet" | "other";
   transaction_ref?: string;
   payment_notes?: string;
+  fulfillment_mode?: "standard" | "instant";
 };
 
 export type CreateAndPayResponse = CreateOrderResponse & {

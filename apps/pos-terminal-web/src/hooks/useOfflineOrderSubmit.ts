@@ -119,6 +119,7 @@ export function useOfflineOrderSubmit() {
           payment_method: input.payment_method,
           transaction_ref: input.transaction_ref,
           payment_notes: input.payment_notes,
+          fulfillment_mode: input.fulfillment_mode,
         });
 
         return {

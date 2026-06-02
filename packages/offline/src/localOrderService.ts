@@ -31,6 +31,7 @@ export type CreateLocalOrderInput = {
   payment_method: "cash" | "card" | "ewallet" | "other";
   transaction_ref?: string;
   payment_notes?: string;
+  fulfillment_mode?: "standard" | "instant";
 };
 
 export type CreateLocalOrderResult = {
@@ -87,6 +88,9 @@ export async function createLocalOrder(
   const localId = nanoid();
   const idempotencyKey = generateIdempotencyKey(terminalId);
   const localOrderNumber = await generateLocalOrderNumber(tenantId, terminalId);
+  const fulfillmentMode = input.fulfillment_mode ?? "standard";
+  const orderStatus = fulfillmentMode === "instant" ? "completed" : "confirmed";
+
   const pricing = computePricing(
     input.items,
     input.tax_rate ?? 0,
@@ -98,7 +102,7 @@ export async function createLocalOrder(
     tenantId,
     terminalId,
     localOrderNumber,
-    status: "completed",
+    status: orderStatus,
     paymentStatus: "paid",
     syncStatus: "pending_sync",
     idempotencyKey,
@@ -150,6 +154,7 @@ export async function createLocalOrder(
     payment_method: input.payment_method,
     transaction_ref: input.transaction_ref,
     payment_notes: input.payment_notes,
+    fulfillment_mode: fulfillmentMode,
     local_order_id: localId,
     local_order_number: localOrderNumber,
     source_terminal_id: terminalId,
@@ -173,7 +178,7 @@ export async function createLocalOrder(
       id: localId,
       order_number: localOrderNumber,
       local_order_number: localOrderNumber,
-      status: "completed",
+      status: orderStatus,
       payment_status: "paid",
       customer_name: input.customer_name,
       table_number: input.table_number,
@@ -197,7 +202,9 @@ export async function mirrorServerOrderLocally(
   terminalId: string,
   serverId: string,
   serverOrderNumber: string,
-  idempotencyKey: string
+  idempotencyKey: string,
+  status = "confirmed",
+  paymentStatus = "paid"
 ): Promise<void> {
   const now = new Date().toISOString();
   const existing = await offlineDb.local_orders
@@ -224,8 +231,8 @@ export async function mirrorServerOrderLocally(
     terminalId,
     localOrderNumber,
     serverOrderNumber,
-    status: "completed",
-    paymentStatus: "paid",
+    status,
+    paymentStatus,
     syncStatus: "synced",
     idempotencyKey,
     createdAtLocal: now,

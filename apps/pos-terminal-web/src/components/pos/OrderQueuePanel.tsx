@@ -29,7 +29,8 @@ export function OrderQueuePanel({ compact = false }: OrderQueuePanelProps) {
 
   const orders = data?.orders ?? [];
   const orderCount = orders.length;
-  const pendingCount = orders.filter((o) => o.status === "open").length;
+  const operationalStatuses = new Set(["draft", "confirmed", "preparing", "ready", "served"]);
+  const pendingCount = orders.filter((o) => operationalStatuses.has(o.status)).length;
 
   if (compact) {
     return (
@@ -75,9 +76,9 @@ export function OrderQueuePanel({ compact = false }: OrderQueuePanelProps) {
                       <span className="text-sm font-medium truncate">
                         Order #{order.orderNumber}
                       </span>
-                      {order.status === "open" && (
+                      {operationalStatuses.has(order.status) && (
                         <Badge variant="secondary" className="text-xs">
-                          Pending
+                          {order.status === "served" ? "Served" : "Active"}
                         </Badge>
                       )}
                     </div>

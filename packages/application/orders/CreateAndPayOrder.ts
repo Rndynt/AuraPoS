@@ -65,6 +65,13 @@ export interface CreateAndPayOrderInput {
   transaction_ref?: string;
   payment_notes?: string;
   idempotency_key?: string;
+  /**
+   * Explicit fulfillment shortcut for non-kitchen quick-sale orders.
+   * Default `standard` keeps the operational lifecycle at confirmed/preparing/ready/served
+   * until kitchen/cashier fulfillment completion. `instant` is an explicit, validated
+   * request to close fulfillment immediately at create-and-pay time.
+   */
+  fulfillment_mode?: 'standard' | 'instant';
 }
 
 export interface CreateAndPayOrderOutput {
@@ -98,7 +105,12 @@ export class CreateAndPayOrder {
       transaction_ref,
       payment_notes,
       idempotency_key,
+      fulfillment_mode = 'standard',
     } = input;
+
+    if (!['standard', 'instant'].includes(fulfillment_mode)) {
+      throw new Error(`Invalid fulfillment_mode '${fulfillment_mode}'. Expected 'standard' or 'instant'.`);
+    }
 
     // ------------------------------------------------------------------
     // Validate products belong to tenant (outside transaction — pure read)
@@ -302,8 +314,12 @@ export class CreateAndPayOrder {
         updatedAt: new Date(),
       };
 
-      // If fully paid, close the order immediately
-      if (newPaymentStatus === 'paid') {
+      // Payment and fulfillment are separate lifecycle dimensions. Full payment
+      // must not implicitly complete the operational order; paid orders remain
+      // visible in queues as at least `confirmed` until kitchen/cashier fulfillment
+      // completion. Only an explicit, validated instant-fulfillment request may
+      // close a non-kitchen quick-sale order immediately.
+      if (newPaymentStatus === 'paid' && fulfillment_mode === 'instant') {
         finalUpdates.status = 'completed';
         finalUpdates.closedAt = new Date();
       }
