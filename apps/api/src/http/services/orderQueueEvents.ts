@@ -12,7 +12,7 @@ const listeners = new Set<QueueListener>();
 const CLEANUP_INTERVAL = 30_000;
 const STALE_THRESHOLD = 60_000; // 60s without ping = stale
 
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const listener of listeners) {
     if (now - listener.lastPing > STALE_THRESHOLD) {
@@ -21,6 +21,7 @@ setInterval(() => {
     }
   }
 }, CLEANUP_INTERVAL);
+cleanupInterval.unref?.();
 
 export function subscribeOrderQueue(tenantId: string, res: Response) {
   const listener: QueueListener = { tenantId, res, lastPing: Date.now() };
@@ -57,6 +58,7 @@ export function subscribeOrderQueue(tenantId: string, res: Response) {
       listeners.delete(listener);
     }
   }, 15_000);
+  heartbeat.unref?.();
 
   return () => {
     clearInterval(heartbeat);
