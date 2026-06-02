@@ -45,3 +45,8 @@ AuraPoS adalah monorepo aplikasi Point of Sale (POS) untuk UMKM yang mencakup fr
 ## Environment Variables Tambahan (Auth)
 - `BETTER_AUTH_SECRET`: secret minimal 32 karakter untuk better-auth.
 - `BETTER_AUTH_URL`: base URL aplikasi (contoh `http://localhost:5000`).
+
+## Environment Variables Tambahan (Tenant Resolution)
+- `BASE_DOMAIN`: domain utama untuk resolusi subdomain tenant (default `aurapos.my.id`).
+- `ALLOW_TENANT_HEADER`: kontrol fallback `x-tenant-id`/`tenant_id` di non-production; set `false` untuk mematikannya.
+- `TENANT_HEADER_SERVICE_TOKEN`: token service/device untuk mengizinkan fallback `x-tenant-id`/`tenant_id` di production melalui header `x-tenant-service-token`. Tanpa token ini, production wajib memakai subdomain tenant.
