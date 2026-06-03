@@ -56,6 +56,7 @@ export default function POSPage() {
   const cart = useCart();
   const { hasFeature } = useFeatures();
   const hasReceiptPrinter = hasFeature("receipt_printer");
+  const hasKitchenPrinter = hasFeature("kitchen_printer");
   const isOrderQueueEnabled = hasFeature("order_queue");
   const hasProductVariants = hasFeature("product_variants");
   const hasPairedPrinter = Boolean(bluetoothReceiptPrinter.getPairedDeviceId());
