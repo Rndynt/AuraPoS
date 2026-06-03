@@ -60,7 +60,8 @@ export type Tenant = {
   settings: Record<string, any> | null;
   
   // Subscription & billing
-  plan_tier: "free" | "starter" | "professional" | "enterprise";
+  /** Values stored in DB: 'free' | 'growth' | 'pro' */
+  plan_tier: "free" | "growth" | "pro";
   subscription_status: "active" | "trial" | "suspended" | "cancelled";
   trial_ends_at?: Date;
   
@@ -110,37 +111,51 @@ export type FeatureCheck = {
 };
 
 /**
- * Common feature codes used across the system
+ * Common feature codes used across the system.
+ * These values are stored in the DB (tenant_features.feature_code) and MUST
+ * stay in sync with:
+ *   - packages/core/enums.ts FeatureCode
+ *   - apps/api/src/http/controllers/TenantsController.ts PLAN_FEATURE_MAP
+ *   - apps/pos-terminal-web/src/pages/marketplace.tsx catalogs
  */
 export const FEATURE_CODES = {
   // Printing features
   KITCHEN_PRINTER: "kitchen_printer",
   RECEIPT_PRINTER: "receipt_printer",
   LABEL_PRINTER: "label_printer",
-  
+
   // Kitchen features
-  KITCHEN_DISPLAY: "kitchen_display",
+  KITCHEN_TICKET: "kitchen_ticket",         // KOT sent to kitchen on order confirm
+  KITCHEN_DISPLAY: "kitchen_display",       // KDS screen for kitchen staff
   ORDER_NOTIFICATIONS: "order_notifications",
-  
+
   // POS features
-  MULTI_VARIANT: "multi_variant",
+  PRODUCT_VARIANTS: "product_variants",
+  /** @deprecated Use PRODUCT_VARIANTS */
+  MULTI_VARIANT: "product_variants",
   INVENTORY_TRACKING: "inventory_tracking",
-  PARTIAL_PAYMENTS: "partial_payments",
+  PARTIAL_PAYMENT: "partial_payment",
+  /** @deprecated Use PARTIAL_PAYMENT */
+  PARTIAL_PAYMENTS: "partial_payment",
   DISCOUNTS: "discounts",
   ORDER_QUEUE: "order_queue",
-  
+  BARCODE_SCANNER: "barcode_scanner",
+
   // Reporting features
   SALES_REPORTS: "sales_reports",
   INVENTORY_REPORTS: "inventory_reports",
   ANALYTICS_DASHBOARD: "analytics_dashboard",
-  
+
   // UI features
   DARK_MODE: "dark_mode",
   CUSTOM_BRANDING: "custom_branding",
-  
+
   // Integration features
   PAYMENT_GATEWAY: "payment_gateway",
   ACCOUNTING_SYNC: "accounting_sync",
+  API_INTEGRATION: "api_integration",
+  ONLINE_BOOKING: "online_booking",
+  CALENDAR_SYNC: "calendar_sync",
 } as const;
 
 export type FeatureCode = typeof FEATURE_CODES[keyof typeof FEATURE_CODES];

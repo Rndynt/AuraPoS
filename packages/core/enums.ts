@@ -165,6 +165,7 @@ export const FeatureCode = {
   PARTIAL_PAYMENTS: 'partial_payment',
   DISCOUNTS: 'discounts',
   ORDER_QUEUE: 'order_queue',
+  BARCODE_SCANNER: 'barcode_scanner',
   
   // Reporting features
   SALES_REPORTS: 'sales_reports',
@@ -178,6 +179,9 @@ export const FeatureCode = {
   // Integration features
   PAYMENT_GATEWAY: 'payment_gateway',
   ACCOUNTING_SYNC: 'accounting_sync',
+  API_INTEGRATION: 'api_integration',
+  ONLINE_BOOKING: 'online_booking',
+  CALENDAR_SYNC: 'calendar_sync',
 } as const;
 
 export type FeatureCode = typeof FeatureCode[keyof typeof FeatureCode];
