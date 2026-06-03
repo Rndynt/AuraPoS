@@ -12,7 +12,8 @@ import type { TenantModuleConfig } from '@pos/domain/tenants/types';
 export type BusinessTypeTemplate = {
   // Default tenant settings
   tenantDefaults: {
-    plan_tier: 'free' | 'starter' | 'professional' | 'enterprise';
+    /** Plan tier for this business type. Tenant starts on trial of this tier. */
+    plan_tier: 'free' | 'growth' | 'pro';
     subscription_status: 'active' | 'trial' | 'suspended' | 'cancelled';
     settings: Record<string, any>;
   };
@@ -35,9 +36,11 @@ export type BusinessTypeTemplate = {
  * Template map keyed by business type
  */
 export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate> = {
+  // Cafe & restoran mulai di tier growth (trial) karena butuh KDS dan dapur.
+  // Saat trial habis → downgrade ke free: fitur 'trial' source dihapus oleh billing system.
   CAFE_RESTAURANT: {
     tenantDefaults: {
-      plan_tier: 'free',
+      plan_tier: 'growth',
       subscription_status: 'trial',
       settings: {
         default_tax_rate: 0.1,
@@ -60,23 +63,26 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       },
     },
     features: [
-      { feature_code: 'kitchen_ticket', source: 'plan_default', is_active: true },
-      { feature_code: 'kitchen_printer', source: 'plan_default', is_active: true },
-      { feature_code: 'kitchen_display', source: 'plan_default', is_active: true },
+      // Free features
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
-      { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
       { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'product_variants', source: 'plan_default', is_active: true },
       { feature_code: 'partial_payment', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
+      // Growth features (valid because plan_tier = 'growth')
+      { feature_code: 'kitchen_ticket', source: 'plan_default', is_active: true },
+      { feature_code: 'kitchen_printer', source: 'plan_default', is_active: true },
+      { feature_code: 'kitchen_display', source: 'plan_default', is_active: true },
+      { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
     ],
     orderTypes: ['DINE_IN', 'TAKE_AWAY', 'DELIVERY'],
   },
 
+  // Retail/minimarket butuh inventori lanjutan & loyalty → tier growth
   RETAIL_MINIMARKET: {
     tenantDefaults: {
-      plan_tier: 'free',
+      plan_tier: 'growth',
       subscription_status: 'trial',
       settings: {
         default_tax_rate: 0.1,
@@ -99,21 +105,25 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       },
     },
     features: [
+      // Free features
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
       { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'product_variants', source: 'plan_default', is_active: true },
       { feature_code: 'partial_payment', source: 'plan_default', is_active: true },
-      { feature_code: 'inventory_tracking', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
+      // Growth features (valid because plan_tier = 'growth')
+      { feature_code: 'inventory_tracking', source: 'plan_default', is_active: true },
       { feature_code: 'inventory_reports', source: 'plan_default', is_active: true },
+      { feature_code: 'barcode_scanner', source: 'plan_default', is_active: true },
     ],
     orderTypes: ['WALK_IN'],
   },
 
+  // Laundry butuh label printer & loyalty → tier growth
   LAUNDRY: {
     tenantDefaults: {
-      plan_tier: 'free',
+      plan_tier: 'growth',
       subscription_status: 'trial',
       settings: {
         default_tax_rate: 0.1,
@@ -136,19 +146,22 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       },
     },
     features: [
+      // Free features
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
       { feature_code: 'order_queue', source: 'plan_default', is_active: true },
-      { feature_code: 'label_printer', source: 'plan_default', is_active: true },
-      { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
+      // Growth features (valid because plan_tier = 'growth')
+      { feature_code: 'label_printer', source: 'plan_default', is_active: true },
+      { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
     ],
     orderTypes: ['WALK_IN', 'DELIVERY'],
   },
 
+  // Service/appointment butuh order_notifications + loyalty → tier growth
   SERVICE_APPOINTMENT: {
     tenantDefaults: {
-      plan_tier: 'free',
+      plan_tier: 'growth',
       subscription_status: 'trial',
       settings: {
         default_tax_rate: 0.1,
@@ -171,20 +184,24 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       },
     },
     features: [
+      // Free features
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
-      { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
       { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'product_variants', source: 'plan_default', is_active: true },
       { feature_code: 'partial_payment', source: 'plan_default', is_active: true },
       { feature_code: 'discounts', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
+      // Growth features (valid because plan_tier = 'growth')
+      { feature_code: 'order_notifications', source: 'plan_default', is_active: true },
+      { feature_code: 'analytics_dashboard', source: 'plan_default', is_active: true },
     ],
     orderTypes: ['WALK_IN'],
   },
 
+  // PPOB/Digital butuh payment_gateway + multi_location → tier pro
   DIGITAL_PPOB: {
     tenantDefaults: {
-      plan_tier: 'free',
+      plan_tier: 'pro',
       subscription_status: 'trial',
       settings: {
         enable_digital_receipts: true,
@@ -206,11 +223,15 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       },
     },
     features: [
+      // Free features
       { feature_code: 'receipt_printer', source: 'plan_default', is_active: true },
       { feature_code: 'order_queue', source: 'plan_default', is_active: true },
       { feature_code: 'sales_reports', source: 'plan_default', is_active: true },
-      { feature_code: 'payment_gateway', source: 'plan_default', is_active: true },
+      // Growth features
       { feature_code: 'analytics_dashboard', source: 'plan_default', is_active: true },
+      // Pro features (valid because plan_tier = 'pro')
+      { feature_code: 'payment_gateway', source: 'plan_default', is_active: true },
+      { feature_code: 'api_integration', source: 'plan_default', is_active: true },
     ],
     orderTypes: ['WALK_IN'],
   },
