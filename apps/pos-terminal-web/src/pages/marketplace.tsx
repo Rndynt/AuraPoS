@@ -714,8 +714,11 @@ export default function MarketplacePage() {
     [...items].sort((a, b) => {
       const rank = (i: T) => {
         if (i.comingSoon) return 3;
-        if (isItemActive(i)) return 0;
+        // Active = enabled in DB AND plan tier sufficient (same as effectiveActive in cards)
+        if (isItemActive(i) && canActivate(i)) return 0;
+        // Unlocked = plan allows it but not yet active
         if (canActivate(i)) return 1;
+        // Locked = plan too low (need upgrade)
         return 2;
       };
       return rank(a) - rank(b);
