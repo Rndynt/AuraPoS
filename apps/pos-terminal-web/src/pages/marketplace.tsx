@@ -676,29 +676,15 @@ export default function MarketplacePage() {
   const totalActive = activeModules + activeFeatures;
   const totalItems = availableModules.length + availableFeatures.length;
 
-  const handleSwitchPlan = async (tier: PlanTier) => {
-    if (tier === currentPlan) return;
-    setSwitchingPlan(tier);
-    try {
-      const res = await fetch("/api/tenants/plan", {
-        method: "PATCH",
-        headers: buildApiHeaders({ "Content-Type": "application/json" }),
-        credentials: "include",
-        body: JSON.stringify({ plan_tier: tier }),
-      });
-      if (!res.ok) throw new Error("Gagal mengganti paket");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/tenants/profile", tenantId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/tenants/features", tenantId] }),
-      ]);
-      const planName = PLANS.find((p) => p.tier === tier)?.name ?? tier;
-      toast({ title: `Paket ${planName} aktif`, description: "Fitur baru sudah bisa digunakan." });
-      setShowPlans(false);
-    } catch {
-      toast({ title: "Gagal", description: "Coba lagi beberapa saat.", variant: "destructive" });
-    } finally {
-      setSwitchingPlan(null);
-    }
+  const handleSwitchPlan = (_tier: PlanTier) => {
+    // BILLING SAFETY: Plan upgrades cannot be initiated from the browser.
+    // Upgrade must be processed through the billing/admin system.
+    toast({
+      title: "Upgrade belum tersedia",
+      description:
+        "Upgrade paket harus diproses melalui billing/admin. Fitur ini akan dihubungkan ke pembayaran resmi.",
+    });
+    setShowPlans(false);
   };
 
   const handleToggle = async (item: CatalogItem) => {

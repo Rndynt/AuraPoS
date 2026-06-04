@@ -56,7 +56,7 @@ type BetterAuthSignUpResult = {
 export class RegistrationError extends Error {
   constructor(
     message: string,
-    public readonly code: 'DUPLICATE_SLUG' | 'DUPLICATE_EMAIL' | 'OWNER_SIGNUP_FAILED' | 'REGISTRATION_FAILED',
+    public readonly code: 'DUPLICATE_SLUG' | 'DUPLICATE_EMAIL' | 'OWNER_SIGNUP_FAILED' | 'REGISTRATION_FAILED' | 'TEMPLATE_PLAN_MISMATCH',
     public readonly status: number,
     public readonly detail?: unknown,
   ) {
@@ -65,11 +65,20 @@ export class RegistrationError extends Error {
   }
 }
 
+/**
+ * BILLING SAFETY: New tenants always start on the free plan regardless of
+ * what the business-type template specifies. Only the billing/admin system
+ * may upgrade a tenant to a paid tier after payment is confirmed.
+ */
+const DEFAULT_ONBOARDING_PLAN_TIER = 'free' as const;
+
 type RegistrationDeps = {
   baseDomain: string;
   generateId: () => string;
   runTransaction: <T>(callback: (tx: any) => Promise<T>) => Promise<T>;
   signUpOwner: (input: RegisterTenantOwnerInput) => Promise<BetterAuthSignUpResult>;
+  /** Link the Better Auth user row to a tenant. Runs outside the transaction (authDb pool). */
+  linkOwnerToTenant: (userId: string, tenantId: string) => Promise<void>;
   cleanupAuthUser: (userId: string) => Promise<void>;
   cleanupTenant: (tenantId: string) => Promise<void>;
 };
@@ -238,6 +247,12 @@ const createDefaultDeps = (baseDomain: string): RegistrationDeps => ({
         password: input.ownerPassword,
       },
     }) as Promise<BetterAuthSignUpResult>,
+  linkOwnerToTenant: async (userId, tenantId) => {
+    await authDb
+      .update(authUser)
+      .set({ tenantId, role: 'owner', updatedAt: new Date() })
+      .where(eq(authUser.id, userId));
+  },
   cleanupAuthUser: async (userId) => {
     await authDb.delete(session).where(eq(session.userId, userId));
     await authDb.delete(account).where(eq(account.userId, userId));
@@ -274,6 +289,15 @@ export async function registerTenantOwner(
       const tenantId = deps.generateId();
       const template = getBusinessTypeTemplate(businessType);
 
+      // BILLING SAFETY: ignore any plan_tier from the template — always start free.
+      // Only a trusted billing/admin flow may upgrade after payment is confirmed.
+      if (template.tenantDefaults.plan_tier !== 'free') {
+        console.warn(
+          `[register] Template for ${businessType} specifies plan_tier='${template.tenantDefaults.plan_tier}'; ` +
+          `forcing '${DEFAULT_ONBOARDING_PLAN_TIER}' for onboarding safety.`,
+        );
+      }
+
       const [tenant] = await tx
         .insert(tenants)
         .values({
@@ -283,9 +307,8 @@ export async function registerTenantOwner(
           businessName: input.businessName,
           businessType,
           settings: template.tenantDefaults.settings,
-          planTier: template.tenantDefaults.plan_tier,
-          subscriptionStatus: template.tenantDefaults.subscription_status,
-          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          planTier: DEFAULT_ONBOARDING_PLAN_TIER,
+          subscriptionStatus: 'active',
           timezone: input.timezone ?? 'Asia/Jakarta',
           currency: input.currency ?? 'IDR',
           locale: input.locale ?? 'id-ID',
@@ -312,13 +335,14 @@ export async function registerTenantOwner(
       const featureCodes = template.features.map((feature) => feature.feature_code);
 
       // Safety guard: validate that every feature in the template is allowed
-      // for the plan tier. This prevents template bugs from granting free tenants
-      // paid features that would disappear when the billing system resyncs.
-      const allowedForPlan: string[] = PLAN_FEATURE_MAP[template.tenantDefaults.plan_tier] ?? PLAN_FEATURE_MAP.free;
-      const outOfPlan = featureCodes.filter((code) => !allowedForPlan.includes(code));
+      // under the FREE plan. Registration always onboards to free regardless of
+      // what the template declares, so features must never exceed free entitlements.
+      const allowedForOnboardingPlan: string[] = PLAN_FEATURE_MAP.free;
+      const outOfPlan = featureCodes.filter((code) => !allowedForOnboardingPlan.includes(code));
       if (outOfPlan.length > 0) {
         throw new RegistrationError(
-          `Template seeds features that exceed plan_tier \'${template.tenantDefaults.plan_tier}\': ${outOfPlan.join(', ')}`,
+          `Template seeds features that exceed the free onboarding plan: ${outOfPlan.join(', ')}. ` +
+          `Fix the template — paid features must not be active defaults.`,
           'TEMPLATE_PLAN_MISMATCH',
           500,
         );
@@ -405,12 +429,8 @@ export async function registerTenantOwner(
       createdOwnerUserId = ownerUserId;
 
       // Better Auth creates the user outside the transaction scope (uses shared pool connection).
-      // Use authDb directly (outside tx) so the update is guaranteed visible and not subject
-      // to transaction isolation issues between the Better Auth connection and the tx connection.
-      await authDb
-        .update(authUser)
-        .set({ tenantId: tenant.id, role: 'owner', updatedAt: new Date() })
-        .where(eq(authUser.id, ownerUserId));
+      // Use deps.linkOwnerToTenant so tests can mock this call without needing a real DB.
+      await deps.linkOwnerToTenant(ownerUserId, tenant.id);
 
       await tx
         .insert(userOutletAssignments)

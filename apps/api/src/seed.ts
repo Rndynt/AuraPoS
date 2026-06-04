@@ -59,13 +59,13 @@ async function clearDatabase() {
 async function seedBusinessTypes() {
   console.log('📊 Seeding business types...');
   const data: InsertBusinessType[] = [
-    { code: 'CAFE_RESTAURANT',  name: 'Cafe & Restaurant',    description: 'Food and beverage service', isActive: true },
-    { code: 'RETAIL_MINIMARKET',name: 'Retail & Minimarket',  description: 'Retail store',              isActive: true },
-    { code: 'LAUNDRY_SERVICE',  name: 'Laundry Service',      description: 'Laundry and cleaning',      isActive: true },
-    { code: 'SERVICE_BUSINESS', name: 'Service Business',     description: 'General service',           isActive: true },
-    { code: 'DIGITAL_PPOB',     name: 'Digital & PPOB',       description: 'Digital products',          isActive: true },
+    { code: 'CAFE_RESTAURANT',     name: 'Cafe & Restaurant',    description: 'Food and beverage service', isActive: true },
+    { code: 'RETAIL_MINIMARKET',   name: 'Retail & Minimarket',  description: 'Retail store',              isActive: true },
+    { code: 'LAUNDRY',             name: 'Laundry Service',      description: 'Laundry and cleaning',      isActive: true },
+    { code: 'SERVICE_APPOINTMENT', name: 'Service Business',     description: 'General service',           isActive: true },
+    { code: 'DIGITAL_PPOB',        name: 'Digital & PPOB',       description: 'Digital products',          isActive: true },
   ];
-  await db.insert(businessTypes).values(data);
+  await db.insert(businessTypes).values(data).onConflictDoNothing();
   console.log('✅ Business types seeded\n');
 }
 
@@ -73,11 +73,12 @@ async function seedBusinessTypes() {
 async function seedOrderTypes() {
   console.log('📋 Seeding order types...');
   const data: InsertOrderType[] = [
-    { code: 'DINE_IN',    name: 'Dine In',    description: 'Makan di tempat',     isOnPremise: true,  needTableNumber: true,  needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: true,  isActive: true },
-    { code: 'TAKE_AWAY',  name: 'Take Away',  description: 'Bawa pulang',         isOnPremise: true,  needTableNumber: false, needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
-    { code: 'DELIVERY',   name: 'Delivery',   description: 'Antar ke alamat',     isOnPremise: false, needTableNumber: false, needAddress: true,  allowScheduled: true,  isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
+    { code: 'DINE_IN',    name: 'Dine In',    description: 'Makan di tempat',          isOnPremise: true,  needTableNumber: true,  needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: true,  isActive: true },
+    { code: 'TAKE_AWAY',  name: 'Take Away',  description: 'Bawa pulang',              isOnPremise: true,  needTableNumber: false, needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
+    { code: 'DELIVERY',   name: 'Delivery',   description: 'Antar ke alamat',          isOnPremise: false, needTableNumber: false, needAddress: true,  allowScheduled: true,  isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
+    { code: 'WALK_IN',    name: 'Walk In',    description: 'Transaksi langsung di toko', isOnPremise: true, needTableNumber: false, needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
   ];
-  const created = await db.insert(orderTypes).values(data).returning();
+  const created = await db.insert(orderTypes).values(data).onConflictDoNothing().returning();
   console.log(`✅ ${created.length} order types seeded\n`);
   return created;
 }

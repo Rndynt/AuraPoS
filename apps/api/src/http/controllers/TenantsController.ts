@@ -296,11 +296,39 @@ export const updateModuleConfig = asyncHandler(async (req: Request, res: Respons
 });
 
 /**
+ * Returns true only if the request carries a valid internal billing secret.
+ * Used to restrict plan-tier mutations to the billing/admin system.
+ *
+ * Rules:
+ *  - If BILLING_INTERNAL_SECRET is not configured → always deny.
+ *  - If the x-internal-billing-secret header is missing or wrong → deny.
+ */
+export function isBillingPlanChangeAuthorized(req: Request): boolean {
+  const configuredSecret = process.env.BILLING_INTERNAL_SECRET;
+  if (!configuredSecret) return false;
+  const provided = req.headers['x-internal-billing-secret'];
+  return typeof provided === 'string' && provided === configuredSecret;
+}
+
+/**
  * PATCH /api/tenants/plan
- * Switch plan tier and sync all plan_default features accordingly
+ * Switch plan tier and sync all plan_default features accordingly.
+ *
+ * BILLING SAFETY: This endpoint is restricted to trusted internal billing/admin
+ * systems only. Browser/client requests are rejected with 403.
+ * Set BILLING_INTERNAL_SECRET env var and pass it in x-internal-billing-secret header.
  */
 export const updatePlanTier = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
+
+  if (!isBillingPlanChangeAuthorized(req)) {
+    res.status(403).json({
+      success: false,
+      error: 'Plan changes are restricted to the billing/admin system.',
+      code: 'BILLING_AUTH_REQUIRED',
+    });
+    return;
+  }
 
   const bodySchema = z.object({
     plan_tier: z.enum(['free', 'growth', 'pro']),
