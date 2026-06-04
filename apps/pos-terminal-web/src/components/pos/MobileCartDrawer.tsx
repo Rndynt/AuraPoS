@@ -45,14 +45,12 @@ type MobileCartDrawerProps = {
   serviceCharge: number;
   total: number;
   onCharge: () => void;
-  onPartialPayment?: () => void;
   onSaveDraft?: () => void;
   isDraftSaving?: boolean;
   onConfirmAndKitchen?: () => void;
   hasKitchen?: boolean;
   isKitchenSending?: boolean;
   onUpdateNote?: (id: string, note: string) => void;
-  hasPartialPayment?: boolean;
   isProcessing?: boolean;
   customerName: string;
   setCustomerName: (name: string) => void;
@@ -89,8 +87,6 @@ export function MobileCartDrawer({
   serviceCharge,
   total,
   onCharge,
-  onPartialPayment,
-  hasPartialPayment = false,
   onSaveDraft,
   isDraftSaving = false,
   onConfirmAndKitchen,
@@ -515,19 +511,6 @@ export function MobileCartDrawer({
                         </>
                       )}
                     </button>
-
-                    {hasPartialPayment && (
-                      <button
-                        onClick={onPartialPayment}
-                        disabled={isProcessing || items.length === 0}
-                        className="w-14 flex-shrink-0 bg-amber-50 border-2 border-amber-200 text-amber-600 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
-                        data-testid="button-partial-payment"
-                        title="Bayar sebagian / DP"
-                      >
-                        <Banknote size={18} />
-                        <span className="text-[9px] font-normal opacity-70">DP</span>
-                      </button>
-                    )}
 
                     {hasKitchen && (
                       <button

@@ -21,14 +21,12 @@ type CartPanelProps = {
   serviceCharge: number;
   total: number;
   onCharge: () => void;
-  onPartialPayment?: () => void;
   onSaveDraft?: () => void;
   isDraftSaving?: boolean;
   onConfirmAndKitchen?: () => void;
   hasKitchen?: boolean;
   isKitchenSending?: boolean;
   onUpdateNote?: (id: string, note: string) => void;
-  hasPartialPayment?: boolean;
   isProcessing?: boolean;
   customerName: string;
   setCustomerName: (name: string) => void;
@@ -53,7 +51,7 @@ type CartPanelProps = {
 export function CartPanel({
   items, onUpdateQty, onRemove, onClear, getItemPrice,
   subtotal, taxRate, tax, serviceChargeRate, serviceCharge, total,
-  onCharge, onPartialPayment, hasPartialPayment = false, onSaveDraft, isDraftSaving = false, onConfirmAndKitchen, hasKitchen = false, isKitchenSending = false, onUpdateNote, isProcessing = false,
+  onCharge, onSaveDraft, isDraftSaving = false, onConfirmAndKitchen, hasKitchen = false, isKitchenSending = false, onUpdateNote, isProcessing = false,
   customerName, setCustomerName, orderNumber,
   tableNumber, setTableNumber,
   orderType, setOrderType,
@@ -386,19 +384,6 @@ export function CartPanel({
                 : <ShoppingBag size={16} />
               }
             </button>
-
-            {hasPartialPayment && (
-              <button
-                onClick={onPartialPayment}
-                disabled={isProcessing || items.length === 0}
-                className="w-10 h-10 flex-shrink-0 bg-amber-50 border-2 border-amber-200 hover:border-amber-300 text-amber-600 hover:text-amber-700 rounded-xl flex flex-col items-center justify-center gap-0.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-                data-testid="button-partial-payment"
-                title="Bayar sebagian / DP"
-              >
-                <Banknote size={13} />
-                <span className="text-[8px] font-bold leading-none">DP</span>
-              </button>
-            )}
 
             {hasKitchen && (
               <button

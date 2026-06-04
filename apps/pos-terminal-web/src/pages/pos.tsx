@@ -7,7 +7,6 @@ import { OrderQueue } from "@/components/kitchen-display/OrderQueue";
 import { OrderQueuePanel } from "@/components/pos/OrderQueuePanel";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { ProductOptionsDialog } from "@/components/pos/ProductOptionsDialog";
-import { PartialPaymentDialog } from "@/components/pos/PartialPaymentDialog";
 import { PaymentMethodDialog } from "@/components/pos/PaymentMethodDialog";
 import { CombinedDraftSheet } from "@/components/pos/CombinedDraftSheet";
 import type { PaymentMethod } from "@/hooks/useCart";
@@ -43,8 +42,6 @@ export default function POSPage() {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [combinedDraftOpen, setCombinedDraftOpen] = useState(false);
   const [isKitchenSending, setIsKitchenSending] = useState(false);
-  const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
-  const [isSubmittingPartialPayment, setIsSubmittingPartialPayment] = useState(false);
   const [isProcessingQuickCharge, setIsProcessingQuickCharge] = useState(false);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
   const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
@@ -415,8 +412,65 @@ export default function POSPage() {
   };
 
   // Handle payment method confirmation from dialog
-  const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod) => {
-    if (!ensureCartHasItems() || !cart.selectedOrderTypeId) return;
+  const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod, _cashReceived?: number, partialAmount?: number) => {
+    if (!ensureCartHasItems()) return;
+
+    // ── PARTIAL PAYMENT (DP) FLOW ────────────────────────────────────────────
+    if (partialAmount !== undefined) {
+      setIsProcessingQuickCharge(true);
+      const cfdOrderNumber = cart.orderNumber;
+
+      // Auto-select order type if needed
+      if (!cart.selectedOrderTypeId && activeOrderTypes.length > 0) {
+        cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
+      }
+
+      try {
+        const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
+        const orderId = orderResult.order?.id;
+        const orderNumber = orderResult.order?.order_number || cfdOrderNumber;
+
+        const _pHdrs = buildApiHeaders({ "Content-Type": "application/json" });
+        const paymentRes = await fetch(`/api/orders/${orderId}/payments`, {
+          method: "POST",
+          headers: _pHdrs,
+          credentials: "include",
+          body: JSON.stringify({ amount: partialAmount, payment_method: paymentMethod }),
+        });
+        if (!paymentRes.ok) {
+          const errText = await paymentRes.text();
+          throw new Error(errText || "Gagal mencatat pembayaran DP");
+        }
+        const paymentData = await paymentRes.json();
+        const remainingAmount = paymentData.data.remainingAmount;
+
+        // Kirim ke dapur jika fitur aktif — pesanan tetap perlu disiapkan meski belum lunas
+        if (hasKitchenTicket && orderId) {
+          try { await handleSendToKitchen(orderId); } catch { /* non-critical */ }
+        }
+
+        const fmtRp = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+        toast({
+          title: "DP berhasil dicatat",
+          description: `Order #${orderNumber} — Dibayar: ${fmtRp(partialAmount)}, Sisa: ${fmtRp(remainingAmount)}${hasKitchenTicket ? " · Dikirim ke dapur" : ""}`,
+        });
+
+        cart.clearCart();
+        setPaymentMethodDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Gagal mencatat DP",
+          description: error instanceof Error ? error.message : "Gagal mencatat pembayaran",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessingQuickCharge(false);
+      }
+      return;
+    }
+
+    // ── FULL PAYMENT FLOW ────────────────────────────────────────────────────
+    if (!cart.selectedOrderTypeId) return;
 
     // Snapshot cart before clearing
     const cfdItems = cart.items.map(toCFDItem);
@@ -623,19 +677,6 @@ export default function POSPage() {
   };
 
 
-  const handlePartialPayment = () => {
-    if (!hasPartialPayment) return;
-    if (!ensureCartHasItems()) return;
-    
-    // Auto-select first order type if none selected
-    if (!cart.selectedOrderTypeId && activeOrderTypes.length > 0) {
-      cart.setSelectedOrderTypeId(activeOrderTypes[0].id);
-    }
-    
-    setPartialPaymentDialogOpen(true);
-    setMobileCartOpen(false);
-  };
-
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const _sHdrs = buildApiHeaders({ "Content-Type": "application/json" });
@@ -659,80 +700,6 @@ export default function POSPage() {
         description: "Gagal memperbarui status order",
         variant: "destructive",
       });
-    }
-  };
-
-  const handlePartialPaymentSubmit = async (
-    amount: number,
-    paymentMethod: "cash" | "card" | "ewallet" | "other",
-    transactionRef?: string,
-    notes?: string
-  ) => {
-    if (!hasPartialPayment) return;
-    if (!ensureCartHasItems()) {
-      setPartialPaymentDialogOpen(false);
-      return;
-    }
-
-    try {
-      setIsSubmittingPartialPayment(true);
-
-      const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
-      const orderId = orderResult.order?.id;
-      const orderNumber = orderResult.order?.order_number || orderResult.order?.id;
-
-      const _pHdrs = buildApiHeaders({ "Content-Type": "application/json" });
-      const paymentResult = await fetch(`/api/orders/${orderId}/payments`, {
-        method: "POST",
-        headers: _pHdrs,
-        credentials: "include",
-        body: JSON.stringify({
-          amount,
-          payment_method: paymentMethod,
-          transaction_ref: transactionRef,
-          notes,
-        }),
-      });
-
-      if (!paymentResult.ok) {
-        throw new Error((await paymentResult.text()) || "Failed to record payment");
-      }
-
-      const paymentData = await paymentResult.json();
-
-      // Show success toast with remaining balance
-      const remainingAmount = paymentData.data.remainingAmount;
-      toast({
-        title: "Partial payment recorded",
-        description: `Order #${orderNumber} - Paid: Rp ${amount.toLocaleString("id-ID")} - Remaining: Rp ${remainingAmount.toLocaleString("id-ID")}`,
-      });
-
-      // Clear cart and close dialog
-      cart.clearCart();
-      setPartialPaymentDialogOpen(false);
-      setMobileCartOpen(false);
-    } catch (error) {
-      let errorMessage = "Failed to process partial payment";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      // Try to extract more details from API error response
-      const apiError = error as any;
-      if (apiError?.response?.data?.message) {
-        errorMessage = apiError.response.data.message;
-      } else if (apiError?.body?.message) {
-        errorMessage = apiError.body.message;
-      }
-      
-      console.error("Partial payment error details:", error);
-      
-      toast({
-        title: "Payment failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingPartialPayment(false);
     }
   };
 
@@ -968,14 +935,12 @@ export default function POSPage() {
           serviceCharge={cart.serviceCharge}
           total={cart.total}
           onCharge={handleCharge}
-          onPartialPayment={handlePartialPayment}
           onSaveDraft={handleSaveDraft}
           isDraftSaving={isDraftSaving}
           onConfirmAndKitchen={handleConfirmAndKitchen}
           hasKitchen={hasKitchenTicket}
           isKitchenSending={isKitchenSending}
           onUpdateNote={cart.updateNote}
-          hasPartialPayment={hasPartialPayment}
           isProcessing={isProcessingQuickCharge}
           customerName={cart.customerName}
           setCustomerName={cart.setCustomerName}
@@ -1027,14 +992,12 @@ export default function POSPage() {
           handleCharge();
           setMobileCartOpen(false);
         }}
-        onPartialPayment={handlePartialPayment}
         onSaveDraft={handleSaveDraft}
         isDraftSaving={isDraftSaving}
         onConfirmAndKitchen={handleConfirmAndKitchen}
         hasKitchen={hasKitchenTicket}
         isKitchenSending={isKitchenSending}
         onUpdateNote={cart.updateNote}
-        hasPartialPayment={hasPartialPayment}
         isProcessing={isProcessingQuickCharge}
         customerName={cart.customerName}
         setCustomerName={cart.setCustomerName}
@@ -1075,26 +1038,14 @@ export default function POSPage() {
         onAdd={handleVariantAdd}
       />
 
-      {/* Partial Payment Dialog */}
-      {hasPartialPayment && (
-        <PartialPaymentDialog
-          open={partialPaymentDialogOpen}
-          onClose={() => setPartialPaymentDialogOpen(false)}
-          onSubmit={handlePartialPaymentSubmit}
-          cartTotal={cart.total}
-          isSubmitting={isSubmittingPartialPayment}
-        />
-      )}
-
       {/* Payment Method Selection Dialog */}
       <PaymentMethodDialog
         open={paymentMethodDialogOpen}
         onClose={() => {
-          // Inform user the order was created but not paid
           if (pendingOrderForPayment) {
             toast({
-              title: "Order created",
-              description: `Order #${pendingOrderForPayment.orderNumber} created. You can complete payment from the Orders page.`,
+              title: "Pesanan dibuat",
+              description: `Order #${pendingOrderForPayment.orderNumber} dapat dilunasi dari halaman Pesanan.`,
             });
             cart.clearCart();
           }
@@ -1106,6 +1057,7 @@ export default function POSPage() {
         cartTotal={pendingOrderForPayment?.totalAmount || cart.total}
         isSubmitting={isProcessingQuickCharge}
         defaultPaymentMethod={cart.paymentMethod}
+        allowPartial={hasPartialPayment}
       />
 
       {/* Quick Charge Processing Overlay */}
