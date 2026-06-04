@@ -18,11 +18,15 @@ import {
   Building2,
   ChevronDown,
   MapPin,
+  AlertTriangle,
+  UtensilsCrossed,
+  ChefHat,
 } from "lucide-react";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
+import { useFeatures } from "@/hooks/useFeatures";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { useOutlet } from "@/context/OutletContext";
@@ -68,6 +72,15 @@ export default function HomePage() {
   const { toast } = useToast();
   const { tenantId } = useTenant();
   const { data: profile, isLoading: profileLoading } = useTenantProfile(tenantId);
+  const { hasFeature } = useFeatures();
+  const { hasModule } = useTenant();
+
+  // Feature gates
+  const showDashboard       = hasFeature("analytics_dashboard");
+  const showStockAdvanced   = hasFeature("inventory_tracking");
+  const showTables          = hasModule("enable_table_management");
+  const showKitchen         = hasModule("enable_kitchen_ticket");
+  const showMultiLocation   = hasModule("enable_multi_location");
   const { user, loading: userLoading } = useCurrentUser();
   const { activeOutlet, outlets, setActiveOutlet, isLoading: outletLoading } = useOutlet();
   const [showOutletPicker, setShowOutletPicker] = useState(false);
@@ -78,92 +91,95 @@ export default function HomePage() {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "Owner";
 
+  // Menu items dengan feature gate — hanya tampil jika fitur aktif
   const MENU_ITEMS = [
+    // ── Selalu tampil (free tier) ──
     {
-      id: 'marketplace',
-      title: 'Marketplace',
-      icon: ShoppingBag,
-      color: 'bg-violet-100 text-violet-600',
-      subtitle: 'Aktifkan fitur bisnis',
-      highlight: true,
+      id: 'marketplace', title: 'Marketplace',
+      icon: ShoppingBag, color: 'bg-violet-100 text-violet-600',
+      subtitle: 'Aktifkan fitur bisnis', highlight: true,
     },
     {
-      id: 'dashboard',
-      title: 'Dashboard',
-      icon: BarChart3,
-      color: 'bg-blue-100 text-blue-600',
-      subtitle: 'Lihat ringkasan',
+      id: 'products', title: 'Produk',
+      icon: Box, color: 'bg-orange-100 text-orange-600',
+      subtitle: 'Kelola menu & katalog',
     },
     {
-      id: 'products',
-      title: 'Produk',
-      icon: Box,
-      color: 'bg-orange-100 text-orange-600',
-      subtitle: 'Kelola menu produk',
+      id: 'stock', title: 'Stok',
+      icon: Package, color: 'bg-purple-100 text-purple-600',
+      subtitle: 'Pantau & adjust stok',
     },
     {
-      id: 'stock',
-      title: 'Stok',
-      icon: Package,
-      color: 'bg-purple-100 text-purple-600',
-      subtitle: 'Kelola stok barang',
-    },
-    {
-      id: 'employees',
-      title: 'Karyawan',
-      icon: Users2,
-      color: 'bg-green-100 text-green-600',
+      id: 'employees', title: 'Karyawan',
+      icon: Users2, color: 'bg-green-100 text-green-600',
       subtitle: 'Kelola karyawan',
     },
     {
-      id: 'reports',
-      title: 'Laporan',
-      icon: FileText,
-      color: 'bg-pink-100 text-pink-600',
-      subtitle: 'Lihat laporan penjualan',
+      id: 'reports', title: 'Laporan',
+      icon: FileText, color: 'bg-pink-100 text-pink-600',
+      subtitle: 'Laporan penjualan',
     },
     {
-      id: 'outlets',
-      title: 'Cabang',
-      icon: Building2,
-      color: 'bg-teal-100 text-teal-600',
-      subtitle: 'Kelola outlet & cabang',
-    },
-    {
-      id: 'store',
-      title: 'Profil Toko',
-      icon: Store,
-      color: 'bg-slate-100 text-slate-600',
+      id: 'store', title: 'Profil Toko',
+      icon: Store, color: 'bg-slate-100 text-slate-600',
       subtitle: 'Pengaturan toko',
     },
     {
-      id: 'printers',
-      title: 'Printers',
-      icon: Printer,
-      color: 'bg-cyan-100 text-cyan-600',
+      id: 'printers', title: 'Printer',
+      icon: Printer, color: 'bg-cyan-100 text-cyan-600',
       subtitle: 'Pairing & test print',
     },
     {
-      id: 'local-orders',
-      title: 'Order Offline',
-      icon: ClipboardList,
-      color: 'bg-indigo-100 text-indigo-600',
-      subtitle: 'Transaksi & sinkronisasi',
+      id: 'local-orders', title: 'Order Offline',
+      icon: ClipboardList, color: 'bg-indigo-100 text-indigo-600',
+      subtitle: 'Transaksi tersimpan lokal',
     },
+    {
+      id: 'sync-conflicts', title: 'Konflik Sync',
+      icon: AlertTriangle, color: 'bg-amber-100 text-amber-600',
+      subtitle: 'Kelola konflik sinkronisasi',
+    },
+    // ── Growth: analytics ──
+    ...(showDashboard ? [{
+      id: 'dashboard', title: 'Dashboard',
+      icon: BarChart3, color: 'bg-blue-100 text-blue-600',
+      subtitle: 'Analitik & ringkasan',
+    }] : []),
+    // ── Growth: denah meja ──
+    ...(showTables ? [{
+      id: 'tables', title: 'Denah Meja',
+      icon: UtensilsCrossed, color: 'bg-rose-100 text-rose-600',
+      subtitle: 'Status & kelola meja',
+    }] : []),
+    // ── Growth: dapur / KDS ──
+    ...(showKitchen ? [{
+      id: 'kitchen', title: 'Dapur / KDS',
+      icon: ChefHat, color: 'bg-orange-100 text-orange-600',
+      subtitle: 'Kitchen Display System',
+    }] : []),
+    // ── Pro: multi lokasi ──
+    ...(showMultiLocation ? [{
+      id: 'outlets', title: 'Cabang',
+      icon: Building2, color: 'bg-teal-100 text-teal-600',
+      subtitle: 'Kelola outlet & cabang',
+    }] : []),
   ];
 
   const handleNavigate = (menuId: string) => {
     const routes: Record<string, string> = {
-      marketplace: "/marketplace",
-      dashboard: "/dashboard",
-      products: "/products",
-      stock: "/stock",
-      employees: "/employees",
-      reports: "/reports",
-      store: "/store-profile",
-      printers: "/printers",
-      "local-orders": "/local-orders",
-      outlets: "/outlets",
+      marketplace:      "/marketplace",
+      dashboard:        "/dashboard",
+      products:         "/products",
+      stock:            "/stock",
+      employees:        "/employees",
+      reports:          "/reports",
+      store:            "/store-profile",
+      printers:         "/printers",
+      "local-orders":   "/local-orders",
+      "sync-conflicts": "/sync-conflicts",
+      outlets:          "/outlets",
+      tables:           "/tables",
+      kitchen:          "/kitchen",
     };
 
     const route = routes[menuId];

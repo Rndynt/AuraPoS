@@ -1,6 +1,6 @@
 import {
-  ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip, LogOut,
-  AlertTriangle, Printer, ClipboardList, Wifi, WifiOff, RefreshCw,
+  ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Grip,
+  AlertTriangle, WifiOff, RefreshCw,
   CheckCircle2, Clock3, XCircle, Receipt,
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -135,7 +135,7 @@ export function Sidebar() {
         <ShoppingBag size={18} className="text-white" strokeWidth={2.5} />
       </div>
 
-      {/* Nav items */}
+      {/* Nav items — hanya item prioritas harian POS */}
       <nav className="flex flex-col items-center gap-1.5 flex-1">
         <SidebarItem
           icon={LayoutGrid}
@@ -173,29 +173,8 @@ export function Sidebar() {
           />
         )}
 
-        <SidebarItem
-          icon={Printer}
-          label="Printer Hub"
-          isActive={location.startsWith("/printers")}
-          onClick={() => nav("/printers")}
-          testId="button-nav-printers"
-        />
-
-        <SidebarItem
-          icon={ClipboardList}
-          label="Order Offline"
-          isActive={location.startsWith("/local-orders")}
-          onClick={() => nav("/local-orders")}
-          testId="button-nav-local-orders"
-        />
-
-        <SidebarItem
-          icon={AlertTriangle}
-          label="Konflik Sync"
-          isActive={location.startsWith("/sync-conflicts")}
-          onClick={() => nav("/sync-conflicts")}
-          testId="button-nav-sync-conflicts"
-        />
+        {/* Separator */}
+        <div className="w-6 h-px bg-slate-100 my-1 flex-shrink-0" />
 
         <SidebarItem
           icon={Grip}
@@ -206,17 +185,8 @@ export function Sidebar() {
         />
       </nav>
 
-      {/* Sync status indicator */}
+      {/* Sync status indicator — selalu tampil, penting untuk offline */}
       <SidebarSyncButton />
-
-      {/* Logout */}
-      <button
-        className="flex items-center justify-center w-11 h-11 rounded-xl text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all duration-150 flex-shrink-0"
-        data-testid="button-nav-logout"
-        title="Keluar"
-      >
-        <LogOut size={18} strokeWidth={1.8} />
-      </button>
     </aside>
   );
 }
@@ -232,15 +202,13 @@ export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const nav = (path: string) => { setLocation(path); onItemClick?.(); };
   const isHub = ["/hub", "/dashboard", "/products", "/stock", "/reports", "/employees", "/store-profile"].some(p => location === p || location.startsWith(p));
 
+  // Mobile drawer hanya item prioritas — logout ada di halaman Hub/Home
   const items = [
-    { path: "/pos",             icon: LayoutGrid,     label: "Kasir / POS",      active: location === "/pos" || location === "/",   show: true         },
-    { path: "/orders",          icon: Receipt,        label: "Pesanan",          active: location.startsWith("/orders"),            show: true         },
-    { path: "/tables",          icon: UtensilsCrossed,label: "Meja",             active: location.startsWith("/tables"),            show: showTables   },
-    { path: "/kitchen",         icon: ChefHat,        label: "Dapur / Kitchen",  active: location.startsWith("/kitchen"),           show: showKitchen  },
-    { path: "/printers",        icon: Printer,        label: "Printer Hub",      active: location.startsWith("/printers"),          show: true         },
-    { path: "/local-orders",    icon: ClipboardList,  label: "Order Offline",    active: location.startsWith("/local-orders"),      show: true         },
-    { path: "/sync-conflicts",  icon: AlertTriangle,  label: "Konflik Sync",     active: location.startsWith("/sync-conflicts"),    show: true         },
-    { path: "/hub",             icon: Grip,           label: "Hub / Manajemen",  active: isHub,                                     show: true         },
+    { path: "/pos",    icon: LayoutGrid,      label: "Kasir / POS",     active: location === "/pos" || location === "/", show: true        },
+    { path: "/orders", icon: Receipt,         label: "Pesanan",         active: location.startsWith("/orders"),          show: true        },
+    { path: "/tables", icon: UtensilsCrossed, label: "Denah Meja",      active: location.startsWith("/tables"),          show: showTables  },
+    { path: "/kitchen",icon: ChefHat,         label: "Dapur / Kitchen", active: location.startsWith("/kitchen"),         show: showKitchen },
+    { path: "/hub",    icon: Grip,            label: "Hub / Manajemen", active: isHub,                                   show: true        },
   ];
 
   return (
@@ -257,13 +225,6 @@ export function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
           {label}
         </button>
       ))}
-
-      <div className="mt-2 pt-2 border-t border-slate-100">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all">
-          <LogOut size={18} strokeWidth={1.8} />
-          Keluar
-        </button>
-      </div>
     </div>
   );
 }
