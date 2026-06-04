@@ -425,18 +425,16 @@ function ModuleCard({
 }) {
   const comingSoon = item.comingSoon;
   const isCore = item.isCore;
-  // Show "Aktif" only when BOTH the module is enabled AND the plan allows it.
-  // If module is enabled in DB but plan is too low (legacy seed bug), treat as inactive
-  // so the card shows locked/upgrade state instead of a misleading green badge.
   const effectiveActive = isCore ? true : (isActive && unlocked);
+  const locked = !unlocked && !comingSoon && !isCore;
+
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden relative ${
       comingSoon ? "border-slate-100"
       : effectiveActive ? "border-emerald-300 shadow-md shadow-emerald-50"
-      : unlocked ? "border-slate-200 hover:border-slate-300 hover:shadow-md"
-      : "border-slate-100 opacity-60"
+      : locked ? "border-slate-100 opacity-60"
+      : "border-slate-200 hover:border-slate-300 hover:shadow-md"
     }`}>
-      {/* ── Coming Soon overlay ── */}
       {comingSoon && (
         <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 rounded-2xl">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
@@ -452,25 +450,26 @@ function ModuleCard({
             <item.icon size={18} className={item.iconColor} />
           </div>
           <div className="flex items-center gap-1.5">
-            {/* Active status badge — prominent green pill */}
             {effectiveActive && !comingSoon && (
               <span className="flex items-center gap-1 text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full">
                 <CheckCircle2 size={9} /> Aktif
               </span>
             )}
-            {item.badge && !effectiveActive && (
+            {/* Plan badge — only shown when NOT active (locked or unlocked-idle) */}
+            {!effectiveActive && !comingSoon && item.requiredPlan !== "free" && (
               <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                item.badge === "Pro" ? "bg-violet-50 text-violet-600 border-violet-200"
+                item.requiredPlan === "pro" ? "bg-violet-50 text-violet-600 border-violet-200"
                 : "bg-orange-50 text-orange-600 border-orange-200"
-              }`}>{item.badge}</span>
+              }`}>
+                {item.requiredPlan === "pro" ? "Pro" : "Growth"}
+              </span>
             )}
-            {!unlocked && !comingSoon && !isCore && <Lock size={11} className="text-slate-300" />}
+            {locked && <Lock size={11} className="text-slate-300" />}
           </div>
         </div>
         <h3 className="font-black text-slate-800 text-sm mb-1">{item.title}</h3>
         <p className="text-[11px] text-slate-400 leading-relaxed">{item.description}</p>
 
-        {/* Bundled features chips */}
         {item.bundledFeatures.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2.5">
             {item.bundledFeatures.map((f) => (
@@ -483,28 +482,11 @@ function ModuleCard({
         )}
       </button>
 
-      <div className={`px-4 py-3 flex items-center justify-between border-t ${
-        effectiveActive && !comingSoon ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
-      }`}>
-        <div className="flex flex-col gap-0.5">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full w-fit ${
-            item.requiredPlan === "free" ? "bg-slate-100 text-slate-500"
-            : item.requiredPlan === "growth" ? "bg-blue-50 text-blue-600"
-            : "bg-violet-50 text-violet-600"
-          }`}>
-            {item.requiredPlan === "free" ? "Gratis" : item.requiredPlan === "growth" ? "Growth" : "Pro"}
-          </span>
-          {typeof item.price === "number" && (
-            <span className="text-[10px] text-violet-600 font-bold px-2">
-              +Rp {item.price.toLocaleString("id-ID")}/bln
-            </span>
-          )}
-        </div>
-        {comingSoon ? (
-          <span className="text-[10px] font-bold text-slate-400 italic">Coming soon</span>
-        ) : isCore ? (
-        ""
-        ) : unlocked ? (
+      {/* Footer — only rendered when there's an actionable toggle */}
+      {!comingSoon && !isCore && unlocked && (
+        <div className={`px-4 py-2.5 flex items-center justify-end border-t ${
+          effectiveActive ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
+        }`}>
           <button
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             disabled={isToggling}
@@ -519,15 +501,8 @@ function ModuleCard({
             ) : isActive ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
             {isActive ? "Nonaktifkan" : "Aktifkan"}
           </button>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggle(); }}
-            className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-700 transition-colors"
-          >
-            <Crown size={11} /> Upgrade
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -540,16 +515,16 @@ function FeatureCard({
 }) {
   const comingSoon = item.comingSoon;
   const isCore = item.isCore;
-  // Same plan-tier guard as ModuleCard — feature active in DB but plan too low = show locked
   const effectiveActive = isCore ? true : (isActive && unlocked);
+  const locked = !unlocked && !comingSoon && !isCore;
+
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden relative ${
       comingSoon ? "border-slate-100"
       : effectiveActive ? "border-emerald-300 shadow-md shadow-emerald-50"
-      : unlocked ? "border-slate-200 hover:border-slate-300 hover:shadow-md"
-      : "border-slate-100 opacity-60"
+      : locked ? "border-slate-100 opacity-60"
+      : "border-slate-200 hover:border-slate-300 hover:shadow-md"
     }`}>
-      {/* ── Coming Soon overlay ── */}
       {comingSoon && (
         <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 rounded-2xl">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
@@ -565,47 +540,38 @@ function FeatureCard({
             <item.icon size={18} className={item.iconColor} />
           </div>
           <div className="flex items-center gap-1.5">
-            {/* Active status badge — prominent green pill */}
             {effectiveActive && !comingSoon && (
               <span className="flex items-center gap-1 text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full">
                 <CheckCircle2 size={9} /> Aktif
               </span>
             )}
-            {item.badge && !effectiveActive && (
+            {/* Plan badge — only shown when NOT active */}
+            {!effectiveActive && !comingSoon && item.requiredPlan !== "free" && (
               <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                item.badge === "Pro" ? "bg-violet-50 text-violet-600 border-violet-200"
-                : item.badge === "Baru" ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                item.requiredPlan === "pro" ? "bg-violet-50 text-violet-600 border-violet-200"
                 : "bg-orange-50 text-orange-600 border-orange-200"
-              }`}>{item.badge}</span>
+              }`}>
+                {item.requiredPlan === "pro" ? "Pro" : "Growth"}
+              </span>
             )}
-            {!unlocked && !comingSoon && !isCore && <Lock size={11} className="text-slate-300" />}
+            {/* "Baru" badge alongside plan badge if both apply */}
+            {item.badge === "Baru" && !effectiveActive && !comingSoon && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-600 border-emerald-200">
+                Baru
+              </span>
+            )}
+            {locked && <Lock size={11} className="text-slate-300" />}
           </div>
         </div>
         <h3 className="font-black text-slate-800 text-sm mb-1">{item.title}</h3>
         <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{item.description}</p>
       </button>
-      <div className={`px-4 py-3 flex items-center justify-between border-t ${
-        effectiveActive && !comingSoon ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
-      }`}>
-        <div className="flex flex-col gap-0.5">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full w-fit ${
-            item.requiredPlan === "free" ? "bg-slate-100 text-slate-500"
-            : item.requiredPlan === "growth" ? "bg-blue-50 text-blue-600"
-            : "bg-violet-50 text-violet-600"
-          }`}>
-            {item.requiredPlan === "free" ? "Gratis" : item.requiredPlan === "growth" ? "Growth" : "Pro"}
-          </span>
-          {typeof item.price === "number" && (
-            <span className="text-[10px] text-violet-600 font-bold px-2">
-              +Rp {item.price.toLocaleString("id-ID")}/bln
-            </span>
-          )}
-        </div>
-        {comingSoon ? (
-          <span className="text-[10px] font-bold text-slate-400 italic">Coming soon</span>
-        ) : isCore ? (
-      ""
-        ) : unlocked ? (
+
+      {/* Footer — only rendered when there's an actionable toggle */}
+      {!comingSoon && !isCore && unlocked && (
+        <div className={`px-4 py-2.5 flex items-center justify-end border-t ${
+          effectiveActive ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
+        }`}>
           <button
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             disabled={isToggling}
@@ -620,15 +586,8 @@ function FeatureCard({
             ) : isActive ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
             {isActive ? "Nonaktifkan" : "Aktifkan"}
           </button>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggle(); }}
-            className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-700"
-          >
-            <Crown size={11} /> Upgrade
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
