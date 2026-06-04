@@ -237,28 +237,28 @@ const MODULE_CATALOG: ModuleItem[] = [
 const FEATURE_CATALOG: FeatureItem[] = [
   // Kasir & Transaksi
   {
-    type: "feature", featureCode: "product_variants", price: None,
+    type: "feature", featureCode: "product_variants", price: null,
     title: "Variasi Produk", category: "Kasir & Transaksi",
     description: "Size, topping, rasa — tambahkan pilihan ke setiap produk.",
     longDesc: "Buat variasi produk fleksibel (ukuran, rasa, topping, add-on). Tiap varian bisa punya harga berbeda. Pelanggan pilih opsi saat checkout.",
     icon: Layers, iconBg: "bg-blue-100", iconColor: "text-blue-600", requiredPlan: "free",
   },
   {
-    type: "feature", featureCode: "partial_payment", price: None,
+    type: "feature", featureCode: "partial_payment", price: null,
     title: "Pembayaran Parsial", category: "Kasir & Transaksi",
     description: "Bayar sebagian, lunasi nanti — split bill & cicilan.",
     longDesc: "Terima pembayaran parsial atau split bill antar pelanggan. Sisa tagihan tercatat dan bisa dilunasi di waktu berbeda dengan metode bayar berbeda.",
     icon: SplitSquareVertical, iconBg: "bg-green-100", iconColor: "text-green-600", requiredPlan: "free",
   },
   {
-    type: "feature", featureCode: "discounts", price: None,
+    type: "feature", featureCode: "discounts", price: null,
     title: "Sistem Diskon", category: "Kasir & Transaksi",
     description: "Diskon per item (% atau Rp) dan diskon keseluruhan order.",
     longDesc: "Berikan diskon fleksibel: persentase atau nominal per item, plus diskon total per order. Badge hemat tampil otomatis di struk.",
     icon: Tag, iconBg: "bg-rose-100", iconColor: "text-rose-600", requiredPlan: "free",
   },
   {
-    type: "feature", featureCode: "order_queue", price: None,
+    type: "feature", featureCode: "order_queue", price: null,
     title: "Panel Antrian Order", category: "Kasir & Transaksi",
     description: "Tampilkan antrian semua order aktif real-time di layar kasir.",
     longDesc: "Panel samping yang menampilkan semua order aktif secara real-time beserta status bayar. Kasir pantau pesanan tanpa berpindah layar.",
@@ -266,7 +266,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
   },
   // Notifikasi
   {
-    type: "feature", featureCode: "order_notifications", price: None,
+    type: "feature", featureCode: "order_notifications", price: null,
     title: "Notifikasi Order", category: "Notifikasi",
     description: "Alert bunyi & visual saat order baru masuk atau status berubah.",
     longDesc: "Notifikasi audio dan visual untuk semua tipe order (bukan hanya dapur). Kasir tidak melewatkan pesanan yang baru dibuat atau butuh perhatian.",
@@ -275,7 +275,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
   },
   // Hardware & Cetak
   {
-    type: "feature", featureCode: "receipt_printer", price: None,
+    type: "feature", featureCode: "receipt_printer", price: null,
     title: "Printer Struk", category: "Hardware & Cetak",
     description: "Cetak struk thermal ke pelanggan saat transaksi selesai.",
     longDesc: "Integrasi printer thermal untuk struk pelanggan. Struk mencakup item, harga, diskon, pajak, metode bayar, dan info toko.",
@@ -283,7 +283,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     isCore: true,
   },
   {
-    type: "feature", featureCode: "label_printer", price: None,
+    type: "feature", featureCode: "label_printer", price: null,
     title: "Printer Label", category: "Hardware & Cetak",
     description: "Cetak label harga, barcode, atau stiker pakaian & produk.",
     longDesc: "Cetak label produk dengan barcode, harga, dan nama. Cocok untuk laundry (tag pakaian), retail (label harga), atau usaha dengan banyak SKU.",
@@ -291,7 +291,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "barcode_scanner", price: None,
+    type: "feature", featureCode: "barcode_scanner", price: null,
     title: "Scanner Barcode", category: "Hardware & Cetak",
     description: "Scan produk langsung dari kamera atau scanner USB/Bluetooth.",
     longDesc: "Tambahkan produk ke keranjang dengan scan barcode. Mendukung scanner USB, Bluetooth, dan kamera perangkat. Proses checkout retail jadi lebih cepat.",
@@ -300,7 +300,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
   },
   // Laporan & Analitik
   {
-    type: "feature", featureCode: "sales_reports", price: None,
+    type: "feature", featureCode: "sales_reports", price: null,
     title: "Laporan Penjualan", category: "Laporan & Analitik",
     description: "Ringkasan omzet harian, mingguan, dan bulanan dengan export.",
     longDesc: "Laporan penjualan lengkap: omzet per periode, produk terlaris, metode pembayaran, dan tren penjualan. Export ke PDF atau Excel.",
@@ -308,7 +308,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     isCore: true,
   },
   {
-    type: "feature", featureCode: "analytics_dashboard", price: None,
+    type: "feature", featureCode: "analytics_dashboard", price: null,
     title: "Dashboard Analitik", category: "Laporan & Analitik",
     description: "Grafik real-time, KPI bisnis, & insight penjualan interaktif.",
     longDesc: "Dashboard visual dengan grafik omzet, chart produk terlaris, rata-rata nilai transaksi, dan insight bisnis. Update real-time, bisa filter per periode.",
@@ -316,7 +316,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
   },
   // Integrasi Eksternal
   {
-    type: "feature", featureCode: "payment_gateway", price: None,
+    type: "feature", featureCode: "payment_gateway", price: null,
     title: "Payment Gateway", category: "Integrasi Eksternal",
     description: "Terima QRIS, Virtual Account, GoPay, OVO, & kartu kredit.",
     longDesc: "Integrasi payment gateway: QRIS, Virtual Account, GoPay, OVO, ShopeePay, dan kartu kredit. Rekonsiliasi otomatis ke laporan penjualan.",
@@ -324,7 +324,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "api_integration", price: None,
+    type: "feature", featureCode: "api_integration", price: null,
     title: "Integrasi API", category: "Integrasi Eksternal",
     description: "Hubungkan AuraPOS ke sistem ERP, marketplace, atau akuntansi.",
     longDesc: "API key & webhook untuk integrasi dengan sistem eksternal (ERP, marketplace, akuntansi). Dokumentasi REST API lengkap tersedia.",
@@ -332,7 +332,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "online_booking", price: None,
+    type: "feature", featureCode: "online_booking", price: null,
     title: "Booking Online", category: "Integrasi Eksternal",
     description: "Halaman booking publik via link atau QR code untuk pelanggan.",
     longDesc: "Halaman booking online yang bisa dibagikan ke pelanggan. Mereka pilih layanan, tanggal, jam — langsung masuk ke kalender appointment toko.",
@@ -340,7 +340,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "calendar_sync", price: None,
+    type: "feature", featureCode: "calendar_sync", price: null,
     title: "Sinkronisasi Kalender", category: "Integrasi Eksternal",
     description: "Sync appointment ke Google Calendar atau iCal secara otomatis.",
     longDesc: "Appointment otomatis tersync ke Google Calendar atau iCal. Reminder email & WhatsApp ke pelanggan terkirim otomatis.",
@@ -348,7 +348,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "accounting_sync", price: None,
+    type: "feature", featureCode: "accounting_sync", price: null,
     title: "Sinkronisasi Akuntansi", category: "Integrasi Eksternal",
     description: "Ekspor data transaksi ke Jurnal, Accurate, atau Excel otomatis.",
     longDesc: "Sync data penjualan & pembayaran ke software akuntansi (Jurnal, Accurate) atau ekspor otomatis ke Excel setiap tutup hari. Tidak perlu input manual lagi.",
@@ -356,7 +356,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "dark_mode", price: None,
+    type: "feature", featureCode: "dark_mode", price: null,
     title: "Mode Gelap", category: "Kasir & Transaksi",
     description: "Tampilan kasir mode gelap — nyaman untuk shift malam.",
     longDesc: "Aktifkan dark mode di seluruh tampilan POS. Cocok untuk operasional malam hari atau lingkungan dengan pencahayaan rendah.",
@@ -364,7 +364,7 @@ const FEATURE_CATALOG: FeatureItem[] = [
     comingSoon: true,
   },
   {
-    type: "feature", featureCode: "custom_branding", price: None,
+    type: "feature", featureCode: "custom_branding", price: null,
     title: "Kustomisasi Merek", category: "Kasir & Transaksi",
     description: "Logo toko, warna tema, & nama brand di struk dan tampilan.",
     longDesc: "Pasang logo bisnis, pilih warna tema POS, dan sesuaikan nama brand yang tampil di struk serta layar customer-facing display.",
