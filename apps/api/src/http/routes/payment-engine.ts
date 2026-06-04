@@ -101,4 +101,39 @@ router.get('/intents/:id/transactions', PaymentEngineController.listTransactions
 // POST /api/payment-engine/intents/:id/manual-payments — Record manual payment
 router.post('/intents/:id/manual-payments', PaymentEngineController.recordManualPayment);
 
+// ── Phase 2: Gateway abstraction ───────────────────────────────────────────────
+
+// POST /api/payment-engine/intents/:id/gateway-payments
+// Create a pending gateway payment transaction. Phase 2: only fake_gateway allowed.
+router.post('/intents/:id/gateway-payments', PaymentEngineController.createGatewayPayment);
+
+/**
+ * POST /api/payment-engine/fake-gateway/confirm
+ *
+ * Dev/test-only controlled gateway confirmation.
+ * Simulates a gateway callback (succeeded | failed) for fake_gateway transactions.
+ *
+ * Security rules:
+ * - Hard-disabled in production (NODE_ENV === 'production') — returns 404.
+ * - In non-production, protected by the same requirePaymentOperator guard
+ *   (service token or cashier+ session).
+ * - NOT a real webhook handler — do not call from untrusted sources.
+ *
+ * Phase 3 will add real webhook endpoints under /webhooks/:provider.
+ */
+router.post(
+  '/fake-gateway/confirm',
+  (req, res, next) => {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(404).json({
+        success: false,
+        error: 'Not found',
+      });
+      return;
+    }
+    next();
+  },
+  PaymentEngineController.confirmFakeGatewayPayment,
+);
+
 export default router;

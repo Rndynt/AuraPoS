@@ -3,6 +3,23 @@ import { z } from 'zod';
 import { container } from '../../container';
 import { PaymentPolicyError } from '@pos/domain/payments';
 
+// ── Phase 2 schemas ────────────────────────────────────────────────────────────
+
+const createGatewayPaymentSchema = z.object({
+  amount: z.number().positive(),
+  method: z.enum(['qris', 'ewallet', 'card', 'bank_transfer', 'other']),
+  provider: z.string().min(1).max(50),
+  metadata: z.record(z.unknown()).optional(),
+  idempotency_key: z.string().max(128).optional(),
+});
+
+const confirmFakeGatewayPaymentSchema = z.object({
+  provider_reference: z.string().min(1).max(255),
+  status: z.enum(['succeeded', 'failed']),
+  failure_reason: z.string().max(500).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
 const createIntentSchema = z.object({
   payable_type: z.string().min(1).max(64),
   payable_id: z.string().min(1).max(128),
@@ -133,6 +150,94 @@ export async function recordManualPayment(req: Request, res: Response): Promise<
       sendError(res, err.message, 409);
     } else if (err instanceof PaymentPolicyError) {
       sendError(res, err.message, 422);
+    } else {
+      sendError(res, err.message ?? 'Internal server error', 500);
+    }
+  }
+}
+
+// ── Phase 2 handlers ───────────────────────────────────────────────────────────
+
+/**
+ * POST /api/payment-engine/intents/:id/gateway-payments
+ *
+ * Create a pending gateway payment transaction for the given intent.
+ * Phase 2 only supports provider = "fake_gateway".
+ */
+export async function createGatewayPayment(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  const parsed = createGatewayPaymentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendError(res, parsed.error.errors.map((e) => e.message).join(', '), 400);
+    return;
+  }
+
+  const data = parsed.data;
+
+  try {
+    const result = await container.createGatewayPayment.execute({
+      tenantId: req.tenantId!,
+      paymentIntentId: id,
+      amount: data.amount,
+      method: data.method,
+      provider: data.provider,
+      metadata: data.metadata,
+      idempotencyKey: data.idempotency_key,
+    });
+
+    sendSuccess(res, result);
+  } catch (err: any) {
+    if (err.message?.includes('not found')) {
+      sendError(res, 'Payment intent not found', 404);
+    } else if (err instanceof PaymentPolicyError && err.code === 'IDEMPOTENCY_KEY_CONFLICT') {
+      sendError(res, err.message, 409);
+    } else if (err instanceof PaymentPolicyError && err.code === 'UNSUPPORTED_PROVIDER') {
+      sendError(res, err.message, 422);
+    } else if (err instanceof PaymentPolicyError) {
+      sendError(res, err.message, 422);
+    } else {
+      sendError(res, err.message ?? 'Internal server error', 500);
+    }
+  }
+}
+
+/**
+ * POST /api/payment-engine/fake-gateway/confirm
+ *
+ * Dev/test-only endpoint to simulate a gateway callback (succeeded or failed).
+ * MUST be disabled / guarded in production — see route definition.
+ *
+ * Returns 404 for unknown provider reference, 422 for invalid transition.
+ */
+export async function confirmFakeGatewayPayment(req: Request, res: Response): Promise<void> {
+  const parsed = confirmFakeGatewayPaymentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendError(res, parsed.error.errors.map((e) => e.message).join(', '), 400);
+    return;
+  }
+
+  const data = parsed.data;
+
+  try {
+    const result = await container.confirmFakeGatewayPayment.execute({
+      tenantId: req.tenantId!,
+      providerReference: data.provider_reference,
+      status: data.status,
+      failureReason: data.failure_reason,
+      metadata: data.metadata,
+    });
+
+    sendSuccess(res, result);
+  } catch (err: any) {
+    if (err instanceof PaymentPolicyError && err.code === 'TRANSACTION_NOT_FOUND') {
+      sendError(res, err.message, 404);
+    } else if (err instanceof PaymentPolicyError && err.code === 'INVALID_TRANSITION') {
+      sendError(res, err.message, 422);
+    } else if (err instanceof PaymentPolicyError) {
+      sendError(res, err.message, 422);
+    } else if (err.message?.includes('not found')) {
+      sendError(res, err.message, 404);
     } else {
       sendError(res, err.message ?? 'Internal server error', 500);
     }

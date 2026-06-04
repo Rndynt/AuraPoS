@@ -31,6 +31,13 @@ import { GetPaymentIntent } from '@pos/application/payments/GetPaymentIntent';
 import { ListPaymentTransactions } from '@pos/application/payments/ListPaymentTransactions';
 import { RecordManualPayment } from '@pos/application/payments/RecordManualPayment';
 import { RecalculatePaymentIntent } from '@pos/application/payments/RecalculatePaymentIntent';
+import { PaymentProviderRegistry } from '@pos/application/payments/PaymentProviderRegistry';
+import { CreateGatewayPayment } from '@pos/application/payments/CreateGatewayPayment';
+import { ConfirmFakeGatewayPayment } from '@pos/application/payments/ConfirmFakeGatewayPayment';
+
+// Payment Providers
+import { ManualProvider } from '@pos/domain/payments';
+import { FakeGatewayProvider } from '@pos/infrastructure/payments/providers/FakeGatewayProvider';
 
 // Use Cases - Catalog
 import { GetProducts } from '@pos/application/catalog/GetProducts';
@@ -120,12 +127,17 @@ class Container {
   public readonly paymentAllocationRepository: PaymentAllocationRepository;
   public readonly paymentProviderEventRepository: PaymentProviderEventRepository;
 
-  // Payment Engine Use Cases
+  // Payment Engine Use Cases (Phase 1)
   public readonly createPaymentIntent: CreatePaymentIntent;
   public readonly getPaymentIntent: GetPaymentIntent;
   public readonly listPaymentTransactions: ListPaymentTransactions;
   public readonly recalculatePaymentIntent: RecalculatePaymentIntent;
   public readonly recordManualPayment: RecordManualPayment;
+
+  // Payment Engine (Phase 2: Gateway Abstraction)
+  public readonly paymentProviderRegistry: PaymentProviderRegistry;
+  public readonly createGatewayPayment: CreateGatewayPayment;
+  public readonly confirmFakeGatewayPayment: ConfirmFakeGatewayPayment;
 
   constructor() {
     // Initialize Repositories
@@ -228,12 +240,13 @@ class Container {
       this.tenantModuleConfigRepository as any
     );
 
-    // Payment Engine
+    // Payment Engine — Repositories
     this.paymentIntentRepository = new PaymentIntentRepository(db);
     this.paymentTransactionRepository = new PaymentTransactionRepository(db);
     this.paymentAllocationRepository = new PaymentAllocationRepository(db);
     this.paymentProviderEventRepository = new PaymentProviderEventRepository(db);
 
+    // Payment Engine — Phase 1 Use Cases
     this.recalculatePaymentIntent = new RecalculatePaymentIntent(
       this.paymentIntentRepository,
       this.paymentTransactionRepository
@@ -250,6 +263,27 @@ class Container {
       this.paymentTransactionRepository,
       this.paymentAllocationRepository,
       this.recalculatePaymentIntent
+    );
+
+    // Payment Engine — Phase 2: Gateway Abstraction
+    // Build the provider registry with all Phase 2 supported providers.
+    this.paymentProviderRegistry = new PaymentProviderRegistry()
+      .register(new ManualProvider())
+      .register(new FakeGatewayProvider());
+
+    this.createGatewayPayment = new CreateGatewayPayment(
+      db,
+      this.paymentIntentRepository,
+      this.paymentTransactionRepository,
+      this.paymentProviderRegistry,
+    );
+
+    this.confirmFakeGatewayPayment = new ConfirmFakeGatewayPayment(
+      db,
+      this.paymentIntentRepository,
+      this.paymentTransactionRepository,
+      this.paymentAllocationRepository,
+      this.recalculatePaymentIntent,
     );
   }
 }
