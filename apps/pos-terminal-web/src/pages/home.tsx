@@ -70,17 +70,15 @@ function getInitials(name: string): string {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { tenantId } = useTenant();
+  const { tenantId, hasModule } = useTenant();
   const { data: profile, isLoading: profileLoading } = useTenantProfile(tenantId);
   const { hasFeature } = useFeatures();
-  const { hasModule } = useTenant();
 
-  // Feature gates
-  const showDashboard       = hasFeature("analytics_dashboard");
-  const showStockAdvanced   = hasFeature("inventory_tracking");
-  const showTables          = hasModule("enable_table_management");
-  const showKitchen         = hasModule("enable_kitchen_ticket");
-  const showMultiLocation   = hasModule("enable_multi_location");
+  // Feature gates — controls hub menu visibility
+  const showDashboard     = hasFeature("analytics_dashboard");
+  const showTables        = hasModule("enable_table_management");
+  const showKitchen       = hasModule("enable_kitchen_ticket");
+  const showMultiLocation = hasModule("enable_multi_location");
   const { user, loading: userLoading } = useCurrentUser();
   const { activeOutlet, outlets, setActiveOutlet, isLoading: outletLoading } = useOutlet();
   const [showOutletPicker, setShowOutletPicker] = useState(false);
