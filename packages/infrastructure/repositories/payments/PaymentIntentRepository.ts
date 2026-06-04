@@ -5,7 +5,7 @@ import {
   type PaymentIntent,
   type InsertPaymentIntent,
 } from '../../../../shared/schema';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 export interface IPaymentIntentRepository {
   create(data: InsertPaymentIntent): Promise<PaymentIntent>;
@@ -13,6 +13,18 @@ export interface IPaymentIntentRepository {
   findByIdempotencyKey(tenantId: string, idempotencyKey: string, tx?: any): Promise<PaymentIntent | null>;
   lockForUpdate(id: string, tenantId: string, tx: any): Promise<PaymentIntent | null>;
   update(id: string, tenantId: string, data: Partial<PaymentIntent>, tx?: any): Promise<PaymentIntent>;
+
+  /**
+   * Phase 5: List all intents for a tenant, paginated.
+   * Used by ReconcilePaymentIntentTotals to iterate over all intents.
+   */
+  listByTenant(tenantId: string, options?: { limit?: number; offset?: number; tx?: any }): Promise<PaymentIntent[]>;
+
+  /**
+   * Phase 5: Fetch a batch of intents by their IDs within a tenant.
+   * Used by ReconcilePaymentIntentTotals when given an explicit list of intentIds.
+   */
+  listByIds(ids: string[], tenantId: string, tx?: any): Promise<PaymentIntent[]>;
 }
 
 export class PaymentIntentRepository
@@ -109,6 +121,51 @@ export class PaymentIntentRepository
     } catch (error) {
       if (error instanceof RepositoryError) throw error;
       this.handleError('update', error);
+    }
+  }
+
+  /**
+   * Phase 5: List all payment intents for a tenant, paginated (oldest-first).
+   * Used by ReconcilePaymentIntentTotals to iterate over all intents.
+   */
+  async listByTenant(
+    tenantId: string,
+    options?: { limit?: number; offset?: number; tx?: any },
+  ): Promise<PaymentIntent[]> {
+    try {
+      const client = options?.tx ?? this.db;
+      const rows = await client
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.tenantId, tenantId))
+        .orderBy(paymentIntents.createdAt)
+        .limit(options?.limit ?? 500)
+        .offset(options?.offset ?? 0);
+      return rows;
+    } catch (error) {
+      this.handleError('list by tenant', error);
+    }
+  }
+
+  /**
+   * Phase 5: Fetch intents by an explicit list of IDs within a tenant.
+   * Used by ReconcilePaymentIntentTotals when the caller supplies intentIds.
+   */
+  async listByIds(ids: string[], tenantId: string, tx?: any): Promise<PaymentIntent[]> {
+    if (ids.length === 0) return [];
+    try {
+      const client = tx ?? this.db;
+      return await client
+        .select()
+        .from(paymentIntents)
+        .where(
+          and(
+            eq(paymentIntents.tenantId, tenantId),
+            inArray(paymentIntents.id, ids),
+          ),
+        );
+    } catch (error) {
+      this.handleError('list by ids', error);
     }
   }
 }

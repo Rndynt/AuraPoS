@@ -30,3 +30,29 @@ export type {
   VoidPaymentTransactionInput,
   VoidPaymentTransactionOutput,
 } from './VoidPaymentTransaction';
+
+// Phase 5: Reconciliation & stale recovery
+export { ReprocessStaleProviderEvents } from './ReprocessStaleProviderEvents';
+export type {
+  ReprocessStaleProviderEventsInput,
+  ReprocessStaleProviderEventsOutput,
+  StaleEventResult,
+} from './ReprocessStaleProviderEvents';
+export { ListStalePaymentTransactions } from './ListStalePaymentTransactions';
+export type {
+  ListStalePaymentTransactionsInput,
+  ListStalePaymentTransactionsOutput,
+  StaleTransactionRow,
+} from './ListStalePaymentTransactions';
+export { ExpireStalePaymentTransactions } from './ExpireStalePaymentTransactions';
+export type {
+  ExpireStalePaymentTransactionsInput,
+  ExpireStalePaymentTransactionsOutput,
+  ExpiredTransactionResult,
+} from './ExpireStalePaymentTransactions';
+export { ReconcilePaymentIntentTotals } from './ReconcilePaymentIntentTotals';
+export type {
+  ReconcilePaymentIntentTotalsInput,
+  ReconcilePaymentIntentTotalsOutput,
+  IntentMismatch,
+} from './ReconcilePaymentIntentTotals';

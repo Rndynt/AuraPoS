@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import * as PaymentEngineController from '../controllers/PaymentEngineController';
-import { requireCashier } from '../middleware/rbac';
+import { requireCashier, requireManager } from '../middleware/rbac';
 
 const router = Router();
 
@@ -194,5 +194,50 @@ router.post('/transactions/:id/refund', PaymentEngineController.refundTransactio
 // POST /api/payment-engine/transactions/:id/void
 // Void a pending or requires_action transaction.
 router.post('/transactions/:id/void', PaymentEngineController.voidTransaction);
+
+// ── Phase 5: Reconciliation & stale-recovery endpoints ─────────────────────────
+//
+// All reconciliation routes require at minimum manager role (40) because they
+// can mutate event/transaction status and correct intent totals. They are
+// intentionally admin-only and should never be exposed to cashier-level users.
+//
+// POST /api/payment-engine/reconciliation/reprocess-stale-events
+//   Finds orphaned pending provider events and re-applies their gateway status.
+//   Defaults to dryRun=true so callers must explicitly opt in to mutations.
+//
+// GET  /api/payment-engine/reconciliation/stale-transactions
+//   Read-only listing of transactions stuck in pending/requires_action.
+//
+// POST /api/payment-engine/reconciliation/expire-stale-transactions
+//   Marks stale internal/fake pending transactions as voided.
+//   Defaults to dryRun=true.
+//
+// POST /api/payment-engine/reconciliation/reconcile-intent-totals
+//   Recomputes and optionally fixes amountPaid/amountRefunded/status mismatches.
+//   Defaults to dryRun=true — callers must explicitly set dry_run=false to fix.
+
+router.post(
+  '/reconciliation/reprocess-stale-events',
+  requireManager,
+  PaymentEngineController.reprocessStaleProviderEvents,
+);
+
+router.get(
+  '/reconciliation/stale-transactions',
+  requireManager,
+  PaymentEngineController.listStalePaymentTransactions,
+);
+
+router.post(
+  '/reconciliation/expire-stale-transactions',
+  requireManager,
+  PaymentEngineController.expireStalePaymentTransactions,
+);
+
+router.post(
+  '/reconciliation/reconcile-intent-totals',
+  requireManager,
+  PaymentEngineController.reconcilePaymentIntentTotals,
+);
 
 export default router;

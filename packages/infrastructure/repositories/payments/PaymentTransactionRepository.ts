@@ -5,7 +5,7 @@ import {
   type PaymentTransaction,
   type InsertPaymentTransaction,
 } from '../../../../shared/schema';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 
 export interface IPaymentTransactionRepository {
   create(data: InsertPaymentTransaction, tx?: any): Promise<PaymentTransaction>;
@@ -61,6 +61,22 @@ export interface IPaymentTransactionRepository {
    * Phase 4: Find all refund transactions linked to a parent transaction.
    */
   findByParentTransactionId(parentTransactionId: string, tenantId: string, tx?: any): Promise<PaymentTransaction[]>;
+
+  /**
+   * Phase 5: List payment transactions with status 'pending' or 'requires_action'
+   * older than cutoffDate. Excludes terminal statuses (succeeded, failed, cancelled,
+   * voided, refunded). Optionally filtered by tenantId and provider.
+   */
+  listStalePendingTransactions(
+    cutoffDate: Date,
+    options?: { tenantId?: string; provider?: string; limit?: number },
+  ): Promise<PaymentTransaction[]>;
+
+  /**
+   * Phase 5: Fetch all transactions for a list of intent IDs within a tenant.
+   * Used by ReconcilePaymentIntentTotals to avoid N+1 queries.
+   */
+  findAllByIntentIds(intentIds: string[], tenantId: string, tx?: any): Promise<PaymentTransaction[]>;
 }
 
 export class PaymentTransactionRepository
@@ -380,6 +396,67 @@ export class PaymentTransactionRepository
         );
     } catch (error) {
       this.handleError('find by parent transaction id', error);
+    }
+  }
+
+  /**
+   * Phase 5: List transactions with status 'pending' or 'requires_action' created
+   * before cutoffDate. Terminal statuses (succeeded, failed, cancelled, voided,
+   * refunded) are excluded by the status filter. Results are ordered oldest-first.
+   */
+  async listStalePendingTransactions(
+    cutoffDate: Date,
+    options?: { tenantId?: string; provider?: string; limit?: number },
+  ): Promise<PaymentTransaction[]> {
+    try {
+      const conditions = [
+        inArray(paymentTransactions.status, ['pending', 'requires_action']),
+        lt(paymentTransactions.createdAt, cutoffDate),
+      ] as any[];
+
+      if (options?.tenantId) {
+        conditions.push(eq(paymentTransactions.tenantId, options.tenantId));
+      }
+      if (options?.provider) {
+        conditions.push(eq(paymentTransactions.provider, options.provider));
+      }
+
+      const rows = await this.db
+        .select()
+        .from(paymentTransactions)
+        .where(and(...conditions))
+        .orderBy(paymentTransactions.createdAt)
+        .limit(options?.limit ?? 100);
+
+      return rows;
+    } catch (error) {
+      this.handleError('list stale pending transactions', error);
+    }
+  }
+
+  /**
+   * Phase 5: Fetch all transactions belonging to any of the given intent IDs
+   * within a tenant in a single query (avoids N+1 in reconciliation).
+   */
+  async findAllByIntentIds(
+    intentIds: string[],
+    tenantId: string,
+    tx?: any,
+  ): Promise<PaymentTransaction[]> {
+    if (intentIds.length === 0) return [];
+    try {
+      const client = tx ?? this.db;
+      return await client
+        .select()
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.tenantId, tenantId),
+            inArray(paymentTransactions.paymentIntentId, intentIds),
+          ),
+        );
+    } catch (error) {
+      this.handleError('find all by intent ids', error);
     }
   }
 }

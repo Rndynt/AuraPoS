@@ -334,6 +334,173 @@ export async function voidTransaction(req: Request, res: Response): Promise<void
   }
 }
 
+// ── Phase 5 handlers ───────────────────────────────────────────────────────────
+
+const reprocessStaleEventsSchema = z.object({
+  cutoff_minutes: z.number().int().positive().max(1440).default(15),
+  provider: z.string().max(50).optional(),
+  batch_size: z.number().int().positive().max(500).default(50),
+  dry_run: z.boolean().default(true),
+});
+
+const listStaleTransactionsSchema = z.object({
+  cutoff_minutes: z.number().int().positive().max(1440).default(30),
+  provider: z.string().max(50).optional(),
+  limit: z.number().int().positive().max(500).default(100),
+});
+
+const expireStaleTransactionsSchema = z.object({
+  cutoff_minutes: z.number().int().positive().max(1440).default(30),
+  provider: z.string().max(50).optional(),
+  batch_size: z.number().int().positive().max(500).default(50),
+  dry_run: z.boolean().default(true),
+});
+
+const reconcileIntentTotalsSchema = z.object({
+  intent_ids: z.array(z.string().uuid()).max(500).optional(),
+  batch_size: z.number().int().positive().max(1000).default(200),
+  dry_run: z.boolean().default(true),
+});
+
+/**
+ * POST /api/payment-engine/reconciliation/reprocess-stale-events
+ *
+ * Finds provider events stuck in 'pending' status and reprocesses them.
+ * Uses the stored rawPayload to re-apply gateway transaction status.
+ *
+ * Returns:
+ *   200 — summary of reprocessing results
+ *   400 — validation error
+ *   500 — unexpected server error
+ */
+export async function reprocessStaleProviderEvents(req: Request, res: Response): Promise<void> {
+  const parsed = reprocessStaleEventsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendError(res, parsed.error.errors.map((e) => e.message).join(', '), 400);
+    return;
+  }
+
+  const data = parsed.data;
+
+  try {
+    const result = await container.reprocessStaleProviderEvents.execute({
+      cutoffMinutes: data.cutoff_minutes,
+      provider: data.provider,
+      batchSize: data.batch_size,
+      dryRun: data.dry_run,
+    });
+    sendSuccess(res, result);
+  } catch (err: any) {
+    sendError(res, err?.message ?? 'Internal server error', 500);
+  }
+}
+
+/**
+ * GET /api/payment-engine/reconciliation/stale-transactions
+ *
+ * Lists payment transactions stuck in 'pending' or 'requires_action' status.
+ * Read-only — no mutations.
+ *
+ * Returns:
+ *   200 — list of stale transactions
+ *   400 — validation error
+ *   500 — unexpected server error
+ */
+export async function listStalePaymentTransactions(req: Request, res: Response): Promise<void> {
+  const queryParams = {
+    cutoff_minutes: req.query.cutoff_minutes ? Number(req.query.cutoff_minutes) : undefined,
+    provider: req.query.provider as string | undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+  };
+
+  const parsed = listStaleTransactionsSchema.safeParse(queryParams);
+  if (!parsed.success) {
+    sendError(res, parsed.error.errors.map((e) => e.message).join(', '), 400);
+    return;
+  }
+
+  const data = parsed.data;
+
+  try {
+    const result = await container.listStalePaymentTransactions.execute({
+      cutoffMinutes: data.cutoff_minutes,
+      tenantId: req.tenantId!,
+      provider: data.provider,
+      limit: data.limit,
+    });
+    sendSuccess(res, result);
+  } catch (err: any) {
+    sendError(res, err?.message ?? 'Internal server error', 500);
+  }
+}
+
+/**
+ * POST /api/payment-engine/reconciliation/expire-stale-transactions
+ *
+ * Marks stale pending/requires_action transactions as voided.
+ * Only internal/fake providers are expired — real gateway transactions are skipped.
+ *
+ * Returns:
+ *   200 — summary of expiry results
+ *   400 — validation error
+ *   500 — unexpected server error
+ */
+export async function expireStalePaymentTransactions(req: Request, res: Response): Promise<void> {
+  const parsed = expireStaleTransactionsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendError(res, parsed.error.errors.map((e) => e.message).join(', '), 400);
+    return;
+  }
+
+  const data = parsed.data;
+
+  try {
+    const result = await container.expireStalePaymentTransactions.execute({
+      cutoffMinutes: data.cutoff_minutes,
+      tenantId: req.tenantId!,
+      provider: data.provider,
+      batchSize: data.batch_size,
+      dryRun: data.dry_run,
+    });
+    sendSuccess(res, result);
+  } catch (err: any) {
+    sendError(res, err?.message ?? 'Internal server error', 500);
+  }
+}
+
+/**
+ * POST /api/payment-engine/reconciliation/reconcile-intent-totals
+ *
+ * Recomputes expected amountPaid / amountRefunded / amountRemaining / status
+ * for payment intents from their transaction rows and fixes any mismatches.
+ *
+ * Returns:
+ *   200 — reconciliation report (mismatches + fix status)
+ *   400 — validation error
+ *   500 — unexpected server error
+ */
+export async function reconcilePaymentIntentTotals(req: Request, res: Response): Promise<void> {
+  const parsed = reconcileIntentTotalsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendError(res, parsed.error.errors.map((e) => e.message).join(', '), 400);
+    return;
+  }
+
+  const data = parsed.data;
+
+  try {
+    const result = await container.reconcilePaymentIntentTotals.execute({
+      tenantId: req.tenantId!,
+      intentIds: data.intent_ids,
+      batchSize: data.batch_size,
+      dryRun: data.dry_run,
+    });
+    sendSuccess(res, result);
+  } catch (err: any) {
+    sendError(res, err?.message ?? 'Internal server error', 500);
+  }
+}
+
 // ── Phase 2 handlers ───────────────────────────────────────────────────────────
 
 /**

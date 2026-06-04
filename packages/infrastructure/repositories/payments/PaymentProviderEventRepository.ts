@@ -5,7 +5,7 @@ import {
   type PaymentProviderEvent,
   type InsertPaymentProviderEvent,
 } from '../../../../shared/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 
 export interface IPaymentProviderEventRepository {
   /**
@@ -61,6 +61,16 @@ export interface IPaymentProviderEventRepository {
    * Sets processingStatus = 'ignored' and errorMessage to the reason string.
    */
   markIgnored(id: string, reason: string, tx?: any): Promise<PaymentProviderEvent>;
+
+  /**
+   * Phase 5: List provider events stuck in 'pending' status older than cutoffDate.
+   * Fresh events (created after cutoffDate) are never returned.
+   * Optionally filtered by provider and limited by batchSize.
+   */
+  listStalePendingEvents(
+    cutoffDate: Date,
+    options?: { provider?: string; limit?: number },
+  ): Promise<PaymentProviderEvent[]>;
 }
 
 export class PaymentProviderEventRepository
@@ -211,6 +221,39 @@ export class PaymentProviderEventRepository
       return result;
     } catch (error) {
       this.handleError('mark ignored', error);
+    }
+  }
+
+  /**
+   * Phase 5: Return provider events with processingStatus='pending' that were
+   * created before cutoffDate (i.e. they are stale / orphaned).
+   * Fresh events created at or after cutoffDate are excluded.
+   * Results are ordered oldest-first so the oldest orphans are retried first.
+   */
+  async listStalePendingEvents(
+    cutoffDate: Date,
+    options?: { provider?: string; limit?: number },
+  ): Promise<PaymentProviderEvent[]> {
+    try {
+      const conditions = [
+        eq(paymentProviderEvents.processingStatus, 'pending'),
+        lt(paymentProviderEvents.createdAt, cutoffDate),
+      ] as any[];
+
+      if (options?.provider) {
+        conditions.push(eq(paymentProviderEvents.provider, options.provider));
+      }
+
+      const rows = await this.db
+        .select()
+        .from(paymentProviderEvents)
+        .where(and(...conditions))
+        .orderBy(paymentProviderEvents.createdAt)
+        .limit(options?.limit ?? 100);
+
+      return rows;
+    } catch (error) {
+      this.handleError('list stale pending events', error);
     }
   }
 }

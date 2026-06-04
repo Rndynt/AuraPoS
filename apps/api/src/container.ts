@@ -38,6 +38,10 @@ import { ApplyGatewayTransactionStatus } from '@pos/application/payments/ApplyGa
 import { HandlePaymentProviderWebhook } from '@pos/application/payments/HandlePaymentProviderWebhook';
 import { RefundPaymentTransaction } from '@pos/application/payments/RefundPaymentTransaction';
 import { VoidPaymentTransaction } from '@pos/application/payments/VoidPaymentTransaction';
+import { ReprocessStaleProviderEvents } from '@pos/application/payments/ReprocessStaleProviderEvents';
+import { ListStalePaymentTransactions } from '@pos/application/payments/ListStalePaymentTransactions';
+import { ExpireStalePaymentTransactions } from '@pos/application/payments/ExpireStalePaymentTransactions';
+import { ReconcilePaymentIntentTotals } from '@pos/application/payments/ReconcilePaymentIntentTotals';
 
 // Payment Providers
 import { ManualProvider } from '@pos/domain/payments';
@@ -150,6 +154,12 @@ class Container {
   // Payment Engine (Phase 4: Refund / Void Lifecycle)
   public readonly refundPaymentTransaction: RefundPaymentTransaction;
   public readonly voidPaymentTransaction: VoidPaymentTransaction;
+
+  // Payment Engine (Phase 5: Reconciliation & Stale Recovery)
+  public readonly reprocessStaleProviderEvents: ReprocessStaleProviderEvents;
+  public readonly listStalePaymentTransactions: ListStalePaymentTransactions;
+  public readonly expireStalePaymentTransactions: ExpireStalePaymentTransactions;
+  public readonly reconcilePaymentIntentTotals: ReconcilePaymentIntentTotals;
 
   constructor() {
     // Initialize Repositories
@@ -322,6 +332,30 @@ class Container {
     );
 
     this.voidPaymentTransaction = new VoidPaymentTransaction(
+      db,
+      this.paymentIntentRepository,
+      this.paymentTransactionRepository,
+    );
+
+    // Payment Engine — Phase 5: Reconciliation & Stale Recovery
+    this.reprocessStaleProviderEvents = new ReprocessStaleProviderEvents(
+      db,
+      this.paymentProviderEventRepository,
+      this.paymentTransactionRepository,
+      this.paymentProviderRegistry,
+      this.applyGatewayTransactionStatus,
+    );
+
+    this.listStalePaymentTransactions = new ListStalePaymentTransactions(
+      this.paymentTransactionRepository,
+    );
+
+    this.expireStalePaymentTransactions = new ExpireStalePaymentTransactions(
+      db,
+      this.paymentTransactionRepository,
+    );
+
+    this.reconcilePaymentIntentTotals = new ReconcilePaymentIntentTotals(
       db,
       this.paymentIntentRepository,
       this.paymentTransactionRepository,
