@@ -64,6 +64,20 @@
       "when": 1780358400001,
       "tag": "0018_order_query_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780358400002,
+      "tag": "0019_payment_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780358400003,
+      "tag": "0020_payment_allocations_tx_target_unique",
+      "breakpoints": true
     }
   ]
 }
