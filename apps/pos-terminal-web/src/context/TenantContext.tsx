@@ -52,6 +52,10 @@ const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [tenantId, updateTenantId] = useState(() => resolveInitialTenantId());
+  // True while the async subdomain/session resolution hasn't finished yet.
+  // During this window, the tenantId may still be the localStorage/fallback value
+  // (which could be a stale demo tenant), so nav items must NOT be shown yet.
+  const [tenantResolving, setTenantResolving] = useState(true);
 
   const setTenantId = useCallback((nextTenantId: string) => {
     updateTenantId(nextTenantId);
@@ -74,11 +78,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       clearActiveTenantCache();
       clearActiveOutletId();
       updateTenantId("");
+    }).finally(() => {
+      setTenantResolving(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { data: profile, isLoading, error } = useTenantProfile(tenantId);
+  const { data: profile, isLoading: profileLoading, error } = useTenantProfile(tenantId);
+
+  // isLoading is true while EITHER the tenant identity is still being resolved
+  // OR the profile fetch hasn't completed. Both must be done before rendering
+  // any tenant-specific nav items (modules, features, etc.).
+  const isLoading = tenantResolving || profileLoading;
 
   const hasModule = useCallback(
     (moduleName: keyof TenantModuleConfig): boolean => {
