@@ -399,7 +399,10 @@ function ModuleCard({
 }) {
   const comingSoon = item.comingSoon;
   const isCore = item.isCore;
-  const effectiveActive = isCore ? true : isActive;
+  // Show "Aktif" only when BOTH the module is enabled AND the plan allows it.
+  // If module is enabled in DB but plan is too low (legacy seed bug), treat as inactive
+  // so the card shows locked/upgrade state instead of a misleading green badge.
+  const effectiveActive = isCore ? true : (isActive && unlocked);
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden relative ${
       comingSoon ? "border-slate-100"
@@ -504,7 +507,8 @@ function FeatureCard({
 }) {
   const comingSoon = item.comingSoon;
   const isCore = item.isCore;
-  const effectiveActive = isCore ? true : isActive;
+  // Same plan-tier guard as ModuleCard — feature active in DB but plan too low = show locked
+  const effectiveActive = isCore ? true : (isActive && unlocked);
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden relative ${
       comingSoon ? "border-slate-100"
@@ -628,8 +632,13 @@ export default function MarketplacePage() {
   // Only count non-comingSoon items in totals (coming soon items aren't activatable yet)
   const availableModules = MODULE_CATALOG.filter((m) => !m.comingSoon);
   const availableFeatures = FEATURE_CATALOG.filter((f) => !f.comingSoon);
-  const activeModules = availableModules.filter(isModuleActive).length;
-  const activeFeatures = availableFeatures.filter(isFeatureActive).length;
+  // Count as active only if BOTH enabled in DB AND plan allows it (same logic as effectiveActive in cards)
+  const activeModules = availableModules.filter(
+    (m) => isModuleActive(m) && canActivate(m)
+  ).length;
+  const activeFeatures = availableFeatures.filter(
+    (f) => isFeatureActive(f) && canActivate(f)
+  ).length;
   const totalActive = activeModules + activeFeatures;
   const totalItems = availableModules.length + availableFeatures.length;
 
