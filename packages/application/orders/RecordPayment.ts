@@ -126,19 +126,15 @@ export class RecordPayment {
       // Keep fulfillment/order lifecycle explicit: payment success must not
       // automatically close order. This allows paid and unpaid orders to stay
       // visible in operational queues until cashier/kitchen completes flow.
-      const orderUpdates: Record<string, any> = {
-        paid_amount: newPaidAmount.toString(),
-        payment_status: newPaymentStatus,
-        updated_at: new Date(),
-      };
-
-      // Use raw SQL update to match DB column names (snake_case)
+      // Use raw SQL update to match DB column names (snake_case).
+      // Use NOW() for updated_at to avoid Date-object serialization issues
+      // with the postgres driver in raw sql template contexts.
       const updatedOrders = await tx.execute(sql`
         UPDATE orders
         SET
-          paid_amount    = ${orderUpdates.paid_amount},
-          payment_status = ${orderUpdates.payment_status},
-          updated_at     = ${orderUpdates.updated_at}
+          paid_amount    = ${newPaidAmount.toString()},
+          payment_status = ${newPaymentStatus},
+          updated_at     = NOW()
         WHERE id = ${input.order_id}
           AND tenant_id = ${input.tenant_id}
         RETURNING *
