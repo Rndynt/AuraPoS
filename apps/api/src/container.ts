@@ -34,6 +34,8 @@ import { RecalculatePaymentIntent } from '@pos/application/payments/RecalculateP
 import { PaymentProviderRegistry } from '@pos/application/payments/PaymentProviderRegistry';
 import { CreateGatewayPayment } from '@pos/application/payments/CreateGatewayPayment';
 import { ConfirmFakeGatewayPayment } from '@pos/application/payments/ConfirmFakeGatewayPayment';
+import { ApplyGatewayTransactionStatus } from '@pos/application/payments/ApplyGatewayTransactionStatus';
+import { HandlePaymentProviderWebhook } from '@pos/application/payments/HandlePaymentProviderWebhook';
 
 // Payment Providers
 import { ManualProvider } from '@pos/domain/payments';
@@ -137,7 +139,11 @@ class Container {
   // Payment Engine (Phase 2: Gateway Abstraction)
   public readonly paymentProviderRegistry: PaymentProviderRegistry;
   public readonly createGatewayPayment: CreateGatewayPayment;
+
+  // Payment Engine (Phase 3: Webhook / Event Engine)
+  public readonly applyGatewayTransactionStatus: ApplyGatewayTransactionStatus;
   public readonly confirmFakeGatewayPayment: ConfirmFakeGatewayPayment;
+  public readonly handlePaymentProviderWebhook: HandlePaymentProviderWebhook;
 
   constructor() {
     // Initialize Repositories
@@ -266,7 +272,7 @@ class Container {
     );
 
     // Payment Engine — Phase 2: Gateway Abstraction
-    // Build the provider registry with all Phase 2 supported providers.
+    // Build the provider registry with all supported providers.
     this.paymentProviderRegistry = new PaymentProviderRegistry()
       .register(new ManualProvider())
       .register(new FakeGatewayProvider());
@@ -278,12 +284,27 @@ class Container {
       this.paymentProviderRegistry,
     );
 
-    this.confirmFakeGatewayPayment = new ConfirmFakeGatewayPayment(
-      db,
+    // Payment Engine — Phase 3: Webhook / Event Engine
+    // ApplyGatewayTransactionStatus is the shared atomic helper used by both
+    // ConfirmFakeGatewayPayment (dev/test endpoint) and HandlePaymentProviderWebhook.
+    this.applyGatewayTransactionStatus = new ApplyGatewayTransactionStatus(
       this.paymentIntentRepository,
       this.paymentTransactionRepository,
       this.paymentAllocationRepository,
       this.recalculatePaymentIntent,
+    );
+
+    this.confirmFakeGatewayPayment = new ConfirmFakeGatewayPayment(
+      db,
+      this.applyGatewayTransactionStatus,
+    );
+
+    this.handlePaymentProviderWebhook = new HandlePaymentProviderWebhook(
+      db,
+      this.paymentProviderRegistry,
+      this.paymentProviderEventRepository,
+      this.paymentTransactionRepository,
+      this.applyGatewayTransactionStatus,
     );
   }
 }

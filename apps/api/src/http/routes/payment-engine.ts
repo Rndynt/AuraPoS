@@ -50,10 +50,6 @@ function requireTenantContext(req: Request, res: Response, next: NextFunction): 
  * Even if `PAYMENT_ENGINE_SERVICE_TOKEN` is present in production env vars,
  * it is ignored. The only way to call payment-engine routes in production is
  * via a valid authenticated session with cashier+ role.
- *
- * TODO(phase-2): If payment-engine routes need a separate permission scope
- * decoupled from POS roles (e.g. a dedicated "payment-operator" grant),
- * replace `requireCashier` in the fallback path here.
  */
 function requirePaymentOperator(req: Request, res: Response, next: NextFunction): void {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -86,6 +82,43 @@ function requirePaymentOperator(req: Request, res: Response, next: NextFunction)
   void requireCashier(req, res, next);
 }
 
+// ── Phase 3: Webhook routes ────────────────────────────────────────────────────
+//
+// IMPORTANT: Registered BEFORE requireTenantContext and requirePaymentOperator.
+//
+// Webhook callbacks from payment providers:
+//   1. Do NOT carry a session or service token.
+//   2. Are authenticated exclusively by HMAC signature verification
+//      (performed inside HandlePaymentProviderWebhook.execute).
+//   3. May not have a known tenantId upfront — the tenantId is resolved from
+//      the payment transaction row identified by providerReference.
+//
+// fake_gateway webhook is always disabled in production (same guard as confirm).
+
+/**
+ * POST /api/payment-engine/webhooks/:provider
+ *
+ * Generic provider webhook endpoint (Phase 3).
+ * Security: HMAC-SHA256 signature only — no session, no service token.
+ *
+ * For fake_gateway:
+ *   - Returns 404 in production (same guard as /fake-gateway/confirm).
+ *   - In non-production: validates signature via FakeGatewayProvider.verifyWebhook().
+ */
+router.post(
+  '/webhooks/:provider',
+  (req: Request, res: Response, next: NextFunction) => {
+    // Fake gateway webhook must never be active in production.
+    if (req.params.provider === 'fake_gateway' && process.env.NODE_ENV === 'production') {
+      res.status(404).json({ success: false, error: 'Not found' });
+      return;
+    }
+    next();
+  },
+  PaymentEngineController.handleProviderWebhook,
+);
+
+// ── Apply tenant context requirement for all routes below ─────────────────────
 router.use(requireTenantContext);
 
 // ── Phase 2: fake-gateway/confirm — REGISTERED BEFORE requirePaymentOperator ──
@@ -114,8 +147,6 @@ router.use(requireTenantContext);
  * - In production: returns 404 before ANY auth check (production guard runs first).
  * - In non-production: requires payment operator authorization (same as other routes).
  * - NOT a real webhook handler — do not call from untrusted sources.
- *
- * Phase 3 will add real webhook endpoints under /webhooks/:provider.
  */
 router.post(
   '/fake-gateway/confirm',

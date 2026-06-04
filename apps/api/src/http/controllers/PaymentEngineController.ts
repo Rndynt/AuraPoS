@@ -156,6 +156,70 @@ export async function recordManualPayment(req: Request, res: Response): Promise<
   }
 }
 
+// ── Phase 3 handlers ───────────────────────────────────────────────────────────
+
+/**
+ * POST /api/payment-engine/webhooks/:provider
+ *
+ * Generic payment provider webhook endpoint.
+ * Protected by HMAC signature verification — no session/auth middleware.
+ *
+ * Returns:
+ *   200  — processed | idempotent_replay | ignored
+ *   401  — invalid_signature
+ *   404  — unknown_provider (or fake_gateway in production)
+ *   400  — parse_error
+ *   500  — unexpected server error
+ */
+export async function handleProviderWebhook(req: Request, res: Response): Promise<void> {
+  const { provider } = req.params;
+
+  // Reconstruct raw body string.
+  // The express.json verify callback stores the raw buffer at req.rawBody.
+  const rawBody =
+    (req as any).rawBody instanceof Buffer
+      ? ((req as any).rawBody as Buffer).toString('utf8')
+      : JSON.stringify(req.body);
+
+  try {
+    const result = await container.handlePaymentProviderWebhook.execute({
+      provider,
+      headers: req.headers as Record<string, string>,
+      rawBody,
+      tenantId: req.tenantId ?? null,
+    });
+
+    switch (result.outcome) {
+      case 'processed':
+        sendSuccess(res, result);
+        return;
+      case 'idempotent_replay':
+        sendSuccess(res, result);
+        return;
+      case 'ignored':
+        sendSuccess(res, result);
+        return;
+      case 'invalid_signature':
+        sendError(res, 'Invalid webhook signature', 401);
+        return;
+      case 'unknown_provider':
+        sendError(res, `Unknown payment provider: ${provider}`, 404);
+        return;
+      case 'parse_error':
+        sendError(res, result.error, 400);
+        return;
+      default:
+        sendError(res, 'Internal server error', 500);
+    }
+  } catch (err: any) {
+    if (err instanceof PaymentPolicyError) {
+      sendError(res, err.message, 422);
+    } else {
+      sendError(res, err?.message ?? 'Internal server error', 500);
+    }
+  }
+}
+
 // ── Phase 2 handlers ───────────────────────────────────────────────────────────
 
 /**

@@ -13,3 +13,10 @@ export { CreateGatewayPayment } from './CreateGatewayPayment';
 export type { CreateGatewayPaymentInput, CreateGatewayPaymentOutput } from './CreateGatewayPayment';
 export { ConfirmFakeGatewayPayment } from './ConfirmFakeGatewayPayment';
 export type { ConfirmFakeGatewayPaymentInput, ConfirmFakeGatewayPaymentOutput } from './ConfirmFakeGatewayPayment';
+export { ApplyGatewayTransactionStatus } from './ApplyGatewayTransactionStatus';
+export type { ApplyGatewayTransactionStatusInput, ApplyGatewayStatusOutcome } from './ApplyGatewayTransactionStatus';
+export { HandlePaymentProviderWebhook } from './HandlePaymentProviderWebhook';
+export type {
+  HandlePaymentProviderWebhookInput,
+  HandlePaymentProviderWebhookOutput,
+} from './HandlePaymentProviderWebhook';

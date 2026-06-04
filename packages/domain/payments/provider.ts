@@ -49,10 +49,40 @@ export interface ParseWebhookInput {
   headers: Record<string, string>;
 }
 
+/**
+ * The status that the webhook event implies for the associated transaction.
+ *
+ * - `succeeded`  — transaction should be marked as succeeded; create allocation.
+ * - `failed`     — transaction should be marked as failed; no allocation.
+ * - `pending`    — event acknowledges a still-pending state; no state mutation.
+ * - `ignored`    — event type is recognised but does not affect transaction state
+ *                  (e.g. notification-only, expiry, unknown sub-type).
+ */
+export type WebhookTransactionStatus = 'succeeded' | 'failed' | 'pending' | 'ignored';
+
+/**
+ * ParsedProviderWebhook — the normalised result of parsing a raw provider webhook.
+ *
+ * Phase 3 extensions (added without breaking existing callers):
+ *  - `provider`            — echo of the provider code, for traceability in logs.
+ *  - `transactionStatus`   — canonical status to apply; preferred over isPaymentSuccess/isPaymentFailure.
+ *  - `failureReason`       — optional failure reason from provider payload.
+ *  - `metadata`            — optional provider-specific extra fields, kept for auditing.
+ *
+ * Legacy convenience fields kept for backward compatibility:
+ *  - `isPaymentSuccess`    — derived from transactionStatus === 'succeeded'.
+ *  - `isPaymentFailure`    — derived from transactionStatus === 'failed'.
+ *  - `amount`              — optional amount from provider payload.
+ *  - `rawData`             — the full raw payload for audit storage.
+ */
 export interface ParsedProviderWebhook {
+  provider: string;
   providerEventId: string;
   providerReference: string;
   eventType: string;
+  transactionStatus: WebhookTransactionStatus;
+  failureReason?: string | null;
+  metadata?: Record<string, unknown> | null;
   isPaymentSuccess: boolean;
   isPaymentFailure: boolean;
   amount: number | null;

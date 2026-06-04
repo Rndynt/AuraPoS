@@ -20,6 +20,20 @@ export interface IPaymentTransactionRepository {
    * Returns null if no matching row exists (no lock acquired).
    */
   lockByProviderReferenceForUpdate(provider: string, providerReference: string, tenantId: string, tx: any): Promise<PaymentTransaction | null>;
+  /**
+   * Find a transaction by (provider, providerReference) across ALL tenants.
+   *
+   * This is used exclusively by webhook handlers that do not know the tenant
+   * upfront — the tenantId is resolved from the transaction row itself.
+   *
+   * Tenant isolation is still enforced by subsequently using the resolved
+   * tenantId for all write operations (lockByProviderReferenceForUpdate,
+   * update, etc.).
+   *
+   * Because (provider, provider_reference) is guaranteed unique by a DB index,
+   * this will always return at most one row.
+   */
+  findByProviderReferenceGlobal(provider: string, providerReference: string, tx?: any): Promise<PaymentTransaction | null>;
   update(id: string, tenantId: string, data: Partial<PaymentTransaction>, tx?: any): Promise<PaymentTransaction>;
 }
 
@@ -161,6 +175,33 @@ export class PaymentTransactionRepository
       return rows[0] ?? null;
     } catch (error) {
       this.handleError('lock by provider reference', error);
+    }
+  }
+
+  /**
+   * Find a transaction by (provider, providerReference) across ALL tenants.
+   * No tenant filter applied — used by webhook handlers to resolve tenantId.
+   */
+  async findByProviderReferenceGlobal(
+    provider: string,
+    providerReference: string,
+    tx?: any,
+  ): Promise<PaymentTransaction | null> {
+    try {
+      const client = tx ?? this.db;
+      const rows = await client
+        .select()
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.provider, provider),
+            eq(paymentTransactions.providerReference, providerReference),
+          ),
+        )
+        .limit(1);
+      return rows[0] ?? null;
+    } catch (error) {
+      this.handleError('find by provider reference (global)', error);
     }
   }
 

@@ -24,6 +24,7 @@ import { PaymentProviderRegistry } from '@pos/application/payments/PaymentProvid
 import { CreateGatewayPayment } from '@pos/application/payments/CreateGatewayPayment';
 import { ConfirmFakeGatewayPayment } from '@pos/application/payments/ConfirmFakeGatewayPayment';
 import { RecalculatePaymentIntent } from '@pos/application/payments/RecalculatePaymentIntent';
+import { ApplyGatewayTransactionStatus } from '@pos/application/payments/ApplyGatewayTransactionStatus';
 import { FakeGatewayProvider } from '@pos/infrastructure/payments/providers/FakeGatewayProvider';
 
 // ── Sequence counters ─────────────────────────────────────────────────────────
@@ -145,6 +146,11 @@ function makeFakeTxRepo() {
      * Real concurrency behaviour is exercised via DB-backed integration tests.
      */
     lockByProviderReferenceForUpdate: async (provider: string, ref: string, _tenantId: string, _tx: any) =>
+      store.find(r => r.provider === provider && r.providerReference === ref) ?? null,
+    /**
+     * Global lookup — no tenant filter (Phase 3: webhook tenant resolution).
+     */
+    findByProviderReferenceGlobal: async (provider: string, ref: string, _tx?: any) =>
       store.find(r => r.provider === provider && r.providerReference === ref) ?? null,
     update: async (id: string, _tenantId: string, data: any, _tx?: any) => {
       const idx = store.findIndex(r => r.id === id);
@@ -276,10 +282,13 @@ describe('FakeGatewayProvider', () => {
     assert.strictEqual(result, false);
   });
 
-  it('parseWebhook() throws unsupported error', async () => {
+  it('parseWebhook() is now implemented (Phase 3) and throws on missing required fields', async () => {
+    // Phase 3: parseWebhook is fully implemented. Passing an empty JSON object
+    // (missing event_id, event_type, provider_reference) should throw a
+    // validation error — NOT the old "not supported, Phase 3" stub error.
     await assert.rejects(
       () => provider.parseWebhook({ rawPayload: '{}', headers: {} }),
-      /Phase 3/,
+      /event_id/,
     );
   });
 });
@@ -484,13 +493,14 @@ describe('ConfirmFakeGatewayPayment', () => {
     const txRepo = makeFakeTxRepo();
     const allocationRepo = makeFakeAllocationRepo();
     const recalculate = new RecalculatePaymentIntent(intentRepo as any, txRepo as any);
-    const useCase = new ConfirmFakeGatewayPayment(
-      fakeDb as any,
+    // Phase 3 refactor: ConfirmFakeGatewayPayment now delegates to ApplyGatewayTransactionStatus
+    const applyGatewayStatus = new ApplyGatewayTransactionStatus(
       intentRepo as any,
       txRepo as any,
       allocationRepo as any,
       recalculate,
     );
+    const useCase = new ConfirmFakeGatewayPayment(fakeDb as any, applyGatewayStatus);
 
     // Pre-seed one pending fake_gateway transaction
     const pendingTx = makeDbTx({
@@ -915,13 +925,13 @@ describe('Phase 2 Hardening', () => {
     const txRepo = makeFakeTxRepo();
     const allocationRepo = makeFakeAllocationRepo();
     const recalculate = new RecalculatePaymentIntent(intentRepo as any, txRepo as any);
-    const useCase = new ConfirmFakeGatewayPayment(
-      fakeDb as any,
+    const applyGatewayStatus = new ApplyGatewayTransactionStatus(
       intentRepo as any,
       txRepo as any,
       allocationRepo as any,
       recalculate,
     );
+    const useCase = new ConfirmFakeGatewayPayment(fakeDb as any, applyGatewayStatus);
 
     // Seed a pending transaction
     txRepo._store().push(makeDbTx({
@@ -996,13 +1006,15 @@ describe('Phase 2 Hardening', () => {
 
     const allocationRepo = makeFakeAllocationRepo();
     const recalculate = new RecalculatePaymentIntent(intentRepo as any, txRepo as any);
-    const useCase = new ConfirmFakeGatewayPayment(
-      fakeDb as any,
+    // Phase 3 refactor: ConfirmFakeGatewayPayment uses ApplyGatewayTransactionStatus
+    // which calls lockByProviderReferenceForUpdate — so H5 still passes.
+    const applyGatewayStatus = new ApplyGatewayTransactionStatus(
       intentRepo as any,
       txRepo as any,
       allocationRepo as any,
       recalculate,
     );
+    const useCase = new ConfirmFakeGatewayPayment(fakeDb as any, applyGatewayStatus);
 
     await useCase.execute({
       tenantId: 'tenant-a',
