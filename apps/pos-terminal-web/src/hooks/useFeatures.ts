@@ -17,7 +17,7 @@ export function useFeatures() {
       if (required && PLAN_RANK[planTier] < PLAN_RANK[required]) return false;
     }
 
-    return features.some(f => f.feature_code === code && f.is_active !== false);
+    return features.some(f => f.feature_code === code && f.enabled !== false);
   };
 
   return {
