@@ -6,6 +6,7 @@ import {
   assertIntentAcceptsPayment,
   assertAmountValid,
   calculateCashChange,
+  PaymentPolicyError,
 } from '@pos/domain/payments';
 import { RecalculatePaymentIntent } from './RecalculatePaymentIntent';
 import { intentRowToDomain } from './CreatePaymentIntent';
@@ -51,6 +52,17 @@ export class RecordManualPayment {
       if (input.idempotencyKey) {
         const existingTx = await this.txRepo.findByIdempotencyKey(input.tenantId, input.idempotencyKey, tx);
         if (existingTx) {
+          // Guard: same key but different intent → conflict, not replay.
+          // This prevents a caller from accidentally (or maliciously) replaying a
+          // payment key across different intents and getting a silently wrong result.
+          if (existingTx.paymentIntentId !== input.paymentIntentId) {
+            throw new PaymentPolicyError(
+              'Idempotency key was already used for a different payment intent',
+              'IDEMPOTENCY_KEY_CONFLICT',
+            );
+          }
+
+          // Same key AND same intent → safe idempotent replay.
           // Return the current intent state alongside the replayed transaction.
           // Do NOT re-aggregate — the original payment was already recorded.
           return {

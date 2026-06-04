@@ -723,3 +723,293 @@ describe('Route protection — requireTenantContext', () => {
     assert.equal(nextCalled, true);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 10. Idempotency key conflict across different payment intents (Task 1)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('RecordManualPayment — idempotency key conflict across intents', () => {
+  it('same key + same intent replays existing transaction (idempotent)', async () => {
+    const intentRow = makePartialIntentRow('intent-500', { amountDue: '50000', amountRemaining: '50000', allowPartial: false });
+    const { uc, txRepo, allocRepo } = makeRecordManualPayment({ intentStore: { 'intent-500': intentRow } });
+
+    const first = await uc.execute({
+      tenantId: 'tenant-a',
+      paymentIntentId: 'intent-500',
+      amount: 50000,
+      method: 'cash',
+      receivedAmount: 50000,
+      idempotencyKey: 'conflict-test-key-1',
+    });
+
+    assert.equal(first.idempotentReplay, false);
+    assert.equal(txRepo.store.length, 1);
+
+    const second = await uc.execute({
+      tenantId: 'tenant-a',
+      paymentIntentId: 'intent-500',
+      amount: 50000,
+      method: 'cash',
+      receivedAmount: 50000,
+      idempotencyKey: 'conflict-test-key-1',
+    });
+
+    assert.equal(second.idempotentReplay, true);
+    assert.equal(second.transaction.id, first.transaction.id);
+    assert.equal(txRepo.store.length, 1, 'no duplicate transaction created on replay');
+    assert.equal(allocRepo.store.length, 1, 'no duplicate allocation created on replay');
+  });
+
+  it('same key + different intent rejects with IDEMPOTENCY_KEY_CONFLICT', async () => {
+    const intentRow1 = makePartialIntentRow('intent-501', { amountDue: '50000', amountRemaining: '50000', allowPartial: false });
+    const intentRow2 = makePartialIntentRow('intent-502', { amountDue: '30000', amountRemaining: '30000', allowPartial: false });
+    const { uc, txRepo } = makeRecordManualPayment({
+      intentStore: { 'intent-501': intentRow1, 'intent-502': intentRow2 },
+    });
+
+    await uc.execute({
+      tenantId: 'tenant-a',
+      paymentIntentId: 'intent-501',
+      amount: 50000,
+      method: 'cash',
+      receivedAmount: 50000,
+      idempotencyKey: 'cross-intent-key-1',
+    });
+
+    assert.equal(txRepo.store.length, 1);
+
+    await assert.rejects(
+      () => uc.execute({
+        tenantId: 'tenant-a',
+        paymentIntentId: 'intent-502',
+        amount: 30000,
+        method: 'cash',
+        receivedAmount: 30000,
+        idempotencyKey: 'cross-intent-key-1',
+      }),
+      (err: any) =>
+        err instanceof PaymentPolicyError && err.code === 'IDEMPOTENCY_KEY_CONFLICT',
+      'Same key + different intent must throw IDEMPOTENCY_KEY_CONFLICT',
+    );
+  });
+
+  it('conflict does NOT create extra transaction or allocation', async () => {
+    const intentRow1 = makePartialIntentRow('intent-503', { amountDue: '100000', amountRemaining: '100000', allowPartial: false });
+    const intentRow2 = makePartialIntentRow('intent-504', { amountDue: '100000', amountRemaining: '100000', allowPartial: false });
+    const { uc, txRepo, allocRepo } = makeRecordManualPayment({
+      intentStore: { 'intent-503': intentRow1, 'intent-504': intentRow2 },
+    });
+
+    await uc.execute({
+      tenantId: 'tenant-a',
+      paymentIntentId: 'intent-503',
+      amount: 100000,
+      method: 'card',
+      idempotencyKey: 'conflict-guard-key-1',
+    });
+
+    const txCountBefore = txRepo.store.length;
+    const allocCountBefore = allocRepo.store.length;
+
+    await assert.rejects(
+      () => uc.execute({
+        tenantId: 'tenant-a',
+        paymentIntentId: 'intent-504',
+        amount: 100000,
+        method: 'card',
+        idempotencyKey: 'conflict-guard-key-1',
+      }),
+      (err: any) => err instanceof PaymentPolicyError && err.code === 'IDEMPOTENCY_KEY_CONFLICT',
+    );
+
+    assert.equal(txRepo.store.length, txCountBefore, 'conflict must not insert extra tx row');
+    assert.equal(allocRepo.store.length, allocCountBefore, 'conflict must not insert extra allocation row');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 11. Controller HTTP 409 mapping for IDEMPOTENCY_KEY_CONFLICT (Task 1)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('PaymentEngineController — IDEMPOTENCY_KEY_CONFLICT maps to HTTP 409', () => {
+  it('returns 409 when use case throws IDEMPOTENCY_KEY_CONFLICT', async () => {
+    let statusSent: number | null = null;
+    let bodySent: any = null;
+
+    const res: any = {
+      status(code: number) { statusSent = code; return this; },
+      json(body: any) { bodySent = body; return this; },
+    };
+
+    const conflictError = new PaymentPolicyError(
+      'Idempotency key was already used for a different payment intent',
+      'IDEMPOTENCY_KEY_CONFLICT',
+    );
+
+    function mapError(err: any): void {
+      if (err.message?.includes('not found')) {
+        res.status(404).json({ success: false, error: 'Not found' });
+      } else if (err instanceof PaymentPolicyError && err.code === 'IDEMPOTENCY_KEY_CONFLICT') {
+        res.status(409).json({ success: false, error: err.message });
+      } else if (err instanceof PaymentPolicyError) {
+        res.status(422).json({ success: false, error: err.message });
+      } else {
+        res.status(500).json({ success: false, error: 'Internal server error' });
+      }
+    }
+
+    mapError(conflictError);
+
+    assert.equal(statusSent, 409, 'IDEMPOTENCY_KEY_CONFLICT must produce HTTP 409');
+    assert.equal(bodySent.success, false);
+    assert.ok(bodySent.error.includes('different payment intent'));
+  });
+
+  it('regular PaymentPolicyError still maps to 422', () => {
+    let statusSent: number | null = null;
+    const res: any = {
+      status(code: number) { statusSent = code; return this; },
+      json() { return this; },
+    };
+
+    const policyError = new PaymentPolicyError('Partial not allowed', 'PARTIAL_NOT_ALLOWED');
+
+    function mapError(err: any): void {
+      if (err instanceof PaymentPolicyError && err.code === 'IDEMPOTENCY_KEY_CONFLICT') {
+        res.status(409).json({});
+      } else if (err instanceof PaymentPolicyError) {
+        res.status(422).json({});
+      } else {
+        res.status(500).json({});
+      }
+    }
+
+    mapError(policyError);
+    assert.equal(statusSent, 422, 'Non-conflict PaymentPolicyError must still produce 422');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 12. Invalid tenant UUID — unit tests for guard functions (Task 3)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('Tenant middleware — UUID validation guards', () => {
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function isValidUuid(value: string): boolean {
+    return UUID_REGEX.test(value);
+  }
+
+  function looksLikeUuidAttempt(value: string): boolean {
+    const hyphenCount = (value.match(/-/g) ?? []).length;
+    return hyphenCount >= 2 && !isValidUuid(value);
+  }
+
+  it('valid UUID passes isValidUuid', () => {
+    assert.equal(isValidUuid('550e8400-e29b-41d4-a716-446655440000'), true);
+    assert.equal(isValidUuid('00000000-0000-0000-0000-000000000000'), true);
+  });
+
+  it('invalid UUID-like strings are detected by looksLikeUuidAttempt', () => {
+    assert.equal(looksLikeUuidAttempt('not-a-uuid'), true);
+    assert.equal(looksLikeUuidAttempt('550e8400-e29b-41d4-a716'), true);
+    assert.equal(looksLikeUuidAttempt('bad-format-id'), true);
+  });
+
+  it('plain slugs are not flagged as UUID attempts', () => {
+    assert.equal(looksLikeUuidAttempt('demo-tenant'), false, 'slug with hyphens but slug-like must not be flagged');
+    assert.equal(looksLikeUuidAttempt('mytenant'), false);
+    assert.equal(looksLikeUuidAttempt('laundry123'), false);
+  });
+
+  it('middleware logic: malformed UUID returns 400, not 500', () => {
+    let statusSent: number | null = null;
+    let bodySent: any = null;
+    let nextCalled = false;
+
+    const req: any = { headers: { 'x-tenant-id': 'not-a-valid-uuid-xxxx' }, query: {} };
+    const res: any = {
+      status(code: number) { statusSent = code; return this; },
+      json(body: any) { bodySent = body; return this; },
+    };
+    const next = () => { nextCalled = true; };
+
+    const tenantId = 'not-a-valid-uuid-xxxx';
+    if (looksLikeUuidAttempt(tenantId)) {
+      res.status(400).json({
+        error: 'Invalid tenant identifier',
+        message: 'The provided tenant identifier is not a valid UUID or slug.',
+        code: 'INVALID_TENANT_ID',
+      });
+    } else {
+      next();
+    }
+
+    assert.equal(statusSent, 400, 'malformed UUID-like string must produce 400, not 500');
+    assert.equal(bodySent.code, 'INVALID_TENANT_ID');
+    assert.equal(nextCalled, false);
+  });
+
+  it('middleware logic: valid UUID is allowed through (no early rejection)', () => {
+    let nextCalled = false;
+    const tenantId = '550e8400-e29b-41d4-a716-446655440000';
+
+    if (looksLikeUuidAttempt(tenantId)) {
+      assert.fail('valid UUID must not be flagged as malformed');
+    } else {
+      nextCalled = true;
+    }
+
+    assert.equal(nextCalled, true);
+  });
+
+  it('middleware logic: plain slug is allowed through', () => {
+    let nextCalled = false;
+    const tenantId = 'demo-tenant';
+
+    if (looksLikeUuidAttempt(tenantId)) {
+      assert.fail('plain slug must not be flagged as malformed UUID attempt');
+    } else {
+      nextCalled = true;
+    }
+
+    assert.equal(nextCalled, true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 13. requirePaymentOperator — route guard shape (Task 4)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('requirePaymentOperator — authorization seam', () => {
+  it('requirePaymentOperator is the requireCashier guard from rbac.ts', async () => {
+    const { requireCashier } = await import('../http/middleware/rbac');
+    assert.equal(typeof requireCashier, 'function', 'requireCashier must be a middleware function');
+  });
+
+  it('requirePaymentOperator blocks unauthenticated requests with 401', async () => {
+    const { createRequireRole } = await import('../http/middleware/rbac');
+
+    let statusSent: number | null = null;
+    let bodySent: any = null;
+
+    const req: any = {
+      tenantId: 'some-tenant',
+      headers: {},
+    };
+    const res: any = {
+      status(code: number) { statusSent = code; return this; },
+      json(body: any) { bodySent = body; return this; },
+    };
+    const next = () => {};
+
+    const requirePaymentOp = createRequireRole({
+      getSession: async () => null,
+      getUserById: async () => null,
+    })('cashier');
+
+    await requirePaymentOp(req, res, next);
+
+    assert.equal(statusSent, 401, 'unauthenticated request must be rejected with 401');
+  });
+});

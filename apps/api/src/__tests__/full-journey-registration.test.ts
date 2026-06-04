@@ -26,6 +26,8 @@ process.env.BETTER_AUTH_SECRET ||= 'test-secret-with-at-least-32-characters';
 
 const { registerTenantOwner, RegistrationError } = await import('../services/registrationService');
 const { BUSINESS_TYPE_TEMPLATES }                 = await import('@pos/application/tenants/businessTypeTemplates');
+const { } = await import('@pos/core'); // side-effect import for path alias
+type BusinessType = import('@pos/core').BusinessType;
 const { PLAN_FEATURE_MAP }                        = await import('../constants/planFeatureMap');
 const {
   outlets, productCategories, products, tenantFeatures,
@@ -209,7 +211,7 @@ describe('Full registration journey — all business types', () => {
       it('inserts the correct order types from the business type template', async () => {
         const { deps } = createFake(orderTypeCodes);
         const result = await registerTenantOwner({ ...BASE, slug: `ot-${biz.toLowerCase()}`, businessType }, deps);
-        const templateOrderTypes = BUSINESS_TYPE_TEMPLATES[businessType].orderTypes;
+        const templateOrderTypes = BUSINESS_TYPE_TEMPLATES[businessType as BusinessType].orderTypes;
         assert.deepEqual(
           [...result.orderTypeCodes].sort(),
           [...templateOrderTypes].sort(),

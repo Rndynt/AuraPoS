@@ -18,7 +18,7 @@ import type { TenantModuleConfig } from '@pos/domain/tenants/types';
 export type BusinessTypeTemplate = {
   tenantDefaults: {
     /** Plan tier for onboarding. Must always be 'free' — billing system upgrades separately. */
-    plan_tier: 'free' | 'growth' | 'pro';
+    plan_tier: 'free' | 'starter' | 'professional' | 'enterprise';
     subscription_status: 'active' | 'trial' | 'suspended' | 'cancelled';
     settings: Record<string, any>;
   };

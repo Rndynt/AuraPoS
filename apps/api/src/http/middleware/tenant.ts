@@ -59,6 +59,29 @@ function getFirstHeaderValue(value: string | string[] | undefined): string | und
   return Array.isArray(value) ? value[0] : value;
 }
 
+// UUID v4 regex — used to distinguish a UUID lookup from a slug lookup.
+// If the caller provides a value that looks like a UUID attempt (has hyphens)
+// but does not match the full pattern, we return 400 rather than letting
+// PostgreSQL throw "invalid input syntax for type uuid".
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
+// A value is a "UUID attempt" if it has 2+ hyphen-separated segments but
+// fails the full UUID pattern check.
+// A UUID has exactly 4 hyphens; slugs typically have at most 1 hyphen.
+// We use >= 2 hyphens as the threshold so common slugs like "demo-tenant"
+// (1 hyphen) pass through safely to a slug-only DB query, while values like
+// "not-a-uuid" (2 hyphens) or truncated UUIDs (3-4 hyphens) are rejected
+// early with 400 instead of causing a PostgreSQL "invalid input syntax for
+// type uuid" error.
+function looksLikeUuidAttempt(value: string): boolean {
+  const hyphenCount = (value.match(/-/g) ?? []).length;
+  return hyphenCount >= 2 && !isValidUuid(value);
+}
+
 function isProduction(): boolean {
   return process.env.NODE_ENV === 'production';
 }
@@ -279,6 +302,20 @@ export async function tenantMiddleware(
       return;
     }
 
+    // Guard: if the caller provided something that looks like a malformed UUID
+    // (has hyphens but doesn't match the UUID pattern) we must reject it
+    // BEFORE querying. Letting PostgreSQL try to cast an invalid UUID string
+    // to the uuid column type produces an unhandled 500 ("invalid input syntax
+    // for type uuid"). Return 400 with a clear message instead.
+    if (looksLikeUuidAttempt(tenantId)) {
+      res.status(400).json({
+        error: 'Invalid tenant identifier',
+        message: 'The provided tenant identifier is not a valid UUID or slug.',
+        code: 'INVALID_TENANT_ID',
+      });
+      return;
+    }
+
     const cached = await getCachedTenant(tenantId);
     if (cached) {
       if (!cached.isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
@@ -287,8 +324,14 @@ export async function tenantMiddleware(
       return next();
     }
 
+    // Use UUID-aware query to avoid PostgreSQL type-cast errors:
+    // only include the id equality when the value is a valid UUID.
+    const whereCondition = isValidUuid(tenantId)
+      ? or(eq(tenants.id, tenantId), eq(tenants.slug, tenantId))
+      : eq(tenants.slug, tenantId);
+
     const rows = await db.select({ id: tenants.id, slug: tenants.slug, isActive: tenants.isActive }).from(tenants)
-      .where(or(eq(tenants.id, tenantId), eq(tenants.slug, tenantId))).limit(1);
+      .where(whereCondition).limit(1);
 
     if (!rows.length) { res.status(404).json({ error: 'Tenant not found' }); return; }
     if (!rows[0].isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }

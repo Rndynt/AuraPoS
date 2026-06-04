@@ -129,6 +129,8 @@ export async function recordManualPayment(req: Request, res: Response): Promise<
   } catch (err: any) {
     if (err.message?.includes('not found')) {
       sendError(res, 'Payment intent not found', 404);
+    } else if (err instanceof PaymentPolicyError && err.code === 'IDEMPOTENCY_KEY_CONFLICT') {
+      sendError(res, err.message, 409);
     } else if (err instanceof PaymentPolicyError) {
       sendError(res, err.message, 422);
     } else {
