@@ -70,9 +70,7 @@ export default function CartPanelExample() {
         serviceCharge={serviceCharge}
         total={total}
         onCharge={() => console.log("Charge!")}
-        onPartialPayment={() => console.log("Partial payment")}
         onSaveDraft={() => console.log("Save draft")}
-        hasPartialPayment={true}
         customerName="Walk-in Guest"
         setCustomerName={() => undefined}
         orderNumber="#123456"

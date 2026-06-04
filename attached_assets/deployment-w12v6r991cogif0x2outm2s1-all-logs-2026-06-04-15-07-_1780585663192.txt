@@ -1,0 +1,685 @@
+2026-Jun-04 15:04:38.064095 Docker 29.4.3 with BuildKit and Buildx detected on deployment server (localhost).
+2026-Jun-04 15:04:38.111236 Starting deployment of Rndynt/AuraPoS:main to localhost.
+2026-Jun-04 15:04:38.533462 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-Jun-04 15:04:38.773231 [DEBUG] [CMD]: docker stop -t 30 w12v6r991cogif0x2outm2s1
+2026-Jun-04 15:04:38.773231 [DEBUG] Error response from daemon: No such container: w12v6r991cogif0x2outm2s1
+2026-Jun-04 15:04:39.262070 [DEBUG] [CMD]: docker run -d --network 'coolify' --name w12v6r991cogif0x2outm2s1  --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-Jun-04 15:04:39.262070 [DEBUG] 7f7cd3b94bdd2e8d2c7ff989ac06464316254c30ae6e35b5546bc43ff2e9e239
+2026-Jun-04 15:04:41.922446 [DEBUG] [CMD]: docker exec w12v6r991cogif0x2outm2s1 bash -c 'GIT_SSH_COMMAND="ssh -o ConnectTimeout=30 -p 22 -o Port=22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git ls-remote https://x-access-token:<REDACTED>@github.com/Rndynt/AuraPoS.git refs/heads/main'
+2026-Jun-04 15:04:41.922446 [DEBUG] 5606152be23ec0777ad8cf1717e354a5b5bbd5df	refs/heads/main
+2026-Jun-04 15:04:42.303994 ----------------------------------------
+2026-Jun-04 15:04:42.322382 Importing Rndynt/AuraPoS:main (commit sha 5606152be23ec0777ad8cf1717e354a5b5bbd5df) to /artifacts/w12v6r991cogif0x2outm2s1.
+2026-Jun-04 15:04:42.706592 [DEBUG] [CMD]: docker exec w12v6r991cogif0x2outm2s1 bash -c 'git clone --depth=1 --recurse-submodules --shallow-submodules -b '\''main'\'' '\''https://x-access-token:<REDACTED>@github.com/Rndynt/AuraPoS.git'\'' '\''/artifacts/w12v6r991cogif0x2outm2s1'\'' && cd '\''/artifacts/w12v6r991cogif0x2outm2s1'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git fetch --depth=1 origin '\''5606152be23ec0777ad8cf1717e354a5b5bbd5df'\'' && git -c advice.detachedHead=false checkout '\''5606152be23ec0777ad8cf1717e354a5b5bbd5df'\'' >/dev/null 2>&1 && cd '\''/artifacts/w12v6r991cogif0x2outm2s1'\'' && if [ -f .gitmodules ]; then git submodule sync && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git submodule update --init --recursive --depth=1; fi && cd '\''/artifacts/w12v6r991cogif0x2outm2s1'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git lfs pull'
+2026-Jun-04 15:04:42.706592 [DEBUG] Cloning into '/artifacts/w12v6r991cogif0x2outm2s1'...
+2026-Jun-04 15:04:48.743228 [DEBUG] Updating files:  57% (451/791)
+2026-Jun-04 15:04:48.798861 [DEBUG] Updating files:  58% (459/791)
+2026-Jun-04 15:04:48.819914 [DEBUG] Updating files:  59% (467/791)
+2026-Jun-04 15:04:48.834983 [DEBUG] Updating files:  60% (475/791)
+2026-Jun-04 15:04:48.847651 [DEBUG] Updating files:  61% (483/791)
+2026-Jun-04 15:04:48.860000 [DEBUG] Updating files:  62% (491/791)
+2026-Jun-04 15:04:48.873228 [DEBUG] Updating files:  63% (499/791)
+2026-Jun-04 15:04:48.887097 [DEBUG] Updating files:  64% (507/791)
+2026-Jun-04 15:04:48.902276 [DEBUG] Updating files:  65% (515/791)
+2026-Jun-04 15:04:48.918180 [DEBUG] Updating files:  66% (523/791)
+2026-Jun-04 15:04:48.942447 [DEBUG] Updating files:  67% (530/791)
+2026-Jun-04 15:04:48.972252 [DEBUG] Updating files:  68% (538/791)
+2026-Jun-04 15:04:48.999273 [DEBUG] Updating files:  69% (546/791)
+2026-Jun-04 15:04:49.019755 [DEBUG] Updating files:  70% (554/791)
+2026-Jun-04 15:04:49.056056 [DEBUG] Updating files:  71% (562/791)
+2026-Jun-04 15:04:49.104773 [DEBUG] Updating files:  72% (570/791)
+2026-Jun-04 15:04:49.135646 [DEBUG] Updating files:  73% (578/791)
+2026-Jun-04 15:04:49.140955 [DEBUG] Updating files:  74% (586/791)
+2026-Jun-04 15:04:49.160293 [DEBUG] Updating files:  75% (594/791)
+2026-Jun-04 15:04:49.170180 [DEBUG] Updating files:  76% (602/791)
+2026-Jun-04 15:04:49.176591 [DEBUG] Updating files:  77% (610/791)Updating files:  78% (617/791)
+2026-Jun-04 15:04:49.182906 [DEBUG] Updating files:  79% (625/791)
+2026-Jun-04 15:04:49.188749 [DEBUG] Updating files:  80% (633/791)Updating files:  81% (641/791)Updating files:  82% (649/791)
+2026-Jun-04 15:04:49.193410 [DEBUG] Updating files:  83% (657/791)
+2026-Jun-04 15:04:49.198083 [DEBUG] Updating files:  84% (665/791)
+2026-Jun-04 15:04:49.202242 [DEBUG] Updating files:  85% (673/791)Updating files:  86% (681/791)
+2026-Jun-04 15:04:49.206614 [DEBUG] Updating files:  87% (689/791)Updating files:  88% (697/791)
+2026-Jun-04 15:04:49.210965 [DEBUG] Updating files:  89% (704/791)
+2026-Jun-04 15:04:49.215237 [DEBUG] Updating files:  90% (712/791)
+2026-Jun-04 15:04:49.220250 [DEBUG] Updating files:  91% (720/791)Updating files:  92% (728/791)
+2026-Jun-04 15:04:49.225219 [DEBUG] Updating files:  93% (736/791)Updating files:  94% (744/791)
+2026-Jun-04 15:04:49.230821 [DEBUG] Updating files:  95% (752/791)
+2026-Jun-04 15:04:49.236454 [DEBUG] Updating files:  96% (760/791)Updating files:  97% (768/791)
+2026-Jun-04 15:04:49.245731 [DEBUG] Updating files:  98% (776/791)
+2026-Jun-04 15:04:49.252700 [DEBUG] Updating files:  99% (784/791)Updating files: 100% (791/791)Updating files: 100% (791/791), done.
+2026-Jun-04 15:04:49.781090 [DEBUG] From https://github.com/Rndynt/AuraPoS
+2026-Jun-04 15:<REDACTED>@pos/api (express, drizzle-orm, better-auth, etc.).
+2026-Jun-04 15:04:53.166010 [DEBUG] # Workspace packages (@pos/*) are already inlined into apps/api/dist/index.js
+2026-Jun-04 15:04:53.166010 [DEBUG] # by esbuild, so they do NOT need to be present at runtime.
+2026-Jun-04 15:04:53.166010 [DEBUG] FROM builder AS deploy-prep
+2026-Jun-04 15:04:53.166010 [DEBUG] RUN pnpm --filter @pos/api deploy --prod --legacy /standalone
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] # ── Stage 3: minimal runner ───────────────────────────────────────────────────
+2026-Jun-04 15:04:53.166010 [DEBUG] FROM node:22-alpine AS runner
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] RUN apk add --no-cache curl
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] WORKDIR /app
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] # Production npm dependencies (express, drizzle-orm, better-auth, ws, etc.)
+2026-Jun-04 15:04:53.166010 [DEBUG] # Workspace packages are NOT needed — they are bundled into dist/index.js.
+2026-Jun-04 15:04:53.166010 [DEBUG] COPY --from=deploy-prep /standalone/node_modules ./node_modules
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] # Compiled API bundle (~280 KB, all workspace code inlined by esbuild)
+2026-Jun-04 15:04:53.166010 [DEBUG] # Frontend static assets are at apps/api/dist/public/ (copied by build:static:api)
+2026-Jun-04 15:04:53.166010 [DEBUG] COPY --from=builder /app/apps/api/dist ./apps/api/dist
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] # SQL migration files. The bundle resolves migrations at startup via:
+2026-Jun-04 15:04:53.166010 [DEBUG] #   path.resolve(import.meta.dirname, "../../../migrations")
+2026-Jun-04 15:04:53.166010 [DEBUG] # = apps/api/dist/../../../migrations = /app/migrations  ✓
+2026-Jun-04 15:04:53.166010 [DEBUG] COPY --from=builder /app/migrations ./migrations
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] ENV NODE_ENV=production
+2026-Jun-04 15:04:53.166010 [DEBUG] ENV PORT=5000
+2026-Jun-04 15:04:53.166010 [DEBUG] EXPOSE 5000
+2026-Jun-04 15:04:53.166010 [DEBUG] 
+2026-Jun-04 15:04:53.166010 [DEBUG] # Run from /app so Node's module resolution finds ./node_modules
+2026-Jun-04 15:04:53.166010 [DEBUG] CMD ["node", "apps/api/dist/index.js"]
+2026-Jun-04 15:04:53.797487 [DEBUG] Creating build-time .env file in /artifacts (outside Docker context).
+2026-Jun-04 15:04:54.255958 ----------------------------------------
+2026-Jun-04 15:04:54.276616 ⚠️ Build-time environment variable warning: NODE_ENV=production
+2026-Jun-04 15:04:54.295509 Affects: Node.js/npm/yarn/bun/pnpm
+2026-Jun-04 15:04:54.315560 Issue: Skips devDependencies installation which are often required for building (webpack, typescript, etc.)
+2026-Jun-04 15:04:54.333806 Recommendation: Uncheck "Available at Buildtime" or use "development" during build
+2026-Jun-04 15:04:54.355175 
+2026-Jun-04 15:04:54.375080 💡 Tips to resolve build issues:
+2026-Jun-04 15:04:54.394658 1. Set these variables as "Runtime only" in the environment variables settings
+2026-Jun-04 15:04:54.418091 2. Use different values for build-time (e.g., NODE_ENV=development for build)
+2026-Jun-04 15:04:54.441033 3. Consider using multi-stage Docker builds to separate build and runtime environments
+2026-Jun-04 15:04:54.774779 [DEBUG] [CMD]: docker exec w12v6r991cogif0x2outm2s1 bash -c 'cat /artifacts/w12v6r991cogif0x2outm2s1/Dockerfile'
+2026-Jun-04 15:04:54.774779 [DEBUG] # ── Stage 1: builder ──────────────────────────────────────────────────────────
+2026-Jun-04 15:04:54.774779 [DEBUG] # Full install (devDeps required for: turbo, vite, esbuild, TypeScript)
+2026-Jun-04 15:04:54.774779 [DEBUG] FROM node:22-alpine AS builder
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] ENV PNPM_HOME="/pnpm"
+2026-Jun-04 15:04:54.774779 [DEBUG] ENV PATH="$PNPM_HOME:$PATH"
+2026-Jun-04 15:04:54.774779 [DEBUG] RUN corepack enable
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] WORKDIR /app
+2026-Jun-04 15:04:54.774779 [DEBUG] COPY . .
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] RUN pnpm install --frozen-lockfile
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # Runs: turbo (packages → frontend vite build → api esbuild) + build:static:api
+2026-Jun-04 15:04:54.774779 [DEBUG] # Result: apps/pos-terminal-web/dist/ + apps/api/dist/ + apps/api/dist/public/
+2026-Jun-04 15:04:54.774779 [DEBUG] RUN pnpm run build
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # ── Stage 2: production dep isolation ────────────────────────────────────────
+2026-Jun-04 15:04:54.774779 [DEBUG] # pnpm deploy creates a standalone directory containing only the production
+2026-Jun-04 15:04:54.774779 [DEBUG] # node_modules for @pos/api (express, drizzle-orm, better-auth, etc.).
+2026-Jun-04 15:04:54.774779 [DEBUG] # Workspace packages (@pos/*) are already inlined into apps/api/dist/index.js
+2026-Jun-04 15:04:54.774779 [DEBUG] # by esbuild, so they do NOT need to be present at runtime.
+2026-Jun-04 15:04:54.774779 [DEBUG] FROM builder AS deploy-prep
+2026-Jun-04 15:04:54.774779 [DEBUG] RUN pnpm --filter @pos/api deploy --prod --legacy /standalone
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # ── Stage 3: minimal runner ───────────────────────────────────────────────────
+2026-Jun-04 15:04:54.774779 [DEBUG] FROM node:22-alpine AS runner
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] RUN apk add --no-cache curl
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] WORKDIR /app
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # Production npm dependencies (express, drizzle-orm, better-auth, ws, etc.)
+2026-Jun-04 15:04:54.774779 [DEBUG] # Workspace packages are NOT needed — they are bundled into dist/index.js.
+2026-Jun-04 15:04:54.774779 [DEBUG] COPY --from=deploy-prep /standalone/node_modules ./node_modules
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # Compiled API bundle (~280 KB, all workspace code inlined by esbuild)
+2026-Jun-04 15:04:54.774779 [DEBUG] # Frontend static assets are at apps/api/dist/public/ (copied by build:static:api)
+2026-Jun-04 15:04:54.774779 [DEBUG] COPY --from=builder /app/apps/api/dist ./apps/api/dist
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # SQL migration files. The bundle resolves migrations at startup via:
+2026-Jun-04 15:04:54.774779 [DEBUG] #   path.resolve(import.meta.dirname, "../../../migrations")
+2026-Jun-04 15:04:54.774779 [DEBUG] # = apps/api/dist/../../../migrations = /app/migrations  ✓
+2026-Jun-04 15:04:54.774779 [DEBUG] COPY --from=builder /app/migrations ./migrations
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] ENV NODE_ENV=production
+2026-Jun-04 15:04:54.774779 [DEBUG] ENV PORT=5000
+2026-Jun-04 15:04:54.774779 [DEBUG] EXPOSE 5000
+2026-Jun-04 15:04:54.774779 [DEBUG] 
+2026-Jun-04 15:04:54.774779 [DEBUG] # Run from /app so Node's module resolution finds ./node_modules
+2026-Jun-04 15:04:54.774779 [DEBUG] CMD ["node", "apps/api/dist/index.js"]
+2026-Jun-04 15:04:54.888653 [DEBUG] Final Dockerfile:
+2026-Jun-04 15:04:55.600823 [DEBUG] [CMD]: docker exec w12v6r991cogif0x2outm2s1 bash -c 'cat /artifacts/w12v6r991cogif0x2outm2s1/Dockerfile'
+2026-Jun-04 15:04:55.600823 [DEBUG] # ── Stage 1: builder ──────────────────────────────────────────────────────────
+2026-Jun-04 15:04:55.600823 [DEBUG] # Full install (devDeps required for: turbo, vite, esbuild, TypeScript)
+2026-Jun-04 15:04:55.600823 [DEBUG] FROM node:22-alpine AS builder
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG BETTER_AUTH_SECRET=qmi7KWDUqywma9OhQ9YEaQGEq9fb7HSNH6M1KTXhMubNxbaxx-0Hh9oWIYgoAxS4
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG BETTER_AUTH_URL=https://aurapos.my.id
+2026-Jun-04 15:<REDACTED>@ep-wild-bar-aqyfkn2i-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG COOLIFY_URL=https://aurapos.my.id
+2026-Jun-04 15:<REDACTED>@pos/api (express, drizzle-orm, better-auth, etc.).
+2026-Jun-04 15:04:55.600823 [DEBUG] # Workspace packages (@pos/*) are already inlined into apps/api/dist/index.js
+2026-Jun-04 15:04:55.600823 [DEBUG] # by esbuild, so they do NOT need to be present at runtime.
+2026-Jun-04 15:04:55.600823 [DEBUG] FROM builder AS deploy-prep
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG BETTER_AUTH_SECRET=qmi7KWDUqywma9OhQ9YEaQGEq9fb7HSNH6M1KTXhMubNxbaxx-0Hh9oWIYgoAxS4
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG BETTER_AUTH_URL=https://aurapos.my.id
+2026-Jun-04 15:<REDACTED>@ep-wild-bar-aqyfkn2i-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG COOLIFY_URL=https://aurapos.my.id
+2026-Jun-04 15:<REDACTED>@pos/api deploy --prod --legacy /standalone
+2026-Jun-04 15:04:55.600823 [DEBUG] 
+2026-Jun-04 15:04:55.600823 [DEBUG] # ── Stage 3:<REDACTED>@ep-wild-bar-aqyfkn2i-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+2026-Jun-04 15:04:55.600823 [DEBUG] ARG COOLIFY_URL=https://aurapos.my.id
+2026-Jun-04 15:<REDACTED>@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920
+2026-Jun-04 15:04:57.972999 [DEBUG] #4 resolve docker.io/library/node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 0.0s done
+2026-Jun-04 15:04:58.074743 [DEBUG] #4 DONE 0.2s
+2026-Jun-04 15:04:58.074743 [DEBUG] 
+2026-Jun-04 15:04:58.074743 [DEBUG] #5 [runner 2/6] RUN apk add --no-cache curl
+2026-Jun-04 15:04:58.524296 [DEBUG] #5 ...
+2026-Jun-04 15:04:58.524296 [DEBUG] 
+2026-Jun-04 15:04:58.524296 [DEBUG] #6 [internal] load build context
+2026-Jun-04 15:04:58.524296 [DEBUG] #6 transferring context: 6.65MB 0.4s done
+2026-Jun-04 15:04:58.524296 [DEBUG] #6 DONE 0.4s
+2026-Jun-04 15:04:58.674722 [DEBUG] #7 [builder 2/6] RUN corepack enable
+2026-Jun-04 15:04:58.901798 [DEBUG] #7 DONE 0.8s
+2026-Jun-04 15:04:58.901798 [DEBUG] 
+2026-Jun-04 15:04:58.901798 [DEBUG] #5 [runner 2/6] RUN apk add --no-cache curl
+2026-Jun-04 15:04:59.124470 [DEBUG] #5 ...
+2026-Jun-04 15:04:59.124470 [DEBUG] 
+2026-Jun-04 15:04:59.124470 [DEBUG] #8 [builder 3/6] WORKDIR /app
+2026-Jun-04 15:04:59.124470 [DEBUG] #8 DONE 0.1s
+2026-Jun-04 15:04:59.214210 [DEBUG] #9 [builder 4/6] COPY . .
+2026-Jun-04 15:04:59.214210 [DEBUG] #9 DONE 0.2s
+2026-Jun-04 15:04:59.214210 [DEBUG] 
+2026-Jun-04 15:04:59.214210 [DEBUG] #5 [runner 2/6] RUN apk add --no-cache curl
+2026-Jun-04 15:04:59.712641 [DEBUG] #5 1.565 (1/9) Installing brotli-libs (1.2.0-r0)
+2026-Jun-04 15:04:59.712641 [DEBUG] #5 1.596 (2/9) Installing c-ares (1.34.6-r0)
+2026-Jun-04 15:04:59.712641 [DEBUG] #5 1.605 (3/9) Installing libunistring (1.4.1-r0)
+2026-Jun-04 15:04:59.712641 [DEBUG] #5 1.643 (4/9) Installing libidn2 (2.3.8-r0)
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.652 (5/9) Installing nghttp2-libs (1.69.0-r0)
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.658 (6/9) Installing libpsl (0.21.5-r3)
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.662 (7/9) Installing zstd-libs (1.5.7-r2)
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.684 (8/9) Installing libcurl (8.19.0-r0)
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.704 (9/9) Installing curl (8.19.0-r0)
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.717 Executing busybox-1.37.0-r30.trigger
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 1.738 OK: 15.9 MiB in 27 packages
+2026-Jun-04 15:04:59.920886 [DEBUG] #5 DONE 1.9s
+2026-Jun-04 15:04:59.920886 [DEBUG] 
+2026-Jun-04 15:04:59.920886 [DEBUG] #10 [builder 5/6] RUN pnpm install --frozen-lockfile
+2026-Jun-04 15:04:59.929729 [DEBUG] #10 0.357 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.26.1.tgz
+2026-Jun-04 15:<REDACTED>@11.5.1   │
+2026-Jun-04 15:05:10.118178 [DEBUG] #10 10.90    │                                              │
+2026-Jun-04 15:05:10.118178 [DEBUG] #10 10.90    ╰──────────────────────────────────────────────╯
+2026-Jun-04 15:05:10.118178 [DEBUG] #10 10.90
+2026-Jun-04 15:05:10.309866 [DEBUG] #10 11.09 Progress: resolved 755, reused 0, downloaded 59, added 16
+2026-Jun-04 15:05:11.352688 [DEBUG] #10 12.13 Progress: resolved 755, reused 0, downloaded 132, added 41
+2026-Jun-04 15:05:12.353608 [DEBUG] #10 13.14 Progress: resolved 755, reused 0, downloaded 186, added 63
+2026-Jun-04 15:05:13.379482 [DEBUG] #10 14.15 Progress: resolved 755, reused 0, downloaded 285, added 102
+2026-Jun-04 15:05:14.382105 [DEBUG] #10 15.16 Progress: resolved 755, reused 0, downloaded 361, added 149
+2026-Jun-04 15:05:15.416756 [DEBUG] #10 16.18 Progress: resolved 755, reused 0, downloaded 391, added 166
+2026-Jun-04 15:05:16.569446 [DEBUG] #10 17.35 Progress: resolved 755, reused 0, downloaded 424, added 180
+2026-Jun-04 15:05:17.602602 [DEBUG] #10 18.38 Progress: resolved 755, reused 0, downloaded 456, added 192
+2026-Jun-04 15:05:18.617491 [DEBUG] #10 19.40 Progress: resolved 755, reused 0, downloaded 501, added 210
+2026-Jun-04 15:05:19.624435 [DEBUG] #10 20.41 Progress: resolved 755, reused 0, downloaded 586, added 254
+2026-Jun-04 15:05:20.629405 [DEBUG] #10 21.41 Progress: resolved 755, reused 0, downloaded 673, added 282
+2026-Jun-04 15:05:21.629586 [DEBUG] #10 22.41 Progress: resolved 755, reused 0, downloaded 751, added 348
+2026-Jun-04 15:05:22.631177 [DEBUG] #10 23.41 Progress: resolved 755, reused 0, downloaded 753, added 516
+2026-Jun-04 15:05:23.632945 [DEBUG] #10 24.41 Progress: resolved 755, reused 0, downloaded 754, added 753
+2026-Jun-04 15:05:24.633748 [DEBUG] #10 25.42 Progress: resolved 755, reused 0, downloaded 754, added 754
+2026-Jun-04 15:05:25.431633 [DEBUG] #10 26.21 Progress: resolved 755, reused 0, downloaded 755, added 755, done
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 dependencies:
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @hookform/resolvers 5.2.2
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @jridgewell/trace-mapping 0.3.31
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @neondatabase/serverless 0.10.4
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-checkbox 1.3.3
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-dialog 1.1.15
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-label 2.1.8
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-radio-group 1.3.8
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-scroll-area 1.2.10
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-select 2.2.6
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-separator 1.1.8
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-slot 1.2.4
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-tabs 1.1.13
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-toast 1.2.15
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @radix-ui/react-tooltip 1.2.8
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @replit/vite-plugin-cartographer 0.4.11
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @replit/vite-plugin-dev-banner 0.1.2
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @replit/vite-plugin-runtime-error-modal 0.0.3
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @tanstack/react-query 5.100.10
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/connect-pg-simple 7.0.3
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/express 5.0.6
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/express-session 1.19.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/passport 1.0.17
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/passport-local 1.0.38
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/react 18.3.28
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/react-dom 18.3.7
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/ws 8.18.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @vitejs/plugin-react 5.2.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + class-variance-authority 0.7.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + clsx 2.1.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + connect-pg-simple 10.0.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + dotenv 17.4.2
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + drizzle-orm 0.39.3
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + drizzle-zod 0.7.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + express 4.22.2
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + express-session 1.19.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + lucide-react 0.553.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + memorystore 1.6.8
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + nanoid 5.1.11
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + passport 0.7.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + passport-local 1.0.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + postgres 3.4.9
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + react 18.3.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + react-dom 18.3.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + react-hook-form 7.76.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + tailwind-merge 3.6.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + tailwindcss-animate 1.0.7
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + tsconfig-paths 4.2.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + vaul 1.1.2
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + wouter 3.9.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + ws 8.20.1
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + zod 3.25.76
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + zod-validation-error 5.0.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 devDependencies:
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @tailwindcss/typography 0.5.19
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + @types/node 20.16.11
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + autoprefixer 10.5.0
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + drizzle-kit 0.31.10
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + esbuild 0.25.12
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + postcss 8.5.14
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + prettier 3.8.3
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + tailwindcss 3.4.19
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + tsx 4.22.2
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + turbo 1.13.4
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + typescript 5.6.3
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45 + vite 5.4.21
+2026-Jun-04 15:05:27.668272 [DEBUG] #10 28.45
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 │                                                                              │
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 │   Ignored build scripts: esbuild@0.18.20, esbuild@0.21.5, esbuild@0.25.12,   │
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 │   esbuild@0.28.0.                                                            │
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 │   to run scripts.                                                            │
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 │                                                                              │
+2026-Jun-04 15:05:28.081313 [DEBUG] #10 28.86 ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-Jun-04 15:05:28.252826 [DEBUG] #10 29.03 Done in 21.8s using pnpm v10.26.1
+2026-Jun-04 15:05:29.838986 [DEBUG] #10 DONE 30.6s
+2026-Jun-04 15:05:29.993989 [DEBUG] #12 [builder 6/6] RUN pnpm run build
+2026-Jun-04 15:05:32.703180 [DEBUG] #12 2.857
+2026-Jun-04 15:05:32.703180 [DEBUG] #12 2.857 > @pos/root@1.0.0 build /app
+2026-Jun-04 15:05:32.703180 [DEBUG] #12 2.857 > turbo run build && pnpm run build:static:api
+2026-Jun-04 15:05:32.703180 [DEBUG] #12 2.857
+2026-Jun-04 15:05:32.824769 [DEBUG] #12 2.981
+2026-Jun-04 15:05:32.824769 [DEBUG] #12 2.981 Attention:
+2026-Jun-04 15:05:32.824769 [DEBUG] #12 2.981 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-Jun-04 15:05:32.824769 [DEBUG] #12 2.981 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-Jun-04 15:05:32.824769 [DEBUG] #12 2.981 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-Jun-04 15:05:32.824769 [DEBUG] #12 2.981 https://turbo.build/repo/docs/telemetry
+2026-Jun-04 15:<REDACTED>@pos/api, @pos/application, @pos/core, @pos/domain, @pos/features, @pos/infrastructure, @pos/offline, @pos/shared, @pos/terminal-web, @pos/web
+2026-Jun-04 15:05:32.959967 [DEBUG] #12 3.117 • Running build in 10 packages
+2026-Jun-04 15:05:32.959967 [DEBUG] #12 3.117 • Remote caching disabled
+2026-Jun-04 15:05:33.074004 [DEBUG] #12 3.210 @pos/web:build: cache miss, executing 95dabff4932abb39
+2026-Jun-04 15:05:33.074004 [DEBUG] #12 3.230 @pos/terminal-web:build: cache miss, executing 9150ef44e49f027d
+2026-Jun-04 15:05:33.229931 [DEBUG] #12 3.236 @pos/api:build: cache miss, executing 0fb5fce0e66e32de
+2026-Jun-04 15:05:34.468302 [DEBUG] #12 4.625 @pos/api:build:
+2026-Jun-04 15:05:34.468302 [DEBUG] #12 4.625 @pos/api:build: > @pos/api@1.0.0 build /app/apps/api
+2026-Jun-04 15:05:34.468302 [DEBUG] #12 4.625 @pos/api:build: > esbuild src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --splitting
+2026-Jun-04 15:05:34.468302 [DEBUG] #12 4.625 @pos/api:build:
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.675 @pos/web:build:
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.675 @pos/web:build: > @pos/web@1.0.0 build /app/apps/web
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.675 @pos/web:build: > next build
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.675 @pos/web:build:
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.735 @pos/terminal-web:build:
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.735 @pos/terminal-web:build: > @pos/terminal-web@1.0.0 build /app/apps/pos-terminal-web
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.735 @pos/terminal-web:build: > tsc && vite build
+2026-Jun-04 15:05:34.577514 [DEBUG] #12 4.735 @pos/terminal-web:build:
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/chunk-5IH7A4CS.js                  175.5kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/routes-5XMWFYEM.js                 128.2kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/chunk-RGTBIRYS.js                   36.6kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/chunk-O6VPCMQA.js                    9.7kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/index.js                             7.7kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/vite-I7EIWLKV.js                     5.9kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/chunk-PWSXISBV.js                    4.8kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/inventorySyncRetryJob-JEDU22YX.js    4.0kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/schema-OZZOP3NM.js                   3.2kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/chunk-GG7NCXPQ.js                    1.2kb
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/serveStatic-UPLI2ICY.js              846b
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/OrdersController-SH5W5JGG.js         655b
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/chunk-MLKGABMK.js                    191b
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/auth-BL2E73YL.js                     175b
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:   dist/database-PZUS3YDW.js                 135b
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build:
+2026-Jun-04 15:05:34.791111 [DEBUG] #12 4.797 @pos/api:build: ⚡ Done in 62ms
+2026-Jun-04 15:05:36.335649 [DEBUG] #12 6.493 @pos/web:build: Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2026-Jun-04 15:05:36.486788 [DEBUG] #12 6.493 @pos/web:build: This information is used to shape Next.js' roadmap and prioritize features.
+2026-Jun-04 15:05:36.486788 [DEBUG] #12 6.493 @pos/web:build: You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-Jun-04 15:05:36.486788 [DEBUG] #12 6.493 @pos/web:build: https://nextjs.org/telemetry
+2026-Jun-04 15:<REDACTED>@pos/web:build:
+2026-Jun-04 15:05:36.651722 [DEBUG] #12 6.805 @pos/web:build:   ▲ Next.js 14.2.35
+2026-Jun-04 15:05:36.802989 [DEBUG] #12 6.805 @pos/web:build:
+2026-Jun-04 15:05:36.817960 [DEBUG] #12 6.972 @pos/web:build:    Creating an optimized production build ...
+2026-Jun-04 15:06:18.223266 [DEBUG] #12 48.38 @pos/web:build:  ✓ Compiled successfully
+2026-Jun-04 15:06:18.378498 [DEBUG] #12 48.38 @pos/web:build:    Linting and checking validity of types ...
+2026-Jun-04 15:06:26.304275 [DEBUG] #12 56.46 @pos/web:build:    Collecting page data ...
+2026-Jun-04 15:06:27.889756 [DEBUG] #12 58.05 @pos/web:build:    Generating static pages (0/4) ...
+2026-Jun-04 15:06:29.033713 [DEBUG] #12 59.19 @pos/terminal-web:build: src/components/examples/CartPanel.tsx(73,9): error TS2322: Type '{ items: CartItem[]; onUpdateQty: (id: string, qty: number) => void; onRemove: (id: string) => void; onClear: () => void; getItemPrice: (item: CartItem) => number; subtotal: number; ... 22 more ...; orderDiscountAmount: number; }' is not assignable to type 'IntrinsicAttributes & CartPanelProps'.
+2026-Jun-04 15:06:29.033713 [DEBUG] #12 59.19 @pos/terminal-web:build:   Property 'onPartialPayment' does not exist on type 'IntrinsicAttributes & CartPanelProps'.
+2026-Jun-04 15:06:29.227556 [DEBUG] #12 59.38 @pos/terminal-web:build:  ELIFECYCLE  Command failed with exit code 2.
+2026-Jun-04 15:06:29.446549 [DEBUG] #12 59.45 @pos/terminal-web:build: ERROR: command finished with error: command (/app/apps/pos-terminal-web) /usr/local/bin/pnpm run build exited (2)
+2026-Jun-04 15:06:29.787442 [DEBUG] #12 59.94 @pos/web:build:    Generating static pages (1/4)
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 59.96 @pos/web:build:    Generating static pages (2/4)
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 59.98 @pos/terminal-web#build: command (/app/apps/pos-terminal-web) /usr/local/bin/pnpm run build exited (2)
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.00
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.00  Tasks:    1 successful, 3 total
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.00 Cached:    0 cached, 3 total
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.00   Time:    56.993s
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.00 Failed:    @pos/terminal-web#build
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.00
+2026-Jun-04 15:06:30.009760 [DEBUG] #12 60.02  ERROR  run failed: command  exited (2)
+2026-Jun-04 15:06:30.033431 [DEBUG] #12 60.19  ELIFECYCLE  Command failed with exit code 2.
+2026-Jun-04 15:06:30.441210 [DEBUG] #12 ERROR: process "/bin/sh -c pnpm run build" did not complete successfully: exit code: 2
+2026-Jun-04 15:06:30.635169 [DEBUG] ------
+2026-Jun-04 15:06:30.635169 [DEBUG] > [builder 6/6] RUN pnpm run build:
+2026-Jun-04 15:06:30.635169 [DEBUG] 59.96 @pos/web:build:    Generating static pages (2/4)
+2026-Jun-04 15:06:30.635169 [DEBUG] 59.98 @pos/terminal-web#build: command (/app/apps/pos-terminal-web) /usr/local/bin/pnpm run build exited (2)
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.00
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.00  Tasks:    1 successful, 3 total
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.00 Cached:    0 cached, 3 total
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.00   Time:    56.993s
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.00 Failed:    @pos/terminal-web#build
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.00
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.02  ERROR  run failed: command  exited (2)
+2026-Jun-04 15:06:30.635169 [DEBUG] 60.19  ELIFECYCLE  Command failed with exit code 2.
+2026-Jun-04 15:06:30.635169 [DEBUG] ------
+2026-Jun-04 15:06:30.662573 [DEBUG] 9 warnings found (use docker --debug to expand):
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 55)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 4)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 37)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 41)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 54)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 58)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 5)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 8)
+2026-Jun-04 15:06:30.662573 [DEBUG] - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 38)
+2026-Jun-04 15:06:30.682919 [DEBUG] Dockerfile:29
+2026-Jun-04 15:06:30.682919 [DEBUG] --------------------
+2026-Jun-04 15:06:30.682919 [DEBUG] 27 |     # Runs: turbo (packages → frontend vite build → api esbuild) + build:static:api
+2026-Jun-04 15:06:30.682919 [DEBUG] 28 |     # Result: apps/pos-terminal-web/dist/ + apps/api/dist/ + apps/api/dist/public/
+2026-Jun-04 15:06:30.682919 [DEBUG] 29 | >>> RUN pnpm run build
+2026-Jun-04 15:06:30.682919 [DEBUG] 30 |
+2026-Jun-04 15:06:30.682919 [DEBUG] 31 |     # ── Stage 2: production dep isolation ────────────────────────────────────────
+2026-Jun-04 15:06:30.682919 [DEBUG] --------------------
+2026-Jun-04 15:06:30.682919 [DEBUG] ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm run build" did not complete successfully: exit code: 2
+2026-Jun-04 15:06:30.697661 [DEBUG] exit status 1
+2026-Jun-04 15:06:30.874572 ========================================
+2026-Jun-04 15:06:30.894627 Deployment failed: Command execution failed (exit code 1): docker exec w12v6r991cogif0x2outm2s1 bash -c 'bash /artifacts/build.sh'
+2026-Jun-04 15:06:30.894627 Error: #0 building with "default" instance using docker driver
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #1 [internal] load build definition from Dockerfile
+2026-Jun-04 15:06:30.894627 #1 transferring dockerfile: 4.18kB done
+2026-Jun-04 15:06:30.894627 #1 DONE 0.0s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #2 [internal] load metadata for docker.io/library/node:22-alpine
+2026-Jun-04 15:06:30.894627 #2 DONE 0.8s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #3 [internal] load .dockerignore
+2026-Jun-04 15:06:30.894627 #3 transferring context: 544B done
+2026-Jun-04 15:06:30.894627 #3 DONE 0.0s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #4 [builder 1/6] FROM docker.io/library/node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920
+2026-Jun-04 15:06:30.894627 #4 resolve docker.io/library/node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 0.0s done
+2026-Jun-04 15:06:30.894627 #4 DONE 0.2s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #5 [runner 2/6] RUN apk add --no-cache curl
+2026-Jun-04 15:06:30.894627 #5 ...
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #6 [internal] load build context
+2026-Jun-04 15:06:30.894627 #6 transferring context: 6.65MB 0.4s done
+2026-Jun-04 15:06:30.894627 #6 DONE 0.4s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #7 [builder 2/6] RUN corepack enable
+2026-Jun-04 15:06:30.894627 #7 DONE 0.8s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #5 [runner 2/6] RUN apk add --no-cache curl
+2026-Jun-04 15:06:30.894627 #5 ...
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #8 [builder 3/6] WORKDIR /app
+2026-Jun-04 15:06:30.894627 #8 DONE 0.1s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #9 [builder 4/6] COPY . .
+2026-Jun-04 15:06:30.894627 #9 DONE 0.2s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #5 [runner 2/6] RUN apk add --no-cache curl
+2026-Jun-04 15:06:30.894627 #5 1.565 (1/9) Installing brotli-libs (1.2.0-r0)
+2026-Jun-04 15:06:30.894627 #5 1.596 (2/9) Installing c-ares (1.34.6-r0)
+2026-Jun-04 15:06:30.894627 #5 1.605 (3/9) Installing libunistring (1.4.1-r0)
+2026-Jun-04 15:06:30.894627 #5 1.643 (4/9) Installing libidn2 (2.3.8-r0)
+2026-Jun-04 15:06:30.894627 #5 1.652 (5/9) Installing nghttp2-libs (1.69.0-r0)
+2026-Jun-04 15:06:30.894627 #5 1.658 (6/9) Installing libpsl (0.21.5-r3)
+2026-Jun-04 15:06:30.894627 #5 1.662 (7/9) Installing zstd-libs (1.5.7-r2)
+2026-Jun-04 15:06:30.894627 #5 1.684 (8/9) Installing libcurl (8.19.0-r0)
+2026-Jun-04 15:06:30.894627 #5 1.704 (9/9) Installing curl (8.19.0-r0)
+2026-Jun-04 15:06:30.894627 #5 1.717 Executing busybox-1.37.0-r30.trigger
+2026-Jun-04 15:06:30.894627 #5 1.738 OK: 15.9 MiB in 27 packages
+2026-Jun-04 15:06:30.894627 #5 DONE 1.9s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #10 [builder 5/6] RUN pnpm install --frozen-lockfile
+2026-Jun-04 15:06:30.894627 #10 0.357 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.26.1.tgz
+2026-Jun-04 15:<REDACTED>@11.5.1   │
+2026-Jun-04 15:06:30.894627 #10 10.90    │                                              │
+2026-Jun-04 15:06:30.894627 #10 10.90    ╰──────────────────────────────────────────────╯
+2026-Jun-04 15:06:30.894627 #10 10.90
+2026-Jun-04 15:06:30.894627 #10 11.09 Progress: resolved 755, reused 0, downloaded 59, added 16
+2026-Jun-04 15:06:30.894627 #10 12.13 Progress: resolved 755, reused 0, downloaded 132, added 41
+2026-Jun-04 15:06:30.894627 #10 13.14 Progress: resolved 755, reused 0, downloaded 186, added 63
+2026-Jun-04 15:06:30.894627 #10 14.15 Progress: resolved 755, reused 0, downloaded 285, added 102
+2026-Jun-04 15:06:30.894627 #10 15.16 Progress: resolved 755, reused 0, downloaded 361, added 149
+2026-Jun-04 15:06:30.894627 #10 16.18 Progress: resolved 755, reused 0, downloaded 391, added 166
+2026-Jun-04 15:06:30.894627 #10 17.35 Progress: resolved 755, reused 0, downloaded 424, added 180
+2026-Jun-04 15:06:30.894627 #10 18.38 Progress: resolved 755, reused 0, downloaded 456, added 192
+2026-Jun-04 15:06:30.894627 #10 19.40 Progress: resolved 755, reused 0, downloaded 501, added 210
+2026-Jun-04 15:06:30.894627 #10 20.41 Progress: resolved 755, reused 0, downloaded 586, added 254
+2026-Jun-04 15:06:30.894627 #10 21.41 Progress: resolved 755, reused 0, downloaded 673, added 282
+2026-Jun-04 15:06:30.894627 #10 22.41 Progress: resolved 755, reused 0, downloaded 751, added 348
+2026-Jun-04 15:06:30.894627 #10 23.41 Progress: resolved 755, reused 0, downloaded 753, added 516
+2026-Jun-04 15:06:30.894627 #10 24.41 Progress: resolved 755, reused 0, downloaded 754, added 753
+2026-Jun-04 15:06:30.894627 #10 25.42 Progress: resolved 755, reused 0, downloaded 754, added 754
+2026-Jun-04 15:06:30.894627 #10 26.21 Progress: resolved 755, reused 0, downloaded 755, added 755, done
+2026-Jun-04 15:06:30.894627 #10 28.45
+2026-Jun-04 15:06:30.894627 #10 28.45 dependencies:
+2026-Jun-04 15:06:30.894627 #10 28.45 + @hookform/resolvers 5.2.2
+2026-Jun-04 15:06:30.894627 #10 28.45 + @jridgewell/trace-mapping 0.3.31
+2026-Jun-04 15:06:30.894627 #10 28.45 + @neondatabase/serverless 0.10.4
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-checkbox 1.3.3
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-dialog 1.1.15
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-label 2.1.8
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-radio-group 1.3.8
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-scroll-area 1.2.10
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-select 2.2.6
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-separator 1.1.8
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-slot 1.2.4
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-tabs 1.1.13
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-toast 1.2.15
+2026-Jun-04 15:06:30.894627 #10 28.45 + @radix-ui/react-tooltip 1.2.8
+2026-Jun-04 15:06:30.894627 #10 28.45 + @replit/vite-plugin-cartographer 0.4.11
+2026-Jun-04 15:06:30.894627 #10 28.45 + @replit/vite-plugin-dev-banner 0.1.2
+2026-Jun-04 15:06:30.894627 #10 28.45 + @replit/vite-plugin-runtime-error-modal 0.0.3
+2026-Jun-04 15:06:30.894627 #10 28.45 + @tanstack/react-query 5.100.10
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/connect-pg-simple 7.0.3
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/express 5.0.6
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/express-session 1.19.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/passport 1.0.17
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/passport-local 1.0.38
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/react 18.3.28
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/react-dom 18.3.7
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/ws 8.18.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + @vitejs/plugin-react 5.2.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + class-variance-authority 0.7.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + clsx 2.1.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + connect-pg-simple 10.0.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + dotenv 17.4.2
+2026-Jun-04 15:06:30.894627 #10 28.45 + drizzle-orm 0.39.3
+2026-Jun-04 15:06:30.894627 #10 28.45 + drizzle-zod 0.7.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + express 4.22.2
+2026-Jun-04 15:06:30.894627 #10 28.45 + express-session 1.19.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + lucide-react 0.553.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + memorystore 1.6.8
+2026-Jun-04 15:06:30.894627 #10 28.45 + nanoid 5.1.11
+2026-Jun-04 15:06:30.894627 #10 28.45 + passport 0.7.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + passport-local 1.0.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + postgres 3.4.9
+2026-Jun-04 15:06:30.894627 #10 28.45 + react 18.3.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + react-dom 18.3.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + react-hook-form 7.76.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + tailwind-merge 3.6.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + tailwindcss-animate 1.0.7
+2026-Jun-04 15:06:30.894627 #10 28.45 + tsconfig-paths 4.2.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + vaul 1.1.2
+2026-Jun-04 15:06:30.894627 #10 28.45 + wouter 3.9.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + ws 8.20.1
+2026-Jun-04 15:06:30.894627 #10 28.45 + zod 3.25.76
+2026-Jun-04 15:06:30.894627 #10 28.45 + zod-validation-error 5.0.0
+2026-Jun-04 15:06:30.894627 #10 28.45
+2026-Jun-04 15:06:30.894627 #10 28.45 devDependencies:
+2026-Jun-04 15:06:30.894627 #10 28.45 + @tailwindcss/typography 0.5.19
+2026-Jun-04 15:06:30.894627 #10 28.45 + @types/node 20.16.11
+2026-Jun-04 15:06:30.894627 #10 28.45 + autoprefixer 10.5.0
+2026-Jun-04 15:06:30.894627 #10 28.45 + drizzle-kit 0.31.10
+2026-Jun-04 15:06:30.894627 #10 28.45 + esbuild 0.25.12
+2026-Jun-04 15:06:30.894627 #10 28.45 + postcss 8.5.14
+2026-Jun-04 15:06:30.894627 #10 28.45 + prettier 3.8.3
+2026-Jun-04 15:06:30.894627 #10 28.45 + tailwindcss 3.4.19
+2026-Jun-04 15:06:30.894627 #10 28.45 + tsx 4.22.2
+2026-Jun-04 15:06:30.894627 #10 28.45 + turbo 1.13.4
+2026-Jun-04 15:06:30.894627 #10 28.45 + typescript 5.6.3
+2026-Jun-04 15:06:30.894627 #10 28.45 + vite 5.4.21
+2026-Jun-04 15:06:30.894627 #10 28.45
+2026-Jun-04 15:06:30.894627 #10 28.86 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-Jun-04 15:06:30.894627 #10 28.86 │                                                                              │
+2026-Jun-04 15:06:30.894627 #10 28.86 │   Ignored build scripts: esbuild@0.18.20, esbuild@0.21.5, esbuild@0.25.12,   │
+2026-Jun-04 15:06:30.894627 #10 28.86 │   esbuild@0.28.0.                                                            │
+2026-Jun-04 15:06:30.894627 #10 28.86 │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+2026-Jun-04 15:06:30.894627 #10 28.86 │   to run scripts.                                                            │
+2026-Jun-04 15:06:30.894627 #10 28.86 │                                                                              │
+2026-Jun-04 15:06:30.894627 #10 28.86 ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-Jun-04 15:06:30.894627 #10 29.03 Done in 21.8s using pnpm v10.26.1
+2026-Jun-04 15:06:30.894627 #10 DONE 30.6s
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 #12 [builder 6/6] RUN pnpm run build
+2026-Jun-04 15:06:30.894627 #12 2.857
+2026-Jun-04 15:06:30.894627 #12 2.857 > @pos/root@1.0.0 build /app
+2026-Jun-04 15:06:30.894627 #12 2.857 > turbo run build && pnpm run build:static:api
+2026-Jun-04 15:06:30.894627 #12 2.857
+2026-Jun-04 15:06:30.894627 #12 2.981
+2026-Jun-04 15:06:30.894627 #12 2.981 Attention:
+2026-Jun-04 15:06:30.894627 #12 2.981 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-Jun-04 15:06:30.894627 #12 2.981 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-Jun-04 15:06:30.894627 #12 2.981 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-Jun-04 15:06:30.894627 #12 2.981 https://turbo.build/repo/docs/telemetry
+2026-Jun-04 15:<REDACTED>@pos/api, @pos/application, @pos/core, @pos/domain, @pos/features, @pos/infrastructure, @pos/offline, @pos/shared, @pos/terminal-web, @pos/web
+2026-Jun-04 15:06:30.894627 #12 3.117 • Running build in 10 packages
+2026-Jun-04 15:06:30.894627 #12 3.117 • Remote caching disabled
+2026-Jun-04 15:06:30.894627 #12 3.210 @pos/web:build: cache miss, executing 95dabff4932abb39
+2026-Jun-04 15:06:30.894627 #12 3.230 @pos/terminal-web:build: cache miss, executing 9150ef44e49f027d
+2026-Jun-04 15:06:30.894627 #12 3.236 @pos/api:build: cache miss, executing 0fb5fce0e66e32de
+2026-Jun-04 15:06:30.894627 #12 4.625 @pos/api:build:
+2026-Jun-04 15:06:30.894627 #12 4.625 @pos/api:build: > @pos/api@1.0.0 build /app/apps/api
+2026-Jun-04 15:06:30.894627 #12 4.625 @pos/api:build: > esbuild src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --splitting
+2026-Jun-04 15:06:30.894627 #12 4.625 @pos/api:build:
+2026-Jun-04 15:06:30.894627 #12 4.675 @pos/web:build:
+2026-Jun-04 15:06:30.894627 #12 4.675 @pos/web:build: > @pos/web@1.0.0 build /app/apps/web
+2026-Jun-04 15:06:30.894627 #12 4.675 @pos/web:build: > next build
+2026-Jun-04 15:06:30.894627 #12 4.675 @pos/web:build:
+2026-Jun-04 15:06:30.894627 #12 4.735 @pos/terminal-web:build:
+2026-Jun-04 15:06:30.894627 #12 4.735 @pos/terminal-web:build: > @pos/terminal-web@1.0.0 build /app/apps/pos-terminal-web
+2026-Jun-04 15:06:30.894627 #12 4.735 @pos/terminal-web:build: > tsc && vite build
+2026-Jun-04 15:06:30.894627 #12 4.735 @pos/terminal-web:build:
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/chunk-5IH7A4CS.js                  175.5kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/routes-5XMWFYEM.js                 128.2kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/chunk-RGTBIRYS.js                   36.6kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/chunk-O6VPCMQA.js                    9.7kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/index.js                             7.7kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/vite-I7EIWLKV.js                     5.9kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/chunk-PWSXISBV.js                    4.8kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/inventorySyncRetryJob-JEDU22YX.js    4.0kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/schema-OZZOP3NM.js                   3.2kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/chunk-GG7NCXPQ.js                    1.2kb
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/serveStatic-UPLI2ICY.js              846b
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/OrdersController-SH5W5JGG.js         655b
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/chunk-MLKGABMK.js                    191b
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/auth-BL2E73YL.js                     175b
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:   dist/database-PZUS3YDW.js                 135b
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build:
+2026-Jun-04 15:06:30.894627 #12 4.797 @pos/api:build: ⚡ Done in 62ms
+2026-Jun-04 15:06:30.894627 #12 6.493 @pos/web:build: Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2026-Jun-04 15:06:30.894627 #12 6.493 @pos/web:build: This information is used to shape Next.js' roadmap and prioritize features.
+2026-Jun-04 15:06:30.894627 #12 6.493 @pos/web:build: You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-Jun-04 15:06:30.894627 #12 6.493 @pos/web:build: https://nextjs.org/telemetry
+2026-Jun-04 15:<REDACTED>@pos/web:<REDACTED>@pos/web:build:   ▲ Next.js 14.2.35
+2026-Jun-04 15:06:30.894627 #12 6.805 @pos/web:build:
+2026-Jun-04 15:06:30.894627 #12 6.972 @pos/web:build:    Creating an optimized production build ...
+2026-Jun-04 15:06:30.894627 #12 48.38 @pos/web:build:  ✓ Compiled successfully
+2026-Jun-04 15:06:30.894627 #12 48.38 @pos/web:build:    Linting and checking validity of types ...
+2026-Jun-04 15:06:30.894627 #12 56.46 @pos/web:build:    Collecting page data ...
+2026-Jun-04 15:06:30.894627 #12 58.05 @pos/web:build:    Generating static pages (0/4) ...
+2026-Jun-04 15:06:30.894627 #12 59.19 @pos/terminal-web:build: src/components/examples/CartPanel.tsx(73,9): error TS2322: Type '{ items: CartItem[]; onUpdateQty: (id: string, qty: number) => void; onRemove: (id: string) => void; onClear: () => void; getItemPrice: (item: CartItem) => number; subtotal: number; ... 22 more ...; orderDiscountAmount: number; }' is not assignable to type 'IntrinsicAttributes & CartPanelProps'.
+2026-Jun-04 15:06:30.894627 #12 59.19 @pos/terminal-web:build:   Property 'onPartialPayment' does not exist on type 'IntrinsicAttributes & CartPanelProps'.
+2026-Jun-04 15:06:30.894627 #12 59.38 @pos/terminal-web:build:  ELIFECYCLE  Command failed with exit code 2.
+2026-Jun-04 15:06:30.894627 #12 59.45 @pos/terminal-web:build: ERROR: command finished with error: command (/app/apps/pos-terminal-web) /usr/local/bin/pnpm run build exited (2)
+2026-Jun-04 15:06:30.894627 #12 59.94 @pos/web:build:    Generating static pages (1/4)
+2026-Jun-04 15:06:30.894627 #12 59.96 @pos/web:build:    Generating static pages (2/4)
+2026-Jun-04 15:06:30.894627 #12 59.98 @pos/terminal-web#build: command (/app/apps/pos-terminal-web) /usr/local/bin/pnpm run build exited (2)
+2026-Jun-04 15:06:30.894627 #12 60.00
+2026-Jun-04 15:06:30.894627 #12 60.00  Tasks:    1 successful, 3 total
+2026-Jun-04 15:06:30.894627 #12 60.00 Cached:    0 cached, 3 total
+2026-Jun-04 15:06:30.894627 #12 60.00   Time:    56.993s
+2026-Jun-04 15:06:30.894627 #12 60.00 Failed:    @pos/terminal-web#build
+2026-Jun-04 15:06:30.894627 #12 60.00
+2026-Jun-04 15:06:30.894627 #12 60.02  ERROR  run failed: command  exited (2)
+2026-Jun-04 15:06:30.894627 #12 60.19  ELIFECYCLE  Command failed with exit code 2.
+2026-Jun-04 15:06:30.894627 #12 ERROR: process "/bin/sh -c pnpm run build" did not complete successfully: exit code: 2
+2026-Jun-04 15:06:30.894627 ------
+2026-Jun-04 15:06:30.894627 > [builder 6/6] RUN pnpm run build:
+2026-Jun-04 15:06:30.894627 59.96 @pos/web:build:    Generating static pages (2/4)
+2026-Jun-04 15:06:30.894627 59.98 @pos/terminal-web#build: command (/app/apps/pos-terminal-web) /usr/local/bin/pnpm run build exited (2)
+2026-Jun-04 15:06:30.894627 60.00
+2026-Jun-04 15:06:30.894627 60.00  Tasks:    1 successful, 3 total
+2026-Jun-04 15:06:30.894627 60.00 Cached:    0 cached, 3 total
+2026-Jun-04 15:06:30.894627 60.00   Time:    56.993s
+2026-Jun-04 15:06:30.894627 60.00 Failed:    @pos/terminal-web#build
+2026-Jun-04 15:06:30.894627 60.00
+2026-Jun-04 15:06:30.894627 60.02  ERROR  run failed: command  exited (2)
+2026-Jun-04 15:06:30.894627 60.19  ELIFECYCLE  Command failed with exit code 2.
+2026-Jun-04 15:06:30.894627 ------
+2026-Jun-04 15:06:30.894627 
+2026-Jun-04 15:06:30.894627 9 warnings found (use docker --debug to expand):
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 55)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 4)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 37)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 41)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_SECRET") (line 54)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 58)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 5)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_TRUSTED_ORIGINS") (line 8)
+2026-Jun-04 15:06:30.894627 - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "BETTER_AUTH_URL") (line 38)
+2026-Jun-04 15:06:30.894627 Dockerfile:29
+2026-Jun-04 15:06:30.894627 --------------------
+2026-Jun-04 15:06:30.894627 27 |     # Runs: turbo (packages → frontend vite build → api esbuild) + build:static:api
+2026-Jun-04 15:06:30.894627 28 |     # Result: apps/pos-terminal-web/dist/ + apps/api/dist/ + apps/api/dist/public/
+2026-Jun-04 15:06:30.894627 29 | >>> RUN pnpm run build
+2026-Jun-04 15:06:30.894627 30 |
+2026-Jun-04 15:06:30.894627 31 |     # ── Stage 2: production dep isolation ────────────────────────────────────────
+2026-Jun-04 15:06:30.894627 --------------------
+2026-Jun-04 15:06:30.894627 ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm run build" did not complete successfully: exit code: 2
+2026-Jun-04 15:06:30.894627 exit status 1
+2026-Jun-04 15:06:30.917915 [DEBUG] Error type: App\Exceptions\DeploymentException
+2026-Jun-04 15:06:30.938809 [DEBUG] Error code: 0
+2026-Jun-04 15:06:30.978066 [DEBUG] Location: /var/www/html/app/Traits/ExecuteRemoteCommand.php:242
+2026-Jun-04 15:06:31.001885 [DEBUG] Stack trace (first 5 lines):
+2026-Jun-04 15:06:31.030803 [DEBUG] #0 /var/www/html/app/Traits/ExecuteRemoteCommand.php(106): App\Jobs\ApplicationDeploymentJob->executeCommandWithProcess()
+2026-Jun-04 15:06:31.052957 [DEBUG] #1 /var/www/html/vendor/laravel/framework/src/Illuminate/Collections/Traits/EnumeratesValues.php(275): App\Jobs\ApplicationDeploymentJob->{closure:App\Traits\ExecuteRemoteCommand::execute_remote_command():72}()
+2026-Jun-04 15:06:31.075647 [DEBUG] #2 /var/www/html/app/Traits/ExecuteRemoteCommand.php(72): Illuminate\Support\Collection->each()
+2026-Jun-04 15:06:31.097266 [DEBUG] #3 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(3290): App\Jobs\ApplicationDeploymentJob->execute_remote_command()
+2026-Jun-04 15:06:31.132692 [DEBUG] #4 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(898): App\Jobs\ApplicationDeploymentJob->build_image()
+2026-Jun-04 15:06:31.166765 ========================================
+2026-Jun-04 15:06:31.192131 Deployment failed. Removing the new version of your application.
+2026-Jun-04 15:06:32.129321 Gracefully shutting down build container: w12v6r991cogif0x2outm2s1
+2026-Jun-04 15:06:32.838381 [DEBUG] [CMD]: docker stop -t 30 w12v6r991cogif0x2outm2s1
+2026-Jun-04 15:06:32.838381 [DEBUG] w12v6r991cogif0x2outm2s1
