@@ -109,6 +109,8 @@ FAKE_GATEWAY_WEBHOOK_SECRET="fake-gateway-test-secret-default-dev-only-NOT-for-p
 | `GET` | `/api/payment-engine/reconciliation/stale-transactions` | 5 | List stale transactions |
 | `POST` | `/api/payment-engine/reconciliation/expire-stale-transactions` | 5 | Expire stale transactions |
 | `POST` | `/api/payment-engine/reconciliation/reconcile-intent-totals` | 5 | Reconcile intent totals |
+| `GET` | `/api/payment-engine/intents/:id/refundability` | 6.6 | Pre-refund refundability check (read-only) |
+| `GET` | `/api/payment-engine/intents/:id/status` | 6.6 | Intent status polling (read-only) |
 
 ---
 
@@ -692,6 +694,179 @@ Reconciliation:
 
 ---
 
+## Flow 12 — Intent Status Polling (Phase 6.6)
+
+> **Read-only.** Use this endpoint for frontend payment-screen polling.
+> Does **not** call external providers. Reads Payment Engine state only.
+
+```bash
+# Get intent status (no body required)
+curl -s "$BASE_URL/api/payment-engine/intents/$INTENT_ID/status" \
+  -H "x-tenant-id: $TENANT_ID" \
+  -H "x-payment-engine-service-token: $PAYMENT_ENGINE_SERVICE_TOKEN"
+```
+
+**Expected response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "intent": {
+      "id": "<uuid>",
+      "status": "paid",
+      "amountDue": 100000,
+      "amountPaid": 100000,
+      "amountRefunded": 0,
+      "amountRemaining": 0,
+      "currency": "IDR",
+      "updatedAt": "2025-01-01T00:02:00.000Z"
+    },
+    "latestTransaction": {
+      "id": "<uuid>",
+      "status": "succeeded",
+      "provider": "fake_gateway",
+      "method": "qris",
+      "providerReference": "fake_intent_...",
+      "providerPaymentUrl": null,
+      "providerQrString": null,
+      "failureReason": null,
+      "createdAt": "2025-01-01T00:01:00.000Z",
+      "updatedAt": "2025-01-01T00:01:30.000Z"
+    },
+    "providerActions": [],
+    "isTerminal": true,
+    "requiresAction": false,
+    "canRetryPayment": false
+  }
+}
+```
+
+**Boolean flag semantics:**
+
+| Flag | `true` means | Common UI response |
+|---|---|---|
+| `isTerminal` | Intent status is `paid`, `refunded`, `cancelled`, or `expired` | Show success / completion screen |
+| `requiresAction` | Latest tx status is `requires_action` | Show QR / VA / redirect waiting screen |
+| `canRetryPayment` | `amountRemaining > 0` AND `!isTerminal` | Show "Retry Payment" button |
+
+> **Note:** `providerActions` is always `[]` from this endpoint. Provider action descriptors
+> (QR codes, VA numbers, redirect URLs) are returned live from the `createGatewayPayment`
+> response at transaction creation time. A future phase will persist them alongside the
+> transaction row for retrieval here.
+
+---
+
+## Flow 13 — Pre-Refund Refundability Check (Phase 6.6)
+
+> **Read-only.** Call this before presenting the "Issue Refund" screen to the cashier.
+> Computes per-transaction refundable amounts in-memory from the transaction list —
+> no provider API calls, no DB mutations.
+
+```bash
+curl -s "$BASE_URL/api/payment-engine/intents/$INTENT_ID/refundability" \
+  -H "x-tenant-id: $TENANT_ID" \
+  -H "x-payment-engine-service-token: $PAYMENT_ENGINE_SERVICE_TOKEN"
+```
+
+**Expected response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "intent": {
+      "id": "<uuid>",
+      "status": "paid",
+      "amountDue": 100000,
+      "amountPaid": 100000,
+      "amountRefunded": 0,
+      "amountRemaining": 0,
+      "currency": "IDR"
+    },
+    "totalRefundable": 100000,
+    "transactions": [
+      {
+        "transactionId": "<uuid>",
+        "provider": "fake_gateway",
+        "method": "qris",
+        "transactionType": "payment",
+        "direction": "incoming",
+        "status": "succeeded",
+        "amount": 100000,
+        "refundedAmount": 0,
+        "refundableRemaining": 100000,
+        "canRefund": true,
+        "providerReference": "fake_intent_...",
+        "createdAt": "2025-01-01T00:01:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**Refundability rules:**
+
+| Condition | `canRefund` | `reason` |
+|---|---|---|
+| `direction=incoming`, `status=succeeded`, `transactionType∈{payment,deposit,settlement}`, `refundableRemaining>0` | `true` | _(not set)_ |
+| Already fully refunded | `false` | `"Fully refunded"` |
+| `status` not `succeeded` | `false` | `"Not refundable: status is <status>"` |
+| `direction` is `outgoing` | `false` | `"Not refundable: direction is outgoing"` |
+| `transactionType` not refundable | `false` | `"Not refundable: type is <type>"` |
+
+---
+
+## Flow 14 — FakeGateway HMAC Webhook HTTP Smoke (Phase 6.6)
+
+Webhooks are authenticated by HMAC-SHA256 only — no service token, no session.
+
+```bash
+# Compute HMAC-SHA256 in bash
+BODY='{"event_id":"evt-smoke-001","event_type":"payment.succeeded","provider_reference":"fake_intent_abc123","amount":100000}'
+HMAC_SIG=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$FAKE_GATEWAY_WEBHOOK_SECRET" | awk '{print $2}')
+
+# Send the webhook (no service token header — HMAC only)
+curl -s -X POST "$BASE_URL/api/payment-engine/webhooks/fake_gateway" \
+  -H "Content-Type: application/json" \
+  -H "x-fake-gateway-signature: $HMAC_SIG" \
+  -d "$BODY"
+```
+
+**Expected response (200 — processed):**
+```json
+{
+  "success": true,
+  "data": {
+    "outcome": "processed",
+    "eventId": "evt-smoke-001",
+    "transactionId": "<uuid>",
+    "intentId": "<uuid>"
+  }
+}
+```
+
+**Re-send same `event_id` (idempotent replay):**
+```bash
+curl -s -X POST "$BASE_URL/api/payment-engine/webhooks/fake_gateway" \
+  -H "Content-Type: application/json" \
+  -H "x-fake-gateway-signature: $HMAC_SIG" \
+  -d "$BODY"
+```
+**Expected response (200 — idempotent_replay):**
+```json
+{ "success": true, "data": { "outcome": "idempotent_replay", ... } }
+```
+
+**Invalid signature → 401:**
+```bash
+curl -s -X POST "$BASE_URL/api/payment-engine/webhooks/fake_gateway" \
+  -H "Content-Type: application/json" \
+  -H "x-fake-gateway-signature: deadbeefdeadbeefdeadbeefdeadbeef" \
+  -d "$BODY"
+```
+**Expected response: `401`**
+
+---
+
 ## Known Limitations
 
 - FakeGateway `canCancel: false`, `canRefund: false` — provider-level cancel/refund API is not implemented.
@@ -700,3 +875,5 @@ Reconciliation:
 - No `ProviderAccountConfig` DB table — credentials sourced from env vars only.
 - `rawProviderResponse` is returned in the use-case output but is not persisted to DB.
 - `fake-gateway/confirm` and `webhooks/fake_gateway` are hard-disabled in `NODE_ENV=production`.
+- `providerActions` is always `[]` from `GET /intents/:id/status` — action descriptors
+  are not persisted in the DB yet (Phase 6.6 known gap, planned for a future phase).

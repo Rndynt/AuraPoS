@@ -548,6 +548,65 @@ export async function createGatewayPayment(req: Request, res: Response): Promise
   }
 }
 
+// ── Phase 6.6 handlers ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/payment-engine/intents/:id/refundability
+ *
+ * Read-only pre-check for POS UI before initiating a refund.
+ * Returns per-transaction refundable amounts and a totalRefundable sum.
+ *
+ * Returns:
+ *   200 — success
+ *   404 — intent not found
+ */
+export async function getIntentRefundability(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const result = await container.getPaymentIntentRefundability.execute({
+      tenantId: req.tenantId!,
+      paymentIntentId: id,
+    });
+    sendSuccess(res, result);
+  } catch (err: any) {
+    if (err.message?.includes('not found')) {
+      sendError(res, 'Payment intent not found', 404);
+    } else {
+      sendError(res, err.message ?? 'Internal server error', 500);
+    }
+  }
+}
+
+/**
+ * GET /api/payment-engine/intents/:id/status
+ *
+ * Stable polling endpoint for POS UI / payment screen.
+ * Returns intent state, latest transaction snapshot, and derived boolean flags.
+ * Does NOT poll external providers — reads Payment Engine state only.
+ *
+ * Returns:
+ *   200 — success
+ *   404 — intent not found
+ */
+export async function getIntentStatus(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const result = await container.getPaymentIntentStatus.execute({
+      tenantId: req.tenantId!,
+      paymentIntentId: id,
+    });
+    sendSuccess(res, result);
+  } catch (err: any) {
+    if (err.message?.includes('not found')) {
+      sendError(res, 'Payment intent not found', 404);
+    } else {
+      sendError(res, err.message ?? 'Internal server error', 500);
+    }
+  }
+}
+
 /**
  * POST /api/payment-engine/fake-gateway/confirm
  *

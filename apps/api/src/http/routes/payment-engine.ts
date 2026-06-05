@@ -185,6 +185,17 @@ router.post('/intents/:id/manual-payments', PaymentEngineController.recordManual
 // Create a pending gateway payment transaction. Phase 2: only fake_gateway allowed.
 router.post('/intents/:id/gateway-payments', PaymentEngineController.createGatewayPayment);
 
+// ── Phase 6.6: Refundability + Status read endpoints ──────────────────────────
+
+// GET /api/payment-engine/intents/:id/refundability
+// Read-only pre-check: per-transaction refundable amounts before initiating a refund.
+router.get('/intents/:id/refundability', PaymentEngineController.getIntentRefundability);
+
+// GET /api/payment-engine/intents/:id/status
+// Stable polling endpoint for POS UI / payment screen.
+// Returns intent state, latest tx snapshot, and derived boolean flags.
+router.get('/intents/:id/status', PaymentEngineController.getIntentStatus);
+
 // ── Phase 4: Refund / Void endpoints ───────────────────────────────────────────
 
 // POST /api/payment-engine/transactions/:id/refund

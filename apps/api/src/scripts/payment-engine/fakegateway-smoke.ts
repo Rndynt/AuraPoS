@@ -1,7 +1,8 @@
 /**
  * FakeGateway E2E Smoke Test Script
  *
- * Phase 6.5 — FakeGateway End-to-End Smoke & Dev Testing
+ * Phase 6.6 — FakeGateway End-to-End Smoke & Dev Testing
+ *             (Refundability + Intent Status + HMAC Webhook HTTP smoke)
  *
  * Runs end-to-end HTTP assertions against a LIVE server (default: localhost:5000).
  * Tests all FakeGateway scenarios through actual Payment Engine API endpoints.
@@ -36,6 +37,7 @@
 
 import '../../register-paths';
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 
 // ── Safety guard — must be explicitly enabled ─────────────────────────────────
 
@@ -442,6 +444,196 @@ await run('no auth → 401', async () => {
     body: JSON.stringify({ payable_type: 'order', payable_id: 'x', amount_due: 1000 }),
   });
   assert.equal(r.status, 401);
+});
+
+// ── HMAC webhook helper ───────────────────────────────────────────────────────
+// Webhook requests use HMAC-SHA256 only — NO service token, NO session.
+
+const WEBHOOK_SECRET =
+  process.env.FAKE_GATEWAY_WEBHOOK_SECRET ??
+  'fake-gateway-test-secret-default-dev-only-NOT-for-prod';
+
+function computeHmac(rawBody: string): string {
+  return createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex');
+}
+
+/**
+ * Send a raw webhook request to /api/payment-engine/webhooks/fake_gateway.
+ * Uses HMAC-SHA256 signature only — no service token, no session.
+ * Pass `overrideSignature` to inject a deliberately wrong sig for rejection tests.
+ */
+async function webhookApi(
+  body: object,
+  overrideSignature?: string,
+): Promise<{ status: number; body: any }> {
+  const raw = JSON.stringify(body);
+  const sig = overrideSignature ?? computeHmac(raw);
+  const res = await fetch(`${BASE}/api/payment-engine/webhooks/fake_gateway`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-fake-gateway-signature': sig,
+    },
+    body: raw,
+  });
+  const json = await res.json();
+  return { status: res.status, body: json };
+}
+
+// ── Phase 6.6 — HMAC Webhook HTTP Smoke ──────────────────────────────────────
+
+console.log('\n── Phase 6.6: HMAC Webhook HTTP smoke ──');
+
+// Persist providerRef so we can reuse intentId for refundability + status tests.
+let webhookIntentId: string;
+let webhookProviderRef: string;
+
+await run('HMAC webhook setup: create intent + qris gateway payment', async () => {
+  webhookIntentId = await createIntent(100_000);
+  const gwR = await createGatewayPayment(webhookIntentId, 'qris');
+  assert.equal(gwR.status, 200, JSON.stringify(gwR.body));
+  webhookProviderRef = gwR.body.data.transaction.providerReference as string;
+  assert.ok(webhookProviderRef, 'providerReference must be set for webhook test');
+});
+
+await run('HMAC webhook: payment.succeeded → outcome=processed, tx=succeeded', async () => {
+  const eventId = `smoke-evt-${Date.now()}`;
+  const payload = {
+    event_id: eventId,
+    event_type: 'payment.succeeded',
+    provider_reference: webhookProviderRef,
+    amount: 100_000,
+  };
+  const r = await webhookApi(payload);
+  assert.equal(r.status, 200, `webhook succeeded → ${r.status}: ${JSON.stringify(r.body)}`);
+  assert.equal(r.body.success, true);
+  assert.equal(r.body.data.outcome, 'processed');
+});
+
+await run('HMAC webhook idempotent replay: same event_id → outcome=idempotent_replay', async () => {
+  // Use the SAME event_id as the previous test to exercise idempotency
+  const eventId = `smoke-evt-idempotent-${Date.now()}`;
+  const payload = {
+    event_id: eventId,
+    event_type: 'payment.succeeded',
+    provider_reference: webhookProviderRef,
+    amount: 100_000,
+  };
+  // Send first time
+  const r1 = await webhookApi(payload);
+  // Send SAME payload a second time
+  const r2 = await webhookApi(payload);
+  // First call should be processed or idempotent_replay (transaction already succeeded via prior test)
+  assert.equal(r1.status, 200, JSON.stringify(r1.body));
+  // Second identical event_id must be idempotent_replay
+  assert.equal(r2.status, 200, JSON.stringify(r2.body));
+  assert.equal(r2.body.data.outcome, 'idempotent_replay');
+});
+
+await run('HMAC webhook invalid signature → 401', async () => {
+  const payload = {
+    event_id: `smoke-badsig-${Date.now()}`,
+    event_type: 'payment.succeeded',
+    provider_reference: webhookProviderRef,
+    amount: 100_000,
+  };
+  const r = await webhookApi(payload, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef');
+  assert.equal(r.status, 401, `bad sig must return 401, got ${r.status}: ${JSON.stringify(r.body)}`);
+});
+
+// ── Phase 6.6 — GET /intents/:id/status ──────────────────────────────────────
+
+console.log('\n── Phase 6.6: GET /intents/:id/status ──');
+
+await run('intent status: fresh intent → isTerminal=false, canRetryPayment=true', async () => {
+  const freshId = await createIntent();
+  const r = await api('GET', `/api/payment-engine/intents/${freshId}/status`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.data.isTerminal, false);
+  assert.equal(r.body.data.canRetryPayment, true);
+  assert.equal(r.body.data.requiresAction, false);
+  assert.equal(r.body.data.latestTransaction, null);
+  assert.deepEqual(r.body.data.providerActions, []);
+});
+
+await run('intent status: after HMAC webhook succeeded → isTerminal=true, canRetryPayment=false', async () => {
+  const r = await api('GET', `/api/payment-engine/intents/${webhookIntentId}/status`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.data.isTerminal, true);
+  assert.equal(r.body.data.canRetryPayment, false);
+  assert.equal(r.body.data.requiresAction, false);
+  assert.equal(r.body.data.intent.status, 'paid');
+  assert.ok(r.body.data.latestTransaction, 'latestTransaction must be set');
+  assert.equal(r.body.data.latestTransaction.status, 'succeeded');
+});
+
+await run('intent status: requires_action tx → requiresAction=true', async () => {
+  const id = await createIntent();
+  await createGatewayPayment(id, 'qris');
+  const r = await api('GET', `/api/payment-engine/intents/${id}/status`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.data.requiresAction, true);
+  assert.equal(r.body.data.isTerminal, false);
+  assert.equal(r.body.data.canRetryPayment, true);
+});
+
+await run('intent status: unknown intent → 404', async () => {
+  const r = await api('GET', '/api/payment-engine/intents/00000000-0000-0000-0000-000000000000/status');
+  assert.equal(r.status, 404, JSON.stringify(r.body));
+});
+
+// ── Phase 6.6 — GET /intents/:id/refundability ───────────────────────────────
+
+console.log('\n── Phase 6.6: GET /intents/:id/refundability ──');
+
+await run('refundability: fresh intent (no txs) → totalRefundable=0', async () => {
+  const freshId = await createIntent();
+  const r = await api('GET', `/api/payment-engine/intents/${freshId}/refundability`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.data.totalRefundable, 0);
+  assert.deepEqual(r.body.data.transactions, []);
+});
+
+await run('refundability: paid intent (after HMAC webhook) → totalRefundable=100000', async () => {
+  const r = await api('GET', `/api/payment-engine/intents/${webhookIntentId}/refundability`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.data.totalRefundable, 100_000);
+  const refundableTxs = r.body.data.transactions.filter((t: any) => t.canRefund);
+  assert.equal(refundableTxs.length, 1);
+  assert.equal(refundableTxs[0].refundableRemaining, 100_000);
+  assert.equal(refundableTxs[0].refundedAmount, 0);
+  assert.equal(refundableTxs[0].amount, 100_000);
+});
+
+await run('refundability: after refund → totalRefundable reduced', async () => {
+  // Use the HMAC-webhook intent which is paid + refundable
+  const refR = await api(
+    'GET', `/api/payment-engine/intents/${webhookIntentId}/refundability`,
+  );
+  assert.equal(refR.status, 200);
+  const txRow = refR.body.data.transactions.find((t: any) => t.canRefund);
+  assert.ok(txRow, 'must have a refundable transaction');
+  const txId = txRow.transactionId;
+
+  // Issue a partial refund
+  const partialR = await api(`POST`, `/api/payment-engine/transactions/${txId}/refund`, {
+    amount: 25_000,
+  });
+  assert.equal(partialR.status, 201, JSON.stringify(partialR.body));
+
+  // Re-check refundability
+  const afterR = await api('GET', `/api/payment-engine/intents/${webhookIntentId}/refundability`);
+  assert.equal(afterR.status, 200, JSON.stringify(afterR.body));
+  assert.equal(afterR.body.data.totalRefundable, 75_000);
+  const row = afterR.body.data.transactions.find((t: any) => t.transactionId === txId);
+  assert.ok(row);
+  assert.equal(row.refundedAmount, 25_000);
+  assert.equal(row.refundableRemaining, 75_000);
+});
+
+await run('refundability: unknown intent → 404', async () => {
+  const r = await api('GET', '/api/payment-engine/intents/00000000-0000-0000-0000-000000000000/refundability');
+  assert.equal(r.status, 404, JSON.stringify(r.body));
 });
 
 // ── Summary table ─────────────────────────────────────────────────────────────

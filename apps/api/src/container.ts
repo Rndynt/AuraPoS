@@ -42,6 +42,8 @@ import { ReprocessStaleProviderEvents } from '@pos/application/payments/Reproces
 import { ListStalePaymentTransactions } from '@pos/application/payments/ListStalePaymentTransactions';
 import { ExpireStalePaymentTransactions } from '@pos/application/payments/ExpireStalePaymentTransactions';
 import { ReconcilePaymentIntentTotals } from '@pos/application/payments/ReconcilePaymentIntentTotals';
+import { GetPaymentIntentRefundability } from '@pos/application/payments/GetPaymentIntentRefundability';
+import { GetPaymentIntentStatus } from '@pos/application/payments/GetPaymentIntentStatus';
 
 // Payment Providers
 import { ManualProvider } from '@pos/domain/payments';
@@ -160,6 +162,10 @@ class Container {
   public readonly listStalePaymentTransactions: ListStalePaymentTransactions;
   public readonly expireStalePaymentTransactions: ExpireStalePaymentTransactions;
   public readonly reconcilePaymentIntentTotals: ReconcilePaymentIntentTotals;
+
+  // Payment Engine (Phase 6.6: Refundability + Status)
+  public readonly getPaymentIntentRefundability: GetPaymentIntentRefundability;
+  public readonly getPaymentIntentStatus: GetPaymentIntentStatus;
 
   constructor() {
     // Initialize Repositories
@@ -370,6 +376,17 @@ class Container {
 
     this.reconcilePaymentIntentTotals = new ReconcilePaymentIntentTotals(
       db,
+      this.paymentIntentRepository,
+      this.paymentTransactionRepository,
+    );
+
+    // Payment Engine — Phase 6.6: Refundability + Status
+    this.getPaymentIntentRefundability = new GetPaymentIntentRefundability(
+      this.paymentIntentRepository,
+      this.paymentTransactionRepository,
+    );
+
+    this.getPaymentIntentStatus = new GetPaymentIntentStatus(
       this.paymentIntentRepository,
       this.paymentTransactionRepository,
     );
