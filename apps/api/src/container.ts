@@ -48,6 +48,10 @@ import { GetPaymentIntentStatus } from '@pos/application/payments/GetPaymentInte
 // Payment Providers
 import { ManualProvider } from '@pos/domain/payments';
 import { FakeGatewayProvider } from '@pos/infrastructure/payments/providers/FakeGatewayProvider';
+import {
+  XenditProvider,
+  loadXenditSandboxConfig,
+} from '@pos/infrastructure/payments/providers/XenditProvider';
 
 // Use Cases - Catalog
 import { GetProducts } from '@pos/application/catalog/GetProducts';
@@ -298,6 +302,15 @@ class Container {
     this.paymentProviderRegistry = new PaymentProviderRegistry()
       .register(new ManualProvider())
       .register(new FakeGatewayProvider());
+
+    // Payment Engine — Phase 7A: Xendit Sandbox Provider (conditional)
+    // Only registered when XENDIT_SANDBOX_ENABLED=true AND XENDIT_SECRET_KEY_SANDBOX is set.
+    // Missing config must not break app startup or FakeGateway tests.
+    const xenditSandboxConfig = loadXenditSandboxConfig();
+    if (xenditSandboxConfig) {
+      this.paymentProviderRegistry.register(new XenditProvider(xenditSandboxConfig));
+      console.log('[Payment Engine] Xendit sandbox provider registered (sandbox mode)');
+    }
 
     // Payment Engine — Phase 3: Webhook / Event Engine
     // ApplyGatewayTransactionStatus is the shared atomic helper used by:
