@@ -3,10 +3,10 @@
  *
  * "Ports" in hexagonal architecture define the boundaries between the
  * core domain/application logic and the infrastructure (DB, secrets, etc.).
- * Concrete implementations live in payment-engine-service infrastructure layer.
+ * Concrete implementations live in payment-orchestration-service infrastructure layer.
  *
  * Phase 8A: interface definitions only.
- * Phase 8C: implementations wired to a real Postgres DB in payment-engine-service.
+ * Phase 8C: implementations wired to a real Postgres DB in payment-orchestration-service.
  */
 
 import type { PaymentMerchant } from '../domain/PaymentMerchant';

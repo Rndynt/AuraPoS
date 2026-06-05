@@ -1,5 +1,5 @@
 /**
- * app — Express application factory for payment-engine-service.
+ * app — Express application factory for payment-orchestration-service.
  *
  * Returns a configured Express app instance.
  * Does NOT call app.listen() — that is the responsibility of src/index.ts.
@@ -34,7 +34,7 @@ export function createApp(container: ServiceContainer): express.Application {
     res.status(404).json({
       ok: false,
       error: 'NOT_FOUND',
-      message: 'Route not found. Check the payment-engine-service API documentation.',
+      message: 'Route not found. Check the payment-orchestration-service API documentation.',
     });
   });
 

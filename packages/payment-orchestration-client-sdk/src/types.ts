@@ -1,11 +1,11 @@
 /**
- * types — request/response shapes for payment-engine-client-sdk.
+ * types — request/response shapes for payment-orchestration-client-sdk.
  *
- * Self-contained; does NOT import from @pos/payment-engine-core to keep
+ * Self-contained; does NOT import from @northflow/payment-orchestration-core to keep
  * the SDK portable and independently versioned.
  *
  * These types mirror the service API contracts and should stay in sync
- * with packages/payment-engine-core/src/application/contracts.ts.
+ * with packages/payment-orchestration-core/src/application/contracts.ts.
  */
 
 // ── Client Configuration ──────────────────────────────────────────────────────
@@ -19,8 +19,22 @@ export interface PaymentEngineClientConfig {
 
 // ── Create Payment Intent ─────────────────────────────────────────────────────
 
+/**
+ * CreatePaymentIntentRequest — synced with core CreatePaymentIntentInput.
+ *
+ * Optional external context fields allow multi-source applications to pass
+ * their own tenant/outlet/location IDs for traceability without coupling the
+ * orchestration engine to AuraPoS internals.
+ *
+ * Note: merchantId and sourceApp can be omitted if the client was constructed
+ * with those values — they will be injected via headers automatically.
+ */
 export interface CreatePaymentIntentRequest {
   merchantId?: string;
+  sourceApp?: string | null;
+  externalTenantId?: string | null;
+  externalOutletId?: string | null;
+  externalLocationId?: string | null;
   externalPayableType: string;
   externalPayableId: string;
   currency: string;

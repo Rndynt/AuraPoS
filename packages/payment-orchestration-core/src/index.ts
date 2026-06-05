@@ -1,7 +1,7 @@
 /**
- * @pos/payment-engine-core — Phase 8A Public API
+ * @northflow/payment-orchestration-core — Phase 8A Public API
  *
- * Framework-agnostic payment engine contracts:
+ * Framework-agnostic payment orchestration contracts:
  * - Domain types (merchantId-centric, not tenantId-centric)
  * - Application input/output contracts
  * - Provider interfaces
@@ -12,7 +12,7 @@
  * No direct environment variable reads.
  *
  * Consumers:
- *   - apps/payment-engine-service  (Phase 8D+)
+ *   - apps/payment-orchestration-service  (Phase 8D+)
  *   - future external services
  *   - tests
  *   - apps/api (Phase 8E+ via client SDK)

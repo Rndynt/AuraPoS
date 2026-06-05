@@ -1,14 +1,14 @@
 /**
- * index — entry point for payment-engine-service.
+ * index — entry point for payment-orchestration-service.
  *
- * Phase 8A: skeletal service. Listens on PAYMENT_ENGINE_SERVICE_PORT (default 5100).
+ * Phase 8A: skeletal service. Listens on PAYMENT_ORCHESTRATION_SERVICE_PORT (default 5100).
  * Does NOT share a port with apps/api (port 5000).
  *
  * Start command:
  *   npx tsx --tsconfig tsconfig.json src/index.ts
  *
  * Or via package script:
- *   pnpm --filter @pos/payment-engine-service dev
+ *   pnpm --filter @northflow/payment-orchestration-service dev
  */
 
 import { loadEnv } from './config/env.ts';
@@ -21,7 +21,7 @@ const app = createApp(container);
 
 app.listen(config.port, () => {
   console.log(
-    `[payment-engine-service] Phase ${config.phase} listening on port ${config.port} ` +
+    `[payment-orchestration-service] Phase ${config.phase} listening on port ${config.port} ` +
       `(NODE_ENV=${config.nodeEnv})`,
   );
   console.log(`  GET http://localhost:${config.port}/health`);
@@ -31,6 +31,9 @@ app.listen(config.port, () => {
   console.log(`  POST http://localhost:${config.port}/v1/payment-intents`);
   console.log(
     `  GET  http://localhost:${config.port}/v1/payment-intents/:id/status`,
+  );
+  console.log(
+    `  GET  http://localhost:${config.port}/v1/payment-intents/:id/refundability`,
   );
   console.log(`  POST http://localhost:${config.port}/v1/webhooks/:provider`);
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@pos/payment-engine-client-sdk",
+  "name": "@northflow/payment-orchestration-client-sdk",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,6 +11,6 @@
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit"
   },
-  "keywords": ["payment-engine", "client", "sdk"],
+  "keywords": ["payment-orchestration", "client", "sdk", "northflow"],
   "license": "ISC"
 }

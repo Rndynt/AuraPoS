@@ -1,8 +1,8 @@
 /**
- * errors — typed error classes for payment-engine-client-sdk.
+ * errors — typed error classes for payment-orchestration-client-sdk.
  *
  * Thrown by client methods on non-2xx HTTP responses or transport failures.
- * No dependency on @pos/payment-engine-core — self-contained for portability.
+ * No dependency on @northflow/payment-orchestration-core — self-contained for portability.
  */
 
 /**

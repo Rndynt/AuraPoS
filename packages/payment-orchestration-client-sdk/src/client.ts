@@ -1,8 +1,8 @@
 /**
- * client — typed HTTP client for payment-engine-service.
+ * client — typed HTTP client for payment-orchestration-service.
  *
- * Targets `/v1/...` paths for the standalone payment-engine-service.
- * Supports custom headers: x-payment-engine-service-token, x-payment-merchant-id, x-source-app.
+ * Targets `/v1/...` paths for the standalone payment-orchestration-service.
+ * Supports custom headers: x-payment-orchestration-service-token, x-payment-merchant-id, x-source-app.
  *
  * Fetch-compatible; uses the global `fetch` API (Node 18+ / modern browsers).
  * No React dependency. No AuraPoS tenant dependency.
@@ -32,7 +32,7 @@ export class PaymentEngineClient {
       'Content-Type': 'application/json',
     };
     if (config.serviceToken) {
-      this.defaultHeaders['x-payment-engine-service-token'] = config.serviceToken;
+      this.defaultHeaders['x-payment-orchestration-service-token'] = config.serviceToken;
     }
     if (config.merchantId) {
       this.defaultHeaders['x-payment-merchant-id'] = config.merchantId;
@@ -62,7 +62,7 @@ export class PaymentEngineClient {
       });
     } catch (err: unknown) {
       throw new PaymentEngineNetworkError(
-        `Network error calling payment-engine-service: ${String(err)}`,
+        `Network error calling payment-orchestration-service: ${String(err)}`,
         err,
       );
     }
@@ -77,7 +77,7 @@ export class PaymentEngineClient {
       const message =
         data != null && typeof data === 'object' && 'message' in data
           ? String((data as Record<string, unknown>)['message'])
-          : `HTTP ${response.status} from payment-engine-service`;
+          : `HTTP ${response.status} from payment-orchestration-service`;
 
       throw new PaymentEngineClientError(message, response.status, code, data);
     }
@@ -142,7 +142,8 @@ export class PaymentEngineClient {
    *
    * GET /v1/payment-intents/:intentId/refundability
    *
-   * Phase 8A: service returns 501.
+   * Phase 8A: service returns 501 (placeholder route added in Phase 8A hardening).
+   * Phase 8D: fully implemented.
    */
   async getRefundability(intentId: string): Promise<RefundabilityResponse> {
     return this.request<RefundabilityResponse>(

@@ -1,5 +1,5 @@
 /**
- * webhooks — placeholder webhook routes for payment-engine-service.
+ * webhooks — placeholder webhook routes for payment-orchestration-service.
  *
  * Phase 8A: returns 501 Not Implemented.
  * Phase 8D: HandlePaymentProviderWebhook use case wired here.

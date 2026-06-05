@@ -1,5 +1,5 @@
 /**
- * health — /health and /version endpoints for payment-engine-service.
+ * health — /health and /version endpoints for payment-orchestration-service.
  *
  * No authentication required on health checks.
  * Returns minimal operational metadata — no secrets, no internal paths.
@@ -13,13 +13,13 @@ export function createHealthRouter(config: { version: string; phase: string }): 
 
   /**
    * GET /health
-   * Returns 200 { ok: true, service: 'payment-engine-service' } when service is up.
+   * Returns 200 { ok: true, service: 'payment-orchestration-service' } when service is up.
    * Used by load balancers and health-check probes.
    */
   router.get('/health', (_req: Request, res: Response) => {
     res.json({
       ok: true,
-      service: 'payment-engine-service',
+      service: 'payment-orchestration-service',
     });
   });
 
@@ -29,10 +29,10 @@ export function createHealthRouter(config: { version: string; phase: string }): 
    */
   router.get('/version', (_req: Request, res: Response) => {
     res.json({
-      service: 'payment-engine-service',
+      service: 'payment-orchestration-service',
       version: config.version,
       phase: config.phase,
-      description: 'Payment Engine Standalone Service — hybrid extraction scaffold',
+      description: 'Payment Orchestration Standalone Service — hybrid extraction scaffold',
       status: 'skeleton',
     });
   });

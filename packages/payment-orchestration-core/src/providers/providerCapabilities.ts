@@ -2,7 +2,7 @@
  * providerCapabilities — capability contract for standalone payment providers.
  *
  * TODO(Phase 8B): migrate from packages/domain/payments/provider.ts ProviderCapabilities.
- * Phase 8A: standalone definition for the payment-engine-core package.
+ * Phase 8A: standalone definition for the payment-orchestration-core package.
  */
 
 /**
