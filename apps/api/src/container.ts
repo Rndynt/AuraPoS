@@ -297,8 +297,11 @@ class Container {
     // ApplyGatewayTransactionStatus is the shared atomic helper used by:
     //  - ConfirmFakeGatewayPayment (dev/test controlled confirmation endpoint)
     //  - HandlePaymentProviderWebhook (generic webhook handler)
-    //  - CreateGatewayPayment (Phase 6: immediate success path)
-    // Constructed BEFORE CreateGatewayPayment so it can be injected as a dep.
+    // NOTE: CreateGatewayPayment does NOT use ApplyGatewayTransactionStatus.
+    // Its immediate-success path does direct settlement via PaymentAllocationRepository
+    // + RecalculatePaymentIntent inside the same DB transaction, avoiding the
+    // intent→tx→intent reversed lock ordering that the two-step approach would cause.
+    // (See Phase 6 Hardening report for the full lock-order analysis.)
     this.applyGatewayTransactionStatus = new ApplyGatewayTransactionStatus(
       this.paymentIntentRepository,
       this.paymentTransactionRepository,
