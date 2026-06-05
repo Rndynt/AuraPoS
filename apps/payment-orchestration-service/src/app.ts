@@ -15,6 +15,8 @@
  *   2. Webhook route registered BEFORE service-token auth middleware so that
  *      POST /v1/webhooks/:provider does NOT require a service token.
  *      Provider-level signature verification is done inside FakeGatewayWebhookHandler.
+ *
+ * Phase 8K: 404 handler uses frozen error envelope.
  */
 
 import express from 'express';
@@ -42,7 +44,7 @@ export function createApp(container: ServiceContainer): express.Application {
     }),
   );
 
-  // ── Unprotected: health + version ─────────────────────────────────────────
+  // ── Unprotected: health + version + ready ─────────────────────────────────
   app.use(createHealthRouter(container.config, container.providerRegistry));
 
   // ── Webhooks bypass service-token auth ────────────────────────────────────
@@ -82,8 +84,11 @@ export function createApp(container: ServiceContainer): express.Application {
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       ok: false,
-      error: 'NOT_FOUND',
-      message: 'Route not found. Check the payment-orchestration-service API documentation.',
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Route not found. Check the payment-orchestration-service API documentation.',
+        details: null,
+      },
     });
   });
 

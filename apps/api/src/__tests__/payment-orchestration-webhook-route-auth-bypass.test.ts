@@ -816,7 +816,7 @@ describe('Phase 8E Hardening — Webhook Route Auth Bypass (WR01-WR05)', () => {
     assert.equal(res.status, 400, `Expected 400 for invalid payload, got ${res.status}`);
     const body = await res.json() as any;
     assert.equal(body.ok, false);
-    assert.equal(body.error, 'INVALID_WEBHOOK_PAYLOAD');
+    assert.equal(body.error?.code ?? body.error, 'INVALID_WEBHOOK_PAYLOAD');
   });
 });
 
@@ -865,7 +865,7 @@ describe('Phase 8E Hardening — WR06: Webhook secret configured, signature requ
     assert.equal(res.status, 401, `Expected 401, got ${res.status}`);
     const body = await res.json() as any;
     assert.equal(body.ok, false);
-    assert.equal(body.error, 'WEBHOOK_SIGNATURE_MISSING');
+    assert.equal(body.error?.code ?? body.error, 'WEBHOOK_SIGNATURE_MISSING');
   });
 
   test('WR06b: wrong x-fakegateway-signature → 401 WEBHOOK_SIGNATURE_INVALID', async () => {
@@ -886,6 +886,6 @@ describe('Phase 8E Hardening — WR06: Webhook secret configured, signature requ
     assert.equal(res.status, 401, `Expected 401, got ${res.status}`);
     const body = await res.json() as any;
     assert.equal(body.ok, false);
-    assert.equal(body.error, 'WEBHOOK_SIGNATURE_INVALID');
+    assert.equal(body.error?.code ?? body.error, 'WEBHOOK_SIGNATURE_INVALID');
   });
 });

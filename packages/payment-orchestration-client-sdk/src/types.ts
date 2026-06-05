@@ -10,6 +10,7 @@
  *   - RefundabilityResponse: { intentId, merchantId, totalRefundable, currency, transactions }
  *   - ProviderAccountResponse: includes providerAccountRef; never credentialsRef
  *   - ConfirmFakeGatewayPaymentRequest.merchantId: optional (falls back to config.merchantId)
+ * Phase 8K: added RefreshProviderStatusRequest/Response, ReadinessResponse.
  */
 
 // ── Client Configuration ──────────────────────────────────────────────────────
@@ -242,6 +243,43 @@ export interface ConfirmFakeGatewayPaymentResponse {
   alreadyConfirmed: boolean;
   transaction: PaymentTransactionResponse;
   intent: PaymentIntentResponse;
+}
+
+// ── Phase 8K: Refresh Provider Status ────────────────────────────────────────
+
+export interface RefreshProviderStatusRequest {
+  /** Optional — falls back to SDK config.merchantId when omitted. */
+  merchantId?: string;
+}
+
+/**
+ * RefreshProviderStatusResponse — result of polling the payment provider
+ * for the current transaction status.
+ */
+export interface RefreshProviderStatusResponse {
+  transaction: PaymentTransactionResponse;
+  intent: PaymentIntentResponse | null;
+  /** Raw provider status string as returned by the provider API. */
+  providerStatus: string;
+  /** True if the transaction or intent status was updated during this refresh. */
+  changed: boolean;
+}
+
+// ── Phase 8K: Readiness ───────────────────────────────────────────────────────
+
+/**
+ * ReadinessResponse — service runtime readiness.
+ * Does not expose secrets or service token.
+ */
+export interface ReadinessResponse {
+  ok: boolean;
+  service: string;
+  providers: Record<string, { registered: boolean; configured?: boolean }>;
+  database: 'configured' | 'unconfigured';
+  xenditSandbox?: {
+    enabled: boolean;
+    callbackTokenConfigured: boolean;
+  };
 }
 
 // ── Legacy / deprecated ───────────────────────────────────────────────────────

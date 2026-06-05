@@ -2,11 +2,13 @@
  * merchants — POST /v1/merchants, GET /v1/merchants/:id
  *
  * Phase 8D: real implementation wired to CreateMerchant and merchant repo.
+ * Phase 8K: use frozen error envelope via apiErrorResponse().
  */
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { ServiceContainer } from '../container.ts';
+import { apiErrorResponse } from './utils.ts';
 
 export function createMerchantsRouter(container: ServiceContainer): Router {
   const router = Router();
@@ -20,11 +22,7 @@ export function createMerchantsRouter(container: ServiceContainer): Router {
       const { id, name, legalName, sourceApp, externalRef, metadata } = req.body as Record<string, unknown>;
 
       if (!name || typeof name !== 'string') {
-        res.status(400).json({
-          ok: false,
-          error: 'VALIDATION_ERROR',
-          message: 'name is required and must be a string',
-        });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'name is required and must be a string'));
         return;
       }
 
@@ -59,13 +57,13 @@ export function createMerchantsRouter(container: ServiceContainer): Router {
     try {
       const id = req.params['id'];
       if (!id) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'id is required'));
         return;
       }
 
       const merchant = await container.repos.merchantRepo.findById(id);
       if (!merchant) {
-        res.status(404).json({ ok: false, error: 'MERCHANT_NOT_FOUND', message: `Merchant not found: ${id}` });
+        res.status(404).json(apiErrorResponse('MERCHANT_NOT_FOUND', `Merchant not found: ${id}`));
         return;
       }
 

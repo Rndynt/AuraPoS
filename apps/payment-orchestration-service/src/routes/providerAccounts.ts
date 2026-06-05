@@ -5,11 +5,13 @@
  * Phase 8D Hardening (Task 3):
  *   - Return providerAccountRef directly from DTO field.
  *   - Never expose credentialsRef in any response.
+ * Phase 8K: use frozen error envelope via apiErrorResponse().
  */
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { ServiceContainer } from '../container.ts';
+import { apiErrorResponse } from './utils.ts';
 
 export function createProviderAccountsRouter(container: ServiceContainer): Router {
   const router = Router({ mergeParams: true });
@@ -21,7 +23,7 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
     try {
       const merchantId = req.params['merchantId'];
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required'));
         return;
       }
 
@@ -29,15 +31,11 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
         req.body as Record<string, unknown>;
 
       if (!provider || typeof provider !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'provider is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'provider is required'));
         return;
       }
       if (!environment || !['sandbox', 'test', 'production'].includes(environment as string)) {
-        res.status(400).json({
-          ok: false,
-          error: 'VALIDATION_ERROR',
-          message: 'environment must be sandbox, test, or production',
-        });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'environment must be sandbox, test, or production'));
         return;
       }
 
@@ -80,13 +78,13 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
       const merchantId = req.params['merchantId'];
       const id = req.params['id'];
       if (!merchantId || !id) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId and id are required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId and id are required'));
         return;
       }
 
       const pa = await container.repos.providerAccountRepo.findById(id, merchantId);
       if (!pa) {
-        res.status(404).json({ ok: false, error: 'PROVIDER_ACCOUNT_NOT_FOUND', message: `Provider account not found: ${id}` });
+        res.status(404).json(apiErrorResponse('PROVIDER_ACCOUNT_NOT_FOUND', `Provider account not found: ${id}`));
         return;
       }
 

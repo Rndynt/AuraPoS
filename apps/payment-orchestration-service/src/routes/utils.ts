@@ -2,6 +2,7 @@
  * route utils — shared helpers for payment-orchestration-service routes.
  *
  * Phase 8D Hardening: merchantId resolution with header fallback.
+ * Phase 8K: apiErrorResponse() helper for frozen error envelope.
  */
 
 import type { Request } from 'express';
@@ -45,4 +46,28 @@ export function resolveMerchantIdQuery(req: Request): string | null {
     return header;
   }
   return null;
+}
+
+/**
+ * apiErrorResponse — frozen public error envelope for error responses.
+ *
+ * Phase 8K contract:
+ *   { ok: false, error: { code: string, message: string, details: unknown | null } }
+ *
+ * Use this for all inline error returns in route handlers. The global errorHandler
+ * middleware (middleware/errors.ts) also uses this shape.
+ */
+export function apiErrorResponse(
+  code: string,
+  message: string,
+  details?: unknown,
+): { ok: false; error: { code: string; message: string; details: unknown } } {
+  return {
+    ok: false,
+    error: {
+      code,
+      message,
+      details: details ?? null,
+    },
+  };
 }

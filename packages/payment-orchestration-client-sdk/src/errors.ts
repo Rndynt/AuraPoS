@@ -6,6 +6,7 @@
  *
  * Phase 8B: primary names are now PaymentOrchestration*. PaymentEngine* aliases are
  * deprecated and will be removed in a future major version.
+ * Phase 8K: added `details` field to PaymentOrchestrationClientError for frozen error envelope.
  */
 
 /**
@@ -14,18 +15,21 @@
  * Carries:
  * - `status`       — HTTP status code (e.g. 422, 404, 500)
  * - `code`         — machine-readable error code from the service (if available)
+ * - `details`      — structured details from the service error envelope (e.g. validation fields), or null
  * - `serviceError` — raw error body from the service (safe to log, no secrets)
  */
 export class PaymentOrchestrationClientError extends Error {
   public readonly status: number;
   public readonly code: string | undefined;
+  public readonly details: unknown;
   public readonly serviceError: unknown;
 
-  constructor(message: string, status: number, code?: string, serviceError?: unknown) {
+  constructor(message: string, status: number, code?: string, details?: unknown, serviceError?: unknown) {
     super(message);
     this.name = 'PaymentOrchestrationClientError';
     this.status = status;
     this.code = code;
+    this.details = details ?? null;
     this.serviceError = serviceError;
   }
 }

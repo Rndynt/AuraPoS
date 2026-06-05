@@ -3,6 +3,9 @@
  *
  * Catches unhandled errors from route handlers and returns a consistent
  * JSON error envelope. Never exposes stack traces or raw secrets.
+ *
+ * Phase 8K frozen envelope:
+ *   { "ok": false, "error": { "code": "...", "message": "...", "details": null } }
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -33,8 +36,11 @@ export function errorHandler(
 
   res.status(statusCode).json({
     ok: false,
-    error: code,
-    message,
+    error: {
+      code,
+      message,
+      details: null,
+    },
   });
 }
 

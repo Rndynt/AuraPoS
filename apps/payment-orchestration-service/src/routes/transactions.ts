@@ -1,13 +1,14 @@
 /**
  * transactions — standalone payment transaction routes.
  *
- * Phase 8H adds a service-token protected provider status refresh endpoint.
+ * Phase 8H: service-token protected provider status refresh endpoint.
+ * Phase 8K: use frozen error envelope via apiErrorResponse().
  */
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { ServiceContainer } from '../container.ts';
-import { resolveMerchantId } from './utils.ts';
+import { resolveMerchantId, apiErrorResponse } from './utils.ts';
 
 export function createTransactionsRouter(container: ServiceContainer): Router {
   const router = Router();
@@ -19,14 +20,14 @@ export function createTransactionsRouter(container: ServiceContainer): Router {
     try {
       const transactionId = req.params['id'];
       if (!transactionId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'id is required'));
         return;
       }
 
       const body = req.body as Record<string, unknown>;
       const merchantId = resolveMerchantId(req, body['merchantId']);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required (body or x-payment-merchant-id header)'));
         return;
       }
 

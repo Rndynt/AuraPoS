@@ -2,6 +2,7 @@
  * webhooks — webhook ingestion routes for payment-orchestration-service.
  *
  * Phase 8E: HandleProviderWebhook use case wired here.
+ * Phase 8K: use frozen error envelope.
  *
  * Routes:
  *   POST /v1/webhooks/:provider
@@ -79,8 +80,11 @@ export function createWebhooksRouter(container: ServiceContainer): Router {
 
       res.status(statusCode).json({
         ok: false,
-        error: code,
-        message,
+        error: {
+          code,
+          message,
+          details: null,
+        },
         provider,
       });
     }

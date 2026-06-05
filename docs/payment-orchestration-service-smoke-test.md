@@ -1,6 +1,6 @@
 # Payment Orchestration Service — Smoke Test Guide
 
-**Phase:** 8E Hardening  
+**Phase:** 8K — SDK/API Contract Freeze  
 **Last updated:** 2026-06-05
 
 This guide describes how to manually or programmatically verify the payment-orchestration-service standalone API.
@@ -37,6 +37,26 @@ TOKEN=dev-token
 ```bash
 curl -s $BASE/health | jq
 # Expected: { "ok": true, "service": "payment-orchestration-service" }
+```
+
+### 1a. Version check (Phase 8K)
+
+```bash
+curl -s $BASE/version | jq
+# Expected: { "service": "...", "version": "0.3.0", "phase": "8K", ... }
+```
+
+### 1b. Readiness check
+
+```bash
+curl -s $BASE/ready | jq
+# Expected:
+# {
+#   "ok": true,
+#   "service": "payment-orchestration-service",
+#   "providers": { "fake_gateway": { "registered": true } },
+#   "database": "configured"
+# }
 ```
 
 ---
@@ -146,60 +166,6 @@ curl -s "$BASE/v1/payment-intents/$INTENT/refundability" \
 
 ---
 
-## Automated test suites
-
-Run without a running DB or service:
-
-```bash
-# Use-case level (in-memory repos, fast)
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
-  apps/api/src/__tests__/payment-orchestration-service-fakegateway-flow.test.ts
-
-# HTTP/auth level (real Express, in-memory repos, port 0)
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
-  apps/api/src/__tests__/payment-orchestration-service-http-auth.test.ts
-```
-
-Expected:
-```
-# tests 20   # pass 20   # fail 0   (fakegateway-flow)
-# tests 13   # pass 13   # fail 0   (http-auth)
-```
-
----
-
-## Key API contracts
-
-### merchantId resolution
-
-All routes accept `merchantId` via the `x-payment-merchant-id` header as a fallback when not provided in the request body or query param. This allows SDK clients to set it once in config and omit it from every call.
-
-### Provider accounts
-
-- `providerAccountRef` — the provider's own account identifier. **Always returned** in responses.
-- `credentialsRef` — opaque secret-store reference. **Never returned** in any response.
-
-### Idempotency (gateway payments)
-
-- Pass `idempotencyKey` in the request body.
-- Same key + same params → HTTP 200 + `idempotentReplay: true` (no provider call).
-- Same key + different params → HTTP 409 `IDEMPOTENCY_CONFLICT`.
-
-### Gateway payment response (Phase 8D)
-
-```json
-{
-  "ok": true,
-  "data": {
-    "transaction": { "id": "tx_...", "status": "requires_action", ... },
-    "intent": { "id": "pi_...", "status": "requires_payment", ... },
-    "idempotentReplay": false
-  }
-}
-```
-
----
-
 ### 9. Webhook ingestion (Phase 8E — FakeGateway)
 
 The webhook route does **not** require a service token — it is registered before the auth middleware. Provider identity is verified via HMAC signature.
@@ -240,6 +206,12 @@ curl -s -X POST $BASE/v1/webhooks/fake_gateway \
 - No secret in production → `WEBHOOK_SECRET_REQUIRED` 403.
 - Unsigned webhook in non-production (no secret) → accepted (dev convenience only).
 
+**Phase 8K — Error envelope:**
+All error responses now use nested shape:
+```json
+{ "ok": false, "error": { "code": "WEBHOOK_SIGNATURE_MISSING", "message": "...", "details": null } }
+```
+
 ---
 
 ### 10. Reconciliation (Phase 8E — crash-recovery safety)
@@ -258,7 +230,44 @@ curl -s -X POST $BASE/v1/payment-intents/$INTENT/reconcile \
 - `changed: false` — totals already correct; no DB update.
 - `changed: true` — drift detected and corrected (e.g., TX was succeeded but intent still showed `requires_payment`).
 
-**Note:** No scheduled reconciliation worker yet. Call this endpoint manually after crash recovery or as part of a maintenance script.
+---
+
+### 11. Refresh provider status (Phase 8H)
+
+```bash
+TX_PROVIDER_REF=$(curl -s "$BASE/v1/payment-intents/$INTENT/status" \
+  -H "x-payment-orchestration-service-token: $TOKEN" \
+  -H "x-payment-merchant-id: $MERCHANT" | jq -r '.data.latestTransaction.id')
+
+curl -s -X POST "$BASE/v1/payment-transactions/$TX_PROVIDER_REF/refresh-provider-status" \
+  -H "x-payment-orchestration-service-token: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"merchantId\":\"$MERCHANT\"}" | jq
+# Expected: { "ok": true, "data": { "transaction": {...}, "intent": {...}, "providerStatus": "...", "changed": false } }
+```
+
+---
+
+### 12. Error envelope verification (Phase 8K)
+
+```bash
+# Test validation error shape
+curl -s -X POST $BASE/v1/merchants \
+  -H "x-payment-orchestration-service-token: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq
+# Expected: { "ok": false, "error": { "code": "VALIDATION_ERROR", "message": "name is required and must be a string", "details": null } }
+
+# Test 404 shape
+curl -s $BASE/v1/merchants/nonexistent-id \
+  -H "x-payment-orchestration-service-token: $TOKEN" | jq
+# Expected: { "ok": false, "error": { "code": "MERCHANT_NOT_FOUND", "message": "Merchant not found: nonexistent-id", "details": null } }
+
+# Test unknown route 404
+curl -s $BASE/v1/unknown-route \
+  -H "x-payment-orchestration-service-token: $TOKEN" | jq
+# Expected: { "ok": false, "error": { "code": "NOT_FOUND", "message": "Route not found. Check the payment-orchestration-service API documentation.", "details": null } }
+```
 
 ---
 
@@ -268,28 +277,32 @@ Run without a running DB or service:
 
 ```bash
 # Use-case level (in-memory repos, fast)
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
   apps/api/src/__tests__/payment-orchestration-service-fakegateway-flow.test.ts
 
 # HTTP/auth level (real Express, in-memory repos, port 0)
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
   apps/api/src/__tests__/payment-orchestration-service-http-auth.test.ts
 
 # Phase 8D.1 — atomic confirm (TOCTOU fix)
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
   apps/api/src/__tests__/payment-orchestration-atomic-confirm.test.ts
 
 # Phase 8E — standalone webhook use case
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
   apps/api/src/__tests__/payment-orchestration-standalone-webhook.test.ts
 
 # Phase 8E — webhook route auth bypass (Express HTTP layer)
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
   apps/api/src/__tests__/payment-orchestration-webhook-route-auth-bypass.test.ts
 
 # Phase 8E — reconciliation use case
-npx tsx --tsconfig apps/api/tsconfig.node.json --test \
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
   apps/api/src/__tests__/payment-orchestration-reconcile.test.ts
+
+# Phase 8K — SDK/API contract freeze
+node_modules/.bin/tsx --tsconfig apps/api/tsconfig.node.json --test \
+  apps/api/src/__tests__/payment-orchestration-8k-contract-freeze.test.ts
 ```
 
 Expected pass counts (all phases combined):
@@ -304,78 +317,8 @@ Expected pass counts (all phases combined):
 | payment-orchestration-reconcile | 5 | 5 |
 | payment-orchestration-schema-mappers | 56 | 56 |
 | payment-orchestration-core-contract-adapter | 14 | 14 |
-| payment-xendit-gateway-integration | 11 | 11 |
-
-## Phase 8F roadmap
-
-- AuraPoS SDK consumption by POS terminal.
-- Xendit sandbox integration.
-- DB-backed idempotency key cleanup (TTL expiry).
-- Scheduled reconciliation worker (Phase 8F+).
-
-## Phase 8I runtime readiness smoke checks
-
-### Readiness endpoint
-
-```bash
-curl -s $BASE/ready | jq
-```
-
-Expected shape (values depend on env):
-
-```json
-{
-  "ok": true,
-  "service": "payment-orchestration-service",
-  "providers": {
-    "fake_gateway": { "registered": true },
-    "xendit_sandbox": { "registered": true, "configured": false }
-  },
-  "database": "configured"
-}
-```
-
-The endpoint must not expose `PAYMENT_ORCHESTRATION_SERVICE_TOKEN`, database credentials, Xendit callback tokens, or raw provider secrets.
-
-### Xendit sandbox runtime env
-
-Xendit sandbox HTTP remains disabled unless explicitly enabled:
-
-```bash
-PAYMENT_ORCHESTRATION_XENDIT_SANDBOX_ENABLED=false
-PAYMENT_ORCHESTRATION_XENDIT_BASE_URL=https://api.xendit.co
-PAYMENT_ORCHESTRATION_XENDIT_CALLBACK_TOKEN=replace-with-sandbox-callback-token
-```
-
-Provider-account `credentialsRef` values must be environment variable names only, for example:
-
-```text
-PAYMENT_ORCHESTRATION_XENDIT_SANDBOX_SECRET_KEY
-```
-
-Do not store the raw secret key in `payment_orchestration_provider_accounts.credentials_ref`.
-
-### Operations workers
-
-Phase 8I adds callable worker entry points but no scheduler:
-
-```text
-apps/payment-orchestration-service/src/workers/reconcile.ts
-apps/payment-orchestration-service/src/workers/expireStale.ts
-```
-
-Run these from a platform cron, queue worker, or maintenance script only after configuring the standalone service environment. The workers construct the standalone container and do not start Express.
-
-### Additional focused tests
-
-```bash
-npx tsx --tsconfig apps/api/tsconfig.node.json --test apps/api/src/__tests__/payment-orchestration-schema-boundary.test.ts
-npx tsx --tsconfig apps/api/tsconfig.node.json --test apps/api/src/__tests__/payment-orchestration-xendit-runtime-config.test.ts
-npx tsx --tsconfig apps/api/tsconfig.node.json --test apps/api/src/__tests__/payment-orchestration-expire-stale.test.ts
-npx tsx --tsconfig apps/api/tsconfig.node.json --test apps/api/src/__tests__/payment-orchestration-workers.test.ts
-npx tsx --tsconfig apps/api/tsconfig.node.json --test apps/api/src/__tests__/payment-orchestration-provider-event-reprocess.test.ts
-npx tsx --tsconfig apps/api/tsconfig.node.json --test apps/api/src/__tests__/payment-orchestration-ready-endpoint.test.ts
-```
+| payment-orchestration-xendit-gateway-integration | 11 | 11 |
+| payment-orchestration-8k-contract-freeze | 17 | 17 |
 
 ---
 
@@ -402,4 +345,4 @@ Run the extraction guardrail check from the repository root:
 pnpm payment-orchestration:extraction-check
 ```
 
-The check verifies service-local schema ownership, repository schema imports, standalone migrations, worker entry points, the ready endpoint, required package files, forbidden embedded runtime imports, and absence of random build/log/asset output in the extraction set.
+The check verifies service-local schema ownership, repository schema imports, standalone migrations, worker entry points, the ready endpoint, required package files, forbidden embedded runtime imports, absence of random build/log/asset output in the extraction set, and Phase 8K contract/deployment files.

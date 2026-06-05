@@ -3,12 +3,14 @@
  *
  * Phase 8D: real implementation wired to use cases.
  * Phase 8D Hardening (Task 2): merchantId resolution with x-payment-merchant-id header fallback.
+ * Phase 8K: use frozen error envelope via apiErrorResponse().
  *
  * Routes:
  *   POST /v1/payment-intents
  *   GET  /v1/payment-intents/:id/status
  *   GET  /v1/payment-intents/:id/refundability
  *   POST /v1/payment-intents/:id/gateway-payments
+ *   POST /v1/payment-intents/:id/reconcile
  *
  * merchantId resolution:
  *   POST bodies: body.merchantId → x-payment-merchant-id header
@@ -18,7 +20,7 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { ServiceContainer } from '../container.ts';
-import { resolveMerchantId, resolveMerchantIdQuery } from './utils.ts';
+import { resolveMerchantId, resolveMerchantIdQuery, apiErrorResponse } from './utils.ts';
 
 export function createIntentsRouter(container: ServiceContainer): Router {
   const router = Router();
@@ -47,19 +49,19 @@ export function createIntentsRouter(container: ServiceContainer): Router {
 
       const merchantId = resolveMerchantId(req, body['merchantId']);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required (body or x-payment-merchant-id header)'));
         return;
       }
       if (!externalPayableType || typeof externalPayableType !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'externalPayableType is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'externalPayableType is required'));
         return;
       }
       if (!externalPayableId || typeof externalPayableId !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'externalPayableId is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'externalPayableId is required'));
         return;
       }
       if (typeof amountDue !== 'number' || !Number.isInteger(amountDue) || amountDue <= 0) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'amountDue must be a positive integer' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'amountDue must be a positive integer'));
         return;
       }
 
@@ -97,13 +99,13 @@ export function createIntentsRouter(container: ServiceContainer): Router {
       const intentId = req.params['id'];
 
       if (!intentId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'id is required'));
         return;
       }
 
       const merchantId = resolveMerchantIdQuery(req);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (query param or x-payment-merchant-id header)' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required (query param or x-payment-merchant-id header)'));
         return;
       }
 
@@ -137,13 +139,13 @@ export function createIntentsRouter(container: ServiceContainer): Router {
       const intentId = req.params['id'];
 
       if (!intentId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'id is required'));
         return;
       }
 
       const merchantId = resolveMerchantIdQuery(req);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (query param or x-payment-merchant-id header)' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required (query param or x-payment-merchant-id header)'));
         return;
       }
 
@@ -168,7 +170,7 @@ export function createIntentsRouter(container: ServiceContainer): Router {
     try {
       const intentId = req.params['id'];
       if (!intentId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'intent id is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'intent id is required'));
         return;
       }
 
@@ -177,19 +179,19 @@ export function createIntentsRouter(container: ServiceContainer): Router {
 
       const merchantId = resolveMerchantId(req, body['merchantId']);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required (body or x-payment-merchant-id header)'));
         return;
       }
       if (!provider || typeof provider !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'provider is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'provider is required'));
         return;
       }
       if (!method || typeof method !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'method is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'method is required'));
         return;
       }
       if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'amount must be a positive integer' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'amount must be a positive integer'));
         return;
       }
 
@@ -226,14 +228,14 @@ export function createIntentsRouter(container: ServiceContainer): Router {
     try {
       const intentId = req.params['id'];
       if (!intentId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'id is required'));
         return;
       }
 
       const body = req.body as Record<string, unknown>;
       const merchantId = resolveMerchantId(req, body['merchantId']);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
+        res.status(400).json(apiErrorResponse('VALIDATION_ERROR', 'merchantId is required (body or x-payment-merchant-id header)'));
         return;
       }
 

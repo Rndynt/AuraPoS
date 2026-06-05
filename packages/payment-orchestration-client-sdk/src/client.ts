@@ -14,6 +14,11 @@
  *   - GET status/refundability: merchantId from config used via x-payment-merchant-id header.
  *   - Response types updated to rich service shapes.
  *   - confirmFakeGatewayPayment: merchantId optional, falls back to config.
+ * Phase 8K:
+ *   - Added refreshProviderStatus() and getReadiness() methods.
+ *   - Error parsing updated for frozen nested error envelope:
+ *     { ok: false, error: { code, message, details } }
+ *   - PaymentOrchestrationClientError now carries `details` field.
  */
 
 import { PaymentOrchestrationClientError, PaymentOrchestrationNetworkError } from './errors.ts';
@@ -33,6 +38,9 @@ import type {
   ConfirmFakeGatewayPaymentResponse,
   ReconcilePaymentIntentTotalsRequest,
   ReconcilePaymentIntentTotalsResponse,
+  RefreshProviderStatusRequest,
+  RefreshProviderStatusResponse,
+  ReadinessResponse,
 } from './types.ts';
 
 export class PaymentOrchestrationClient {
@@ -85,16 +93,36 @@ export class PaymentOrchestrationClient {
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      const code =
-        data != null && typeof data === 'object' && 'error' in data
-          ? String((data as Record<string, unknown>)['error'])
-          : undefined;
-      const message =
-        data != null && typeof data === 'object' && 'message' in data
+      // Phase 8K frozen error envelope: { ok: false, error: { code, message, details } }
+      // Also handles legacy flat format: { ok: false, error: 'CODE', message: '...' }
+      const errorObj = data != null && typeof data === 'object' && 'error' in data
+        ? (data as Record<string, unknown>)['error']
+        : null;
+
+      let code: string | undefined;
+      let message: string;
+      let details: unknown = null;
+
+      if (errorObj != null && typeof errorObj === 'object') {
+        // Nested envelope (Phase 8K)
+        const e = errorObj as Record<string, unknown>;
+        code = typeof e['code'] === 'string' ? e['code'] : undefined;
+        message = typeof e['message'] === 'string'
+          ? e['message']
+          : `HTTP ${response.status} from payment-orchestration-service`;
+        details = e['details'] ?? null;
+      } else if (typeof errorObj === 'string') {
+        // Legacy flat format (backward compat)
+        code = errorObj;
+        message = data != null && typeof data === 'object' && 'message' in data
           ? String((data as Record<string, unknown>)['message'])
           : `HTTP ${response.status} from payment-orchestration-service`;
+      } else {
+        code = undefined;
+        message = `HTTP ${response.status} from payment-orchestration-service`;
+      }
 
-      throw new PaymentOrchestrationClientError(message, response.status, code, data);
+      throw new PaymentOrchestrationClientError(message, response.status, code, details, data);
     }
 
     // Unwrap { ok, data } envelope if present; otherwise return data as-is.
@@ -188,7 +216,6 @@ export class PaymentOrchestrationClient {
     );
   }
 
-
   /**
    * reconcilePaymentIntentTotals — recompute intent totals from transaction state.
    *
@@ -277,5 +304,37 @@ export class PaymentOrchestrationClient {
       `/v1/dev/fake-gateway/transactions/${transactionId}/confirm`,
       this.injectMerchantId(input ?? {}),
     );
+  }
+
+  // ── Phase 8K: refresh provider status + readiness ────────────────────────────
+
+  /**
+   * refreshProviderStatus — poll the payment provider for the current transaction status.
+   *
+   * POST /v1/payment-transactions/:transactionId/refresh-provider-status
+   *
+   * merchantId from input or falls back to config.merchantId.
+   */
+  async refreshProviderStatus(
+    transactionId: string,
+    input?: RefreshProviderStatusRequest,
+  ): Promise<RefreshProviderStatusResponse> {
+    return this.request<RefreshProviderStatusResponse>(
+      'POST',
+      `/v1/payment-transactions/${transactionId}/refresh-provider-status`,
+      this.injectMerchantId(input ?? {}),
+    );
+  }
+
+  /**
+   * getReadiness — check service runtime readiness.
+   *
+   * GET /ready
+   *
+   * No auth required. Returns DB configuration state, registered providers,
+   * and Xendit sandbox config. Does not expose secrets or service token.
+   */
+  async getReadiness(): Promise<ReadinessResponse> {
+    return this.request<ReadinessResponse>('GET', '/ready');
   }
 }

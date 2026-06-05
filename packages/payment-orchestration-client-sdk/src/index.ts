@@ -1,5 +1,5 @@
 /**
- * @northflow/payment-orchestration-client-sdk — Phase 8D Public API
+ * @northflow/payment-orchestration-client-sdk — Phase 8K Public API
  *
  * Typed HTTP client for the payment-orchestration-service standalone API.
  *
@@ -9,6 +9,7 @@
  * - Custom header injection (service token, merchant ID, source app)
  * - merchantId auto-injection from config into POST bodies
  * - Typed error classes (PaymentOrchestrationClientError, PaymentOrchestrationNetworkError)
+ *   with `details` field for structured validation errors (Phase 8K)
  * - No React dependency
  * - No AuraPoS tenant/session dependency
  * - No @northflow/payment-orchestration-core dependency (self-contained)
@@ -56,6 +57,9 @@ export type {
   ReconcilePaymentIntentTotalsRequest,
   ReconcileTotalsSnapshot,
   ReconcilePaymentIntentTotalsResponse,
+  RefreshProviderStatusRequest,
+  RefreshProviderStatusResponse,
+  ReadinessResponse,
   ProviderActionResponse,
 } from './types.ts';
 

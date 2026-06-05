@@ -6,3 +6,4 @@
 - [Payment orchestration atomic confirm](atomic-confirm-pattern.md) — conditional UPDATE WHERE status IN ('requires_action','pending'); IDEMPOTENCY_SCOPE='create_gateway_payment' (not 'gateway_payment'); assert.throws (not assert.rejects) for sync throws.
 - [Webhook auth bypass ordering](webhook-auth-bypass.md) — register app.use('/v1/webhooks', router) BEFORE app.use('/v1', auth); add express.json verify to capture req.rawBody for HMAC.
 - [FakeGateway webhook signature error codes](fakegateway-webhook-sig-codes.md) — missing header → WEBHOOK_SIGNATURE_MISSING (401); wrong sig → WEBHOOK_SIGNATURE_INVALID (401); no secret in production → WEBHOOK_SECRET_REQUIRED (403).
+- [Phase 8K frozen error envelope](phase-8k-error-envelope.md) — error shape frozen as nested `{ ok:false, error:{ code, message, details } }`; test assertions must use `body.error?.code ?? body.error` to tolerate both formats; apiErrorResponse() helper in routes/utils.ts is the single source.
