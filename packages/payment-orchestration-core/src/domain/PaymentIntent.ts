@@ -51,7 +51,7 @@ export interface StandalonePaymentIntentDTO {
   allowPartial: boolean;
   expiresAt: Date | null;
   metadata: Record<string, unknown> | null;
-  idempotencyKey: string | null;
+  idempotencyKey?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

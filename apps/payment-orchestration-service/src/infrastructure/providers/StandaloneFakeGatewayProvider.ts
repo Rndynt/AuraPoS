@@ -24,38 +24,32 @@
  */
 
 import { randomBytes } from 'crypto';
-
-export type StandaloneProviderStatus =
-  | 'requires_action'
-  | 'succeeded'
-  | 'failed'
-  | 'pending';
-
-export interface StandaloneCreatePaymentInput {
-  intentId: string;
-  amount: number;
-  currency: string;
-  method: string;
-  metadata?: Record<string, unknown> | null;
-}
-
-export interface StandaloneProviderResult {
-  status: StandaloneProviderStatus;
-  providerReference: string;
-  providerPaymentUrl: string | null;
-  providerQrString: string | null;
-  rawProviderResponse: Record<string, unknown>;
-  failureReason: string | null;
-  expiresAt: Date | null;
-}
-
-export interface StandalonePaymentProvider {
-  readonly providerCode: string;
-  createPayment(input: StandaloneCreatePaymentInput): Promise<StandaloneProviderResult>;
-}
+import type {
+  StandaloneCreatePaymentInput,
+  StandalonePaymentProvider,
+  StandaloneProviderResult,
+  StandaloneProviderStatusResult,
+} from './StandalonePaymentProvider.ts';
 
 export class StandaloneFakeGatewayProvider implements StandalonePaymentProvider {
+  constructor(_nodeEnv?: string) {}
+
   public readonly providerCode = 'fake_gateway';
+  public readonly capabilities = {
+    supportsRefund: false,
+    supportsCancel: false,
+    supportsPolling: true,
+    supportsWebhook: true,
+    supportedMethods: ['qris', 'card', 'va', 'retail'],
+    supportsRedirect: true,
+    supportsQr: true,
+    supportsVa: true,
+    supportsPaymentCode: true,
+    supportsPartialRefund: false,
+    supportsMultiplePartialRefund: false,
+    canReturnImmediateSuccess: true,
+    canReturnImmediateFailure: true,
+  };
 
   async createPayment(input: StandaloneCreatePaymentInput): Promise<StandaloneProviderResult> {
     const scenario =
@@ -155,5 +149,34 @@ export class StandaloneFakeGatewayProvider implements StandalonePaymentProvider 
         };
       }
     }
+  }
+
+  async getPaymentStatus(input: {
+    transactionId: string;
+    providerReference: string | null;
+    rawProviderResponse?: Record<string, unknown> | null;
+    metadata?: Record<string, unknown> | null;
+  }): Promise<StandaloneProviderStatusResult> {
+    const raw = input.rawProviderResponse ?? {};
+    const status = typeof raw['status'] === 'string'
+      ? raw['status']
+      : typeof raw['scenario'] === 'string' && raw['scenario'] === 'immediate_success'
+        ? 'succeeded'
+        : typeof raw['scenario'] === 'string' && raw['scenario'] === 'immediate_failure'
+          ? 'failed'
+          : 'requires_action';
+
+    return {
+      status: status === 'succeeded' || status === 'failed' || status === 'pending'
+        ? status
+        : 'requires_action',
+      providerReference: input.providerReference,
+      rawProviderResponse: {
+        ...raw,
+        provider_reference: input.providerReference,
+        status_refresh: 'deterministic_fake_gateway_lookup',
+      },
+      failureReason: status === 'failed' ? 'FAKE_GATEWAY_STATUS_FAILED' : null,
+    };
   }
 }

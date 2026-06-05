@@ -654,3 +654,44 @@ This means ready only for FakeGateway/dev feature-flag integration work in Phase
 | 8H    | SDK/API Freeze + Deployment Readiness |
 | 8I    | AuraPoS Integration Behind Feature Flag |
 | 8J    | Embedded Engine Deprecation |
+
+---
+
+## Phase 8G+8H — Boundary Purity + Provider Runtime Completion
+
+Phase 8G+8H moves the near-term target from AuraPoS integration readiness to standalone extraction readiness. The standalone-first decision labels are now:
+
+```text
+STANDALONE_BOUNDARY_AND_PROVIDER_RUNTIME_READY
+NOT_READY_BOUNDARY_LEAKS
+NOT_READY_PROVIDER_RUNTIME_GAPS
+NOT_READY_RUNTIME_TEST_FAILURES
+```
+
+### Boundary Updates
+
+- `packages/payment-orchestration-core`, `packages/payment-orchestration-client-sdk`, and `apps/payment-orchestration-service` were audited for forbidden AuraPoS runtime coupling.
+- Runtime source has no `@pos/*`, `apps/api`, embedded payment-provider, order, session, or frontend imports.
+- The known extraction blocker is schema ownership: repositories still import `payment_orchestration_*` Drizzle tables from `shared/schema.ts` while the service remains inside the AuraPoS monorepo.
+- The schema extraction plan is documented in `docs/reports/payment-orchestration-schema-extraction-plan.md`.
+
+### Provider Runtime Updates
+
+- A standalone provider runtime contract now covers create payment, webhook parsing, status polling, capability flags, provider actions, and provider errors.
+- `fake_gateway` remains dev/test only and supports deterministic polling plus webhook ingestion.
+- `xendit_sandbox` now has an isolated standalone sandbox provider with injectable HTTP client, opaque `credentialsRef` secret resolution, sanitized raw provider responses, webhook parser/verifier, and mocked tests.
+- `POST /v1/payment-transactions/:id/refresh-provider-status` provides service-token protected on-demand polling foundation. It is not a scheduled worker.
+- Provider refund/cancel is contract/design only in this phase; no real provider refund/cancel money movement is implemented.
+
+### Standalone-First Roadmap
+
+| Phase | Target |
+|---|---|
+| 8G+8H | Boundary Purity + Provider Runtime Completion |
+| 8I | Operations Layer + Worker Readiness |
+| 8J | SDK/API Contract Freeze + Deployment Readiness |
+| 8K | Extraction Simulation |
+| 8L | Extract to Standalone Repo/Package |
+| 8M | Integrate AuraPoS/Other Apps |
+
+AuraPoS SDK consumption and embedded runtime deprecation are explicitly deferred until after standalone extraction readiness is proven.

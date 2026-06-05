@@ -25,6 +25,7 @@ export type StandaloneTransactionStatus =
   | 'expired'
   | 'voided'
   | 'refunded'
+  | 'reversed'
   | 'ignored';
 
 /**

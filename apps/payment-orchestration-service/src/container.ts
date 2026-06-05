@@ -36,6 +36,7 @@ import { GetPaymentIntentStatus } from './application/use-cases/GetPaymentIntent
 import { GetRefundability } from './application/use-cases/GetRefundability.ts';
 import { HandleProviderWebhook } from './application/use-cases/HandleProviderWebhook.ts';
 import { ReconcilePaymentIntentTotals } from './application/use-cases/ReconcilePaymentIntentTotals.ts';
+import { RefreshProviderStatus } from './application/use-cases/RefreshProviderStatus.ts';
 
 import type { PaymentMerchantRepository } from '@northflow/payment-orchestration-core';
 import type { PaymentProviderAccountRepository } from '@northflow/payment-orchestration-core';
@@ -63,6 +64,7 @@ export interface ServiceUseCases {
   getRefundability: GetRefundability;
   handleProviderWebhook: HandleProviderWebhook;
   reconcilePaymentIntentTotals: ReconcilePaymentIntentTotals;
+  refreshProviderStatus: RefreshProviderStatus;
 }
 
 export interface ServiceContainer {
@@ -124,10 +126,17 @@ export function createContainer(config: PaymentOrchestrationServiceConfig): Serv
       intentRepo,
       providerEventRepo,
       fakeGatewayWebhookHandler,
+      providerRegistry,
     ),
     reconcilePaymentIntentTotals: new ReconcilePaymentIntentTotals(
       intentRepo,
       transactionRepo,
+    ),
+    refreshProviderStatus: new RefreshProviderStatus(
+      transactionRepo,
+      intentRepo,
+      providerAccountRepo,
+      providerRegistry,
     ),
   };
 

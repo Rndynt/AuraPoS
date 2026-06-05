@@ -11,8 +11,14 @@ export interface PaymentMerchant {
   id: string;
   displayName: string;
   legalName?: string | null;
-  status: 'active' | 'suspended' | 'disabled';
+  status: 'active' | 'suspended' | 'disabled' | 'closed';
+  /** Optional source-app correlation retained for standalone idempotent merchant creation. */
+  sourceApp?: string | null;
+  /** Optional external merchant reference from the source app. */
+  externalRef?: string | null;
   metadata?: Record<string, unknown>;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**
