@@ -323,11 +323,11 @@ importers:
         specifier: ^5.4.20
         version: 5.4.21(@types/node@20.16.11)(lightningcss@1.32.0)(terser@5.48.0)
 
-  apps/payment-engine-service:
+  apps/payment-orchestration-service:
     dependencies:
-      '@pos/payment-engine-core':
+      '@northflow/payment-orchestration-core':
         specifier: workspace:*
-        version: link:../../packages/payment-engine-core
+        version: link:../../packages/payment-orchestration-core
       express:
         specifier: ^4.21.2
         version: 4.22.2
@@ -615,9 +615,9 @@ importers:
         specifier: ^6.2.5
         version: 6.2.5
 
-  packages/payment-engine-client-sdk: {}
+  packages/payment-orchestration-client-sdk: {}
 
-  packages/payment-engine-core: {}
+  packages/payment-orchestration-core: {}
 
   shared: {}
 
