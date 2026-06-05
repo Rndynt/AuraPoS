@@ -21,29 +21,36 @@ export type StandaloneTransactionStatus =
   | 'requires_action'
   | 'succeeded'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'expired'
+  | 'voided'
+  | 'refunded'
+  | 'ignored';
 
 /**
  * StandalonePaymentTransactionDTO — the read model for a payment transaction.
  */
 export interface StandalonePaymentTransactionDTO {
   id: string;
-  paymentIntentId: string;
   merchantId: string;
-  method: string;
+  intentId: string;
+  providerAccountId: string | null;
   provider: string;
+  method: string;
+  transactionType: string;
   status: StandaloneTransactionStatus;
+  direction: 'incoming' | 'outgoing';
   amount: number;
-  receivedAmount: number | null;
+  currency: string;
+  parentTransactionId: string | null;
   providerReference: string | null;
+  providerEventId: string | null;
   providerPaymentUrl: string | null;
   providerQrString: string | null;
   failureReason: string | null;
   idempotencyKey: string | null;
   metadata: Record<string, unknown> | null;
+  rawProviderResponse: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
-  succeededAt: Date | null;
-  failedAt: Date | null;
-  cancelledAt: Date | null;
 }

@@ -20,8 +20,11 @@ export type StandaloneIntentStatus =
   | 'partially_paid'
   | 'paid'
   | 'overpaid'
+  | 'refunded'
   | 'voided'
-  | 'expired';
+  | 'expired'
+  | 'cancelled'
+  | 'failed';
 
 /**
  * StandalonePaymentIntentDTO — the read model returned to callers.
@@ -32,9 +35,11 @@ export type StandaloneIntentStatus =
 export interface StandalonePaymentIntentDTO {
   id: string;
   merchantId: string;
+  providerAccountId: string | null;
   sourceApp: string | null;
   externalTenantId: string | null;
   externalOutletId: string | null;
+  externalLocationId: string | null;
   externalPayableType: string;
   externalPayableId: string;
   currency: string;

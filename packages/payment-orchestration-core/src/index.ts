@@ -1,5 +1,5 @@
 /**
- * @northflow/payment-orchestration-core — Phase 8A Public API
+ * @northflow/payment-orchestration-core — Phase 8C Public API
  *
  * Framework-agnostic payment orchestration contracts:
  * - Domain types (merchantId-centric, not tenantId-centric)
@@ -42,6 +42,21 @@ export type {
   StandaloneTransactionStatus,
 } from './domain/PaymentTransaction';
 
+export type {
+  PaymentProviderEventDTO,
+  PaymentProviderEventProcessingStatus,
+  ReserveProviderEventInput,
+} from './domain/PaymentProviderEvent';
+
+export type {
+  PaymentIdempotencyKeyDTO,
+  IdempotencyKeyStatus,
+  ReserveIdempotencyKeyInput,
+  FindIdempotencyKeyInput,
+  MarkIdempotencyCompletedInput,
+  MarkIdempotencyFailedInput,
+} from './domain/PaymentIdempotencyKey';
+
 export { PaymentEngineError } from './domain/PaymentErrors';
 export type { PaymentEngineErrorCode } from './domain/PaymentErrors';
 
@@ -57,7 +72,7 @@ export type {
   CreatePaymentIntentInput,
 } from './application/contracts';
 
-// ── Port Interfaces ───────────────────────────────────────────────────────────
+// ── Port Interfaces (Phase 8A legacy — superseded by repositories.ts) ─────────
 
 export type {
   IPaymentMerchantRepository,
@@ -65,6 +80,26 @@ export type {
   IStandalonePaymentTransactionRepository,
   IPaymentProviderAccountRepository,
 } from './application/ports';
+
+// ── Repository Interfaces (Phase 8C — full standalone boundary) ───────────────
+
+export type {
+  PaymentMerchantRepository,
+  CreatePaymentMerchantInput,
+  PaymentProviderAccountRepository,
+  CreatePaymentProviderAccountInput,
+  PaymentIntentRepository,
+  CreatePaymentIntentDbInput,
+  UpdateIntentTotalsInput,
+  UpdateIntentStatusInput,
+  FindByExternalPayableInput,
+  PaymentTransactionRepository,
+  CreatePaymentTransactionInput,
+  UpdateTransactionStatusInput,
+  PaymentProviderEventRepository,
+  FindStalePendingInput,
+  PaymentIdempotencyRepository,
+} from './application/repositories';
 
 // ── Provider Action Types ─────────────────────────────────────────────────────
 
