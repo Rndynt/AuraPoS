@@ -1,12 +1,13 @@
 /**
- * @northflow/payment-orchestration-client-sdk — Phase 8B Public API
+ * @northflow/payment-orchestration-client-sdk — Phase 8D Public API
  *
  * Typed HTTP client for the payment-orchestration-service standalone API.
  *
  * Features:
  * - Fetch-compatible (Node 18+ / modern browsers)
- * - Typed request/response shapes
+ * - Typed request/response shapes aligned to service API contracts
  * - Custom header injection (service token, merchant ID, source app)
+ * - merchantId auto-injection from config into POST bodies
  * - Typed error classes (PaymentOrchestrationClientError, PaymentOrchestrationNetworkError)
  * - No React dependency
  * - No AuraPoS tenant/session dependency
@@ -28,12 +29,11 @@
  *   externalPayableId: 'order-123',
  *   currency: 'IDR',
  *   amountDue: 100000,
- *   sourceApp: 'aurapos',
  * });
  * ```
  */
 
-// ── Primary exports (Phase 8D) ─────────────────────────────────────────────────
+// ── Primary exports ────────────────────────────────────────────────────────────
 
 export { PaymentOrchestrationClient } from './client.ts';
 export { PaymentOrchestrationClientError, PaymentOrchestrationNetworkError } from './errors.ts';
@@ -41,17 +41,19 @@ export type {
   PaymentOrchestrationClientConfig,
   CreatePaymentIntentRequest,
   PaymentIntentResponse,
+  PaymentTransactionResponse,
   CreateGatewayPaymentRequest,
   GatewayPaymentResponse,
   PaymentIntentStatusResponse,
   RefundabilityResponse,
-  ProviderActionResponse,
+  RefundableTransactionResponse,
   CreateMerchantRequest,
   MerchantResponse,
   CreateProviderAccountRequest,
   ProviderAccountResponse,
   ConfirmFakeGatewayPaymentRequest,
   ConfirmFakeGatewayPaymentResponse,
+  ProviderActionResponse,
 } from './types.ts';
 
 // ── Deprecated aliases (Phase 8B) — will be removed in a future major version ──

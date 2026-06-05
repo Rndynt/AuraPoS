@@ -2,6 +2,7 @@
  * devFakeGateway — POST /v1/dev/fake-gateway/transactions/:transactionId/confirm
  *
  * Phase 8D: dev/test-only route to manually confirm a FakeGateway transaction.
+ * Phase 8D Hardening (Task 2): merchantId resolution with x-payment-merchant-id header fallback.
  *
  * ⚠ DISABLED IN PRODUCTION. This route does not exist in production builds.
  * Used to test the standalone service flow before real provider webhook wiring.
@@ -10,6 +11,7 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { ServiceContainer } from '../container.ts';
+import { resolveMerchantId } from './utils.ts';
 
 export function createDevFakeGatewayRouter(container: ServiceContainer): Router {
   const router = Router();
@@ -17,21 +19,24 @@ export function createDevFakeGatewayRouter(container: ServiceContainer): Router 
   /**
    * POST /v1/dev/fake-gateway/transactions/:transactionId/confirm
    *
-   * Body: { merchantId: string }
+   * Body: { merchantId?: string }
+   * merchantId falls back to x-payment-merchant-id header when not in body.
    */
   router.post(
     '/transactions/:transactionId/confirm',
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const transactionId = req.params['transactionId'];
-        const { merchantId } = req.body as Record<string, unknown>;
+        const body = req.body as Record<string, unknown>;
 
         if (!transactionId) {
           res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'transactionId is required' });
           return;
         }
-        if (!merchantId || typeof merchantId !== 'string') {
-          res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required in request body' });
+
+        const merchantId = resolveMerchantId(req, body['merchantId']);
+        if (!merchantId) {
+          res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
           return;
         }
 
@@ -69,6 +74,7 @@ function serializeTransaction(tx: {
   providerReference: string | null;
   providerPaymentUrl: string | null;
   providerQrString: string | null;
+  failureReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -84,6 +90,7 @@ function serializeTransaction(tx: {
     providerReference: tx.providerReference,
     providerPaymentUrl: tx.providerPaymentUrl,
     providerQrString: tx.providerQrString,
+    failureReason: tx.failureReason,
     createdAt: tx.createdAt,
     updatedAt: tx.updatedAt,
   };
@@ -98,6 +105,7 @@ function serializeIntent(intent: {
   amountRefunded: number;
   amountRemaining: number;
   currency: string;
+  expiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -110,6 +118,7 @@ function serializeIntent(intent: {
     amountRefunded: intent.amountRefunded,
     amountRemaining: intent.amountRemaining,
     currency: intent.currency,
+    expiresAt: intent.expiresAt ?? null,
     createdAt: intent.createdAt,
     updatedAt: intent.updatedAt,
   };

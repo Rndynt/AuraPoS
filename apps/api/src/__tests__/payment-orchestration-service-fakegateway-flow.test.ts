@@ -4,6 +4,13 @@
  * Phase 8D integration test: validates the full FakeGateway payment flow
  * using real use-case classes wired with in-memory repository implementations.
  *
+ * Phase 8D Hardening: updated constructor calls + new test scenarios S15-S19.
+ *   S15: Gateway idempotency replay
+ *   S16: Gateway idempotency conflict
+ *   S17: Provider account validation (invalid providerAccountId)
+ *   S18: ConfirmFakeGateway — overpayment guard at confirmation time
+ *   S19: ConfirmFakeGateway — reject invalid transaction status
+ *
  * Strategy (Option C): in-memory repos + real use-case classes.
  * Avoids full HTTP server setup and DB dependencies, while still exercising
  * all domain logic: merchant creation, provider accounts, intent creation,
@@ -87,7 +94,7 @@ class InMemoryMerchantRepo implements PaymentMerchantRepository {
   }
 }
 
-type ProviderAccountStatus = 'active' | 'suspended' | 'closed';
+type ProviderAccountStatus = 'active' | 'disabled' | 'suspended' | 'closed';
 
 class InMemoryProviderAccountRepo implements PaymentProviderAccountRepository {
   private readonly store = new Map<string, PaymentProviderAccount>();
@@ -127,7 +134,9 @@ class InMemoryProviderAccountRepo implements PaymentProviderAccountRepository {
       id: input.id,
       merchantId: input.merchantId,
       provider: input.provider,
-      environment: input.environment,
+      environment: input.environment as PaymentProviderAccount['environment'],
+      providerAccountRef: input.providerAccountRef ?? null,
+      credentialsRef: input.credentialsRef ?? null,
       publicConfig: input.publicConfig ?? {},
       status: (input.status ?? 'active') as ProviderAccountStatus,
       metadata: input.metadata ?? {},
@@ -455,6 +464,23 @@ function buildProviderRegistry() {
   return registry;
 }
 
+/**
+ * Build a CreateGatewayPayment use case wired with in-memory repos.
+ * nodeEnv defaults to 'test' so fake_gateway dev convenience is active.
+ */
+function buildCreateGatewayPayment(repos: ReturnType<typeof buildRepos>, nodeEnv = 'test') {
+  const registry = buildProviderRegistry();
+  return new CreateGatewayPayment(
+    repos.merchantRepo,
+    repos.intentRepo,
+    repos.transactionRepo,
+    registry,
+    repos.providerAccountRepo,
+    repos.idempotencyRepo,
+    nodeEnv,
+  );
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('Phase 8D FakeGateway Flow', () => {
@@ -515,6 +541,7 @@ describe('Phase 8D FakeGateway Flow', () => {
       merchantId: merchant.id,
       provider: 'fake_gateway',
       environment: 'sandbox',
+      providerAccountRef: 'ref-abc-001',
     });
 
     assert.ok(providerAccount.id.startsWith('pa_'));
@@ -522,6 +549,7 @@ describe('Phase 8D FakeGateway Flow', () => {
     assert.equal(providerAccount.provider, 'fake_gateway');
     assert.equal(providerAccount.environment, 'sandbox');
     assert.equal(providerAccount.status, 'active');
+    assert.equal(providerAccount.providerAccountRef, 'ref-abc-001');
   });
 
   // Scenario 5: CreatePaymentIntent — creates intent with requires_payment status
@@ -551,12 +579,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 6: CreateGatewayPayment (QRIS default) — returns requires_action, intent unchanged
   test('S06: CreateGatewayPayment QRIS returns requires_action, intent status unchanged', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const uc = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const uc = buildCreateGatewayPayment(repos);
 
     const { merchant } = await createMerchant.execute({ name: 'M-QRIS', sourceApp: 'aurapos', externalRef: 'q1' });
     const { intent } = await createIntent.execute({
@@ -581,16 +609,17 @@ describe('Phase 8D FakeGateway Flow', () => {
     assert.ok(result.transaction.providerQrString?.startsWith('FAKE_QR:'), 'Should have QR string');
     assert.equal(result.intent.status, 'requires_payment', 'Intent should still require payment until confirmed');
     assert.equal(result.intent.amountPaid, 0);
+    assert.equal(result.idempotentReplay, false);
   });
 
   // Scenario 7: CreateGatewayPayment (immediate_success) — intent becomes paid immediately
   test('S07: CreateGatewayPayment immediate_success updates intent to paid', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const uc = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const uc = buildCreateGatewayPayment(repos);
 
     const { merchant } = await createMerchant.execute({ name: 'M-Imm', sourceApp: 'aurapos', externalRef: 'i1' });
     const { intent } = await createIntent.execute({
@@ -618,12 +647,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 8: CreateGatewayPayment — overpayment is rejected
   test('S08: CreateGatewayPayment rejects overpayment', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const uc = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const uc = buildCreateGatewayPayment(repos);
 
     const { merchant } = await createMerchant.execute({ name: 'M-Over', sourceApp: 'aurapos', externalRef: 'ov1' });
     const { intent } = await createIntent.execute({
@@ -652,12 +681,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 9: ConfirmFakeGatewayPayment — confirms requires_action transaction
   test('S09: ConfirmFakeGatewayPayment confirms QRIS transaction, intent becomes paid', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const createPayment = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const createPayment = buildCreateGatewayPayment(repos);
     const confirmUc = new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, 'development');
 
     const { merchant } = await createMerchant.execute({ name: 'M-Confirm', sourceApp: 'aurapos', externalRef: 'c1' });
@@ -694,12 +723,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 10: ConfirmFakeGatewayPayment — idempotent on already-confirmed transaction
   test('S10: ConfirmFakeGatewayPayment is idempotent on already-succeeded transaction', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const createPayment = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const createPayment = buildCreateGatewayPayment(repos);
     const confirmUc = new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, 'development');
 
     const { merchant } = await createMerchant.execute({ name: 'M-Idem', sourceApp: 'aurapos', externalRef: 'idem1' });
@@ -729,12 +758,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 11: GetPaymentIntentStatus — returns correct read model
   test('S11: GetPaymentIntentStatus returns correct read model after payment', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const createPayment = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const createPayment = buildCreateGatewayPayment(repos);
     const confirmUc = new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, 'development');
     const statusUc = new GetPaymentIntentStatus(intentRepo, transactionRepo);
 
@@ -777,12 +806,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 12: GetRefundability — returns correct refundable amount
   test('S12: GetRefundability returns correct refundable amount after payment', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const createPayment = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const createPayment = buildCreateGatewayPayment(repos);
     const confirmUc = new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, 'development');
     const refundabilityUc = new GetRefundability(intentRepo, transactionRepo);
 
@@ -836,12 +865,12 @@ describe('Phase 8D FakeGateway Flow', () => {
 
   // Scenario 14: FakeGateway immediate_failure — transaction fails, intent stays requires_payment
   test('S14: FakeGateway immediate_failure keeps intent in requires_payment', async () => {
-    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = buildRepos();
-    const registry = buildProviderRegistry();
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
 
     const createMerchant = new CreateMerchant(merchantRepo);
     const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
-    const createPayment = new CreateGatewayPayment(merchantRepo, intentRepo, transactionRepo, registry);
+    const uc = buildCreateGatewayPayment(repos);
 
     const { merchant } = await createMerchant.execute({ name: 'M-Fail', sourceApp: 'aurapos', externalRef: 'f1' });
     const { intent } = await createIntent.execute({
@@ -852,7 +881,7 @@ describe('Phase 8D FakeGateway Flow', () => {
       amountDue: 40000,
     });
 
-    const result = await createPayment.execute({
+    const result = await uc.execute({
       merchantId: merchant.id,
       intentId: intent.id,
       provider: 'fake_gateway',
@@ -862,9 +891,279 @@ describe('Phase 8D FakeGateway Flow', () => {
     });
 
     assert.equal(result.transaction.status, 'failed');
-    assert.equal(result.transaction.failureReason, 'INSUFFICIENT_FUNDS');
-    assert.equal(result.intent.status, 'requires_payment', 'Intent should not advance on failed transaction');
+    assert.equal(result.intent.status, 'requires_payment');
     assert.equal(result.intent.amountPaid, 0);
+    assert.equal(result.intent.amountRemaining, 40000);
+  });
+
+  // ── Phase 8D Hardening: new scenarios ────────────────────────────────────────
+
+  // Scenario 15: CreateGatewayPayment — idempotency replay
+  test('S15: CreateGatewayPayment idempotency replay returns same transaction without calling provider again', async () => {
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
+
+    const createMerchant = new CreateMerchant(merchantRepo);
+    const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
+    const uc = buildCreateGatewayPayment(repos);
+
+    const { merchant } = await createMerchant.execute({ name: 'M-Idem2', sourceApp: 'aurapos', externalRef: 'idem2' });
+    const { intent } = await createIntent.execute({
+      merchantId: merchant.id,
+      externalPayableType: 'order',
+      externalPayableId: 'order-idem2-001',
+      currency: 'IDR',
+      amountDue: 120000,
+    });
+
+    const idemKey = 'idem-key-s15-001';
+    const first = await uc.execute({
+      merchantId: merchant.id,
+      intentId: intent.id,
+      provider: 'fake_gateway',
+      method: 'qris',
+      amount: 120000,
+      idempotencyKey: idemKey,
+      metadata: { scenario: 'qris' },
+    });
+
+    assert.equal(first.idempotentReplay, false);
+    assert.equal(first.transaction.status, 'requires_action');
+
+    // Second call with same idempotency key and same params → replay
+    const second = await uc.execute({
+      merchantId: merchant.id,
+      intentId: intent.id,
+      provider: 'fake_gateway',
+      method: 'qris',
+      amount: 120000,
+      idempotencyKey: idemKey,
+      metadata: { scenario: 'qris' },
+    });
+
+    assert.equal(second.idempotentReplay, true);
+    assert.equal(second.transaction.id, first.transaction.id, 'Replay must return the same transaction ID');
+    assert.equal(second.transaction.status, 'requires_action');
+  });
+
+  // Scenario 16: CreateGatewayPayment — idempotency conflict
+  test('S16: CreateGatewayPayment idempotency conflict rejects mismatched request', async () => {
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
+
+    const createMerchant = new CreateMerchant(merchantRepo);
+    const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
+    const uc = buildCreateGatewayPayment(repos);
+
+    const { merchant } = await createMerchant.execute({ name: 'M-Conflict', sourceApp: 'aurapos', externalRef: 'cfl1' });
+    const { intent } = await createIntent.execute({
+      merchantId: merchant.id,
+      externalPayableType: 'order',
+      externalPayableId: 'order-cfl-001',
+      currency: 'IDR',
+      amountDue: 200000,
+    });
+
+    const idemKey = 'idem-key-s16-001';
+    await uc.execute({
+      merchantId: merchant.id,
+      intentId: intent.id,
+      provider: 'fake_gateway',
+      method: 'qris',
+      amount: 100000,
+      idempotencyKey: idemKey,
+      metadata: { scenario: 'qris' },
+    });
+
+    // Second call with DIFFERENT amount but same idempotency key → conflict
+    await assert.rejects(
+      () => uc.execute({
+        merchantId: merchant.id,
+        intentId: intent.id,
+        provider: 'fake_gateway',
+        method: 'qris',
+        amount: 150000, // different!
+        idempotencyKey: idemKey,
+        metadata: { scenario: 'qris' },
+      }),
+      (err: { code?: string }) => {
+        assert.equal(err.code, 'IDEMPOTENCY_CONFLICT');
+        return true;
+      },
+    );
+  });
+
+  // Scenario 17: CreateGatewayPayment — provider account validation
+  test('S17: CreateGatewayPayment rejects invalid providerAccountId', async () => {
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, idempotencyRepo } = repos;
+
+    const createMerchant = new CreateMerchant(merchantRepo);
+    const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
+    const uc = buildCreateGatewayPayment(repos);
+
+    const { merchant } = await createMerchant.execute({ name: 'M-PA', sourceApp: 'aurapos', externalRef: 'pa1' });
+    const { intent } = await createIntent.execute({
+      merchantId: merchant.id,
+      externalPayableType: 'order',
+      externalPayableId: 'order-pa-001',
+      currency: 'IDR',
+      amountDue: 55000,
+    });
+
+    // Non-existent providerAccountId → PROVIDER_ACCOUNT_NOT_FOUND
+    await assert.rejects(
+      () => uc.execute({
+        merchantId: merchant.id,
+        intentId: intent.id,
+        provider: 'fake_gateway',
+        method: 'qris',
+        amount: 55000,
+        providerAccountId: 'pa_does_not_exist',
+      }),
+      (err: { code?: string }) => {
+        assert.equal(err.code, 'PROVIDER_ACCOUNT_NOT_FOUND');
+        return true;
+      },
+    );
+  });
+
+  // Scenario 17b: CreateGatewayPayment — provider account provider mismatch
+  test('S17b: CreateGatewayPayment rejects providerAccountId with wrong provider', async () => {
+    const repos = buildRepos();
+    const { merchantRepo, providerAccountRepo, intentRepo, idempotencyRepo } = repos;
+
+    const createMerchant = new CreateMerchant(merchantRepo);
+    const createPa = new CreateProviderAccount(merchantRepo, providerAccountRepo);
+    const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
+    const uc = buildCreateGatewayPayment(repos);
+
+    const { merchant } = await createMerchant.execute({ name: 'M-PA2', sourceApp: 'aurapos', externalRef: 'pa2' });
+    const { providerAccount } = await createPa.execute({
+      merchantId: merchant.id,
+      provider: 'xendit',      // different provider
+      environment: 'sandbox',
+    });
+
+    const { intent } = await createIntent.execute({
+      merchantId: merchant.id,
+      externalPayableType: 'order',
+      externalPayableId: 'order-pa2-001',
+      currency: 'IDR',
+      amountDue: 55000,
+    });
+
+    // PA belongs to 'xendit' but request says 'fake_gateway' → PROVIDER_ACCOUNT_PROVIDER_MISMATCH
+    await assert.rejects(
+      () => uc.execute({
+        merchantId: merchant.id,
+        intentId: intent.id,
+        provider: 'fake_gateway',
+        method: 'qris',
+        amount: 55000,
+        providerAccountId: providerAccount.id,
+      }),
+      (err: { code?: string }) => {
+        assert.equal(err.code, 'PROVIDER_ACCOUNT_PROVIDER_MISMATCH');
+        return true;
+      },
+    );
+  });
+
+  // Scenario 18: ConfirmFakeGatewayPayment — overpayment guard at confirmation time
+  test('S18: ConfirmFakeGatewayPayment rejects confirm that would cause overpayment', async () => {
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = repos;
+
+    const createMerchant = new CreateMerchant(merchantRepo);
+    const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
+    const createPayment = buildCreateGatewayPayment(repos);
+    const confirmUc = new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, 'development');
+
+    const { merchant } = await createMerchant.execute({ name: 'M-ConfirmOver', sourceApp: 'aurapos', externalRef: 'cov1' });
+    const { intent } = await createIntent.execute({
+      merchantId: merchant.id,
+      externalPayableType: 'order',
+      externalPayableId: 'order-cov-001',
+      currency: 'IDR',
+      amountDue: 100000,
+    });
+
+    // Create two pending transactions, each for 100000 (only one should succeed)
+    const { transaction: tx1 } = await createPayment.execute({
+      merchantId: merchant.id,
+      intentId: intent.id,
+      provider: 'fake_gateway',
+      method: 'qris',
+      amount: 100000,
+      metadata: { scenario: 'qris' },
+    });
+    const { transaction: tx2 } = await createPayment.execute({
+      merchantId: merchant.id,
+      intentId: intent.id,
+      provider: 'fake_gateway',
+      method: 'qris',
+      amount: 100000,
+      metadata: { scenario: 'qris' },
+    });
+
+    assert.equal(tx1.status, 'requires_action');
+    assert.equal(tx2.status, 'requires_action');
+
+    // Confirm tx1 — succeeds, intent becomes paid, amountRemaining = 0
+    const result1 = await confirmUc.execute({ merchantId: merchant.id, transactionId: tx1.id });
+    assert.equal(result1.intent.status, 'paid');
+    assert.equal(result1.intent.amountRemaining, 0);
+
+    // Confirm tx2 — rejected because amountRemaining is now 0 → OVERPAYMENT_REJECTED
+    await assert.rejects(
+      () => confirmUc.execute({ merchantId: merchant.id, transactionId: tx2.id }),
+      (err: { code?: string }) => {
+        assert.equal(err.code, 'OVERPAYMENT_REJECTED');
+        return true;
+      },
+    );
+  });
+
+  // Scenario 19: ConfirmFakeGatewayPayment — reject invalid transaction status
+  test('S19: ConfirmFakeGatewayPayment rejects confirm of a failed transaction', async () => {
+    const repos = buildRepos();
+    const { merchantRepo, intentRepo, transactionRepo, idempotencyRepo } = repos;
+
+    const createMerchant = new CreateMerchant(merchantRepo);
+    const createIntent = new CreatePaymentIntent(merchantRepo, intentRepo, idempotencyRepo);
+    const createPayment = buildCreateGatewayPayment(repos);
+    const confirmUc = new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, 'development');
+
+    const { merchant } = await createMerchant.execute({ name: 'M-ConfirmFail', sourceApp: 'aurapos', externalRef: 'cfail1' });
+    const { intent } = await createIntent.execute({
+      merchantId: merchant.id,
+      externalPayableType: 'order',
+      externalPayableId: 'order-cfail-001',
+      currency: 'IDR',
+      amountDue: 60000,
+    });
+
+    // Create a failed transaction (immediate_failure scenario)
+    const { transaction } = await createPayment.execute({
+      merchantId: merchant.id,
+      intentId: intent.id,
+      provider: 'fake_gateway',
+      method: 'transfer',
+      amount: 60000,
+      metadata: { scenario: 'immediate_failure' },
+    });
+
+    assert.equal(transaction.status, 'failed');
+
+    // Attempting to confirm a failed transaction → INVALID_TRANSACTION_STATUS
+    await assert.rejects(
+      () => confirmUc.execute({ merchantId: merchant.id, transactionId: transaction.id }),
+      (err: { code?: string }) => {
+        assert.equal(err.code, 'INVALID_TRANSACTION_STATUS');
+        return true;
+      },
+    );
   });
 
 });

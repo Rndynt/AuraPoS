@@ -2,6 +2,9 @@
  * providerAccounts — routes under /v1/merchants/:merchantId/provider-accounts
  *
  * Phase 8D: real implementation.
+ * Phase 8D Hardening (Task 3):
+ *   - Return providerAccountRef directly from DTO field.
+ *   - Never expose credentialsRef in any response.
  */
 
 import { Router } from 'express';
@@ -50,6 +53,7 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
       });
 
       const pa = result.providerAccount;
+      // ⚠ credentialsRef intentionally excluded from response.
       res.status(201).json({
         ok: true,
         data: {
@@ -57,10 +61,10 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
           merchantId: pa.merchantId,
           provider: pa.provider,
           environment: pa.environment,
-          providerAccountRef: pa.publicConfig?.['providerAccountRef'] ?? null,
+          providerAccountRef: pa.providerAccountRef ?? null,
           status: pa.status,
-          publicConfig: pa.publicConfig,
-          metadata: pa.metadata,
+          publicConfig: pa.publicConfig ?? {},
+          metadata: pa.metadata ?? {},
         },
       });
     } catch (err) {
@@ -86,6 +90,7 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
         return;
       }
 
+      // ⚠ credentialsRef intentionally excluded from response.
       res.json({
         ok: true,
         data: {
@@ -93,9 +98,10 @@ export function createProviderAccountsRouter(container: ServiceContainer): Route
           merchantId: pa.merchantId,
           provider: pa.provider,
           environment: pa.environment,
+          providerAccountRef: pa.providerAccountRef ?? null,
           status: pa.status,
-          publicConfig: pa.publicConfig,
-          metadata: pa.metadata,
+          publicConfig: pa.publicConfig ?? {},
+          metadata: pa.metadata ?? {},
         },
       });
     } catch (err) {

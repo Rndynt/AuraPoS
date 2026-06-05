@@ -2,17 +2,23 @@
  * intents — payment intent routes for payment-orchestration-service.
  *
  * Phase 8D: real implementation wired to use cases.
+ * Phase 8D Hardening (Task 2): merchantId resolution with x-payment-merchant-id header fallback.
  *
  * Routes:
  *   POST /v1/payment-intents
  *   GET  /v1/payment-intents/:id/status
  *   GET  /v1/payment-intents/:id/refundability
  *   POST /v1/payment-intents/:id/gateway-payments
+ *
+ * merchantId resolution:
+ *   POST bodies: body.merchantId → x-payment-merchant-id header
+ *   GET params:  ?merchantId= query → x-payment-merchant-id header
  */
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { ServiceContainer } from '../container.ts';
+import { resolveMerchantId, resolveMerchantIdQuery } from './utils.ts';
 
 export function createIntentsRouter(container: ServiceContainer): Router {
   const router = Router();
@@ -24,7 +30,6 @@ export function createIntentsRouter(container: ServiceContainer): Router {
     try {
       const body = req.body as Record<string, unknown>;
       const {
-        merchantId,
         providerAccountId,
         sourceApp,
         externalTenantId,
@@ -40,8 +45,9 @@ export function createIntentsRouter(container: ServiceContainer): Router {
         idempotencyKey,
       } = body;
 
-      if (!merchantId || typeof merchantId !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      const merchantId = resolveMerchantId(req, body['merchantId']);
+      if (!merchantId) {
+        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
         return;
       }
       if (!externalPayableType || typeof externalPayableType !== 'string') {
@@ -89,14 +95,15 @@ export function createIntentsRouter(container: ServiceContainer): Router {
   router.get('/:id/status', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const intentId = req.params['id'];
-      const merchantId = req.query['merchantId'] as string | undefined;
 
       if (!intentId) {
         res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
         return;
       }
+
+      const merchantId = resolveMerchantIdQuery(req);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId query param is required' });
+        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (query param or x-payment-merchant-id header)' });
         return;
       }
 
@@ -128,14 +135,15 @@ export function createIntentsRouter(container: ServiceContainer): Router {
   router.get('/:id/refundability', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const intentId = req.params['id'];
-      const merchantId = req.query['merchantId'] as string | undefined;
 
       if (!intentId) {
         res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
         return;
       }
+
+      const merchantId = resolveMerchantIdQuery(req);
       if (!merchantId) {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId query param is required' });
+        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (query param or x-payment-merchant-id header)' });
         return;
       }
 
@@ -165,10 +173,11 @@ export function createIntentsRouter(container: ServiceContainer): Router {
       }
 
       const body = req.body as Record<string, unknown>;
-      const { merchantId, provider, method, amount, providerAccountId, idempotencyKey, metadata } = body;
+      const { provider, method, amount, providerAccountId, idempotencyKey, metadata } = body;
 
-      if (!merchantId || typeof merchantId !== 'string') {
-        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      const merchantId = resolveMerchantId(req, body['merchantId']);
+      if (!merchantId) {
+        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
         return;
       }
       if (!provider || typeof provider !== 'string') {
@@ -195,11 +204,12 @@ export function createIntentsRouter(container: ServiceContainer): Router {
         metadata: metadata != null && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : null,
       });
 
-      res.status(201).json({
+      res.status(result.idempotentReplay ? 200 : 201).json({
         ok: true,
         data: {
           transaction: serializeTransaction(result.transaction),
           intent: serializeIntent(result.intent),
+          idempotentReplay: result.idempotentReplay ?? false,
         },
       });
     } catch (err) {
@@ -238,7 +248,7 @@ function serializeIntent(intent: {
     amountRemaining: intent.amountRemaining,
     status: intent.status,
     allowPartial: intent.allowPartial,
-    expiresAt: intent.expiresAt,
+    expiresAt: intent.expiresAt ?? null,
     createdAt: intent.createdAt,
     updatedAt: intent.updatedAt,
   };

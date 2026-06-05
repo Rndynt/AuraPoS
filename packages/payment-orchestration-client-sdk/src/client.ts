@@ -9,7 +9,11 @@
  *
  * Phase 8A: methods implemented as real HTTP wrappers.
  * Phase 8B: class renamed to PaymentOrchestrationClient. PaymentEngineClient is a deprecated alias.
- * The service returns 501 for most routes in Phase 8A/8B — this is expected.
+ * Phase 8D Hardening:
+ *   - merchantId injected into POST bodies from config when not provided in input.
+ *   - GET status/refundability: merchantId from config used via x-payment-merchant-id header.
+ *   - Response types updated to rich service shapes.
+ *   - confirmFakeGatewayPayment: merchantId optional, falls back to config.
  */
 
 import { PaymentOrchestrationClientError, PaymentOrchestrationNetworkError } from './errors.ts';
@@ -32,9 +36,11 @@ import type {
 export class PaymentOrchestrationClient {
   private readonly baseUrl: string;
   private readonly defaultHeaders: Record<string, string>;
+  private readonly configMerchantId: string | undefined;
 
   constructor(config: PaymentOrchestrationClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, '');
+    this.configMerchantId = config.merchantId;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
     };
@@ -78,8 +84,8 @@ export class PaymentOrchestrationClient {
 
     if (!response.ok) {
       const code =
-        data != null && typeof data === 'object' && 'code' in data
-          ? String((data as Record<string, unknown>)['code'])
+        data != null && typeof data === 'object' && 'error' in data
+          ? String((data as Record<string, unknown>)['error'])
           : undefined;
       const message =
         data != null && typeof data === 'object' && 'message' in data
@@ -96,6 +102,15 @@ export class PaymentOrchestrationClient {
     return data as T;
   }
 
+  /**
+   * Merge the SDK config's merchantId into a POST body when not explicitly provided.
+   * Returns the enriched body object.
+   */
+  private injectMerchantId<T extends { merchantId?: string }>(input: T): T & { merchantId?: string } {
+    if (input.merchantId || !this.configMerchantId) return input;
+    return { ...input, merchantId: this.configMerchantId };
+  }
+
   // ── Public methods ──────────────────────────────────────────────────────────
 
   /**
@@ -103,13 +118,16 @@ export class PaymentOrchestrationClient {
    *
    * POST /v1/payment-intents
    *
-   * Phase 8A/8B: service returns 501. Call will throw PaymentOrchestrationClientError with status=501.
-   * Phase 8D: fully implemented.
+   * merchantId from input or falls back to config.merchantId.
    */
   async createPaymentIntent(
     input: CreatePaymentIntentRequest,
   ): Promise<PaymentIntentResponse> {
-    return this.request<PaymentIntentResponse>('POST', '/v1/payment-intents', input);
+    return this.request<PaymentIntentResponse>(
+      'POST',
+      '/v1/payment-intents',
+      this.injectMerchantId(input),
+    );
   }
 
   /**
@@ -117,7 +135,7 @@ export class PaymentOrchestrationClient {
    *
    * POST /v1/payment-intents/:intentId/gateway-payments
    *
-   * Phase 8A/8B: service returns 501.
+   * merchantId from input or falls back to config.merchantId.
    */
   async createGatewayPayment(
     intentId: string,
@@ -126,7 +144,7 @@ export class PaymentOrchestrationClient {
     return this.request<GatewayPaymentResponse>(
       'POST',
       `/v1/payment-intents/${intentId}/gateway-payments`,
-      input,
+      this.injectMerchantId(input),
     );
   }
 
@@ -135,26 +153,36 @@ export class PaymentOrchestrationClient {
    *
    * GET /v1/payment-intents/:intentId/status
    *
-   * Phase 8A/8B: service returns 501.
+   * merchantId resolved from: options.merchantId → config.merchantId header (x-payment-merchant-id).
    */
-  async getPaymentIntentStatus(intentId: string): Promise<PaymentIntentStatusResponse> {
+  async getPaymentIntentStatus(
+    intentId: string,
+    options?: { merchantId?: string },
+  ): Promise<PaymentIntentStatusResponse> {
+    const merchantId = options?.merchantId ?? this.configMerchantId;
+    const qs = merchantId ? `?merchantId=${encodeURIComponent(merchantId)}` : '';
     return this.request<PaymentIntentStatusResponse>(
       'GET',
-      `/v1/payment-intents/${intentId}/status`,
+      `/v1/payment-intents/${intentId}/status${qs}`,
     );
   }
 
   /**
-   * getRefundability — check whether a payment intent can be refunded.
+   * getRefundability — check the refundable amount for a payment intent.
    *
    * GET /v1/payment-intents/:intentId/refundability
    *
-   * Phase 8D: fully implemented.
+   * merchantId resolved from: options.merchantId → config.merchantId header.
    */
-  async getRefundability(intentId: string): Promise<RefundabilityResponse> {
+  async getRefundability(
+    intentId: string,
+    options?: { merchantId?: string },
+  ): Promise<RefundabilityResponse> {
+    const merchantId = options?.merchantId ?? this.configMerchantId;
+    const qs = merchantId ? `?merchantId=${encodeURIComponent(merchantId)}` : '';
     return this.request<RefundabilityResponse>(
       'GET',
-      `/v1/payment-intents/${intentId}/refundability`,
+      `/v1/payment-intents/${intentId}/refundability${qs}`,
     );
   }
 
@@ -164,7 +192,6 @@ export class PaymentOrchestrationClient {
    * createMerchant — create or return an existing merchant.
    *
    * POST /v1/merchants
-   * Phase 8D.
    */
   async createMerchant(input: CreateMerchantRequest): Promise<MerchantResponse> {
     return this.request<MerchantResponse>('POST', '/v1/merchants', input);
@@ -174,7 +201,6 @@ export class PaymentOrchestrationClient {
    * getMerchant — retrieve a merchant by ID.
    *
    * GET /v1/merchants/:id
-   * Phase 8D.
    */
   async getMerchant(id: string): Promise<MerchantResponse> {
     return this.request<MerchantResponse>('GET', `/v1/merchants/${id}`);
@@ -184,7 +210,6 @@ export class PaymentOrchestrationClient {
    * createProviderAccount — create a provider account for a merchant.
    *
    * POST /v1/merchants/:merchantId/provider-accounts
-   * Phase 8D.
    */
   async createProviderAccount(
     merchantId: string,
@@ -201,7 +226,6 @@ export class PaymentOrchestrationClient {
    * getProviderAccount — retrieve a provider account.
    *
    * GET /v1/merchants/:merchantId/provider-accounts/:id
-   * Phase 8D.
    */
   async getProviderAccount(
     merchantId: string,
@@ -219,16 +243,17 @@ export class PaymentOrchestrationClient {
    * POST /v1/dev/fake-gateway/transactions/:transactionId/confirm
    *
    * ⚠ DEV/TEST ONLY. Not available in production.
-   * Phase 8D.
+   *
+   * merchantId from input or falls back to config.merchantId.
    */
   async confirmFakeGatewayPayment(
     transactionId: string,
-    input: ConfirmFakeGatewayPaymentRequest,
+    input?: ConfirmFakeGatewayPaymentRequest,
   ): Promise<ConfirmFakeGatewayPaymentResponse> {
     return this.request<ConfirmFakeGatewayPaymentResponse>(
       'POST',
       `/v1/dev/fake-gateway/transactions/${transactionId}/confirm`,
-      input,
+      this.injectMerchantId(input ?? {}),
     );
   }
 }

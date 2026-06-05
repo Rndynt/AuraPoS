@@ -159,8 +159,8 @@ export function mapMerchantRow(row: MerchantRow): PaymentMerchant {
 /**
  * mapProviderAccountRow — maps a payment_orchestration_provider_accounts row to PaymentProviderAccount.
  *
- * `credentialsRef` is preserved as an opaque reference; raw credentials are never returned.
- * Callers must NOT expose credentialsRef to external APIs.
+ * `providerAccountRef` is the provider's own account identifier — safe to expose in API responses.
+ * `credentialsRef` is an opaque secret-store reference — callers MUST NOT expose it in public responses.
  */
 export function mapProviderAccountRow(row: ProviderAccountRow): PaymentProviderAccount {
   return {
@@ -168,6 +168,7 @@ export function mapProviderAccountRow(row: ProviderAccountRow): PaymentProviderA
     merchantId: row.merchantId,
     provider: row.provider,
     environment: (row.environment as PaymentProviderAccountEnvironment) ?? 'sandbox',
+    providerAccountRef: row.providerAccountRef ?? null,
     credentialsRef: row.credentialsRef ?? null,
     publicConfig: (row.publicConfig as Record<string, unknown>) ?? {},
     status: (row.status as PaymentProviderAccountStatus) ?? 'active',

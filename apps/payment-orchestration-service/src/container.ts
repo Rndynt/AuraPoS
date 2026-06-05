@@ -2,6 +2,9 @@
  * container — dependency injection container for payment-orchestration-service.
  *
  * Phase 8D: DB connection, repositories, provider registry, and use cases wired.
+ * Phase 8D Hardening:
+ *   - CreateGatewayPayment now receives providerAccountRepo, idempotencyRepo, nodeEnv
+ *     for provider account validation (Task 4) and idempotency guard (Task 5).
  *
  * No AuraPoS session/tenant middleware.
  * No POS order domain deps.
@@ -90,6 +93,9 @@ export function createContainer(config: PaymentOrchestrationServiceConfig): Serv
       intentRepo,
       transactionRepo,
       providerRegistry,
+      providerAccountRepo,   // Task 4: provider account validation
+      idempotencyRepo,       // Task 5: gateway payment idempotency
+      config.nodeEnv,        // Task 4: fake_gateway dev convenience in non-production
     ),
     confirmFakeGatewayPayment: new ConfirmFakeGatewayPayment(
       transactionRepo,

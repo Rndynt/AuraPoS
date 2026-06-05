@@ -2,7 +2,7 @@
  * webhooks — placeholder webhook routes for payment-orchestration-service.
  *
  * Phase 8A: returns 501 Not Implemented.
- * Phase 8D: HandlePaymentProviderWebhook use case wired here.
+ * Phase 8E: HandlePaymentProviderWebhook use case will be wired here.
  *
  * Route: POST /v1/webhooks/:provider
  */
@@ -15,7 +15,7 @@ export function createWebhooksRouter(): Router {
 
   /**
    * POST /v1/webhooks/:provider
-   * TODO(Phase 8D): wire to HandlePaymentProviderWebhook use case.
+   * TODO(Phase 8E): wire to HandlePaymentProviderWebhook use case.
    */
   router.post('/:provider', (req: Request, res: Response) => {
     const provider = req.params['provider'];
@@ -24,8 +24,8 @@ export function createWebhooksRouter(): Router {
       error: 'NOT_IMPLEMENTED',
       message:
         `POST /v1/webhooks/${provider} is not yet implemented. ` +
-        `Use the embedded AuraPoS webhook route at /api/payment-engine/webhooks/${provider} until Phase 8D.`,
-      phase: '8A',
+        `Real provider webhook ingestion is planned for Phase 8E.`,
+      phase: '8E',
     });
   });
 

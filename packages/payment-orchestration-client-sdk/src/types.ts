@@ -4,11 +4,12 @@
  * Self-contained; does NOT import from @northflow/payment-orchestration-core to keep
  * the SDK portable and independently versioned.
  *
- * These types mirror the service API contracts and should stay in sync
- * with packages/payment-orchestration-core/src/application/contracts.ts.
- *
- * Phase 8B: primary config type is now PaymentOrchestrationClientConfig.
- * PaymentEngineClientConfig is a deprecated alias.
+ * Phase 8D Hardening: rich response shapes aligned to actual service API contracts.
+ *   - GatewayPaymentResponse: { transaction, intent, idempotentReplay }
+ *   - PaymentIntentStatusResponse: { intent, latestTransaction, isTerminal, requiresAction, canRetryPayment }
+ *   - RefundabilityResponse: { intentId, merchantId, totalRefundable, currency, transactions }
+ *   - ProviderAccountResponse: includes providerAccountRef; never credentialsRef
+ *   - ConfirmFakeGatewayPaymentRequest.merchantId: optional (falls back to config.merchantId)
  */
 
 // ── Client Configuration ──────────────────────────────────────────────────────
@@ -16,6 +17,7 @@
 export interface PaymentOrchestrationClientConfig {
   baseUrl: string;
   serviceToken?: string;
+  /** Default merchantId injected into request bodies and headers when not explicitly provided. */
   merchantId?: string;
   sourceApp?: string;
 }
@@ -23,19 +25,60 @@ export interface PaymentOrchestrationClientConfig {
 /** @deprecated Use PaymentOrchestrationClientConfig instead. */
 export type PaymentEngineClientConfig = PaymentOrchestrationClientConfig;
 
+// ── Shared sub-types ──────────────────────────────────────────────────────────
+
+/**
+ * PaymentIntentResponse — serialized payment intent.
+ * Matches the serializeIntent() shape returned by the service.
+ */
+export interface PaymentIntentResponse {
+  id: string;
+  merchantId: string;
+  externalPayableType: string;
+  externalPayableId: string;
+  currency: string;
+  amountDue: number;
+  amountPaid: number;
+  amountRefunded: number;
+  amountRemaining: number;
+  status: string;
+  allowPartial: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * PaymentTransactionResponse — serialized payment transaction.
+ * Matches the serializeTransaction() shape returned by the service.
+ */
+export interface PaymentTransactionResponse {
+  id: string;
+  intentId: string;
+  merchantId: string;
+  provider: string;
+  method: string;
+  status: string;
+  amount: number;
+  currency: string;
+  providerReference: string | null;
+  providerPaymentUrl: string | null;
+  providerQrString: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Create Payment Intent ─────────────────────────────────────────────────────
 
 /**
  * CreatePaymentIntentRequest — synced with core CreatePaymentIntentInput.
  *
- * Optional external context fields allow multi-source applications to pass
- * their own tenant/outlet/location IDs for traceability without coupling the
- * orchestration engine to AuraPoS internals.
- *
- * Note: merchantId and sourceApp can be omitted if the client was constructed
- * with those values — they will be injected via headers automatically.
+ * merchantId is optional; falls back to SDK config.merchantId (injected via body
+ * and x-payment-merchant-id header automatically).
  */
 export interface CreatePaymentIntentRequest {
+  /** Optional — falls back to SDK config.merchantId when omitted. */
   merchantId?: string;
   sourceApp?: string | null;
   externalTenantId?: string | null;
@@ -51,25 +94,11 @@ export interface CreatePaymentIntentRequest {
   idempotencyKey?: string | null;
 }
 
-export interface PaymentIntentResponse {
-  id: string;
-  merchantId: string;
-  externalPayableType: string;
-  externalPayableId: string;
-  currency: string;
-  amountDue: number;
-  amountPaid: number;
-  amountRefunded: number;
-  amountRemaining: number;
-  status: string;
-  allowPartial: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 // ── Create Gateway Payment ────────────────────────────────────────────────────
 
 export interface CreateGatewayPaymentRequest {
+  /** Optional — falls back to SDK config.merchantId when omitted. */
+  merchantId?: string;
   provider: string;
   method: string;
   amount: number;
@@ -78,33 +107,25 @@ export interface CreateGatewayPaymentRequest {
   metadata?: Record<string, unknown> | null;
 }
 
-export interface ProviderActionResponse {
-  type: string;
-  descriptor: string;
-  label: string;
-  value: string | null;
-  url: string | null;
-}
-
+/**
+ * GatewayPaymentResponse — rich response matching the service shape.
+ * Contains both the created transaction and the updated intent.
+ */
 export interface GatewayPaymentResponse {
-  transactionId: string;
-  status: string;
-  providerReference: string | null;
-  providerPaymentUrl: string | null;
-  providerQrString: string | null;
-  providerActions: ProviderActionResponse[];
-  immediateSuccess: boolean;
+  transaction: PaymentTransactionResponse;
+  intent: PaymentIntentResponse;
+  /** True when idempotencyKey matched a prior completed request (provider NOT called again). */
   idempotentReplay: boolean;
 }
 
 // ── Payment Intent Status ─────────────────────────────────────────────────────
 
+/**
+ * PaymentIntentStatusResponse — rich status read model matching the service shape.
+ */
 export interface PaymentIntentStatusResponse {
-  intentId: string;
-  status: string;
-  amountDue: number;
-  amountPaid: number;
-  amountRemaining: number;
+  intent: PaymentIntentResponse;
+  latestTransaction: PaymentTransactionResponse | null;
   isTerminal: boolean;
   requiresAction: boolean;
   canRetryPayment: boolean;
@@ -112,10 +133,27 @@ export interface PaymentIntentStatusResponse {
 
 // ── Refundability ─────────────────────────────────────────────────────────────
 
+/**
+ * RefundableTransactionResponse — per-transaction refundability breakdown.
+ */
+export interface RefundableTransactionResponse {
+  transactionId: string;
+  amount: number;
+  amountAlreadyRefunded: number;
+  amountRefundable: number;
+  provider: string;
+  method: string;
+}
+
+/**
+ * RefundabilityResponse — rich response matching the service shape.
+ */
 export interface RefundabilityResponse {
-  canRefund: boolean;
-  refundableAmount: number;
-  reason: string | null;
+  intentId: string;
+  merchantId: string;
+  totalRefundable: number;
+  currency: string;
+  transactions: RefundableTransactionResponse[];
 }
 
 // ── Phase 8D: Merchant ────────────────────────────────────────────────────────
@@ -143,17 +181,25 @@ export interface CreateProviderAccountRequest {
   id?: string;
   provider: string;
   environment: 'sandbox' | 'test' | 'production';
+  /** Provider's own account identifier — safe to store and return in responses. */
   providerAccountRef?: string | null;
+  /** Opaque secret-store reference — NEVER echoed in API responses. */
   credentialsRef?: string | null;
   publicConfig?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * ProviderAccountResponse — public API shape.
+ * Includes providerAccountRef; never exposes credentialsRef.
+ */
 export interface ProviderAccountResponse {
   id: string;
   merchantId: string;
   provider: string;
   environment: string;
+  /** Provider's own account identifier. Safe to include in responses. */
+  providerAccountRef: string | null;
   status: string;
   publicConfig: Record<string, unknown>;
   metadata: Record<string, unknown>;
@@ -162,28 +208,23 @@ export interface ProviderAccountResponse {
 // ── Phase 8D: FakeGateway Dev Confirm ─────────────────────────────────────────
 
 export interface ConfirmFakeGatewayPaymentRequest {
-  merchantId: string;
+  /** Optional — falls back to SDK config.merchantId when omitted. */
+  merchantId?: string;
 }
 
 export interface ConfirmFakeGatewayPaymentResponse {
   alreadyConfirmed: boolean;
-  transaction: {
-    id: string;
-    intentId: string;
-    merchantId: string;
-    status: string;
-    amount: number;
-    currency: string;
-    providerReference: string | null;
-    providerQrString: string | null;
-  };
-  intent: {
-    id: string;
-    merchantId: string;
-    status: string;
-    amountDue: number;
-    amountPaid: number;
-    amountRemaining: number;
-    currency: string;
-  };
+  transaction: PaymentTransactionResponse;
+  intent: PaymentIntentResponse;
+}
+
+// ── Legacy / deprecated ───────────────────────────────────────────────────────
+
+/** @deprecated Not used by the service — use GatewayPaymentResponse instead. */
+export interface ProviderActionResponse {
+  type: string;
+  descriptor: string;
+  label: string;
+  value: string | null;
+  url: string | null;
 }
