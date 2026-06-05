@@ -217,6 +217,45 @@ export function createIntentsRouter(container: ServiceContainer): Router {
     }
   });
 
+  /**
+   * POST /v1/payment-intents/:id/reconcile
+   * Recompute intent totals from actual transaction state (crash-recovery safety).
+   * Protected by service token (via app.ts global auth middleware).
+   */
+  router.post('/:id/reconcile', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const intentId = req.params['id'];
+      if (!intentId) {
+        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'id is required' });
+        return;
+      }
+
+      const body = req.body as Record<string, unknown>;
+      const merchantId = resolveMerchantId(req, body['merchantId']);
+      if (!merchantId) {
+        res.status(400).json({ ok: false, error: 'VALIDATION_ERROR', message: 'merchantId is required (body or x-payment-merchant-id header)' });
+        return;
+      }
+
+      const result = await container.useCases.reconcilePaymentIntentTotals.execute({
+        merchantId,
+        intentId,
+      });
+
+      res.json({
+        ok: true,
+        data: {
+          intent: serializeIntent(result.intent),
+          before: result.before,
+          after: result.after,
+          changed: result.changed,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return router;
 }
 

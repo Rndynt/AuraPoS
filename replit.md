@@ -17,7 +17,8 @@ apps/
   payment-orchestration-service/— Standalone payment microservice (Phase 8D+)
 packages/
   core/                         — Shared utilities, tenant.ts (CURRENT_TENANT_ID here)
-  payment-orchestration-core/   — Payment domain types/interfaces (published package)
+  payment-orchestration-core/   — workspace package / future standalone package containing payment domain types/interfaces
+  payment-orchestration-client-sdk/ — typed HTTP client for future app integrations
 shared/
   schema.ts                     — Drizzle ORM schema (source of truth for DB types)
 docs/
@@ -42,7 +43,11 @@ pnpm --filter @northflow/payment-orchestration-service type-check
 
 ### Critical constraints
 - `tenants.id` is a slug string (e.g. `"demo-tenant"`), NOT uuid
-- No changes to `apps/api/src/payment-engine/` (legacy) or embedded FakeGateway/Xendit in main API
+- No intentional changes to embedded payment runtime unless a phase explicitly says so:
+  - `apps/api/src/http/routes/payment-engine.ts`
+  - `packages/application/payments/*`
+  - `packages/domain/payments/*`
+  - `packages/infrastructure/payments/providers/*`
 - `IDEMPOTENCY_SCOPE = 'create_gateway_payment'` in CreateGatewayPayment (not 'gateway_payment')
 - Webhook route registered BEFORE auth middleware in `app.ts`
 - Memory: `.agents/memory/MEMORY.md` — read this for cross-session decisions
