@@ -631,6 +631,7 @@ function buildContainer(
       repos.intentRepo,
       repos.transactionRepo,
     ),
+    refreshProviderStatus: {} as any,
   };
 
   return {

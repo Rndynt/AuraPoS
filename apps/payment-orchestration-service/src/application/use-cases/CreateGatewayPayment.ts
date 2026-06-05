@@ -24,6 +24,7 @@ import type {
   PaymentIdempotencyRepository,
 } from '@northflow/payment-orchestration-core';
 import type {
+  PaymentProviderAccount,
   StandalonePaymentIntentDTO,
   StandalonePaymentTransactionDTO,
   StandaloneTransactionStatus,
@@ -119,9 +120,11 @@ export class CreateGatewayPayment {
     }
 
     // ── Task 4: Provider account validation ───────────────────────────────────
+    let providerAccount: PaymentProviderAccount | null = null;
     if (input.providerAccountId) {
       // Provided: must exist, be active, and match the requested provider.
       const pa = await this.providerAccountRepo.findById(input.providerAccountId, input.merchantId);
+      providerAccount = pa;
       if (!pa) {
         throw Object.assign(
           new Error(`Provider account not found: ${input.providerAccountId}`),
@@ -239,6 +242,7 @@ export class CreateGatewayPayment {
         amount: input.amount,
         currency: intent.currency,
         method: input.method,
+        providerAccount,
         metadata: input.metadata,
       });
     } catch (providerErr) {

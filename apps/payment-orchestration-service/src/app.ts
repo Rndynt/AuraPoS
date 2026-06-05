@@ -25,6 +25,7 @@ import { createMerchantsRouter } from './routes/merchants.ts';
 import { createProviderAccountsRouter } from './routes/providerAccounts.ts';
 import { createDevFakeGatewayRouter } from './routes/devFakeGateway.ts';
 import { createWebhooksRouter } from './routes/webhooks.ts';
+import { createTransactionsRouter } from './routes/transactions.ts';
 import { createAuthMiddleware } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
 import type { ServiceContainer } from './container.ts';
@@ -65,6 +66,9 @@ export function createApp(container: ServiceContainer): express.Application {
 
   // ── API v1 — Payment Intents ──────────────────────────────────────────────
   app.use('/v1/payment-intents', createIntentsRouter(container));
+
+  // ── API v1 — Payment Transactions ─────────────────────────────────────────
+  app.use('/v1/payment-transactions', createTransactionsRouter(container));
 
   // ── Dev/test only: FakeGateway confirm ───────────────────────────────────
   if (container.config.nodeEnv !== 'production') {

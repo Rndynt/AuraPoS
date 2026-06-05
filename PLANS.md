@@ -3922,3 +3922,195 @@ Continue by writing the parity matrix, readiness decision, final Phase 8F report
 ### Continuation Notes
 
 Next safest batch: Phase 8G Provider Runtime Completion, specifically standalone Xendit create-payment/webhook and provider refund/cancel contract design. Keep AuraPoS SDK consumption deferred until Phase 8I and keep embedded payment runtime unchanged until Phase 8J.
+
+## Plan: Payment Orchestration Phase 8G+8H Standalone Boundary + Provider Runtime
+
+### Source
+
+- Tasklist: `docs/replit-agent-payment-orchestration-phase-8g-8h-standalone-boundary-provider-runtime-prompt.md`
+- User request: `Check dan eksekusi docs/replit-agent-payment-orchestration-phase-8g-8h-standalone-boundary-provider-runtime-prompt.md`
+- Date started: 2026-06-05
+- Current status: Implemented boundary audit docs, schema extraction plan, standalone provider runtime foundation, Xendit sandbox provider/webhook/polling foundations, tests, and report. Validation passed and changes committed in this batch.
+
+### Goal
+
+Advance Northflow Payment Orchestration toward standalone extraction readiness by proving source boundary purity, documenting schema extraction, and completing provider runtime foundations beyond FakeGateway without integrating AuraPoS through the SDK or changing embedded payment/order flows.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+
+#### Backend/API Workstream
+
+- Scope: standalone payment-orchestration-service provider contracts, webhook use case, status route.
+- Files inspected: `apps/payment-orchestration-service/src/app.ts`, `src/container.ts`, `src/routes/*`, `src/application/use-cases/*`, `src/infrastructure/providers/*`.
+- Findings: FakeGateway existed; Xendit sandbox runtime and status polling route were missing.
+- Tasks: add provider runtime contract, Xendit sandbox provider, generalized webhook parser path, status refresh use case/route.
+- Risks: Xendit default HTTP client/credential runtime remains deployment-sensitive.
+- Validation: type-checks and targeted tests required.
+
+#### Database/Schema Workstream
+
+- Scope: current schema/migration ownership.
+- Files inspected: `shared/schema.ts`, `migrations/0022_payment_orchestration_standalone.sql`.
+- Findings: payment_orchestration tables are still rooted in AuraPoS shared schema/migrations.
+- Tasks: document extraction plan; no risky schema relocation in this phase.
+- Risks: schema ownership remains extraction blocker.
+- Validation: docs plus existing schema mapper tests.
+
+#### Frontend/UI Workstream
+
+- Scope: none.
+- Files inspected: none; prompt forbids POS UI changes.
+- Findings: no UI changes needed.
+- Tasks: not attempted by design.
+- Risks: none.
+- Validation: not applicable.
+
+#### Tests/Validation Workstream
+
+- Scope: boundary import scan, Xendit provider/webhook tests, status refresh test, existing payment-orchestration regression tests.
+- Files inspected: existing payment-orchestration tests under `apps/api/src/__tests__`.
+- Findings: tests use node test runner with `tsx` and in-memory repos.
+- Tasks: add targeted tests and run command list.
+- Risks: root `npm run check` may surface unrelated monorepo drift.
+- Validation: targeted tests and `npm run check` passed.
+
+#### Documentation Workstream
+
+- Scope: reports and architecture roadmap.
+- Files inspected: architecture doc, Phase 8F reports, active prompt.
+- Findings: previous roadmap optimized toward AuraPoS integration; new phase needs standalone-first sequence.
+- Tasks: add boundary audit, schema extraction plan, refund/cancel contract, final report, architecture roadmap section.
+- Risks: report command table must be updated after validation.
+- Validation: docs reviewed for honesty.
+
+#### Security/Tenant Isolation Workstream
+
+- Scope: merchant scoping, webhook verification, credential handling.
+- Files inspected: provider account repositories, webhook handler/use case, provider account mapper.
+- Findings: webhook does not trust merchant header; provider account credentialsRef is opaque and must not expose raw secrets.
+- Tasks: xendit_sandbox uses credentialsRef resolver and sanitizes secret-like response fields; status refresh scopes transaction by merchantId.
+- Risks: production credential manager deferred.
+- Validation: no raw credential exposure test and route/service type checks.
+
+### Execution Order
+
+1. Read instructions/context/tasklist.
+2. Audit standalone boundaries.
+3. Implement provider runtime contract and Xendit sandbox foundations.
+4. Add status refresh foundation.
+5. Add tests.
+6. Add docs/reports and update architecture.
+7. Run validation.
+8. Update final report command table if needed.
+
+### Progress
+
+#### Completed
+
+- [x] Task: A1 dependency boundary audit
+  - Files changed: `docs/reports/payment-orchestration-phase-8g-boundary-audit.md`, `apps/api/src/__tests__/payment-orchestration-boundary-purity.test.ts`
+  - Validation: boundary-purity test passed
+  - Docs updated: boundary audit report
+- [x] Task: A2 small boundary leaks
+  - Files changed: standalone provider runtime files; no forbidden source imports found
+  - Validation: boundary-purity test passed
+  - Docs updated: boundary audit report
+- [x] Task: A3 schema extraction plan
+  - Files changed: `docs/reports/payment-orchestration-schema-extraction-plan.md`
+  - Validation: documentation only
+  - Docs updated: schema extraction plan
+- [x] Task: B1 provider runtime contract
+  - Files changed: `apps/payment-orchestration-service/src/infrastructure/providers/StandalonePaymentProvider.ts`
+  - Validation: service type-check passed
+  - Docs updated: final report
+- [x] Task: B2 Xendit sandbox create payment
+  - Files changed: `apps/payment-orchestration-service/src/infrastructure/providers/XenditSandboxProvider.ts`, provider registry, create payment use case
+  - Validation: Xendit provider test passed
+  - Docs updated: final report
+- [x] Task: B3 Xendit standalone webhook parser/verifier
+  - Files changed: `XenditSandboxProvider.ts`, `HandleProviderWebhook.ts`
+  - Validation: Xendit webhook test passed
+  - Docs updated: final report
+- [x] Task: B4 provider status polling foundation
+  - Files changed: `RefreshProviderStatus.ts`, `routes/transactions.ts`, `app.ts`, `container.ts`
+  - Validation: provider status refresh test passed
+  - Docs updated: final report
+- [x] Task: B5 provider refund/cancel contract design
+  - Files changed: `docs/reports/payment-orchestration-provider-refund-cancel-contract.md`
+  - Validation: documentation only
+  - Docs updated: final report
+- [x] Task: documentation/reporting
+  - Files changed: final report and architecture doc
+  - Validation: final report command table updated after passing checks
+  - Docs updated: `docs/payment-orchestration-hybrid-standalone-architecture.md`
+
+#### Partially Completed
+
+- [x] Task: A4 root check/type drift gate
+  - Files changed: `packages/payment-orchestration-core/src/domain/PaymentMerchant.ts`, `packages/payment-orchestration-core/src/domain/PaymentIntent.ts`, `packages/payment-orchestration-core/src/domain/PaymentTransaction.ts`, payment-orchestration test container helpers
+  - Validation: `npm run check` passed
+  - Docs updated: final report command table
+
+#### Blocked
+
+- [ ] Task: Full schema extraction
+  - Blocker: prompt explicitly defers large schema relocation; current shared schema must remain stable until extraction simulation.
+  - Required next step: Phase 8K extraction simulation after standalone schema module is introduced.
+
+#### Not Attempted
+
+- [ ] Task: AuraPoS SDK consumption
+  - Reason: explicitly forbidden in this phase.
+- [ ] Task: Embedded payment runtime/order payment changes
+  - Reason: explicitly forbidden in this phase.
+- [ ] Task: Real provider refund/cancel money movement
+  - Reason: financial-integrity sensitive and explicitly design-only in this phase.
+
+### Validation Log
+
+- Command: `pnpm --filter @northflow/payment-orchestration-core type-check`
+- Result: pass
+- Notes: core contracts compile.
+- Command: `pnpm --filter @northflow/payment-orchestration-service type-check`
+- Result: pass
+- Notes: standalone service compiles.
+- Command: `pnpm --filter @northflow/payment-orchestration-client-sdk type-check`
+- Result: pass
+- Notes: SDK compiles.
+- Command: `npm run check`
+- Result: pass
+- Notes: Turbo type-check passed across all 13 packages after fixing payment-orchestration test/helper drift.
+- Command: targeted payment-orchestration node test suite
+- Result: pass
+- Notes: new and existing tests passed.
+
+### Documentation Updates
+
+- File: `docs/reports/payment-orchestration-phase-8g-boundary-audit.md`
+- Change: added boundary audit.
+- File: `docs/reports/payment-orchestration-schema-extraction-plan.md`
+- Change: added schema/migration extraction plan.
+- File: `docs/reports/payment-orchestration-provider-refund-cancel-contract.md`
+- Change: added refund/cancel contract design.
+- File: `docs/reports/payment-orchestration-phase-8g-8h-standalone-boundary-provider-runtime-report.md`
+- Change: added final phase report draft.
+- File: `docs/payment-orchestration-hybrid-standalone-architecture.md`
+- Change: added Phase 8G+8H standalone-first roadmap section.
+
+### Checklist Updates
+
+- File: `docs/replit-agent-payment-orchestration-phase-8g-8h-standalone-boundary-provider-runtime-prompt.md`
+- Change: source prompt retained as task definition; completion status tracked in this `PLANS.md` section and final report.
+
+### Continuation Notes
+
+Continue with Phase 8I operations layer/worker readiness. Do not integrate AuraPoS SDK until standalone extraction readiness phases complete.

@@ -40,6 +40,7 @@ import type {
   PaymentProviderEventDTO,
 } from '@northflow/payment-orchestration-core';
 import type { FakeGatewayWebhookHandler } from '../../infrastructure/providers/FakeGatewayWebhookHandler.ts';
+import type { ProviderRegistry } from '../../infrastructure/providers/providerRegistry.ts';
 import { computeIntentStatus } from './intentStatusHelper.ts';
 
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'cancelled', 'expired', 'reversed']);
@@ -67,24 +68,29 @@ export class HandleProviderWebhook {
     private readonly intentRepo: PaymentIntentRepository,
     private readonly providerEventRepo: PaymentProviderEventRepository,
     private readonly fakeGatewayHandler: FakeGatewayWebhookHandler,
+    private readonly providerRegistry?: ProviderRegistry,
   ) {}
 
   async execute(input: HandleProviderWebhookInput): Promise<HandleProviderWebhookOutput> {
     const { provider } = input;
 
-    // ── Validate provider support ─────────────────────────────────────────────
-    if (provider !== 'fake_gateway') {
+    // ── Validate provider support and parse/verify event ─────────────────────
+    const runtimeProvider = this.providerRegistry?.get(provider);
+    const parsed = provider === 'fake_gateway'
+      ? this.fakeGatewayHandler.parse(input.headers, input.rawBody)
+      : runtimeProvider?.parseWebhook
+        ? runtimeProvider.parseWebhook({ headers: input.headers, rawBody: input.rawBody })
+        : null;
+
+    if (!parsed) {
       throw Object.assign(
         new Error(
-          `Webhook ingestion for provider '${provider}' is not supported in Phase 8E. ` +
-            'Supported: fake_gateway.',
+          `Webhook ingestion for provider '${provider}' is not supported by the standalone runtime.`,
         ),
         { statusCode: 400, code: 'WEBHOOK_PROVIDER_NOT_SUPPORTED' },
       );
     }
 
-    // ── Parse and verify event ────────────────────────────────────────────────
-    const parsed = this.fakeGatewayHandler.parse(input.headers, input.rawBody);
     const rawPayload = parsed.rawPayload;
 
     // ── Duplicate check by (provider, providerEventId) ────────────────────────

@@ -348,6 +348,8 @@ function buildTestContainer(opts: { serviceToken?: string; nodeEnv?: string } = 
       providerEventRepo,
       fakeGatewayWebhookHandler,
     ),
+    reconcilePaymentIntentTotals: {} as any,
+    refreshProviderStatus: {} as any,
   };
 
   return {
