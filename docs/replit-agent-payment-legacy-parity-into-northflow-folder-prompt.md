@@ -1,4 +1,4 @@
-# Replit Agent Prompt — Migrate Legacy AuraPoS Payment Features into Northflow Folder
+# Replit Agent Prompt — Migrate All Legacy AuraPoS Payment Features into Northflow Folder
 
 Use this prompt in Replit Agent.
 
@@ -12,7 +12,7 @@ Current relevant baseline:
 
 - `be1751fcf64782b674b14b075bf1499488eb405b`
 
-Standalone Northflow target source folder inside AuraPoS:
+Northflow target source folder inside AuraPoS:
 
 - `northflow-payment-orchestration/`
 
@@ -22,45 +22,65 @@ Canonical standalone repo to sync after this work:
 
 ## Goal
 
-Before deleting payment from AuraPoS, migrate any remaining useful legacy/embedded AuraPoS payment features into `northflow-payment-orchestration/`.
+Before deleting payment from AuraPoS, migrate every useful legacy/embedded AuraPoS payment capability into `northflow-payment-orchestration/`.
 
-The priority is **feature parity**, especially refund/void/cancel/refund provider contract parity.
+This phase is a **legacy payment parity migration**, not a cleanup phase.
 
-Do not clean AuraPoS payment yet. Do not delete legacy payment code yet. First make the Northflow folder complete.
+Do not delete AuraPoS payment code yet. First make the Northflow folder complete enough that AuraPoS payment can be removed safely after review.
 
 Final decision must be one of:
 
 - `NORTHFLOW_PAYMENT_PARITY_READY_FOR_AURAPOS_PAYMENT_REMOVAL`
 - `NOT_READY_REFUND_VOID_PARITY_BLOCKER`
 - `NOT_READY_PROVIDER_CONTRACT_PARITY_BLOCKER`
+- `NOT_READY_MANUAL_PROVIDER_PARITY_BLOCKER`
+- `NOT_READY_CONTROLLER_ROUTE_PARITY_BLOCKER`
 - `NOT_READY_ROUTE_SDK_PARITY_BLOCKER`
 - `NOT_READY_TEST_FAILURES`
 
-## Important findings from review
+## Non-negotiable parity items
 
-Legacy AuraPoS still contains payment capabilities not proven present in Northflow:
+These legacy items must be explicitly audited and either ported or explicitly documented as intentionally dropped with a technical reason:
+
+1. `RefundPaymentTransaction`
+2. `VoidPaymentTransaction`
+3. provider-level `cancelPayment()` / `refundPayment()` contract parity
+4. manual provider behavior
+5. legacy `PaymentEngineController` / `payment-engine` route parity
+6. FakeGateway provider behavior
+7. Xendit provider behavior
+8. provider capability/action descriptor behavior
+9. idempotency, reconciliation, webhook, and transaction lifecycle behavior
+
+Do not mark final ready if any critical item above is missing or only mentioned in docs without implementation.
+
+## Legacy source files to inspect
+
+Read and compare at minimum:
 
 - `packages/application/payments/RefundPaymentTransaction.ts`
 - `packages/application/payments/VoidPaymentTransaction.ts`
-- `packages/domain/payments/provider.ts` has provider-level `cancelPayment()` and `refundPayment()` contract
+- `packages/application/payments/CreatePaymentIntent.ts`
+- `packages/application/payments/CreateGatewayPayment.ts`
+- `packages/application/payments/RecalculatePaymentIntent.ts`
+- `packages/application/payments/ListPaymentTransactions.ts`
+- `packages/application/payments/HandlePaymentProviderWebhook.ts`
+- `packages/application/payments/index.ts`
+- `packages/domain/payments/provider.ts`
+- `packages/domain/payments/status.ts`
+- `packages/domain/payments/*`
 - `packages/infrastructure/payments/providers/FakeGatewayProvider.ts`
 - `packages/infrastructure/payments/providers/XenditProvider.ts`
+- `packages/infrastructure/repositories/payments/*`
 - `apps/api/src/http/controllers/PaymentEngineController.ts`
 - `apps/api/src/http/routes/payment-engine.ts`
-- tests like `payment-engine-phase4.test.ts`, `payment-provider-contract.test.ts`, `payment-xendit-provider.test.ts`, `payment-engine-fakegateway-e2e.test.ts`
-
-Northflow already has payment orchestration foundation, but the provider runtime contract currently focuses on:
-
-- `createPayment()`
-- `parseWebhook()`
-- `getPaymentStatus()`
-
-and does not yet clearly expose:
-
-- `cancelPayment()`
-- `refundPayment()`
-- transaction refund execution
-- transaction void execution
+- `apps/api/src/container.ts`
+- `apps/api/src/__tests__/payment-engine.test.ts`
+- `apps/api/src/__tests__/payment-engine-phase2.test.ts`
+- `apps/api/src/__tests__/payment-engine-phase4.test.ts`
+- `apps/api/src/__tests__/payment-provider-contract.test.ts`
+- `apps/api/src/__tests__/payment-xendit-provider.test.ts`
+- `apps/api/src/__tests__/payment-engine-fakegateway-e2e.test.ts`
 
 ## Hard guardrails
 
@@ -84,7 +104,7 @@ Work primarily inside:
 
 Legacy AuraPoS files may be read and used as reference only.
 
-## Task 1 — Build complete parity matrix
+## Task 1 — Build complete legacy-to-Northflow parity matrix
 
 Create:
 
@@ -92,7 +112,7 @@ Create:
 
 The matrix must compare legacy AuraPoS payment vs Northflow folder.
 
-Include rows for at least:
+Rows must include at least:
 
 - create payment intent
 - create gateway payment
@@ -111,11 +131,15 @@ Include rows for at least:
 - Xendit create payment
 - Xendit webhook
 - Xendit polling/status refresh
-- Xendit refund/cancel behavior if legacy supports it
+- Xendit refund/cancel behavior if legacy has it
+- provider-level `cancelPayment()` contract
+- provider-level `refundPayment()` contract
 - provider capabilities
 - provider action descriptors
 - manual provider behavior
-- payment route/controller behavior
+- PaymentEngineController behavior
+- payment-engine route behavior
+- HTTP response/error behavior
 - SDK method coverage
 - schema/migration coverage
 - tests coverage
@@ -127,23 +151,31 @@ Each row must have:
 - status: `ported`, `ported_with_design_change`, `intentionally_dropped`, `missing`, or `blocked`
 - notes
 
-Do not mark final ready if any critical row is `missing` or `blocked`.
+Critical rows cannot be `missing` or `blocked` if final decision is ready.
 
-## Task 2 — Add Northflow refund transaction execution
+## Task 2 — Port RefundPaymentTransaction to Northflow
 
-Implement in `northflow-payment-orchestration/` an equivalent of legacy:
+Implement an equivalent of legacy:
 
 - `packages/application/payments/RefundPaymentTransaction.ts`
 
-Target suggested files:
+Target files:
 
 - `northflow-payment-orchestration/apps/service/src/application/use-cases/RefundPaymentTransaction.ts`
-- core request/response contract in `northflow-payment-orchestration/packages/core/src/application/contracts.ts`
-- repository port changes in `northflow-payment-orchestration/packages/core/src/application/repositories.ts`
-- route in service, suggested: `POST /v1/payment-transactions/:transactionId/refund`
-- SDK method, suggested: `refundPaymentTransaction()`
+- `northflow-payment-orchestration/packages/core/src/application/contracts.ts`
+- `northflow-payment-orchestration/packages/core/src/application/repositories.ts`
+- `northflow-payment-orchestration/apps/service/src/routes/transactions.ts` or equivalent route file
+- `northflow-payment-orchestration/packages/client-sdk/src/client.ts`
 
-Behavior parity requirements:
+Required API route:
+
+- `POST /v1/payment-transactions/:transactionId/refund`
+
+Required SDK method:
+
+- `refundPaymentTransaction(transactionId, input)`
+
+Behavior parity:
 
 - amount must be greater than zero
 - original transaction must exist for merchant
@@ -158,27 +190,37 @@ Behavior parity requirements:
 - reject idempotency key conflict
 - return refund transaction, updated intent, and refundable remaining
 
-Important design point:
+Design rule:
 
-- If provider-level refund is not yet safe for real provider, implement internal refund ledger behavior first and expose provider refund as optional capability.
+- Implement internal refund ledger behavior first.
 - Do not fake real provider refund success for production providers.
-- FakeGateway may support test refund behavior if useful.
+- Provider refund call must be optional and capability-gated.
+- FakeGateway may implement deterministic dev/test refund behavior.
+- Xendit sandbox may report unsupported unless a safe sandbox refund implementation already exists.
 
-## Task 3 — Add Northflow void transaction execution
+## Task 3 — Port VoidPaymentTransaction to Northflow
 
-Implement in `northflow-payment-orchestration/` an equivalent of legacy:
+Implement an equivalent of legacy:
 
 - `packages/application/payments/VoidPaymentTransaction.ts`
 
-Target suggested files:
+Target files:
 
 - `northflow-payment-orchestration/apps/service/src/application/use-cases/VoidPaymentTransaction.ts`
-- core request/response contract in `northflow-payment-orchestration/packages/core/src/application/contracts.ts`
-- repository port changes in `northflow-payment-orchestration/packages/core/src/application/repositories.ts`
-- route in service, suggested: `POST /v1/payment-transactions/:transactionId/void`
-- SDK method, suggested: `voidPaymentTransaction()`
+- `northflow-payment-orchestration/packages/core/src/application/contracts.ts`
+- `northflow-payment-orchestration/packages/core/src/application/repositories.ts`
+- `northflow-payment-orchestration/apps/service/src/routes/transactions.ts` or equivalent route file
+- `northflow-payment-orchestration/packages/client-sdk/src/client.ts`
 
-Behavior parity requirements:
+Required API route:
+
+- `POST /v1/payment-transactions/:transactionId/void`
+
+Required SDK method:
+
+- `voidPaymentTransaction(transactionId, input)`
+
+Behavior parity:
 
 - transaction must exist for merchant
 - allow void only for `pending` or `requires_action`
@@ -187,53 +229,123 @@ Behavior parity requirements:
 - already voided with same idempotency key returns success
 - already voided with different/no idempotency key rejects
 - set status to `voided` or canonical Northflow equivalent
-- set `cancelledAt` if schema supports it, or add field/migration if needed
+- set `cancelledAt` or `voidedAt`; add field/migration if needed
 - preserve/add metadata reason
 - return updated transaction and intent
 
-If Northflow currently uses `cancelled` instead of `voided`, make an explicit decision:
+Preferred design:
 
-- either add `voided` status for parity
-- or map legacy void to `cancelled` with documented semantic difference
+- Support `voided` as a real transaction status because legacy uses it and previous payment docs mention void/refund.
 
-Preferred: support `voided` because legacy uses it and previous docs mention void/refund.
+## Task 4 — Provider-level cancel/refund contract parity
 
-## Task 4 — Add provider contract parity for cancel/refund
-
-Update Northflow provider runtime contract in:
+Update Northflow provider runtime contract:
 
 - `northflow-payment-orchestration/apps/service/src/infrastructure/providers/StandalonePaymentProvider.ts`
 
 Add optional methods:
 
-- `cancelPayment?(input): Promise<...>`
-- `refundPayment?(input): Promise<...>`
+- `cancelPayment?(input): Promise<StandaloneProviderCancelResult>`
+- `refundPayment?(input): Promise<StandaloneProviderRefundResult>`
 
-Add types for:
+Add types:
 
-- cancel input/result
-- refund input/result
+- `StandaloneProviderCancelInput`
+- `StandaloneProviderCancelResult`
+- `StandaloneProviderRefundInput`
+- `StandaloneProviderRefundResult`
 
-Update provider capabilities if needed:
+Capability parity must include a clear equivalent of legacy:
 
-- canCancel / supportsCancel
-- canRefund / supportsRefund
-- supportsPartialRefund
-- supportsMultiplePartialRefund
+- `canCancel`
+- `canRefund`
+- `supportsPartialRefund`
+- `supportsMultiplePartialRefund`
+- existing redirect/QR/VA/payment-code capabilities
 
-Update providers:
+Behavior rules:
 
-- FakeGateway provider: implement deterministic dev/test cancel/refund behavior if suitable
-- XenditSandbox provider: do not fake real refund/cancel if not implemented; return clear unsupported/configuration error or leave optional method undefined, depending on contract
+- service must be able to determine support without calling provider
+- unsupported cancel/refund returns stable public error codes
+- use `PROVIDER_CANCEL_UNSUPPORTED` and `PROVIDER_REFUND_UNSUPPORTED`, or document the chosen stable names
+- no production provider refund/cancel may be faked
 
-Acceptance:
+## Task 5 — Manual provider behavior parity
 
-- service can tell whether provider supports cancel/refund without calling provider
-- unsupported provider returns stable public error code, e.g. `PROVIDER_REFUND_UNSUPPORTED` or `PROVIDER_CANCEL_UNSUPPORTED`
+Legacy `ManualProvider` behavior must be explicitly ported or explicitly replaced by a Northflow-native equivalent.
 
-## Task 5 — Add/adjust schema and migration for refund/void parity
+Target suggested file:
 
-Audit Northflow schema:
+- `northflow-payment-orchestration/apps/service/src/infrastructure/providers/StandaloneManualProvider.ts`
+
+Required behavior:
+
+- provider code: `manual` or a documented Northflow equivalent
+- create payment succeeds immediately
+- no webhook support
+- no polling support
+- no external cancel API
+- no external refund API
+- capabilities must reflect immediate success and unsupported external gateway features
+- manual payment should still create a transaction and update/recalculate intent correctly
+- cancel/refund provider-level methods must return unsupported or be absent based on contract
+- internal refund/void use cases must still work at ledger level where valid
+
+If Northflow intentionally does not want a manual provider, create a documented equivalent policy in the parity matrix and docs, but final ready is only allowed if the same business behavior is covered by another supported provider/method.
+
+Add tests for:
+
+- manual payment immediate success
+- manual provider capabilities
+- manual provider refund/cancel unsupported at provider level
+- internal refund of manual succeeded transaction if ledger policy allows it
+- void rejection for already succeeded manual transaction
+
+## Task 6 — Legacy PaymentEngineController / route parity
+
+Read legacy:
+
+- `apps/api/src/http/controllers/PaymentEngineController.ts`
+- `apps/api/src/http/routes/payment-engine.ts`
+
+Map every legacy endpoint/controller method to Northflow API routes.
+
+Create report section in the parity matrix for controller/route mapping.
+
+For each legacy route, classify as:
+
+- `ported_to_new_route`
+- `merged_into_new_route`
+- `intentionally_dropped`
+- `missing`
+
+Northflow must have route/API coverage for critical payment actions:
+
+- create intent
+- create gateway payment
+- list/get intent status
+- list/get transactions if legacy supports it
+- refundability
+- refund transaction
+- void transaction
+- reconcile/recalculate
+- webhook endpoints
+- FakeGateway dev confirm/smoke endpoints where applicable
+- provider status refresh/polling
+
+Do not copy legacy route names blindly if Northflow already has cleaner REST routes. But document the mapping clearly.
+
+Update:
+
+- `northflow-payment-orchestration/docs/payment-orchestration-api-contract.md`
+- `northflow-payment-orchestration/docs/openapi/payment-orchestration.openapi.json`
+- `northflow-payment-orchestration/docs/payment-orchestration-service-smoke-test.md`
+
+Add tests proving the new Northflow routes cover the legacy controller behavior for refund/void/provider paths.
+
+## Task 7 — Add/adjust schema and migration for refund/void/manual parity
+
+Audit:
 
 - `northflow-payment-orchestration/apps/service/src/infrastructure/schema.ts`
 - `northflow-payment-orchestration/migrations/*`
@@ -242,73 +354,52 @@ Ensure transaction rows can represent:
 
 - parent transaction id
 - direction incoming/outgoing
-- transaction type refund/payment/deposit/settlement if needed
+- transaction type refund/payment/deposit/settlement/manual if applicable
 - refunded child transaction
 - voided/cancelled status
-- cancelledAt/voidedAt timestamp if needed
+- cancelledAt/voidedAt timestamp
 - idempotency key
-- refund reason/metadata
+- refund/void reason through metadata
+- provider reference for refund/cancel if provider returns one
 
-If missing, add a standalone migration:
+If missing, add standalone migration:
 
-- `northflow-payment-orchestration/migrations/0002_refund_void_parity.sql`
+- `northflow-payment-orchestration/migrations/0002_refund_void_manual_parity.sql`
 
 Do not touch AuraPoS root migrations in this phase.
 
-## Task 6 — Add API routes and SDK methods
+## Task 8 — Route, SDK, OpenAPI, and docs update
 
-Add service routes under Northflow:
+Add/update Northflow routes:
 
 - `POST /v1/payment-transactions/:transactionId/refund`
 - `POST /v1/payment-transactions/:transactionId/void`
 
-Request examples:
-
-Refund:
-
-```json
-{
-  "merchantId": "merchant_123",
-  "amount": 50000,
-  "reason": "Customer request",
-  "metadata": {},
-  "idempotencyKey": "refund-key-123"
-}
-```
-
-Void:
-
-```json
-{
-  "merchantId": "merchant_123",
-  "reason": "Cancelled before payment",
-  "metadata": {},
-  "idempotencyKey": "void-key-123"
-}
-```
-
-Update SDK:
+Add/update SDK:
 
 - `refundPaymentTransaction(transactionId, input)`
 - `voidPaymentTransaction(transactionId, input)`
 
-Update OpenAPI docs:
+Update docs:
 
 - `northflow-payment-orchestration/docs/openapi/payment-orchestration.openapi.json`
-
-Update API contract docs:
-
 - `northflow-payment-orchestration/docs/payment-orchestration-api-contract.md`
-
-Update SDK contract docs:
-
 - `northflow-payment-orchestration/docs/payment-orchestration-sdk-contract.md`
-
-Update error codes docs:
-
 - `northflow-payment-orchestration/docs/payment-orchestration-error-codes.md`
+- `northflow-payment-orchestration/docs/payment-orchestration-service-smoke-test.md`
+- `northflow-payment-orchestration/README.md`
 
-## Task 7 — Port parity tests from legacy
+Error codes must include stable codes for:
+
+- invalid refund amount
+- refund amount exceeds refundable remaining
+- invalid transaction status for refund
+- invalid transaction status for void
+- provider refund unsupported
+- provider cancel unsupported
+- idempotency conflict
+
+## Task 9 — Port and strengthen parity tests
 
 Use legacy tests as reference:
 
@@ -316,12 +407,14 @@ Use legacy tests as reference:
 - `apps/api/src/__tests__/payment-provider-contract.test.ts`
 - `apps/api/src/__tests__/payment-xendit-provider.test.ts`
 - `apps/api/src/__tests__/payment-engine-fakegateway-e2e.test.ts`
+- `apps/api/src/__tests__/payment-engine.test.ts`
+- `apps/api/src/__tests__/payment-engine-phase2.test.ts`
 
-Add or update tests in:
+Add/update tests in:
 
 - `northflow-payment-orchestration/tests/`
 
-Required test coverage:
+Required coverage:
 
 Refund:
 
@@ -350,27 +443,35 @@ Provider contract:
 - provider capabilities expose cancel/refund support
 - FakeGateway cancel/refund behavior deterministic
 - Xendit sandbox unsupported behavior clear and stable if not implemented
+- manual provider immediate success and unsupported provider-level refund/cancel
 
-SDK/API:
+Controller/route/API/SDK:
 
 - refund endpoint envelope success/error
 - void endpoint envelope success/error
-- SDK calls correct methods/paths/body/headers
+- SDK calls correct refund/void paths/methods/body/headers
+- OpenAPI contains refund/void endpoints
+- legacy controller/route mapping report has no critical missing rows
 
-## Task 8 — Update extraction check and docs
+## Task 10 — Update extraction check
 
 Update:
 
 - `northflow-payment-orchestration/scripts/extraction-check.ts`
-- `northflow-payment-orchestration/README.md`
-- `northflow-payment-orchestration/docs/payment-orchestration-service-smoke-test.md`
-- `northflow-payment-orchestration/docs/payment-orchestration-worker-operations.md` if affected
 
-Extraction check must assert refund/void parity files exist and OpenAPI includes refund/void endpoints.
+It must assert:
 
-Smoke docs must include a refund/void sequence.
+- refund use case exists
+- void use case exists
+- provider cancel/refund contract exists
+- manual provider or equivalent documented policy exists
+- OpenAPI contains refund and void endpoints
+- SDK contains refund and void methods
+- parity matrix exists
+- final migration report exists
+- no forbidden AuraPoS imports in Northflow source
 
-## Task 9 — Final report
+## Task 11 — Final report
 
 Create:
 
@@ -385,6 +486,8 @@ Report must include:
 - refund parity result
 - void parity result
 - provider contract parity result
+- manual provider parity result
+- legacy controller/route parity result
 - route/API/SDK parity result
 - schema/migration changes
 - tests added/updated
@@ -407,7 +510,7 @@ pnpm --filter @northflow/payment-orchestration-client-sdk type-check
 pnpm --filter @northflow/payment-orchestration-service type-check
 ```
 
-If integration tests need database env and cannot run, run unit/contract tests that do not need DB, document exact skipped DB tests, and do not claim full DB runtime validation.
+If integration tests need database env and cannot run, run all non-DB unit/contract tests, document exact skipped DB tests, and do not claim full DB runtime validation.
 
 Do not fake results.
 
@@ -415,28 +518,30 @@ Do not fake results.
 
 Accepted only if:
 
-1. Legacy payment parity matrix exists.
+1. Legacy parity matrix exists and has no critical `missing` or `blocked` rows.
 2. Refund transaction execution exists in Northflow.
 3. Void transaction execution exists in Northflow.
 4. Provider runtime contract supports optional cancel/refund parity.
-5. FakeGateway and Xendit sandbox behavior are explicit for cancel/refund.
-6. API routes exist for refund and void.
-7. SDK methods exist for refund and void.
-8. OpenAPI/API/SDK docs include refund and void.
-9. Tests cover refund/void/provider parity.
-10. Extraction check validates refund/void parity files/endpoints.
-11. Final decision is `NORTHFLOW_PAYMENT_PARITY_READY_FOR_AURAPOS_PAYMENT_REMOVAL` or a clear blocker state.
-12. No AuraPoS payment deletion occurs in this phase.
+5. Manual provider behavior is ported or covered by a documented equivalent with tests.
+6. Legacy PaymentEngineController/route behavior is mapped to Northflow routes with no critical missing actions.
+7. FakeGateway and Xendit sandbox cancel/refund behavior are explicit.
+8. API routes exist for refund and void.
+9. SDK methods exist for refund and void.
+10. OpenAPI/API/SDK docs include refund and void.
+11. Tests cover refund/void/provider/manual/controller-route parity.
+12. Extraction check validates refund/void/provider/manual/controller-route parity files/endpoints.
+13. Final decision is `NORTHFLOW_PAYMENT_PARITY_READY_FOR_AURAPOS_PAYMENT_REMOVAL` or a clear blocker state.
+14. No AuraPoS payment deletion occurs in this phase.
 
 ## Commit and push
 
 Commit AuraPoS changes with:
 
-- `feat(payment): port legacy refund void parity into northflow folder`
+- `feat(payment): port legacy payment parity into northflow folder`
 
 Then push the updated `northflow-payment-orchestration/` folder contents to the standalone repo with:
 
-- `feat: add legacy refund void parity`
+- `feat: add legacy payment parity`
 
 Do not run the full AuraPoS payment removal prompt until this parity migration is reviewed and accepted.
 
@@ -448,7 +553,11 @@ Final Replit response must include:
 - standalone repo commit SHA if pushed
 - files changed inside `northflow-payment-orchestration/`
 - parity matrix final status
-- refund/void/provider parity summary
+- refund parity summary
+- void parity summary
+- provider cancel/refund parity summary
+- manual provider parity summary
+- legacy controller/route parity summary
 - routes and SDK methods added
 - tests/checks run
 - final decision
