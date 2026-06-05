@@ -9,9 +9,16 @@
  * - No POS order domain deps
  * - No static file serving
  * - JSON API only
+ *
+ * Phase 8E changes:
+ *   1. Raw body capture: express.json({ verify }) saves Buffer to req.rawBody for HMAC.
+ *   2. Webhook route registered BEFORE service-token auth middleware so that
+ *      POST /v1/webhooks/:provider does NOT require a service token.
+ *      Provider-level signature verification is done inside FakeGatewayWebhookHandler.
  */
 
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { createHealthRouter } from './routes/health.ts';
 import { createIntentsRouter } from './routes/intents.ts';
 import { createMerchantsRouter } from './routes/merchants.ts';
@@ -25,12 +32,25 @@ import type { ServiceContainer } from './container.ts';
 export function createApp(container: ServiceContainer): express.Application {
   const app = express();
 
-  app.use(express.json());
+  // ── Body parsing: capture raw bytes for HMAC webhook verification ──────────
+  app.use(
+    express.json({
+      verify: (req: Request, _res: Response, buf: Buffer) => {
+        (req as any).rawBody = buf;
+      },
+    }),
+  );
 
   // ── Unprotected: health + version ─────────────────────────────────────────
   app.use(createHealthRouter(container.config));
 
-  // ── Service-token auth for all /v1/... routes ─────────────────────────────
+  // ── Webhooks bypass service-token auth ────────────────────────────────────
+  // IMPORTANT: must be registered BEFORE app.use('/v1', auth) so that
+  // POST /v1/webhooks/:provider does not require a service token.
+  // Provider identity is verified via payload signature inside each handler.
+  app.use('/v1/webhooks', createWebhooksRouter(container));
+
+  // ── Service-token auth for all remaining /v1/... routes ───────────────────
   const auth = createAuthMiddleware(container.config.serviceToken, container.config.nodeEnv);
   app.use('/v1', auth);
 
@@ -46,9 +66,6 @@ export function createApp(container: ServiceContainer): express.Application {
   // ── API v1 — Payment Intents ──────────────────────────────────────────────
   app.use('/v1/payment-intents', createIntentsRouter(container));
 
-  // ── API v1 — Webhooks (placeholder — Phase 8E) ────────────────────────────
-  app.use('/v1/webhooks', createWebhooksRouter());
-
   // ── Dev/test only: FakeGateway confirm ───────────────────────────────────
   if (container.config.nodeEnv !== 'production') {
     app.use('/v1/dev/fake-gateway', createDevFakeGatewayRouter(container));
@@ -58,7 +75,7 @@ export function createApp(container: ServiceContainer): express.Application {
   app.use(errorHandler);
 
   // ── 404 catch-all ────────────────────────────────────────────────────────
-  app.use((_req, res) => {
+  app.use((_req: Request, res: Response) => {
     res.status(404).json({
       ok: false,
       error: 'NOT_FOUND',

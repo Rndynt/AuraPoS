@@ -44,6 +44,8 @@ import { ConfirmFakeGatewayPayment } from '../../../payment-orchestration-servic
 import { GetPaymentIntentStatus } from '../../../payment-orchestration-service/src/application/use-cases/GetPaymentIntentStatus.ts';
 import { GetRefundability } from '../../../payment-orchestration-service/src/application/use-cases/GetRefundability.ts';
 import { StandaloneFakeGatewayProvider } from '../../../payment-orchestration-service/src/infrastructure/providers/StandaloneFakeGatewayProvider.ts';
+import { FakeGatewayWebhookHandler } from '../../../payment-orchestration-service/src/infrastructure/providers/FakeGatewayWebhookHandler.ts';
+import { HandleProviderWebhook } from '../../../payment-orchestration-service/src/application/use-cases/HandleProviderWebhook.ts';
 
 // ── Core type imports ─────────────────────────────────────────────────────────
 
@@ -247,6 +249,20 @@ class InMemoryTransactionRepo implements PaymentTransactionRepository {
     }
     return total;
   }
+
+  async markSucceededIfConfirmable(input: {
+    id: string;
+    merchantId: string;
+  }): Promise<{ transaction: StandalonePaymentTransactionDTO | null; changed: boolean }> {
+    const tx = this.store.get(input.id);
+    if (!tx || tx.merchantId !== input.merchantId) return { transaction: null, changed: false };
+    if (tx.status !== 'requires_action' && tx.status !== 'pending') {
+      return { transaction: null, changed: false };
+    }
+    const updated: StandalonePaymentTransactionDTO = { ...tx, status: 'succeeded' as TxStatus, updatedAt: new Date() };
+    this.store.set(input.id, updated);
+    return { transaction: updated, changed: true };
+  }
 }
 
 class InMemoryIdempotencyRepo implements PaymentIdempotencyRepository {
@@ -278,14 +294,14 @@ class InMemoryIdempotencyRepo implements PaymentIdempotencyRepository {
   }
 }
 
-/** Stub provider event repo — not tested here, included to satisfy ServiceContainer interface. */
+/** Stub provider event repo — not tested in isolation here, included to satisfy ServiceContainer interface. */
 class StubProviderEventRepo implements PaymentProviderEventRepository {
-  async create(): Promise<PaymentProviderEventDTO> { throw new Error('not implemented'); }
-  async findById(): Promise<PaymentProviderEventDTO | null> { return null; }
+  async reserveEvent(): Promise<PaymentProviderEventDTO> { throw new Error('StubProviderEventRepo.reserveEvent not implemented'); }
   async findByProviderEventId(): Promise<PaymentProviderEventDTO | null> { return null; }
+  async assignMerchant(): Promise<void> { return; }
+  async markProcessed(): Promise<void> { return; }
+  async markFailed(): Promise<void> { return; }
   async findStalePending(): Promise<PaymentProviderEventDTO[]> { return []; }
-  async updateProcessingStatus(): Promise<PaymentProviderEventDTO> { throw new Error('not implemented'); }
-  async incrementAttempt(): Promise<PaymentProviderEventDTO> { throw new Error('not implemented'); }
 }
 
 // ── Test container factory ────────────────────────────────────────────────────
@@ -313,6 +329,8 @@ function buildTestContainer(opts: { serviceToken?: string; nodeEnv?: string } = 
     phase: '8D',
   };
 
+  const fakeGatewayWebhookHandler = new FakeGatewayWebhookHandler({ nodeEnv });
+
   const useCases = {
     createMerchant: new CreateMerchant(merchantRepo),
     createProviderAccount: new CreateProviderAccount(merchantRepo, providerAccountRepo),
@@ -324,6 +342,12 @@ function buildTestContainer(opts: { serviceToken?: string; nodeEnv?: string } = 
     confirmFakeGatewayPayment: new ConfirmFakeGatewayPayment(transactionRepo, intentRepo, nodeEnv),
     getPaymentIntentStatus: new GetPaymentIntentStatus(intentRepo, transactionRepo),
     getRefundability: new GetRefundability(intentRepo, transactionRepo),
+    handleProviderWebhook: new HandleProviderWebhook(
+      transactionRepo,
+      intentRepo,
+      providerEventRepo,
+      fakeGatewayWebhookHandler,
+    ),
   };
 
   return {

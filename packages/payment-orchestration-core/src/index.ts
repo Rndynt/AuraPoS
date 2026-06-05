@@ -96,6 +96,8 @@ export type {
   PaymentTransactionRepository,
   CreatePaymentTransactionInput,
   UpdateTransactionStatusInput,
+  MarkSucceededIfConfirmableInput,
+  MarkSucceededIfConfirmableResult,
   PaymentProviderEventRepository,
   FindStalePendingInput,
   PaymentIdempotencyRepository,

@@ -171,6 +171,25 @@ export interface UpdateTransactionStatusInput {
   providerEventId?: string | null;
 }
 
+export interface MarkSucceededIfConfirmableInput {
+  id: string;
+  merchantId: string;
+}
+
+export interface MarkSucceededIfConfirmableResult {
+  /**
+   * The transaction row after the conditional update, or null if the row was
+   * not found OR if the UPDATE matched no rows (status not confirmable).
+   * Callers must reload via findById when changed === false.
+   */
+  transaction: StandalonePaymentTransactionDTO | null;
+  /**
+   * true  = the row was atomically transitioned to 'succeeded'.
+   * false = no update happened (row not found, or status was not confirmable).
+   */
+  changed: boolean;
+}
+
 export interface PaymentTransactionRepository {
   findById(id: string, merchantId: string): Promise<StandalonePaymentTransactionDTO | null>;
   findByIntentId(
@@ -186,6 +205,21 @@ export interface PaymentTransactionRepository {
     input: UpdateTransactionStatusInput,
   ): Promise<StandalonePaymentTransactionDTO>;
   sumSucceededRefundsByParent(parentTransactionId: string): Promise<number>;
+  /**
+   * Atomically set status = 'succeeded' only if current status is
+   * 'requires_action' or 'pending'. Uses a conditional UPDATE … WHERE
+   * status IN ('requires_action','pending') so concurrent confirms cannot
+   * double-credit the intent.
+   *
+   * Returns { changed: true, transaction: <updated> } when the row was
+   * transitioned, or { changed: false, transaction: null } when the WHERE
+   * clause matched nothing (row not found, or status already terminal).
+   * Callers should reload via findById to check the final status when
+   * changed === false.
+   */
+  markSucceededIfConfirmable(
+    input: MarkSucceededIfConfirmableInput,
+  ): Promise<MarkSucceededIfConfirmableResult>;
 }
 
 // ── Provider Event ────────────────────────────────────────────────────────────

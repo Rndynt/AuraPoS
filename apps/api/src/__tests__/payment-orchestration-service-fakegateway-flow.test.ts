@@ -362,6 +362,24 @@ class InMemoryTransactionRepo implements PaymentTransactionRepository {
     }
     return total;
   }
+
+  async markSucceededIfConfirmable(input: {
+    id: string;
+    merchantId: string;
+  }): Promise<{ transaction: StandalonePaymentTransactionDTO | null; changed: boolean }> {
+    const tx = this.store.get(input.id);
+    if (!tx || tx.merchantId !== input.merchantId) return { transaction: null, changed: false };
+    if (tx.status !== 'requires_action' && tx.status !== 'pending') {
+      return { transaction: null, changed: false };
+    }
+    const updated: StandalonePaymentTransactionDTO = {
+      ...tx,
+      status: 'succeeded' as TxStatus,
+      updatedAt: new Date(),
+    };
+    this.store.set(input.id, updated);
+    return { transaction: updated, changed: true };
+  }
 }
 
 class InMemoryIdempotencyRepo implements PaymentIdempotencyRepository {

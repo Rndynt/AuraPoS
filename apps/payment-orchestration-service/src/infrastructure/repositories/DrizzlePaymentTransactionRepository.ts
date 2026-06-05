@@ -5,11 +5,13 @@
  * the payment_orchestration_transactions table.
  */
 
-import { eq, and, sum } from 'drizzle-orm';
+import { eq, and, sum, inArray } from 'drizzle-orm';
 import type {
   PaymentTransactionRepository,
   CreatePaymentTransactionInput,
   UpdateTransactionStatusInput,
+  MarkSucceededIfConfirmableInput,
+  MarkSucceededIfConfirmableResult,
 } from '@northflow/payment-orchestration-core';
 import type { StandalonePaymentTransactionDTO } from '@northflow/payment-orchestration-core';
 import type { PoDb } from '../db.ts';
@@ -133,5 +135,37 @@ export class DrizzlePaymentTransactionRepository
         ),
       );
     return Number(result[0]?.total ?? 0);
+  }
+
+  /**
+   * Atomically transitions a transaction to 'succeeded' only when it is
+   * currently in 'requires_action' or 'pending' status.
+   *
+   * Uses a conditional UPDATE … WHERE id = ? AND merchant_id = ?
+   * AND status IN ('requires_action', 'pending') RETURNING *
+   *
+   * This prevents concurrent confirms from double-crediting the intent:
+   * only ONE concurrent caller gets changed=true; all others see changed=false
+   * and must reload to determine the current status.
+   */
+  async markSucceededIfConfirmable(
+    input: MarkSucceededIfConfirmableInput,
+  ): Promise<MarkSucceededIfConfirmableResult> {
+    const rows = await this.db
+      .update(t)
+      .set({ status: 'succeeded', updatedAt: new Date() })
+      .where(
+        and(
+          eq(t.id, input.id),
+          eq(t.merchantId, input.merchantId),
+          inArray(t.status, ['requires_action', 'pending']),
+        ),
+      )
+      .returning();
+    const row = rows[0];
+    if (!row) {
+      return { transaction: null, changed: false };
+    }
+    return { transaction: mapTransactionRow(row as any), changed: true };
   }
 }

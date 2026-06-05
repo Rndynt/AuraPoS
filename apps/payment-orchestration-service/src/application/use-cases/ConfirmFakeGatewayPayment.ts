@@ -2,23 +2,18 @@
  * ConfirmFakeGatewayPayment — manually confirm a FakeGateway transaction in dev/test mode.
  *
  * Phase 8D: non-production only. Simulates provider webhook confirmation.
- * Phase 8D Hardening (Task 6):
- *   - Conditional status update: only transitions from requires_action or pending → succeeded.
- *   - Fresh reload of transaction before checking status (reduces TOCTOU window).
- *   - Reload intent BEFORE updating totals to detect concurrent changes and re-check overpayment.
- *   - Overpayment guard at confirmation time: if tx.amount > current intent.amountRemaining, reject.
- *   - alreadyConfirmed returns current state without re-applying totals.
- *
- * Concurrency note: the read-before-write pattern has a known TOCTOU race under high concurrency.
- * A truly atomic conditional UPDATE (WHERE status IN ('requires_action', 'pending')) would require
- * a repository extension; this is deferred to Phase 8E as an enhancement when real provider webhooks
- * are wired and concurrent confirmation becomes a practical concern.
+ * Phase 8D.1 (atomic confirm):
+ *   - Uses markSucceededIfConfirmable() — a conditional UPDATE WHERE status IN
+ *     ('requires_action', 'pending') — instead of read-then-write.
+ *   - Eliminates the TOCTOU race that was documented in Phase 8D Hardening.
+ *   - Concurrent confirms: only ONE caller gets changed=true and credits the intent;
+ *     the other gets changed=false → reload → alreadyConfirmed=true, no double-add.
  *
  * Rules:
  * - Only available in NODE_ENV !== 'production'.
  * - Only transactions with status requires_action or pending may be confirmed.
- * - Updates transaction to succeeded.
- * - Updates intent totals and status.
+ * - Updates transaction to succeeded atomically.
+ * - Updates intent totals and status only when changed === true.
  * - Confirming already-succeeded is idempotent (does NOT double-add amountPaid).
  */
 
@@ -60,7 +55,7 @@ export class ConfirmFakeGatewayPayment {
       );
     }
 
-    // Fresh read of transaction to minimise TOCTOU window.
+    // Load transaction for validation.
     const tx = await this.transactionRepo.findById(
       input.transactionId,
       input.merchantId,
@@ -72,7 +67,7 @@ export class ConfirmFakeGatewayPayment {
       );
     }
 
-    // Idempotent: already succeeded — reload intent for consistent response.
+    // If already succeeded, return idempotent without re-applying totals.
     if (tx.status === 'succeeded') {
       const intent = await this.intentRepo.findById(tx.intentId, input.merchantId);
       if (!intent) {
@@ -84,7 +79,7 @@ export class ConfirmFakeGatewayPayment {
       return { transaction: tx, intent, alreadyConfirmed: true };
     }
 
-    // Conditional guard: only requires_action or pending may be confirmed.
+    // Reject non-confirmable status before even trying the atomic update.
     if (tx.status !== 'requires_action' && tx.status !== 'pending') {
       throw Object.assign(
         new Error(
@@ -95,7 +90,7 @@ export class ConfirmFakeGatewayPayment {
       );
     }
 
-    // Reload intent fresh BEFORE updating to re-check overpayment.
+    // Reload intent fresh BEFORE the atomic update to check overpayment.
     const intent = await this.intentRepo.findById(tx.intentId, input.merchantId);
     if (!intent) {
       throw Object.assign(
@@ -105,8 +100,8 @@ export class ConfirmFakeGatewayPayment {
     }
 
     // Overpayment guard at confirmation time.
-    // The amountRemaining may have changed since the gateway payment was created
-    // (e.g., another payment was confirmed concurrently).
+    // amountRemaining may have changed since the gateway payment was created
+    // (e.g. another payment was confirmed concurrently).
     if (tx.amount > intent.amountRemaining) {
       throw Object.assign(
         new Error(
@@ -117,14 +112,40 @@ export class ConfirmFakeGatewayPayment {
       );
     }
 
-    // Update transaction status to succeeded.
-    const confirmedTx = await this.transactionRepo.updateStatus({
-      id: tx.id,
-      merchantId: input.merchantId,
-      status: 'succeeded',
-    });
+    // ── Phase 8D.1: Atomic conditional update ────────────────────────────────
+    // UPDATE … WHERE status IN ('requires_action','pending')
+    // Prevents TOCTOU: only the first concurrent caller to succeed gets changed=true.
+    const { transaction: confirmedTx, changed } =
+      await this.transactionRepo.markSucceededIfConfirmable({
+        id: tx.id,
+        merchantId: input.merchantId,
+      });
 
-    // Update intent totals.
+    if (!changed) {
+      // Another concurrent caller already confirmed (or status changed).
+      // Reload to determine actual current status.
+      const reloaded = await this.transactionRepo.findById(
+        input.transactionId,
+        input.merchantId,
+      );
+      if (reloaded?.status === 'succeeded') {
+        const freshIntent = await this.intentRepo.findById(tx.intentId, input.merchantId);
+        return {
+          transaction: reloaded,
+          intent: freshIntent ?? intent,
+          alreadyConfirmed: true,
+        };
+      }
+      throw Object.assign(
+        new Error(
+          `Transaction status '${reloaded?.status ?? 'unknown'}' cannot be confirmed. ` +
+            'Only requires_action or pending transactions may be confirmed.',
+        ),
+        { statusCode: 422, code: 'INVALID_TRANSACTION_STATUS' },
+      );
+    }
+
+    // ── Update intent totals — only when WE made the status change ───────────
     const newAmountPaid = intent.amountPaid + tx.amount;
     const newAmountRemaining = Math.max(0, intent.amountDue - newAmountPaid);
     const newStatus = computeIntentStatus(intent.amountDue, newAmountPaid);
@@ -144,7 +165,7 @@ export class ConfirmFakeGatewayPayment {
     });
 
     return {
-      transaction: confirmedTx,
+      transaction: confirmedTx!,
       intent: { ...updatedTotals, status: updatedIntent.status },
       alreadyConfirmed: false,
     };

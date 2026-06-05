@@ -208,7 +208,17 @@ export class CreateGatewayPayment {
             idempotentReplay: true,
           };
         }
-        // status === 'failed': allow retry (fall through to normal execution).
+        if (existingKey.status === 'failed') {
+          // Phase 8D.1 policy: failed idempotency key is NOT reusable.
+          // The client must supply a new idempotency key for a retry.
+          throw Object.assign(
+            new Error(
+              'Idempotency key previously failed. A new idempotency key is required for a retry.',
+            ),
+            { statusCode: 409, code: 'IDEMPOTENCY_PREVIOUSLY_FAILED' },
+          );
+        }
+        // unknown status: fall through to normal execution.
       }
 
       // Reserve the idempotency key before calling the provider.

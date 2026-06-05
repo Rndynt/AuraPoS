@@ -5,6 +5,10 @@
  * Phase 8D Hardening:
  *   - CreateGatewayPayment now receives providerAccountRepo, idempotencyRepo, nodeEnv
  *     for provider account validation (Task 4) and idempotency guard (Task 5).
+ * Phase 8D.1 + 8E:
+ *   - ConfirmFakeGatewayPayment uses atomic markSucceededIfConfirmable.
+ *   - FakeGatewayWebhookHandler wired with optional webhook secret from env.
+ *   - HandleProviderWebhook use case wired and exposed.
  *
  * No AuraPoS session/tenant middleware.
  * No POS order domain deps.
@@ -22,6 +26,7 @@ import { DrizzlePaymentIntentRepository } from './infrastructure/repositories/Dr
 import { DrizzlePaymentTransactionRepository } from './infrastructure/repositories/DrizzlePaymentTransactionRepository.ts';
 import { DrizzlePaymentProviderEventRepository } from './infrastructure/repositories/DrizzlePaymentProviderEventRepository.ts';
 import { DrizzlePaymentIdempotencyRepository } from './infrastructure/repositories/DrizzlePaymentIdempotencyRepository.ts';
+import { FakeGatewayWebhookHandler } from './infrastructure/providers/FakeGatewayWebhookHandler.ts';
 import { CreateMerchant } from './application/use-cases/CreateMerchant.ts';
 import { CreateProviderAccount } from './application/use-cases/CreateProviderAccount.ts';
 import { CreatePaymentIntent } from './application/use-cases/CreatePaymentIntent.ts';
@@ -29,6 +34,7 @@ import { CreateGatewayPayment } from './application/use-cases/CreateGatewayPayme
 import { ConfirmFakeGatewayPayment } from './application/use-cases/ConfirmFakeGatewayPayment.ts';
 import { GetPaymentIntentStatus } from './application/use-cases/GetPaymentIntentStatus.ts';
 import { GetRefundability } from './application/use-cases/GetRefundability.ts';
+import { HandleProviderWebhook } from './application/use-cases/HandleProviderWebhook.ts';
 
 import type { PaymentMerchantRepository } from '@northflow/payment-orchestration-core';
 import type { PaymentProviderAccountRepository } from '@northflow/payment-orchestration-core';
@@ -54,6 +60,7 @@ export interface ServiceUseCases {
   confirmFakeGatewayPayment: ConfirmFakeGatewayPayment;
   getPaymentIntentStatus: GetPaymentIntentStatus;
   getRefundability: GetRefundability;
+  handleProviderWebhook: HandleProviderWebhook;
 }
 
 export interface ServiceContainer {
@@ -84,6 +91,12 @@ export function createContainer(config: PaymentOrchestrationServiceConfig): Serv
     idempotencyRepo,
   };
 
+  // ── Phase 8E: FakeGateway webhook handler ────────────────────────────────
+  const fakeGatewayWebhookHandler = new FakeGatewayWebhookHandler({
+    webhookSecret: process.env['PAYMENT_ORCHESTRATION_FAKEGATEWAY_WEBHOOK_SECRET'] ?? null,
+    nodeEnv: config.nodeEnv,
+  });
+
   const useCases: ServiceUseCases = {
     createMerchant: new CreateMerchant(merchantRepo),
     createProviderAccount: new CreateProviderAccount(merchantRepo, providerAccountRepo),
@@ -104,6 +117,12 @@ export function createContainer(config: PaymentOrchestrationServiceConfig): Serv
     ),
     getPaymentIntentStatus: new GetPaymentIntentStatus(intentRepo, transactionRepo),
     getRefundability: new GetRefundability(intentRepo, transactionRepo),
+    handleProviderWebhook: new HandleProviderWebhook(
+      transactionRepo,
+      intentRepo,
+      providerEventRepo,
+      fakeGatewayWebhookHandler,
+    ),
   };
 
   return { config, db, repos, providerRegistry, useCases };
