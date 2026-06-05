@@ -1,5 +1,5 @@
 /**
- * @northflow/payment-orchestration-client-sdk — Phase 8A Public API
+ * @northflow/payment-orchestration-client-sdk — Phase 8B Public API
  *
  * Typed HTTP client for the payment-orchestration-service standalone API.
  *
@@ -7,16 +7,16 @@
  * - Fetch-compatible (Node 18+ / modern browsers)
  * - Typed request/response shapes
  * - Custom header injection (service token, merchant ID, source app)
- * - Typed error classes (PaymentEngineClientError, PaymentEngineNetworkError)
+ * - Typed error classes (PaymentOrchestrationClientError, PaymentOrchestrationNetworkError)
  * - No React dependency
  * - No AuraPoS tenant/session dependency
  * - No @northflow/payment-orchestration-core dependency (self-contained)
  *
  * Usage:
  * ```ts
- * import { PaymentEngineClient } from '@northflow/payment-orchestration-client-sdk';
+ * import { PaymentOrchestrationClient } from '@northflow/payment-orchestration-client-sdk';
  *
- * const client = new PaymentEngineClient({
+ * const client = new PaymentOrchestrationClient({
  *   baseUrl: 'http://localhost:5100',
  *   serviceToken: process.env.PAYMENT_ORCHESTRATION_SERVICE_TOKEN,
  *   merchantId: 'my-merchant-id',
@@ -33,10 +33,12 @@
  * ```
  */
 
-export { PaymentEngineClient } from './client.ts';
-export { PaymentEngineClientError, PaymentEngineNetworkError } from './errors.ts';
+// ── Primary exports (Phase 8B) ─────────────────────────────────────────────────
+
+export { PaymentOrchestrationClient } from './client.ts';
+export { PaymentOrchestrationClientError, PaymentOrchestrationNetworkError } from './errors.ts';
 export type {
-  PaymentEngineClientConfig,
+  PaymentOrchestrationClientConfig,
   CreatePaymentIntentRequest,
   PaymentIntentResponse,
   CreateGatewayPaymentRequest,
@@ -45,3 +47,14 @@ export type {
   RefundabilityResponse,
   ProviderActionResponse,
 } from './types.ts';
+
+// ── Deprecated aliases (Phase 8B) — will be removed in a future major version ──
+
+/** @deprecated Use PaymentOrchestrationClient instead. */
+export { PaymentOrchestrationClient as PaymentEngineClient } from './client.ts';
+/** @deprecated Use PaymentOrchestrationClientError instead. */
+export { PaymentOrchestrationClientError as PaymentEngineClientError } from './errors.ts';
+/** @deprecated Use PaymentOrchestrationNetworkError instead. */
+export { PaymentOrchestrationNetworkError as PaymentEngineNetworkError } from './errors.ts';
+/** @deprecated Use PaymentOrchestrationClientConfig instead. */
+export type { PaymentOrchestrationClientConfig as PaymentEngineClientConfig } from './types.ts';

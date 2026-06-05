@@ -8,12 +8,13 @@
  * No React dependency. No AuraPoS tenant dependency.
  *
  * Phase 8A: methods implemented as real HTTP wrappers.
- * The service returns 501 for most routes in Phase 8A — this is expected.
+ * Phase 8B: class renamed to PaymentOrchestrationClient. PaymentEngineClient is a deprecated alias.
+ * The service returns 501 for most routes in Phase 8A/8B — this is expected.
  */
 
-import { PaymentEngineClientError, PaymentEngineNetworkError } from './errors.ts';
+import { PaymentOrchestrationClientError, PaymentOrchestrationNetworkError } from './errors.ts';
 import type {
-  PaymentEngineClientConfig,
+  PaymentOrchestrationClientConfig,
   CreatePaymentIntentRequest,
   PaymentIntentResponse,
   CreateGatewayPaymentRequest,
@@ -22,11 +23,11 @@ import type {
   RefundabilityResponse,
 } from './types.ts';
 
-export class PaymentEngineClient {
+export class PaymentOrchestrationClient {
   private readonly baseUrl: string;
   private readonly defaultHeaders: Record<string, string>;
 
-  constructor(config: PaymentEngineClientConfig) {
+  constructor(config: PaymentOrchestrationClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, '');
     this.defaultHeaders = {
       'Content-Type': 'application/json',
@@ -61,7 +62,7 @@ export class PaymentEngineClient {
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
     } catch (err: unknown) {
-      throw new PaymentEngineNetworkError(
+      throw new PaymentOrchestrationNetworkError(
         `Network error calling payment-orchestration-service: ${String(err)}`,
         err,
       );
@@ -79,7 +80,7 @@ export class PaymentEngineClient {
           ? String((data as Record<string, unknown>)['message'])
           : `HTTP ${response.status} from payment-orchestration-service`;
 
-      throw new PaymentEngineClientError(message, response.status, code, data);
+      throw new PaymentOrchestrationClientError(message, response.status, code, data);
     }
 
     // Unwrap { ok, data } envelope if present; otherwise return data as-is.
@@ -96,7 +97,7 @@ export class PaymentEngineClient {
    *
    * POST /v1/payment-intents
    *
-   * Phase 8A: service returns 501. Call will throw PaymentEngineClientError with status=501.
+   * Phase 8A/8B: service returns 501. Call will throw PaymentOrchestrationClientError with status=501.
    * Phase 8D: fully implemented.
    */
   async createPaymentIntent(
@@ -110,7 +111,7 @@ export class PaymentEngineClient {
    *
    * POST /v1/payment-intents/:intentId/gateway-payments
    *
-   * Phase 8A: service returns 501.
+   * Phase 8A/8B: service returns 501.
    */
   async createGatewayPayment(
     intentId: string,
@@ -128,7 +129,7 @@ export class PaymentEngineClient {
    *
    * GET /v1/payment-intents/:intentId/status
    *
-   * Phase 8A: service returns 501.
+   * Phase 8A/8B: service returns 501.
    */
   async getPaymentIntentStatus(intentId: string): Promise<PaymentIntentStatusResponse> {
     return this.request<PaymentIntentStatusResponse>(

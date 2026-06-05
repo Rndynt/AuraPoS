@@ -6,16 +6,22 @@
  *
  * These types mirror the service API contracts and should stay in sync
  * with packages/payment-orchestration-core/src/application/contracts.ts.
+ *
+ * Phase 8B: primary config type is now PaymentOrchestrationClientConfig.
+ * PaymentEngineClientConfig is a deprecated alias.
  */
 
 // ── Client Configuration ──────────────────────────────────────────────────────
 
-export interface PaymentEngineClientConfig {
+export interface PaymentOrchestrationClientConfig {
   baseUrl: string;
   serviceToken?: string;
   merchantId?: string;
   sourceApp?: string;
 }
+
+/** @deprecated Use PaymentOrchestrationClientConfig instead. */
+export type PaymentEngineClientConfig = PaymentOrchestrationClientConfig;
 
 // ── Create Payment Intent ─────────────────────────────────────────────────────
 

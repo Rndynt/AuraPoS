@@ -66,6 +66,12 @@
       ],
       "@pos/offline/*": [
         "./packages/offline/src/*"
+      ],
+      "@northflow/payment-orchestration-core": [
+        "./packages/payment-orchestration-core/src"
+      ],
+      "@northflow/payment-orchestration-core/*": [
+        "./packages/payment-orchestration-core/src/*"
       ]
     }
   },

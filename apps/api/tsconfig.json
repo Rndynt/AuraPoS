@@ -18,7 +18,9 @@
       "@pos/infrastructure": ["../../packages/infrastructure"],
       "@pos/infrastructure/*": ["../../packages/infrastructure/*"],
       "@pos/features": ["../../packages/features"],
-      "@pos/features/*": ["../../packages/features/*"]
+      "@pos/features/*": ["../../packages/features/*"],
+      "@northflow/payment-orchestration-core": ["../../packages/payment-orchestration-core/src"],
+      "@northflow/payment-orchestration-core/*": ["../../packages/payment-orchestration-core/src/*"]
     }
   },
   "include": ["src/**/*"],

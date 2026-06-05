@@ -1,7 +1,8 @@
 # Payment Orchestration — Hybrid Standalone Architecture
 
-**Phase:** 8A — Hybrid Standalone Extraction Scaffold (Hardened)
-**Status:** Architecture contracted. Service skeleton. Embedded engine unchanged.
+**Phase:** 8B — Core Contract Adoption (current)
+**Previous phase:** 8A — Hybrid Standalone Extraction Scaffold (Hardened)
+**Status:** Provider contracts converged. SDK renamed. Adapter helpers added. Embedded engine unchanged.
 **Date:** 2026-06-05
 **Naming:** `@northflow/payment-orchestration-*`
 
@@ -245,11 +246,109 @@ pnpm --filter @northflow/payment-orchestration-service type-check
 
 ---
 
+## Phase 8B — Core Contract Adoption
+
+### What changed in Phase 8B
+
+**SDK rename (Task 1)**
+
+The primary public class and error names in `@northflow/payment-orchestration-client-sdk`
+were renamed from `PaymentEngine*` to `PaymentOrchestration*`:
+
+| Before (deprecated) | After (primary) |
+|---------------------|-----------------|
+| `PaymentEngineClient` | `PaymentOrchestrationClient` |
+| `PaymentEngineClientError` | `PaymentOrchestrationClientError` |
+| `PaymentEngineNetworkError` | `PaymentOrchestrationNetworkError` |
+| `PaymentEngineClientConfig` | `PaymentOrchestrationClientConfig` |
+
+Deprecated aliases remain exported for backward compatibility and are marked `@deprecated`.
+
+**Correct SDK usage (Phase 8B+):**
+
+```ts
+import { PaymentOrchestrationClient } from '@northflow/payment-orchestration-client-sdk';
+
+const client = new PaymentOrchestrationClient({
+  baseUrl: 'http://localhost:5100',
+  serviceToken: process.env.PAYMENT_ORCHESTRATION_SERVICE_TOKEN,
+  merchantId: 'my-merchant-id',
+  sourceApp: 'aurapos',
+});
+```
+
+**Core capability contract extension (Task 5)**
+
+`PaymentProviderCapabilities` in `@northflow/payment-orchestration-core` was extended
+with three optional fields to align with the embedded `ProviderCapabilities`:
+
+| New optional field | Maps from embedded | Meaning |
+|-------------------|--------------------|---------|
+| `supportsMultiplePartialRefund?` | `supportsMultiplePartialRefund` | Provider allows multiple partial refunds per tx |
+| `canReturnImmediateSuccess?` | `canReturnImmediateSuccess` | Provider may settle synchronously from createPayment() |
+| `canReturnImmediateFailure?` | `canReturnImmediateFailure` | Provider may reject synchronously from createPayment() |
+
+**Provider adapter (Task 2/3)**
+
+A new adapter module bridges embedded and core provider contracts:
+
+```text
+packages/application/payments/adapters/PaymentProviderCoreAdapter.ts
+```
+
+Exported helpers:
+
+```ts
+toCoreProviderAction(embedded: ProviderAction): PaymentProviderAction
+toCoreProviderActions(embedded: ProviderAction[]): PaymentProviderAction[]
+toCoreProviderCapabilities(embedded: ProviderCapabilities): PaymentProviderCapabilities
+```
+
+Key mapping decisions:
+- `canCancel` → `supportsCancel`, `canRefund` → `supportsRefund` (rename only, no behavior change)
+- `url` field in core: set to `value` for `WEB_URL` descriptor, `null` otherwise
+- `supportedMethods` in core: always `[]` (embedded has no direct equivalent)
+- `expiresAt` and `metadata` from embedded `ProviderAction` are **not** propagated to core DTO
+  (core is a portable DTO; callers needing those fields retain the original embedded action)
+
+**tsconfig path alias added**
+
+`@northflow/payment-orchestration-core` was added to:
+- `tsconfig.base.json` (inherited by all packages)
+- `apps/api/tsconfig.json` (overrides base paths; needs explicit entry)
+- `apps/api/tsconfig.node.json` (used by test runner)
+
+**Contract compatibility tests (Task 4)**
+
+```text
+apps/api/src/__tests__/payment-orchestration-core-contract-adapter.test.ts
+```
+
+14 tests across 4 suites. All pass. Covers:
+- FakeGateway: qris, va, redirect, payment_code, immediate_success, immediate_failure
+- Xendit (mocked): redirect, QR, VA
+- Capability mapping: FakeGateway, Xendit sandbox, Manual
+- Edge cases: null value, metadata/expiresAt not propagated
+
+### What did NOT change in Phase 8B
+
+- Runtime traffic: still 100% embedded AuraPoS API (`apps/api`)
+- No DB schema additions
+- `apps/payment-orchestration-service` remains a skeleton (no real use cases wired)
+- Embedded `/api/payment-engine/...` routes remain the runtime source of truth
+- FakeGateway scenarios unchanged
+- Xendit sandbox adapter behavior unchanged
+- Provider codes unchanged (`fake_gateway`, `xendit_sandbox`, `manual`)
+- No provider-level refund/cancel
+- No POS UI changes; no order adapter
+- Legacy order payment flow untouched
+
+---
+
 ## Next Phases
 
 | Phase | Description |
 |-------|-------------|
-| 8B    | Provider migration: embedded providers adapt to core contracts |
 | 8C    | DB schema addendum: standalone tables (merchant, standalone_intent, etc.) |
 | 8D    | Full use-case wiring in payment-orchestration-service |
 | 8E    | AuraPoS consumes client SDK; embedded engine deprecated |
