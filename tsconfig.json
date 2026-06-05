@@ -23,6 +23,12 @@
       "path": "./packages/offline/tsconfig.json"
     },
     {
+      "path": "./packages/payment-engine-core/tsconfig.json"
+    },
+    {
+      "path": "./packages/payment-engine-client-sdk/tsconfig.json"
+    },
+    {
       "path": "./apps/api/tsconfig.json"
     },
     {
@@ -30,6 +36,9 @@
     },
     {
       "path": "./apps/web/tsconfig.json"
+    },
+    {
+      "path": "./apps/payment-engine-service/tsconfig.json"
     }
   ]
 }
