@@ -14,6 +14,7 @@
  */
 
 import type { Database } from '../../database';
+import { DrizzleUnitOfWork } from '../../unit-of-work';
 import {
   orders,
   orderItems,
@@ -27,9 +28,7 @@ import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from '@pos/applicati
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
 import { calculateSelectedOptionsDelta, flattenSelectedOptions } from '@pos/application/catalog';
 import type { SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
-import { deductStockForItems } from '@pos/application/inventory/stockMovements';
-import { resolveInventoryPolicy } from '@pos/application/inventory/inventoryPolicy';
-import { recordInventorySyncError } from '@pos/application/inventory/inventorySyncErrors';
+import { DrizzleInventoryPolicyRepository, DrizzleInventorySyncErrorRepository, DrizzleStockMovementRepository } from '../inventory';
 import { nextOrderNumberForTenant } from './orderNumberSequence';
 
 // ---------------------------------------------------------------------------
@@ -56,7 +55,15 @@ interface LegacyCreateAndPayOrderItemInput {
 // ---------------------------------------------------------------------------
 
 export class DrizzleCreateAndPayOrderRepository {
-  constructor(private readonly db: Database) {}
+  private readonly inventoryPolicyRepository: DrizzleInventoryPolicyRepository;
+  private readonly inventorySyncErrorRepository: DrizzleInventorySyncErrorRepository;
+  private readonly stockMovementRepository: DrizzleStockMovementRepository;
+
+  constructor(private readonly db: Database) {
+    this.inventoryPolicyRepository = new DrizzleInventoryPolicyRepository(db);
+    this.inventorySyncErrorRepository = new DrizzleInventorySyncErrorRepository(db);
+    this.stockMovementRepository = new DrizzleStockMovementRepository(db);
+  }
 
   async createAndPay(input: CreateAndPayOrderInput): Promise<CreateAndPayOrderOutput> {
     const {
@@ -169,7 +176,7 @@ export class DrizzleCreateAndPayOrderRepository {
     // and strict inventory writes commit or roll back together.
     // ------------------------------------------------------------------
 
-    const inventoryPolicy = await resolveInventoryPolicy(tenant_id, this.db);
+    const inventoryPolicy = await this.inventoryPolicyRepository.resolveInventoryPolicy(tenant_id);
 
     // ------------------------------------------------------------------
     // TRUE ATOMIC TRANSACTION (P0.2)
@@ -306,7 +313,7 @@ export class DrizzleCreateAndPayOrderRepository {
       // tenants perform the movement after the financial transaction; failures are
       // durable retry/audit records and do not orphan the order/payment.
       if (inventoryPolicy.policy === 'strict') {
-        await deductStockForItems(
+        await this.stockMovementRepository.deductStockForItems(
           tenant_id,
           computedItems.map((item) => ({
             productId: item.product_id,
@@ -318,7 +325,7 @@ export class DrizzleCreateAndPayOrderRepository {
             outletId: outlet_id ?? null,
             terminalId: inventory_terminal_id ?? null,
           },
-          { tx, allowNegativeStock: false },
+          { transaction: DrizzleUnitOfWork.toContext(tx), allowNegativeStock: false },
         );
       }
 
@@ -340,9 +347,9 @@ export class DrizzleCreateAndPayOrderRepository {
       };
 
       try {
-        await deductStockForItems(tenant_id, movementItems, movementContext, { allowNegativeStock: true });
+        await this.stockMovementRepository.deductStockForItems(tenant_id, movementItems, movementContext, { allowNegativeStock: true });
       } catch (error) {
-        inventorySyncError = await recordInventorySyncError({
+        inventorySyncError = await this.inventorySyncErrorRepository.recordInventorySyncError({
           tenantId: tenant_id,
           outletId: outlet_id ?? null,
           orderId: result.order.id,

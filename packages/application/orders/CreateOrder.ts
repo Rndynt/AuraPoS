@@ -3,11 +3,10 @@
  * Creates a new order with items, modifiers, and complete pricing calculation
  */
 
-import type { Order as DbOrder, InsertOrder } from '../../../shared/schema';
 import type { Order, OrderItem, SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';
-import { toInsertOrderDb, toDomainOrder } from './mappers';
+import { toInsertOrderDb, toDomainOrder, type InsertOrderPersistenceData, type PersistedOrderRecord } from './mappers';
 import {
   type CheckProductAvailabilityInput,
   type CheckProductAvailabilityOutput,
@@ -68,7 +67,7 @@ export interface OrderItemInput {
 }
 
 export interface IOrderRepository {
-  create(order: InsertOrder, orderItems: OrderItemInput[], tenantId: string): Promise<DbOrder>;
+  create(order: InsertOrderPersistenceData, orderItems: OrderItemInput[], tenantId: string): Promise<PersistedOrderRecord>;
   generateOrderNumber(tenantId: string): Promise<string>;
   findByIdempotencyKey?(tenantId: string, idempotencyKey: string): Promise<any | null>;
 }

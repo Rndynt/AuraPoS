@@ -21,6 +21,17 @@ import { DrizzleSyncOfflineOrderRepository } from '@pos/infrastructure/repositor
 import { TenantRepository } from '@pos/infrastructure/repositories/tenants/TenantRepository';
 import { TenantFeatureRepository } from '@pos/infrastructure/repositories/tenants/TenantFeatureRepository';
 import { TenantModuleConfigRepository } from '@pos/infrastructure/repositories/tenants/TenantModuleConfigRepository';
+import { DrizzleUnitOfWork } from '@pos/infrastructure/unit-of-work';
+import {
+  DrizzleInventoryPolicyRepository,
+  DrizzleInventorySyncErrorRepository,
+  DrizzleStockMovementRepository,
+} from '@pos/infrastructure/repositories/inventory';
+import {
+  configureInventoryPolicyPort,
+  configureInventorySyncErrorPort,
+  configureStockMovementPort,
+} from '@pos/application/inventory';
 
 // Use Cases - Catalog
 import { GetProducts } from '@pos/application/catalog/GetProducts';
@@ -74,6 +85,12 @@ class Container {
   public readonly tenantFeatureRepository: TenantFeatureRepository;
   public readonly tenantModuleConfigRepository: TenantModuleConfigRepository;
 
+  // Inventory Adapters
+  public readonly inventoryPolicyRepository: DrizzleInventoryPolicyRepository;
+  public readonly inventorySyncErrorRepository: DrizzleInventorySyncErrorRepository;
+  public readonly stockMovementRepository: DrizzleStockMovementRepository;
+  public readonly unitOfWork: DrizzleUnitOfWork;
+
   // Catalog Use Cases
   public readonly getProducts: GetProducts;
   public readonly getProductById: GetProductById;
@@ -118,6 +135,13 @@ class Container {
     this.tenantRepository = new TenantRepository(db);
     this.tenantFeatureRepository = new TenantFeatureRepository(db);
     this.tenantModuleConfigRepository = new TenantModuleConfigRepository(db);
+    this.unitOfWork = new DrizzleUnitOfWork(db);
+    this.inventoryPolicyRepository = new DrizzleInventoryPolicyRepository(db);
+    this.inventorySyncErrorRepository = new DrizzleInventorySyncErrorRepository(db);
+    this.stockMovementRepository = new DrizzleStockMovementRepository(db);
+    configureInventoryPolicyPort(this.inventoryPolicyRepository);
+    configureInventorySyncErrorPort(this.inventorySyncErrorRepository);
+    configureStockMovementPort(this.stockMovementRepository);
 
     // Initialize Use Cases with Repository Dependencies
     // Catalog
@@ -127,7 +151,7 @@ class Container {
       this.productRepository as any
     );
     this.createOrUpdateProduct = new CreateOrUpdateProduct(
-      db,
+      this.unitOfWork,
       this.productRepository as any,
       this.productOptionGroupRepository as any,
       this.productOptionRepository as any,

@@ -115,3 +115,30 @@ Important scope notes:
 - [ ] Full P2 is not complete yet. Remaining application-layer DB/schema/Drizzle imports still exist outside the four requested starting targets, including inventory helpers, catalog create/update, seating table types, and some order list/create mapper files.
 - [ ] P3 was not started.
 - [ ] No endpoint behavior, DB schema, cash/standard payment behavior, or partial payment behavior was intentionally changed in this batch.
+
+## Execution notes — 2026-06-08 P2 continuation batch
+
+Status: implemented and validated.
+
+Completed in this batch:
+
+- [x] `packages/application/catalog/CreateOrUpdateProduct.ts` no longer imports `@pos/infrastructure/database`, `@shared/schema`/`shared/schema`, or Drizzle. Product mutation transaction ownership now depends on `UnitOfWorkPort`, and product/option persistence uses application-level DTOs while infrastructure repositories map those DTOs to Drizzle insert/update shapes.
+- [x] `packages/application/inventory/inventoryPolicy.ts` no longer imports DB clients, shared schema, or Drizzle. It now exposes policy normalization/application contracts and delegates persistence through `InventoryPolicyPort`; `DrizzleInventoryPolicyRepository` owns the tenant module config query.
+- [x] `packages/application/inventory/inventorySyncErrors.ts` no longer imports DB clients, shared schema, or Drizzle. It now exposes retry/audit contracts and delegates persistence through `InventorySyncErrorPort`; `DrizzleInventorySyncErrorRepository` owns insert/update/list-due persistence and DB-specific retry-count SQL.
+- [x] `packages/application/inventory/stockMovements.ts` no longer imports DB clients, shared schema, or Drizzle. It now exposes stock movement contracts/errors and delegates persistence through `StockMovementPort`; `DrizzleStockMovementRepository` owns row locks, conditional stock updates, and inventory movement ledger inserts.
+- [x] Remaining `packages/application` blocked-source imports were removed from order mapper/list/create type contracts and seating use cases. Application code now uses local application persistence records/ports instead of shared schema or infrastructure repository types.
+- [x] `apps/api/src/container.ts` now wires inventory policy, inventory sync error, stock movement, and unit-of-work adapters in the composition root without endpoint renames or DB schema changes.
+
+Validation:
+
+- [x] `pnpm --filter @pos/application type-check` — pass.
+- [x] `pnpm --filter @pos/infrastructure type-check` — pass.
+- [x] `pnpm --filter @pos/api type-check` — pass.
+- [x] `pnpm --filter @pos/api test` — pass, 195/195 tests.
+- [x] `pnpm type-check` — pass, 10/10 Turbo tasks.
+
+Important scope notes:
+
+- [ ] P3 was not started.
+- [ ] No DB schema changes, endpoint renames, cash/standard payment behavior changes, or partial payment behavior changes were made.
+- [ ] Inventory strict/allow-negative behavior, stock movement ledger behavior, and inventory sync retry/audit behavior were preserved while moving persistence access to infrastructure adapters.

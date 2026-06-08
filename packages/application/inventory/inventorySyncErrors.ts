@@ -1,7 +1,5 @@
-import type { DbClient } from '@pos/infrastructure/database';
-import { db } from '@pos/infrastructure/database';
-import { inventorySyncErrors } from '../../../shared/schema';
-import { and, asc, eq, isNull, lte, sql } from 'drizzle-orm';
+import type { TransactionContext } from '../shared/ports/UnitOfWorkPort';
+import type { InventorySyncErrorPort } from './ports/InventorySyncErrorPort';
 import type { StockContext, StockItem } from './stockMovements';
 
 export type InventorySyncOperation = 'deduct_sale' | 'reverse_return';
@@ -25,50 +23,37 @@ export interface RecordInventorySyncErrorInput {
   nextRetryAt?: Date;
 }
 
+let defaultInventorySyncErrorPort: InventorySyncErrorPort | undefined;
+
+export function configureInventorySyncErrorPort(port: InventorySyncErrorPort): void {
+  defaultInventorySyncErrorPort = port;
+}
+
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return typeof error === 'string' ? error : 'Unknown inventory sync error';
 }
 
+function getInventorySyncErrorPort(): InventorySyncErrorPort {
+  if (!defaultInventorySyncErrorPort) {
+    throw new Error('Inventory sync error port has not been configured');
+  }
+  return defaultInventorySyncErrorPort;
+}
+
 export async function recordInventorySyncError(
   input: RecordInventorySyncErrorInput,
-  client: DbClient = db,
+  context?: TransactionContext,
 ) {
-  const [record] = await client
-    .insert(inventorySyncErrors)
-    .values({
-      tenantId: input.tenantId,
-      outletId: input.outletId ?? null,
-      orderId: input.orderId ?? null,
-      productId: input.productId ?? null,
-      operation: input.operation,
-      status: 'pending',
-      payload: input.payload as any,
-      lastError: errorMessage(input.error),
-      retryCount: 0,
-      nextRetryAt: input.nextRetryAt ?? new Date(),
-    })
-    .returning();
-
-  return record;
+  return getInventorySyncErrorPort().recordInventorySyncError(input, context);
 }
 
-export async function markInventorySyncErrorRetrying(id: string, client: DbClient = db) {
-  const [record] = await client
-    .update(inventorySyncErrors)
-    .set({ status: 'retrying', updatedAt: new Date() })
-    .where(eq(inventorySyncErrors.id, id))
-    .returning();
-  return record;
+export async function markInventorySyncErrorRetrying(id: string, context?: TransactionContext) {
+  return getInventorySyncErrorPort().markInventorySyncErrorRetrying(id, context);
 }
 
-export async function markInventorySyncErrorResolved(id: string, client: DbClient = db) {
-  const [record] = await client
-    .update(inventorySyncErrors)
-    .set({ status: 'resolved', resolvedAt: new Date(), updatedAt: new Date() })
-    .where(eq(inventorySyncErrors.id, id))
-    .returning();
-  return record;
+export async function markInventorySyncErrorResolved(id: string, context?: TransactionContext) {
+  return getInventorySyncErrorPort().markInventorySyncErrorResolved(id, context);
 }
 
 export async function markInventorySyncErrorFailed(
@@ -76,34 +61,17 @@ export async function markInventorySyncErrorFailed(
   error: unknown,
   retryDelayMs: number,
   maxRetries: number,
-  client: DbClient = db,
+  context?: TransactionContext,
 ) {
-  const message = errorMessage(error);
-  const [record] = await client
-    .update(inventorySyncErrors)
-    .set({
-      status: sql`CASE WHEN ${inventorySyncErrors.retryCount} + 1 >= ${maxRetries} THEN 'failed' ELSE 'pending' END` as any,
-      retryCount: sql`${inventorySyncErrors.retryCount} + 1` as any,
-      lastError: message,
-      nextRetryAt: new Date(Date.now() + retryDelayMs),
-      updatedAt: new Date(),
-    })
-    .where(eq(inventorySyncErrors.id, id))
-    .returning();
-  return record;
+  return getInventorySyncErrorPort().markInventorySyncErrorFailed(
+    id,
+    error,
+    retryDelayMs,
+    maxRetries,
+    context,
+  );
 }
 
-export async function listDueInventorySyncErrors(limit: number, client: DbClient = db) {
-  return client
-    .select()
-    .from(inventorySyncErrors)
-    .where(
-      and(
-        eq(inventorySyncErrors.status, 'pending'),
-        lte(inventorySyncErrors.nextRetryAt, new Date()),
-        isNull(inventorySyncErrors.resolvedAt),
-      ),
-    )
-    .orderBy(asc(inventorySyncErrors.createdAt))
-    .limit(limit);
+export async function listDueInventorySyncErrors(limit: number, context?: TransactionContext) {
+  return getInventorySyncErrorPort().listDueInventorySyncErrors(limit, context);
 }
