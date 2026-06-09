@@ -97,3 +97,9 @@ export type {
   OrderPaymentRepositoryPort,
   OrderRepositoryPort,
 } from './ports';
+
+// P4: application-layer order workflows used by thin HTTP controllers
+export { ConfirmOrderWorkflow } from './services/ConfirmOrderWorkflow';
+export type { ConfirmOrderWorkflowInput, ConfirmOrderWorkflowOutput } from './services/ConfirmOrderWorkflow';
+export { CancelOrderWorkflow } from './services/CancelOrderWorkflow';
+export type { CancelOrderWorkflowInput, CancelOrderWorkflowOutput } from './services/CancelOrderWorkflow';

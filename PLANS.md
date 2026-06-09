@@ -5731,3 +5731,216 @@ Continue with P3 only. Do not start P4.
 ### Continuation Notes
 
 P3 code changes are complete for this batch. Next safe action is to re-run DB-backed API tests with `DATABASE_URL` configured. Do not start P4 unless explicitly requested.
+
+## Plan: P4 S1-S3 Thin Controllers
+
+### Source
+
+- Tasklist: `roadmap/refactor/prompts/p4-s1-s3-thin-controllers-prompt.md`
+- User request: "Eksekusi hati hati, sesuai, presisi roadmap/refactor/prompts/p4-s1-s3-thin-controllers-prompt.md"
+- Date started: 2026-06-09
+- Current status: in progress
+
+### Goal
+
+Move confirm/cancel order inventory orchestration out of `apps/api/src/http/controllers/OrdersController.ts` into application-layer workflow services while preserving P3 transaction boundaries, tenant/outlet isolation, endpoint paths, response shapes, and payment/order/inventory behavior.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs (`roadmap/refactor/main.md`, `execution-protocol.md`, P2/P3/P4 phase docs)
+- [x] Relevant source files listed in the P4 prompt
+
+### Workstreams
+
+Real subagents were not used because the current developer instruction only allows spawning subagents when explicitly requested by the user; workstreams are simulated here.
+
+#### Backend/API Workstream
+
+- Scope: `OrdersController.ts`, API composition root.
+- Files inspected: `apps/api/src/http/controllers/OrdersController.ts`, `apps/api/src/container.ts`.
+- Findings: Controller owns confirm/cancel inventory policy resolution, transaction orchestration, stock movement, stock reversal, inventory sync error recording, and cancelled-order stock-state decisions.
+- Tasks: Add application workflow services and wire them into the container; replace controller helper calls with service calls.
+- Risks: Error shape and outlet guard behavior must remain compatible.
+- Validation: `pnpm --filter @pos/api type-check`, `pnpm --filter @pos/api test`.
+
+#### Database/Schema Workstream
+
+- Scope: Ensure no schema/migration edits.
+- Files inspected: P3 docs and UnitOfWork implementation.
+- Findings: P4 should reuse `UnitOfWorkPort.transaction(callback)` and must not touch DB schema.
+- Tasks: Run schema-change audit.
+- Risks: None expected if only application/API files change.
+- Validation: `git diff -- shared/schema.ts packages/infrastructure/db`.
+
+#### Frontend/UI Workstream
+
+- Scope: None; P4 prompt forbids frontend POS changes.
+- Files inspected: None.
+- Findings: Not applicable.
+- Tasks: Do not touch frontend.
+- Risks: None.
+- Validation: Ensure changed files do not include frontend files.
+
+#### Tests/Validation Workstream
+
+- Scope: Required P4 commands and audits.
+- Files inspected: API/application package scripts.
+- Findings: Required validation commands are available via pnpm scripts.
+- Tasks: Run application/API type-checks, API tests, root type-check, forbidden import audit, endpoint-change audit, schema-change audit.
+- Risks: DB-backed tests may require configured `DATABASE_URL`.
+- Validation: Command log below.
+
+#### Documentation Workstream
+
+- Scope: P4 phase notes and PLANS.md.
+- Files inspected: `roadmap/refactor/p4-s1-s3-thin-controllers.md`, `roadmap/refactor/execution-protocol.md`.
+- Findings: P4 phase notes must record affected files, validation, behavior preservation, and follow-up risks.
+- Tasks: Update phase notes after implementation and validation.
+- Risks: Must not claim validation not actually run.
+- Validation: Diff review.
+
+#### Security/Tenant Isolation Workstream
+
+- Scope: Confirm/cancel workflow tenant/outlet checks.
+- Files inspected: `OrdersController.ts`, `ConfirmOrder.ts`, `CancelOrder.ts`, `OrderRepository.ts`.
+- Findings: Existing tenant-scoped repository calls are used; controller outlet guard precedes confirm; cancel workflow performs scoped lookup both strict and allow-negative paths.
+- Tasks: Preserve tenant-scoped lookups and outlet mismatch 404 behavior.
+- Risks: Application services should not replace scoped lookups with id-only reads.
+- Validation: Type-checks/tests and code review.
+
+### Execution Order
+
+1. Extract workflow services for confirm/cancel inventory orchestration.
+2. Wire services in `apps/api/src/container.ts`.
+3. Thin `OrdersController.ts` imports/helpers and call new services.
+4. Update P4 roadmap notes and PLANS.md progress.
+5. Run required validation and audits.
+6. Commit P4 changes.
+
+### Progress
+
+#### Completed
+
+- [ ] Task: Extract confirm/cancel inventory workflows into application services.
+  - Files changed: pending
+  - Validation: pending
+  - Docs updated: pending
+
+#### Partially Completed
+
+- [ ] Task: None yet.
+  - Completed:
+  - Remaining:
+  - Reason:
+
+#### Blocked
+
+- [ ] Task: None yet.
+  - Blocker:
+  - Required next step:
+
+#### Not Attempted
+
+- [ ] Task: Validation and commit.
+  - Reason: Implementation not complete yet.
+
+### Validation Log
+
+- Command: pending
+- Result: pending
+- Notes: pending
+
+### Documentation Updates
+
+- File: `PLANS.md`
+- Change: Added active P4 execution plan.
+
+### Checklist Updates
+
+- File: `roadmap/refactor/p4-s1-s3-thin-controllers.md`
+- Change: Pending after validation.
+
+### Continuation Notes
+
+Continue by implementing `ConfirmOrderWorkflow` and `CancelOrderWorkflow` in `packages/application/orders/services`, wiring them in `apps/api/src/container.ts`, and replacing controller-local workflow helpers.
+
+## Update: P4 S1-S3 Thin Controllers — implementation completed
+
+### Progress
+
+#### Completed
+
+- [x] Task: Extract confirm/cancel inventory workflows into application services.
+  - Files changed: `packages/application/orders/services/ConfirmOrderWorkflow.ts`, `packages/application/orders/services/CancelOrderWorkflow.ts`, `packages/application/orders/services/orderInventoryWorkflow.ts`, `packages/application/orders/index.ts`.
+  - Validation: `pnpm --filter @pos/application type-check` pass; `pnpm --filter @pos/api type-check` pass; `pnpm type-check` pass.
+  - Docs updated: `roadmap/refactor/p4-s1-s3-thin-controllers.md`.
+- [x] Task: Wire workflow services in the API container.
+  - Files changed: `apps/api/src/container.ts`.
+  - Validation: API and root type-check pass.
+  - Docs updated: `roadmap/refactor/p4-s1-s3-thin-controllers.md`.
+- [x] Task: Thin OrdersController confirm/cancel/kitchen-ticket workflow calls.
+  - Files changed: `apps/api/src/http/controllers/OrdersController.ts`.
+  - Validation: API and root type-check pass; endpoint diff reviewed with no route or response-shape changes.
+  - Docs updated: `roadmap/refactor/p4-s1-s3-thin-controllers.md`.
+
+#### Partially Completed
+
+- [ ] Task: Full API test validation.
+  - Completed: `pnpm --filter @pos/api test` was run; 194/195 tests passed.
+  - Remaining: Re-run with `DATABASE_URL` configured so `record-payment-idempotency.test.ts` can start.
+  - Reason: Environment blocker, not a P4 code failure.
+
+#### Blocked
+
+- [ ] Task: DB-backed record-payment idempotency test.
+  - Blocker: `DATABASE_URL` is not set in this environment.
+  - Required next step: Provide/configure `DATABASE_URL` and re-run `pnpm --filter @pos/api test`.
+
+#### Not Attempted
+
+- [ ] Task: P5.
+  - Reason: P4 prompt explicitly forbids starting P5.
+
+### Validation Log
+
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Notes: Application layer type-check passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Notes: API composition root and controller wiring type-check passed after omitting unused actor IDs from controller inputs.
+- Command: `pnpm --filter @pos/api test`
+- Result: fail/environment blocker
+- Notes: 194/195 tests passed; `record-payment-idempotency.test.ts` failed at startup because `DATABASE_URL` is not set.
+- Command: `pnpm type-check`
+- Result: pass
+- Notes: Turbo reported 10/10 successful type-check tasks.
+- Command: forbidden application import audit
+- Result: pass
+- Notes: No forbidden application imports found.
+- Command: endpoint-change audit
+- Result: reviewed
+- Notes: No endpoint path or public response shape changes.
+- Command: schema-change audit
+- Result: pass
+- Notes: No diff under `shared/schema.ts` or `packages/infrastructure/db`.
+
+### Documentation Updates
+
+- File: `roadmap/refactor/p4-s1-s3-thin-controllers.md`
+- Change: Added P4 execution notes, affected files, validation results, behavior preservation notes, and continuation guidance.
+- File: `PLANS.md`
+- Change: Updated active P4 plan with completed, partial, blocked, validation, and continuation details.
+
+### Checklist Updates
+
+- File: `roadmap/refactor/p4-s1-s3-thin-controllers.md`
+- Change: Recorded completed P4 S1-S3 implementation items and the DB-backed validation blocker honestly.
+
+### Continuation Notes
+
+P4 S1-S3 implementation should be considered ready for review, with the only validation gap being the environment-dependent DB-backed record-payment idempotency test. Next safe action is to rerun API tests with `DATABASE_URL` configured; P5 must wait for user approval.

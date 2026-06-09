@@ -52,6 +52,8 @@ import { ListOrderHistory } from '@pos/application/orders/ListOrderHistory';
 import { TransitionOrderStatus } from '@pos/application/orders/TransitionOrderStatus';
 import { CreateAndPayOrder } from '@pos/application/orders/CreateAndPayOrder';
 import { TransitionOrderFulfillmentStatus } from '@pos/application/orders/TransitionOrderFulfillmentStatus';
+import { ConfirmOrderWorkflow } from '@pos/application/orders/services/ConfirmOrderWorkflow';
+import { CancelOrderWorkflow } from '@pos/application/orders/services/CancelOrderWorkflow';
 import { SyncOfflineOrder } from '@pos/application/sync/SyncOfflineOrder';
 
 // Use Cases - Tenants
@@ -105,6 +107,8 @@ class Container {
   public readonly confirmOrder: ConfirmOrder;
   public readonly completeOrder: CompleteOrder;
   public readonly cancelOrder: CancelOrder;
+  public readonly confirmOrderWorkflow: ConfirmOrderWorkflow;
+  public readonly cancelOrderWorkflow: CancelOrderWorkflow;
   public readonly listOpenOrders: ListOpenOrders;
   public readonly listOrderHistory: ListOrderHistory;
   public readonly transitionOrderStatus: TransitionOrderStatus;
@@ -185,6 +189,15 @@ class Container {
     this.cancelOrder = new CancelOrder(
       this.orderRepository as any,
       this.tenantRepository as any
+    );
+    this.confirmOrderWorkflow = new ConfirmOrderWorkflow(
+      this.confirmOrder,
+      this.unitOfWork
+    );
+    this.cancelOrderWorkflow = new CancelOrderWorkflow(
+      this.cancelOrder,
+      this.orderRepository as any,
+      this.unitOfWork
     );
     this.listOpenOrders = new ListOpenOrders(
       this.orderRepository as any,
