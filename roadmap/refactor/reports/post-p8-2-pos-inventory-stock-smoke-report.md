@@ -2,7 +2,9 @@
 
 ## Environment
 
-- **Commit SHA tested:** `3fde45b` (HEAD → main)
+- **Smoke/fix commit SHA:** `ee5d26ccaf7f51fe4974a1a1215cd0875fb19c7f`
+- **Original smoke prompt commit:** `3fde45b141fa6f9bab713fce06cb411e78cfdfa5`
+- **Post-smoke UI-only interruption commit:** `6108b02419ca860276cff7282803102349637c77` — ProductAvatar fallback for missing/broken product images; no order/payment/inventory/schema behavior changes.
 - **Date:** 2026-06-09
 - **Database/environment:** Local PostgreSQL (Replit dev environment)
 - **Tenant:** Thamada Coffee Shop (`slug: thamada`, UUID auto-generated)
@@ -68,7 +70,7 @@ Status format: `pass / fail / blocked / not available / not run`
 |------|--------|------------------|
 | T. KDS ticket | **not run** | `enableKitchenTicket: true`; KDS route exists at `POST /api/orders/:id/kitchen-ticket`; not exercised in API smoke |
 | U. Receipt print/reprint | **not available** | No receipt print endpoint found |
-| V. CFD/customer display | **not available** | No CFD endpoint found |
+| V. CFD/customer display | **not run** | CFD backend endpoints exist (`POST /api/cfd/session-token`, `POST /api/cfd/update`) and websocket exists from P5, but full CFD device/browser websocket smoke was not exercised in this run. CFD should be validated in a dedicated device/browser smoke if needed. |
 
 ---
 
@@ -147,6 +149,9 @@ Stock is decremented when `POST /api/orders/:id/payments` is first called (even 
 ### FINDING-004: `create-and-pay` uses `amount` not `amount_paid`
 `POST /api/orders/create-and-pay` schema uses field `amount` (not `amount_paid` or `payment_amount`) for the payment amount alongside `payment_method`. This is consistent with `recordPayment` which also uses `amount`.
 
+### FINDING-005: CFD endpoints exist but were not manually smoke tested
+P5 provides CFD backend routes (`POST /api/cfd/session-token`, `POST /api/cfd/update`) and websocket support. The Post-P8.2 smoke did not run a full device/browser websocket CFD scenario, so CFD is marked `not run`, not `not available`.
+
 ---
 
 ## Final Decision
@@ -156,4 +161,5 @@ Stock is decremented when `POST /api/orders/:id/payments` is first called (even 
 - **Stock tracking safe:** yes — SALE movements created correctly; ADJUSTMENT_IN/OUT work correctly
 - **Advanced stock safe:** partial — adjustment IN/OUT works; transfer, opname, void/refund not available
 - **Offline stock sync safe:** not available — no offline mechanism
+- **CFD/customer display safe:** not run — endpoints exist, but full device/browser smoke still needs dedicated test if required
 - **Ready for feature development:** **yes**, with the 6 seed bugs fixed (all applied in this session)
