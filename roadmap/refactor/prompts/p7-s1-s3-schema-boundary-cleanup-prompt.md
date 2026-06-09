@@ -1,41 +1,27 @@
 # AuraPoS Refactor — P7 S1-S3 Schema Boundary Cleanup Agent Prompt
 
-You are working in the `Rndynt/AuraPoS` repository.
-
-This prompt is the updated P7 prompt to use after P2, P3, P4, P5, and P6 have been implemented.
+Work in `Rndynt/AuraPoS`.
 
 ## Objective
 
-Execute **P7 S1-S3 — Schema Boundary Cleanup** safely.
+Execute P7 only: move DB schema ownership to infrastructure without changing runtime database shape.
 
-The goal is to move DB schema ownership toward infrastructure while keeping `shared/schema.ts` as a temporary compatibility boundary. This is a boundary cleanup/refactor, not a feature phase and not a database redesign.
-
-Primary target areas:
+This is the only accepted strategy:
 
 ```txt
-shared/schema.ts
-packages/infrastructure/db/schema/
-packages/infrastructure/repositories/**
-apps/api/**
+Canonical Infrastructure Schema + shared/schema.ts Compatibility Re-export
 ```
 
-## Current context
+Final target:
 
-The root monorepo still has `shared/schema.ts` as a central Drizzle schema file.
+```txt
+packages/infrastructure/db/schema/* = canonical Drizzle schema definitions
+shared/schema.ts                    = compatibility re-export wrapper
+```
 
-P2/P3 removed application-layer DB/schema leaks. Application must remain schema-free.
-
-P4 moved order workflow out of controllers.
-
-P5 moved backend CFD/realtime logic into `apps/api/src/realtime/cfd`.
-
-P6 moved frontend POS logic into `apps/pos-terminal-web/src/features/pos`.
-
-P7 must not undo any of that.
+There must be one source of truth only. Do not create mirrored schema definitions or multiple competing strategies.
 
 ## Read first
-
-Read these files before editing:
 
 ```txt
 roadmap/refactor/main.md
@@ -46,63 +32,33 @@ roadmap/refactor/p5-s1-s3-realtime-cfd-module-split.md
 roadmap/refactor/p4-s1-s3-thin-controllers.md
 roadmap/refactor/p3-s1-s3-unit-of-work-transaction-boundary.md
 roadmap/refactor/p2-s1-s4-application-db-leak-removal.md
-
 shared/schema.ts
 packages/infrastructure/package.json
-apps/api/src/container.ts
 drizzle.config.ts
 ```
 
-Then audit schema imports:
+## Scope
 
-```bash
-rg -n "from ['\"](@shared/schema|shared/schema|../../shared/schema|../../../shared/schema|.*shared/schema)['\"]" .
-rg -n "@shared/schema|shared/schema" packages apps shared
+P7 is schema-boundary cleanup only.
+
+Keep all behavior from P2-P6 intact:
+
+```txt
+application layer remains schema-free
+P3 UnitOfWork transaction behavior unchanged
+P4 order workflows unchanged
+P5 CFD backend unchanged
+P6 frontend POS unchanged
+payment, partial payment, inventory, offline, KDS, CFD behavior unchanged
 ```
 
-## Strict scope
+No new feature tables. No table rename. No column rename. No index/default/reference/constraint/type changes. No migrations. No P8 enforcement yet.
 
-Work only on P7.
+Expected DB result: zero runtime schema changes.
 
-Do not start P8.
+## Required structure
 
-Do not add ESLint/import-boundary enforcement yet.
-
-Do not touch frontend POS behavior.
-
-Do not edit P6 POS feature flows unless a type-only import path update is absolutely necessary.
-
-Do not edit P5 CFD behavior.
-
-Do not edit P4 order workflow semantics.
-
-Do not edit P3 UnitOfWork transaction semantics.
-
-Do not edit payment business behavior.
-
-Do not edit partial payment behavior.
-
-Do not edit inventory behavior.
-
-Do not add new feature tables.
-
-Do not add branch/multi-location features.
-
-Do not introduce hard FK dependencies from `orders` to restaurant-specific tables like tables/kitchen/down-payment.
-
-Do not rename tables.
-
-Do not rename columns.
-
-Do not change constraints, indexes, defaults, enum-like varchar values, or references unless explicitly documented as an accidental mismatch fix.
-
-Do not generate migrations unless a real schema change is intentionally required and approved.
-
-The default expectation for P7 is **zero runtime DB schema changes**.
-
-## P7 target shape
-
-Create an infrastructure-owned schema folder:
+Create infrastructure schema modules:
 
 ```txt
 packages/infrastructure/db/schema/
@@ -118,114 +74,42 @@ packages/infrastructure/db/schema/
   index.ts
 ```
 
-Names may be adjusted if the current schema domains require it, but responsibility must be clear.
+Adjust module names only when the current schema grouping clearly requires it.
 
-## Compatibility rule
+## Implementation
 
-Do not delete `shared/schema.ts`.
+Move actual Drizzle table/schema/type definitions from `shared/schema.ts` into the infrastructure schema modules.
 
-During P7, `shared/schema.ts` should remain a compatibility entry point. Prefer one of these safe strategies:
+Export every schema symbol from:
 
-### Strategy A — Compatibility re-export wrapper
+```txt
+packages/infrastructure/db/schema/index.ts
+```
 
-Move actual schema definitions into `packages/infrastructure/db/schema/*`, then make `shared/schema.ts` re-export from the new infrastructure schema index.
+Then convert `shared/schema.ts` into a compatibility wrapper:
 
-Use this only if import cycles and package resolution remain safe.
+```ts
+export * from "@pos/infrastructure/db/schema";
+```
 
-### Strategy B — Incremental mirrored modules
+If that alias does not resolve from `shared/schema.ts`, use the shortest stable relative re-export that passes type-check.
 
-Create infrastructure schema modules that initially re-export selected symbols from `shared/schema.ts`, then migrate infrastructure imports toward the infrastructure path. Keep `shared/schema.ts` as source of truth temporarily.
+Preserve every existing export name from `shared/schema.ts`.
 
-Use this if full move is too risky for one batch.
+## Import migration
 
-### Strategy C — Hybrid staged split
-
-Move low-risk, independent schema groups first and leave tightly coupled groups in `shared/schema.ts`, with explicit documentation.
-
-Only use this if type-check and Drizzle config remain stable.
-
-Pick the safest strategy based on actual code. Document the chosen strategy in the P7 roadmap execution notes.
-
-## Import migration order
-
-Migrate imports in this order:
+Migrate safe imports in this order:
 
 ```txt
 1. infrastructure repositories
-2. API infrastructure-heavy services/controllers only where they already use schema directly
+2. API files that already import schema directly
 3. jobs/scripts/seeds if safe
-4. compatibility re-export layer
-5. leave application schema-free
+4. drizzle.config.ts if validation passes
 ```
 
-Do not start by changing application use cases. Application should already depend on ports, not schema.
+Application use cases must not be changed to import schema.
 
-## Application-layer hard rule
-
-Application must not import schema from either old or new path.
-
-Forbidden:
-
-```txt
-packages/application/** imports @shared/schema
-packages/application/** imports shared/schema
-packages/application/** imports @pos/infrastructure/db/schema
-packages/application/** imports drizzle-orm for schema/query work
-```
-
-Run:
-
-```bash
-rg -n "(@shared/schema|shared/schema|@pos/infrastructure/db/schema|drizzle-orm)" packages/application
-```
-
-Expected result:
-
-```txt
-No matches, unless there is a documented type-only exception already approved. Do not create new exceptions.
-```
-
-## Drizzle config rule
-
-Inspect `drizzle.config.ts` and preserve migration/discovery behavior.
-
-If the Drizzle config points to `shared/schema.ts`, do not break it. Either keep it pointing to compatibility `shared/schema.ts` or update it only if the new infrastructure schema index exports all schema symbols correctly and validation passes.
-
-Do not change migration output folder unless explicitly approved.
-
-## Schema identity preservation
-
-For every moved schema definition, preserve exactly:
-
-```txt
-table name
-column name
-column type
-notNull/default behavior
-references/onDelete behavior
-indexes
-unique indexes
-primary keys
-zod insert/select schema names if exported
-type export names if exported
-```
-
-The refactor should be import-path cleanup, not database shape change.
-
-## Do not break existing consumers
-
-Existing consumers may still import from:
-
-```txt
-@shared/schema
-shared/schema
-```
-
-P7 should keep those imports working through compatibility exports until P8/import-boundary enforcement is ready.
-
-Do not delete exports used by API tests, seeds, repositories, or frontend type imports.
-
-## Required validation
+## Validation
 
 Run:
 
@@ -236,127 +120,59 @@ pnpm type-check
 pnpm run db:check
 ```
 
-If `pnpm run db:check` requires a local/default database and fails for environment reasons, document the exact reason and run any available schema/static check command.
-
-If the full API test suite is run and hits the known `DATABASE_URL` blocker, document it as environment-limited. Do not delete or weaken the test.
-
-## Required audits before commit
-
-Audit application remains schema-free:
+Run audits:
 
 ```bash
-rg -n "(@shared/schema|shared/schema|@pos/infrastructure/db/schema|drizzle-orm)" packages/application
-```
-
-Audit no accidental schema shape changes:
-
-```bash
+rg -n "@shared/schema|shared/schema|@pos/infrastructure/db/schema|drizzle-orm" packages/application
 git diff -- shared/schema.ts packages/infrastructure/db/schema drizzle.config.ts
-```
-
-Manually review this diff and document whether it is re-export/import movement only or whether any actual schema shape changed.
-
-Audit no unrelated frontend/backend feature changes:
-
-```bash
 git diff -- apps/pos-terminal-web/src/features/pos apps/api/src/realtime/cfd apps/api/src/http/controllers/OrdersController.ts packages/application/orders packages/application/inventory
 ```
 
 Expected:
 
 ```txt
-No unrelated P4/P5/P6 behavior changes.
+application schema audit: no matches
+schema diff: movement/re-export/import-path cleanup only
+unrelated behavior diff: no P4/P5/P6 behavior changes
 ```
+
+If `pnpm run db:check` fails because database/env is unavailable, document the exact reason.
 
 ## Documentation update
 
-Update:
+Update `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md` with:
 
 ```txt
-roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md
-```
-
-Add execution notes with this structure:
-
-```md
-## Execution notes — P7 S1-S3
-
-Status: implemented and validated / partially implemented / blocked
-
-### Strategy chosen
-
-- Strategy A/B/C
-- Why this strategy was chosen
-- Whether `shared/schema.ts` remains compatibility source or compatibility wrapper
-
-### Completed
-
-- [x] Audited current `shared/schema.ts` imports.
-- [x] Created `packages/infrastructure/db/schema` boundary modules.
-- [x] Migrated infrastructure/API schema imports where safe.
-- [x] Preserved `shared/schema.ts` compatibility exports.
-- [x] Kept application layer schema-free.
-- [x] Did not change table/column names, constraints, indexes, defaults, or references.
-- [x] Did not start P8.
-
-### Validation
-
-- `pnpm --filter @pos/infrastructure type-check`: pass/fail
-- `pnpm --filter @pos/api type-check`: pass/fail
-- `pnpm type-check`: pass/fail
-- `pnpm run db:check`: pass/fail/environment-limited with reason
-- application schema import audit: pass/fail
-
-### Behavior preservation
-
-- Runtime DB schema changed: no
-- Migration generated: no
-- Table names changed: no
-- Column names changed: no
-- Indexes/constraints changed: no
-- Application schema-free boundary preserved: yes/no
-- P3 transaction boundary changed: no
-- P4 order workflow changed: no
-- P5 CFD backend changed: no
-- P6 frontend POS changed: no
-- Payment/partial payment behavior changed: no
-- Inventory behavior changed: no
-
-### Continuation
-
-P7 is complete. Next safe phase is P8 only after user approval.
+Status
+Files changed
+Schema modules added
+shared/schema.ts role after P7
+Imports migrated
+Validation results
+DB schema shape changed: no
+Migration generated: no
+Application schema-free audit result
+P3/P4/P5/P6 preserved
+P8 started: no
 ```
 
 ## Commit
 
-Use commit message:
+Use:
 
 ```bash
-git commit -m "refactor(db): move schema ownership toward infrastructure"
+git commit -m "refactor(db): move schema ownership to infrastructure"
 ```
 
-Then push the branch.
+Then push.
 
-## If validation fails
-
-Do not start P8.
-
-Do not delete compatibility exports to force type-check.
-
-Do not hide the failure.
-
-If moving real definitions is too risky, fall back to Strategy B: create infrastructure schema boundary modules that re-export from `shared/schema.ts`, update only safe infrastructure imports, and document remaining work.
-
-If schema identity diff shows runtime DB shape changes, stop and revert that part unless explicitly approved.
-
-## Final report required from agent
+## Final report
 
 Report:
 
 ```txt
 P7 status:
 Commit SHA:
-Strategy chosen:
 Files changed:
 Schema modules added:
 shared/schema.ts role after P7:
