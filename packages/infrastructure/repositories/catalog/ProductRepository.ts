@@ -4,6 +4,9 @@
  */
 
 import { Database, DbClient } from '../../database';
+import type { TransactionContext } from '@pos/application/shared/ports';
+import type { ProductMutationData, ProductMutationUpdateData } from '@pos/application/catalog/CreateOrUpdateProduct';
+import { DrizzleUnitOfWork } from '../../unit-of-work';
 import { BaseRepository, RepositoryError } from '../BaseRepository';
 import {
   products,
@@ -21,6 +24,57 @@ import type {
   ProductOption 
 } from '../../../domain/catalog/types';
 import { eq, and, inArray } from 'drizzle-orm';
+
+type CatalogDbContext = DbClient | TransactionContext;
+
+function resolveCatalogClient(defaultClient: DbClient, context?: CatalogDbContext): DbClient {
+  if (!context) return defaultClient;
+  return DrizzleUnitOfWork.fromContext(context as TransactionContext) ?? (context as DbClient);
+}
+
+function mapProductMutationData(product: ProductMutationData): InsertProduct {
+  return {
+    tenantId: product.tenantId,
+    name: product.name,
+    description: product.description,
+    basePrice: product.basePrice.toString(),
+    category: product.category,
+    categoryId: product.categoryId,
+    imageUrl: product.imageUrl,
+    metadata: product.metadata,
+    hasVariants: product.hasVariants,
+    stockTrackingEnabled: product.stockTrackingEnabled,
+    stockQty: product.stockQty,
+    sku: product.sku,
+    isActive: product.isActive,
+  };
+}
+
+function mapProductMutationUpdateData(product: ProductMutationUpdateData): Partial<InsertProduct> {
+  return {
+    tenantId: product.tenantId,
+    name: product.name,
+    description: product.description,
+    basePrice: product.basePrice === undefined ? undefined : product.basePrice.toString(),
+    category: product.category,
+    categoryId: product.categoryId,
+    imageUrl: product.imageUrl,
+    metadata: product.metadata,
+    hasVariants: product.hasVariants,
+    stockTrackingEnabled: product.stockTrackingEnabled,
+    stockQty: product.stockQty,
+    sku: product.sku,
+    isActive: product.isActive,
+  };
+}
+
+function isProductMutationData(product: InsertProduct | ProductMutationData): product is ProductMutationData {
+  return typeof (product as ProductMutationData).basePrice === 'number';
+}
+
+function isProductMutationUpdateData(product: Partial<InsertProduct> | ProductMutationUpdateData): product is ProductMutationUpdateData {
+  return typeof (product as ProductMutationUpdateData).basePrice === 'number';
+}
 
 /**
  * Map database product to domain product (camelCase -> snake_case)
@@ -81,12 +135,12 @@ export interface ProductFilters {
 }
 
 export interface IProductRepository {
-  findByTenant(tenantId: string, filters?: ProductFilters, client?: DbClient): Promise<Product[]>;
-  findById(id: string, tenantId: string, client?: DbClient): Promise<Product | null>;
-  findByIdWithOptions(id: string, tenantId: string, client?: DbClient): Promise<Product | null>;
-  create(product: InsertProduct, tenantId: string, client?: DbClient): Promise<Product>;
-  update(id: string, product: Partial<InsertProduct>, tenantId: string, client?: DbClient): Promise<Product>;
-  delete(id: string, tenantId: string, client?: DbClient): Promise<void>;
+  findByTenant(tenantId: string, filters?: ProductFilters, client?: CatalogDbContext): Promise<Product[]>;
+  findById(id: string, tenantId: string, client?: CatalogDbContext): Promise<Product | null>;
+  findByIdWithOptions(id: string, tenantId: string, client?: CatalogDbContext): Promise<Product | null>;
+  create(product: InsertProduct | ProductMutationData, tenantId: string, client?: CatalogDbContext): Promise<Product>;
+  update(id: string, product: Partial<InsertProduct> | ProductMutationUpdateData, tenantId: string, client?: CatalogDbContext): Promise<Product>;
+  delete(id: string, tenantId: string, client?: CatalogDbContext): Promise<void>;
 }
 
 export class ProductRepository
@@ -106,10 +160,10 @@ export class ProductRepository
   async findByTenant(
     tenantId: string,
     filters?: ProductFilters,
-    client?: DbClient
+    client?: CatalogDbContext
   ): Promise<Product[]> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       
       // If businessType filter is provided, need to join with tenants table
       if (filters?.businessType) {
@@ -176,9 +230,9 @@ export class ProductRepository
   /**
    * Find product by ID with basic option groups
    */
-  async findById(id: string, tenantId: string, client?: DbClient): Promise<Product | null> {
+  async findById(id: string, tenantId: string, client?: CatalogDbContext): Promise<Product | null> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       const result = await dbClient
         .select()
         .from(products)
@@ -194,9 +248,9 @@ export class ProductRepository
   /**
    * Find product by ID with all option groups and options
    */
-  async findByIdWithOptions(id: string, tenantId: string, client?: DbClient): Promise<Product | null> {
+  async findByIdWithOptions(id: string, tenantId: string, client?: CatalogDbContext): Promise<Product | null> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       
       // Get the product first (already mapped to domain)
       const product = await this.findById(id, tenantId, dbClient);
@@ -231,10 +285,11 @@ export class ProductRepository
   /**
    * Create a new product
    */
-  async create(product: InsertProduct, tenantId: string, client?: DbClient): Promise<Product> {
+  async create(product: InsertProduct | ProductMutationData, tenantId: string, client?: CatalogDbContext): Promise<Product> {
     try {
-      const dbClient = client ?? this.db;
-      const data = this.injectTenantId(product, tenantId);
+      const dbClient = resolveCatalogClient(this.db, client);
+      const insertData = isProductMutationData(product) ? mapProductMutationData(product) : product;
+      const data = this.injectTenantId(insertData, tenantId);
       const result = await dbClient.insert(products).values(data).returning();
       return mapProductToDomain(result[0]);
     } catch (error) {
@@ -247,17 +302,17 @@ export class ProductRepository
    */
   async update(
     id: string,
-    product: Partial<InsertProduct>,
+    product: Partial<InsertProduct> | ProductMutationUpdateData,
     tenantId: string,
-    client?: DbClient
+    client?: CatalogDbContext
   ): Promise<Product> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       await this.ensureTenantAccess(id, tenantId, dbClient);
 
       const result = await dbClient
         .update(products)
-        .set({ ...product, updatedAt: new Date() })
+        .set({ ...(isProductMutationUpdateData(product) ? mapProductMutationUpdateData(product) : product), updatedAt: new Date() })
         .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
         .returning();
 
@@ -275,9 +330,9 @@ export class ProductRepository
   /**
    * Delete a product (soft delete by setting isActive to false)
    */
-  async delete(id: string, tenantId: string, client?: DbClient): Promise<void> {
+  async delete(id: string, tenantId: string, client?: CatalogDbContext): Promise<void> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       await this.ensureTenantAccess(id, tenantId, dbClient);
 
       await dbClient
@@ -302,9 +357,9 @@ export class ProductRepository
    * Find option groups for multiple products
    * Returns a map of productId -> option groups (mapped to domain types)
    */
-  async findOptionGroupsByProductIds(productIds: string[], client?: DbClient): Promise<Map<string, ProductOptionGroup[]>> {
+  async findOptionGroupsByProductIds(productIds: string[], client?: CatalogDbContext): Promise<Map<string, ProductOptionGroup[]>> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       if (productIds.length === 0) {
         return new Map();
       }
@@ -334,9 +389,9 @@ export class ProductRepository
    * Find options for multiple option groups
    * Returns a map of groupId -> options (mapped to domain types)
    */
-  async findOptionsByGroupIds(groupIds: string[], client?: DbClient): Promise<Map<string, ProductOption[]>> {
+  async findOptionsByGroupIds(groupIds: string[], client?: CatalogDbContext): Promise<Map<string, ProductOption[]>> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       if (groupIds.length === 0) {
         return new Map();
       }
@@ -366,9 +421,9 @@ export class ProductRepository
    * Find option groups by product ID (for GetProductById use case)
    * Returns option groups mapped to domain types
    */
-  async findOptionGroupsByProductId(productId: string, client?: DbClient): Promise<ProductOptionGroup[]> {
+  async findOptionGroupsByProductId(productId: string, client?: CatalogDbContext): Promise<ProductOptionGroup[]> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       const groups = await dbClient
         .select()
         .from(productOptionGroups)

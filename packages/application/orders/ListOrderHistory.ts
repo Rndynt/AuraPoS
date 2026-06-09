@@ -3,7 +3,7 @@
  * Fetches completed and cancelled orders with pagination support
  */
 
-import type { Order } from '../../../shared/schema';
+import type { PersistedOrderRecord } from './mappers';
 
 export interface IOrderRepository {
   findByTenant(tenantId: string, filters?: {
@@ -14,7 +14,7 @@ export interface IOrderRepository {
     limit?: number;
     offset?: number;
     outletId?: string;
-  }): Promise<Order[]>;
+  }): Promise<PersistedOrderRecord[]>;
   countByTenant(
     tenantId: string,
     filters?: {
@@ -48,7 +48,7 @@ export interface PaginationMetadata {
 }
 
 export interface ListOrderHistoryOutput {
-  orders: Order[];
+  orders: PersistedOrderRecord[];
   pagination: PaginationMetadata;
 }
 

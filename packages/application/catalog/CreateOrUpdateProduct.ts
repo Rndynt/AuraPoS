@@ -8,15 +8,7 @@ import type {
   ProductOptionGroup as DomainProductOptionGroup,
   ProductOption as DomainProductOption 
 } from '@pos/domain/catalog/types';
-import type { 
-  InsertProduct, 
-  InsertProductOptionGroup, 
-  InsertProductOption,
-  ProductOptionGroup as DBProductOptionGroup,
-  ProductOption as DBProductOption,
-  Tenant
-} from '../../../shared/schema';
-import type { Database, DbClient } from '@pos/infrastructure/database';
+import type { TransactionContext, UnitOfWorkPort } from '../shared/ports/UnitOfWorkPort';
 
 /**
  * Input type for option within an option group
@@ -80,24 +72,85 @@ export interface CreateOrUpdateProductOutput {
 /**
  * Repository interfaces with proper typing
  */
+export interface ProductMutationData {
+  tenantId: string;
+  name: string;
+  description?: string;
+  basePrice: number;
+  category: string;
+  categoryId?: string;
+  imageUrl?: string;
+  metadata?: CreateOrUpdateProductInput['metadata'];
+  hasVariants: boolean;
+  stockTrackingEnabled: boolean;
+  stockQty?: number;
+  sku?: string;
+  isActive: boolean;
+}
+
+export interface ProductMutationUpdateData {
+  tenantId: string;
+  name?: string;
+  description?: string;
+  basePrice?: number;
+  category?: string;
+  categoryId?: string;
+  imageUrl?: string;
+  metadata?: CreateOrUpdateProductInput['metadata'];
+  hasVariants?: boolean;
+  stockTrackingEnabled?: boolean;
+  stockQty?: number;
+  sku?: string;
+  isActive?: boolean;
+}
+
+export interface ProductOptionGroupMutationData {
+  productId: string;
+  tenantId: string;
+  name: string;
+  selectionType: 'single' | 'multiple';
+  minSelections: number;
+  maxSelections: number;
+  isRequired: boolean;
+  displayOrder: number;
+}
+
+export interface ProductOptionMutationData {
+  optionGroupId: string;
+  tenantId: string;
+  name: string;
+  priceDelta: number;
+  inventorySku?: string;
+  isAvailable: boolean;
+  displayOrder: number;
+}
+
+export interface ProductOptionGroupMutationResult {
+  id: string;
+}
+
+export interface ProductOptionMutationResult {
+  id: string;
+}
+
 export interface IProductRepository {
-  findById(id: string, tenantId: string, client?: DbClient): Promise<Product | null>;
-  create(product: InsertProduct, tenantId: string, client?: DbClient): Promise<Product>;
-  update(id: string, product: Partial<InsertProduct>, tenantId: string, client?: DbClient): Promise<Product>;
-  findByIdWithOptions(id: string, tenantId: string, client?: DbClient): Promise<Product & { option_groups?: DomainProductOptionGroup[] } | null>;
+  findById(id: string, tenantId: string, context?: TransactionContext): Promise<Product | null>;
+  create(product: ProductMutationData, tenantId: string, context?: TransactionContext): Promise<Product>;
+  update(id: string, product: ProductMutationUpdateData, tenantId: string, context?: TransactionContext): Promise<Product>;
+  findByIdWithOptions(id: string, tenantId: string, context?: TransactionContext): Promise<Product & { option_groups?: DomainProductOptionGroup[] } | null>;
 }
 
 export interface IProductOptionGroupRepository {
-  create(optionGroup: InsertProductOptionGroup, tenantId: string, client?: DbClient): Promise<DBProductOptionGroup>;
-  deleteByProductId(productId: string, tenantId: string, client?: DbClient): Promise<void>;
+  create(optionGroup: ProductOptionGroupMutationData, tenantId: string, context?: TransactionContext): Promise<ProductOptionGroupMutationResult>;
+  deleteByProductId(productId: string, tenantId: string, context?: TransactionContext): Promise<void>;
 }
 
 export interface IProductOptionRepository {
-  create(option: InsertProductOption, tenantId: string, client?: DbClient): Promise<DBProductOption>;
+  create(option: ProductOptionMutationData, tenantId: string, context?: TransactionContext): Promise<ProductOptionMutationResult>;
 }
 
 export interface ITenantRepository {
-  findById(tenantId: string): Promise<Tenant | null>;
+  findById(tenantId: string): Promise<{ id: string } | null>;
 }
 
 /**
@@ -106,7 +159,7 @@ export interface ITenantRepository {
  */
 export class CreateOrUpdateProduct {
   constructor(
-    private readonly db: Database,
+    private readonly unitOfWork: UnitOfWorkPort,
     private readonly productRepository: IProductRepository,
     private readonly productOptionGroupRepository: IProductOptionGroupRepository,
     private readonly productOptionRepository: IProductOptionRepository,
@@ -151,7 +204,7 @@ export class CreateOrUpdateProduct {
       }
 
       // Step 4: Execute all write operations within a transaction for atomicity
-      const result = await this.db.transaction(async (tx) => {
+      const result = await this.unitOfWork.runInTransaction(async (tx) => {
         let product: Product;
 
         // Create or update product
@@ -196,7 +249,7 @@ export class CreateOrUpdateProduct {
             this.validateOptionGroup(optionGroupInput);
             
             // Prepare option group data with proper types
-            const optionGroupData: InsertProductOptionGroup = {
+            const optionGroupData: ProductOptionGroupMutationData = {
               productId: product.id,
               tenantId: input.tenant_id,
               name: optionGroupInput.name,
@@ -224,11 +277,11 @@ export class CreateOrUpdateProduct {
                 
                 // Prepare option data with proper types
                 // Convert number to string only at database boundary (Drizzle decimal field requirement)
-                const optionData: InsertProductOption = {
+                const optionData: ProductOptionMutationData = {
                   optionGroupId: createdOptionGroup.id,
                   tenantId: input.tenant_id,
                   name: optionInput.name,
-                  priceDelta: optionInput.price_delta.toString(),
+                  priceDelta: optionInput.price_delta,
                   inventorySku: optionInput.inventory_sku,
                   isAvailable: optionInput.is_available ?? true,
                   displayOrder: optionInput.display_order ?? optionIndex,
@@ -402,7 +455,7 @@ export class CreateOrUpdateProduct {
    * Prepare product data for create operations with defaults
    * Convert number to string only at database boundary (Drizzle decimal field requirement)
    */
-  private prepareCreateData(input: CreateOrUpdateProductInput): InsertProduct {
+  private prepareCreateData(input: CreateOrUpdateProductInput): ProductMutationData {
     if (input.name === undefined || input.base_price === undefined || input.category === undefined) {
       throw new Error('Name, base price, and category are required for product creation');
     }
@@ -411,7 +464,7 @@ export class CreateOrUpdateProduct {
       tenantId: input.tenant_id,
       name: input.name,
       description: input.description,
-      basePrice: input.base_price.toString(),
+      basePrice: input.base_price,
       category: input.category,
       categoryId: input.category_id,
       imageUrl: input.image_url,
@@ -429,8 +482,8 @@ export class CreateOrUpdateProduct {
    * This preserves existing values for omitted fields
    * Convert number to string only at database boundary (Drizzle decimal field requirement)
    */
-  private prepareUpdateData(input: CreateOrUpdateProductInput): Partial<InsertProduct> {
-    const updateData: Partial<InsertProduct> = {
+  private prepareUpdateData(input: CreateOrUpdateProductInput): ProductMutationUpdateData {
+    const updateData: ProductMutationUpdateData = {
       tenantId: input.tenant_id,
     };
 
@@ -439,7 +492,7 @@ export class CreateOrUpdateProduct {
     }
 
     if (input.base_price !== undefined) {
-      updateData.basePrice = input.base_price.toString();
+      updateData.basePrice = input.base_price;
     }
 
     if (input.category !== undefined) {

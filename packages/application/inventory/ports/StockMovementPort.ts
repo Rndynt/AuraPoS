@@ -12,7 +12,22 @@ export interface StockContext {
   terminalId?: string | null;
 }
 
+export interface StockMovementPortOptions {
+  transaction?: TransactionContext;
+  allowNegativeStock?: boolean;
+}
+
 export interface StockMovementPort {
-  deductStockForItems(tenantId: string, items: StockItem[], context?: StockContext, transaction?: TransactionContext): Promise<void>;
-  reverseStockForItems(tenantId: string, items: StockItem[], context?: StockContext, transaction?: TransactionContext): Promise<void>;
+  deductStockForItems(
+    tenantId: string,
+    items: StockItem[],
+    context?: StockContext,
+    options?: StockMovementPortOptions,
+  ): Promise<void>;
+  reverseStockForItems(
+    tenantId: string,
+    items: StockItem[],
+    context?: StockContext,
+    options?: StockMovementPortOptions,
+  ): Promise<void>;
 }

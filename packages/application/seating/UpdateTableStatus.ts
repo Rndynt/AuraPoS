@@ -1,5 +1,14 @@
-import { TableRepository } from "@pos/infrastructure/repositories/seating/TableRepository";
-import type { Table } from "@shared/schema";
+import type { SeatingTable } from './ListTables';
+
+export interface UpdateTableStatusRepositoryPort {
+  updateStatus(
+    tenantId: string,
+    tableId: string,
+    status: string,
+    currentOrderId?: string,
+    outletId?: string,
+  ): Promise<SeatingTable>;
+}
 
 export interface UpdateTableStatusRequest {
   tenantId: string;
@@ -10,9 +19,9 @@ export interface UpdateTableStatusRequest {
 }
 
 export class UpdateTableStatus {
-  constructor(private tableRepository: TableRepository) {}
+  constructor(private tableRepository: UpdateTableStatusRepositoryPort) {}
 
-  async execute(request: UpdateTableStatusRequest): Promise<Table> {
+  async execute(request: UpdateTableStatusRequest): Promise<SeatingTable> {
     const { tenantId, tableId, status, currentOrderId, outletId } = request;
 
     const table = await this.tableRepository.updateStatus(

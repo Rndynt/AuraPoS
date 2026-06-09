@@ -3,8 +3,69 @@
  * Convert between domain Order types (snake_case) and database types (camelCase)
  */
 
-import type { Order as DbOrder, InsertOrder, InsertOrderItem, InsertOrderItemModifier } from '../../../shared/schema';
 import type { Order, OrderItem, SelectedOption } from '@pos/domain/orders/types';
+
+export interface PersistedOrderRecord {
+  id: string;
+  tenantId: string;
+  orderTypeId?: string | null;
+  subtotal: string;
+  taxAmount: string;
+  serviceCharge: string;
+  discountAmount: string;
+  total: string;
+  paidAmount: string;
+  paymentStatus: string;
+  orderNumber: string;
+  status: string;
+  customerName?: string | null;
+  tableNumber?: string | null;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InsertOrderPersistenceData {
+  tenantId: string;
+  orderTypeId?: string;
+  orderNumber: string;
+  status: string;
+  subtotal: string;
+  taxAmount: string;
+  serviceCharge: string;
+  discountAmount: string;
+  total: string;
+  paidAmount: string;
+  paymentStatus: string;
+  customerName?: string;
+  tableNumber?: string;
+  notes?: string;
+  idempotencyKey?: string;
+  outletId?: string;
+}
+
+export interface InsertOrderItemPersistenceData {
+  orderId: string;
+  productId: string;
+  productName: string;
+  variantId?: string;
+  variantName?: string;
+  quantity: number;
+  unitPrice: string;
+  itemSubtotal: string;
+  notes?: string;
+  status: string;
+}
+
+export interface InsertOrderItemModifierPersistenceData {
+  orderItemId: string;
+  optionGroupId: string;
+  optionGroupName: string;
+  optionId: string;
+  optionName: string;
+  priceDelta: string;
+}
+
 
 /**
  * Convert domain Order to database InsertOrder
@@ -22,7 +83,7 @@ export function toInsertOrderDb(
   notes?: string,
   idempotencyKey?: string,
   outletId?: string,
-): InsertOrder {
+): InsertOrderPersistenceData {
   return {
     tenantId,
     orderTypeId,
@@ -47,7 +108,7 @@ export function toInsertOrderDb(
  * Convert database Order to domain Order
  */
 export function toDomainOrder(
-  dbOrder: DbOrder,
+  dbOrder: PersistedOrderRecord,
   items: OrderItem[]
 ): Order {
   return {
@@ -78,7 +139,7 @@ export function toDomainOrder(
 export function toInsertOrderItemDb(
   orderItem: OrderItem,
   orderId: string
-): InsertOrderItem {
+): InsertOrderItemPersistenceData {
   const variantDelta = orderItem.variant_price_delta ?? 0;
   const optionsDelta = orderItem.selected_options?.reduce(
     (sum, opt) => sum + opt.price_delta,
@@ -106,7 +167,7 @@ export function toInsertOrderItemDb(
 export function toInsertOrderItemModifierDb(
   selectedOption: SelectedOption,
   orderItemId: string
-): InsertOrderItemModifier {
+): InsertOrderItemModifierPersistenceData {
   return {
     orderItemId,
     optionGroupId: selectedOption.group_id,

@@ -1,5 +1,23 @@
-import { TableRepository } from "@pos/infrastructure/repositories/seating/TableRepository";
-import type { Table } from "@shared/schema";
+export interface SeatingTable {
+  id: string;
+  tenantId: string;
+  tableNumber: string;
+  capacity: number | null;
+  tableName?: string | null;
+  status: string;
+  floor?: string | null;
+  currentOrderId?: string | null;
+  outletId?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface TableRepositoryPort {
+  findByTenant(
+    tenantId: string,
+    filters?: { status?: string; floor?: string; outletId?: string },
+  ): Promise<SeatingTable[]>;
+}
 
 export interface ListTablesRequest {
   tenantId: string;
@@ -9,12 +27,12 @@ export interface ListTablesRequest {
 }
 
 export interface ListTablesResponse {
-  tables: Table[];
+  tables: SeatingTable[];
   total: number;
 }
 
 export class ListTables {
-  constructor(private tableRepository: TableRepository) {}
+  constructor(private tableRepository: TableRepositoryPort) {}
 
   async execute(request: ListTablesRequest): Promise<ListTablesResponse> {
     const { tenantId, status, floor, outletId } = request;

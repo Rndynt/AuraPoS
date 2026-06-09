@@ -3,7 +3,7 @@
  * Fetches open orders (draft, confirmed, preparing, ready) for a tenant with pagination
  */
 
-import type { Order } from '../../../shared/schema';
+import type { PersistedOrderRecord } from './mappers';
 
 export interface IOrderRepository {
   findByTenant(
@@ -13,7 +13,7 @@ export interface IOrderRepository {
       limit?: number;
       offset?: number;
     }
-  ): Promise<Order[]>;
+  ): Promise<PersistedOrderRecord[]>;
 }
 
 export interface ITenantRepository {
@@ -28,7 +28,7 @@ export interface ListOpenOrdersInput {
 }
 
 export interface ListOpenOrdersOutput {
-  orders: Order[];
+  orders: PersistedOrderRecord[];
 }
 
 export class ListOpenOrders {

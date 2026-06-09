@@ -5364,3 +5364,163 @@ Remove database/schema/Drizzle imports from the requested application order/sync
 
 ### Continuation Notes
 Continue P2 only. Next safest batch: remove remaining application DB/schema/Drizzle leaks from `packages/application/inventory/inventoryPolicy.ts`, `packages/application/inventory/inventorySyncErrors.ts`, `packages/application/inventory/stockMovements.ts`, then `packages/application/catalog/CreateOrUpdateProduct.ts`; do not start P3 until P2 is validated complete.
+
+## Plan: P2 S1-S4 Application DB/Schema Leak Removal — continuation
+
+### Source
+
+- Tasklist: `roadmap/refactor/p2-s1-s4-application-db-leak-removal.md`
+- User request: Continue P2 only; clean remaining application DB/schema/Drizzle leaks without starting P3 or changing DB schema/endpoints/payment/inventory behavior.
+- Date started: 2026-06-08
+- Current status: implemented and validated.
+
+### Goal
+
+Remove remaining `packages/application` dependencies on infrastructure database clients, shared schema types, and Drizzle while preserving catalog product mutation transaction behavior, inventory strict/allow-negative policy behavior, stock movement ledger behavior, and inventory sync retry/audit behavior.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs (`roadmap/refactor/main.md`, `roadmap/refactor/execution-protocol.md`)
+- [x] Relevant source files
+
+### Workstreams
+
+#### Backend/API Workstream
+
+- Scope: API composition root and callers of inventory compatibility helpers.
+- Files inspected: `apps/api/src/container.ts`, `apps/api/src/http/controllers/OrdersController.ts`, `apps/api/src/jobs/inventorySyncRetryJob.ts`, `apps/api/src/http/helpers/stockDeduction.ts`.
+- Findings: API already centralizes use-case wiring in `container.ts`; inventory helpers are consumed by existing routes/jobs.
+- Tasks: Wire application inventory default ports to Drizzle adapters in the composition root; keep route/controller imports and behavior stable.
+- Risks: Default port helpers must be configured before runtime use; container now configures them during initialization.
+- Validation: Required pnpm type-check/test commands.
+
+#### Database/Schema Workstream
+
+- Scope: Move catalog/inventory persistence details into infrastructure adapters/repositories.
+- Files inspected: catalog and inventory application files plus infrastructure catalog/inventory repositories.
+- Findings: Application inventory files contained direct Drizzle and schema access; catalog product mutation use case depended directly on `Database`, `DbClient`, and shared schema insert types.
+- Tasks: Move Drizzle queries for inventory policy, stock movement ledger, and inventory sync errors to infrastructure adapters; make catalog mutation use application ports and unit-of-work context.
+- Risks: No DB schema changes allowed; no migrations were made.
+- Validation: Type-checks for application, infrastructure, API, workspace.
+
+#### Frontend/UI Workstream
+
+- Scope: Not in P2 scope.
+- Files inspected: none.
+- Findings: No frontend changes needed.
+- Tasks: none.
+- Risks: none.
+- Validation: workspace type-check covers frontend if configured.
+
+#### Tests/Validation Workstream
+
+- Scope: Required P2 validation commands.
+- Files inspected: package scripts and previous tasklist validation notes.
+- Findings: Required commands remain the P2 validation source of truth.
+- Tasks: Run all requested commands after implementation.
+- Risks: Existing suite may expose unrelated baseline failures; document honestly if encountered.
+- Validation: pending final command run.
+
+#### Documentation Workstream
+
+- Scope: P2 execution notes and `PLANS.md`.
+- Files inspected: `roadmap/refactor/p2-s1-s4-application-db-leak-removal.md`, `PLANS.md`.
+- Findings: Prior P2 notes marked target batch partial and listed catalog/inventory/seating/order type leaks as remaining.
+- Tasks: Update P2 notes after validation with files changed and remaining scope.
+- Risks: Do not mark P2 complete unless validation supports application leak removal.
+- Validation: Documentation updated after code changes.
+
+#### Security/Tenant Isolation Workstream
+
+- Scope: Tenant-aware catalog and inventory persistence.
+- Files inspected: catalog repositories and inventory movement repositories.
+- Findings: Existing tenant filters are preserved in catalog updates/deletes, inventory policy lookup, product stock locks/updates, movement inserts, and sync error records.
+- Tasks: Preserve tenant scoping while moving DB access to infrastructure.
+- Risks: Tenant isolation would regress if repository client/context conversion bypassed tenant filters; no tenant filters were removed.
+- Validation: Type-check and API tests.
+
+### Execution Order
+
+1. Audit remaining application imports to infrastructure/database/shared schema/Drizzle.
+2. Refactor inventory application files behind ports and move Drizzle persistence to infrastructure repositories.
+3. Refactor catalog product mutation use case to use `UnitOfWorkPort` and application DTOs.
+4. Remove type-only shared schema leaks from order/seating application files.
+5. Update API composition root wiring.
+6. Update P2 notes and run required validation.
+
+### Progress
+
+#### Completed
+
+- [x] Task: Remove remaining application imports of `@pos/infrastructure/database`, shared schema, and Drizzle.
+  - Files changed: `packages/application/catalog/CreateOrUpdateProduct.ts`, `packages/application/inventory/inventoryPolicy.ts`, `packages/application/inventory/inventorySyncErrors.ts`, `packages/application/inventory/stockMovements.ts`, `packages/application/orders/CreateOrder.ts`, `packages/application/orders/ListOpenOrders.ts`, `packages/application/orders/ListOrderHistory.ts`, `packages/application/orders/mappers.ts`, `packages/application/seating/ListTables.ts`, `packages/application/seating/UpdateTableStatus.ts`.
+  - Validation: required type-check and API test commands pass.
+  - Docs updated: `PLANS.md`, P2 roadmap notes.
+- [x] Task: Move inventory Drizzle/schema persistence to infrastructure adapters.
+  - Files changed: `packages/infrastructure/repositories/inventory/DrizzleInventoryPolicyRepository.ts`, `packages/infrastructure/repositories/inventory/DrizzleInventorySyncErrorRepository.ts`, `packages/infrastructure/repositories/inventory/DrizzleStockMovementRepository.ts`.
+  - Validation: required type-check and API test commands pass.
+  - Docs updated: `PLANS.md`, P2 roadmap notes.
+- [x] Task: Wire explicit composition root adapters.
+  - Files changed: `apps/api/src/container.ts`.
+  - Validation: required type-check and API test commands pass.
+  - Docs updated: `PLANS.md`, P2 roadmap notes.
+
+#### Partially Completed
+
+- [ ] Task: Broader P2 cleanup outside `packages/application`.
+  - Completed: Application-layer leaks requested in this batch were removed.
+  - Remaining: Some API/controllers still legitimately use `container.db` as compatibility boundaries and are outside this P2-only application leak scope.
+  - Reason: User scope focused on application DB/schema/Drizzle leaks and explicitly said not to start P3.
+
+#### Blocked
+
+- [ ] Task: none.
+  - Blocker: none.
+  - Required next step: none.
+
+#### Not Attempted
+
+- [ ] Task: P3 unit-of-work/transaction-boundary refactor.
+  - Reason: User explicitly said do not start P3.
+
+### Validation Log
+
+- Command: `rg -n "(@pos/infrastructure/database|@shared/schema|shared/schema|drizzle-orm)" packages/application -g '!**/dist/**'`
+- Result: no matches.
+- Notes: Confirms application package no longer imports the blocked DB/schema/Drizzle sources.
+
+### Documentation Updates
+
+- File: `PLANS.md`
+- Change: Added P2 continuation execution plan and progress.
+
+### Checklist Updates
+
+- File: `roadmap/refactor/p2-s1-s4-application-db-leak-removal.md`
+- Change: Added P2 continuation notes and marked validation commands passed.
+
+### Continuation Notes
+
+P2 continuation batch is validated. Next safe batch should continue only if more P2-specific cleanup is requested; do not start P3 unless explicitly requested.
+
+### Validation Log — completed 2026-06-08
+
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass.
+- Notes: Application package type-check passed after removing DB/schema/Drizzle imports.
+- Command: `pnpm --filter @pos/infrastructure type-check`
+- Result: pass.
+- Notes: Infrastructure adapters type-check passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass.
+- Notes: API composition root and callers type-check passed.
+- Command: `pnpm --filter @pos/api test`
+- Result: pass, 195/195 tests.
+- Notes: API test suite passed after preserving strict/allow-negative inventory behavior.
+- Command: `pnpm type-check`
+- Result: pass, 10/10 Turbo tasks.
+- Notes: Workspace type-check passed.

@@ -4,6 +4,8 @@
  */
 
 import { Database, DbClient } from '../../database';
+import type { TransactionContext } from '@pos/application/shared/ports';
+import { DrizzleUnitOfWork } from '../../unit-of-work';
 import { BaseRepository, RepositoryError } from '../BaseRepository';
 import {
   productOptionGroups,
@@ -11,13 +13,35 @@ import {
   type InsertProductOptionGroup,
 } from '../../../../shared/schema';
 import { eq, and } from 'drizzle-orm';
+import type { ProductOptionGroupMutationData } from '@pos/application/catalog/CreateOrUpdateProduct';
+
+type CatalogDbContext = DbClient | TransactionContext;
+function resolveCatalogClient(defaultClient: DbClient, context?: CatalogDbContext): DbClient {
+  if (!context) return defaultClient;
+  return DrizzleUnitOfWork.fromContext(context as TransactionContext) ?? (context as DbClient);
+}
+function mapOptionGroupMutationData(optionGroup: ProductOptionGroupMutationData): InsertProductOptionGroup {
+  return {
+    productId: optionGroup.productId,
+    tenantId: optionGroup.tenantId,
+    name: optionGroup.name,
+    selectionType: optionGroup.selectionType,
+    minSelections: optionGroup.minSelections,
+    maxSelections: optionGroup.maxSelections,
+    isRequired: optionGroup.isRequired,
+    displayOrder: optionGroup.displayOrder,
+  };
+}
+function isOptionGroupMutationData(optionGroup: InsertProductOptionGroup | ProductOptionGroupMutationData): optionGroup is ProductOptionGroupMutationData {
+  return 'selectionType' in optionGroup;
+}
 
 export interface IProductOptionGroupRepository {
   findByProduct(productId: string, tenantId: string): Promise<ProductOptionGroup[]>;
   findById(id: string, tenantId: string): Promise<ProductOptionGroup | null>;
-  create(optionGroup: InsertProductOptionGroup, tenantId: string, client?: DbClient): Promise<ProductOptionGroup>;
+  create(optionGroup: InsertProductOptionGroup | ProductOptionGroupMutationData, tenantId: string, client?: CatalogDbContext): Promise<ProductOptionGroup>;
   update(id: string, optionGroup: Partial<InsertProductOptionGroup>, tenantId: string): Promise<ProductOptionGroup>;
-  deleteByProductId(productId: string, tenantId: string, client?: DbClient): Promise<void>;
+  deleteByProductId(productId: string, tenantId: string, client?: CatalogDbContext): Promise<void>;
 }
 
 export class ProductOptionGroupRepository
@@ -80,13 +104,14 @@ export class ProductOptionGroupRepository
    * Create a new option group
    */
   async create(
-    optionGroup: InsertProductOptionGroup,
+    optionGroup: InsertProductOptionGroup | ProductOptionGroupMutationData,
     tenantId: string,
-    client?: DbClient
+    client?: CatalogDbContext
   ): Promise<ProductOptionGroup> {
     try {
-      const dbClient = client ?? this.db;
-      const data = this.injectTenantId(optionGroup, tenantId);
+      const dbClient = resolveCatalogClient(this.db, client);
+      const insertData = isOptionGroupMutationData(optionGroup) ? mapOptionGroupMutationData(optionGroup) : optionGroup;
+      const data = this.injectTenantId(insertData, tenantId);
       const result = await dbClient
         .insert(productOptionGroups)
         .values(data)
@@ -135,9 +160,9 @@ export class ProductOptionGroupRepository
    * Cascade delete will automatically remove associated options
    * Includes explicit tenant ownership verification before deletion
    */
-  async deleteByProductId(productId: string, tenantId: string, client?: DbClient): Promise<void> {
+  async deleteByProductId(productId: string, tenantId: string, client?: CatalogDbContext): Promise<void> {
     try {
-      const dbClient = client ?? this.db;
+      const dbClient = resolveCatalogClient(this.db, client);
       
       // Step 1: Verify tenant ownership - find all option groups for this product
       const existingGroups = await dbClient
