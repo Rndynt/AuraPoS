@@ -9,7 +9,7 @@ import { eq, and } from 'drizzle-orm';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { db } from '@pos/infrastructure/database';
-import { tenants, tenantFeatures } from '@shared/schema';
+import { tenants, tenantFeatures } from '@pos/infrastructure/db/schema';
 import {
   invalidateFeatureAccessCache,
   invalidateModuleAccessCache,
@@ -189,7 +189,7 @@ const MODULE_REQUIRED_PLAN: Partial<Record<string, string[]>> = {
 export const updateModuleConfig = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = req.tenantId!;
   const { db } = await import('@pos/infrastructure/database');
-  const { tenantModuleConfigs, tenants: tenantsTable } = await import('@shared/schema');
+  const { tenantModuleConfigs, tenants: tenantsTable } = await import('@pos/infrastructure/db/schema');
   const { eq } = await import('drizzle-orm');
 
   const bodySchema = z.object({

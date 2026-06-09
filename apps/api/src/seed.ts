@@ -13,12 +13,12 @@ import {
   tenants, products, productCategories, productOptionGroups, productOptions,
   tenantFeatures, tenantModuleConfigs, tables, orders, orderItems,
   orderTypes, tenantOrderTypes, businessTypes, outlets,
-} from '@shared/schema';
+} from '@pos/infrastructure/db/schema';
 import type {
   InsertTenant, InsertProduct, InsertProductOptionGroup, InsertProductOption,
   InsertTenantFeature, InsertTenantModuleConfig, InsertTable, InsertOrderType,
   InsertTenantOrderType, InsertBusinessType, InsertOutlet,
-} from '@shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { sql, eq } from 'drizzle-orm';
 import { auth } from './lib/auth';
 

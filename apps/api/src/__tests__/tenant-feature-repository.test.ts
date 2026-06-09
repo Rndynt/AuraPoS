@@ -6,7 +6,7 @@ process.env.DATABASE_URL ||= 'postgres://user:pass@127.0.0.1:5432/aurapos_test';
 process.env.BETTER_AUTH_SECRET ||= 'test-secret-with-at-least-32-characters';
 
 const { TenantFeatureRepository } = await import('@pos/infrastructure/repositories/tenants/TenantFeatureRepository');
-const { tenantFeatures } = await import('@shared/schema');
+const { tenantFeatures } = await import('@pos/infrastructure/db/schema');
 
 type CapturedUpsert = {
   values?: any;

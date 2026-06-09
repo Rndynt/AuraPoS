@@ -21,7 +21,7 @@ import {
   orders,
   products,
   tables,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and, inArray, ne } from 'drizzle-orm';
 import { ConflictType } from '@pos/application/sync/conflictTypes';
 

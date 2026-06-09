@@ -9,7 +9,7 @@ import {
   kitchenTickets,
   type KitchenTicket,
   type InsertKitchenTicket,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface IKitchenTicketRepository {

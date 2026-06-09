@@ -20,7 +20,7 @@ import { DrizzleUnitOfWork } from '../../unit-of-work';
 import {
   orderPayments,
   type InsertOrderPayment,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 import type { RecordPaymentInput, RecordPaymentOutput } from '@pos/application/orders/RecordPayment';

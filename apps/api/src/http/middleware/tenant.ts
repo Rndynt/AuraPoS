@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '@pos/infrastructure/database';
-import { tenants } from '@shared/schema';
+import { tenants } from '@pos/infrastructure/db/schema';
 import { eq, or } from 'drizzle-orm';
 import { cacheKeys, getCacheJson, setCacheJson } from '../../services/distributedCache';
 import { invalidateTenantResolutionCache } from '../../services/cacheInvalidation';

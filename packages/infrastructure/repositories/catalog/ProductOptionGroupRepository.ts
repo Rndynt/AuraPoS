@@ -11,7 +11,7 @@ import {
   productOptionGroups,
   type ProductOptionGroup,
   type InsertProductOptionGroup,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { ProductOptionGroupMutationData } from '@pos/application/catalog/CreateOrUpdateProduct';
 

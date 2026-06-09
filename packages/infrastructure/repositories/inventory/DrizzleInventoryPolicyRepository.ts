@@ -6,7 +6,7 @@ import {
 } from '@pos/application/inventory/inventoryPolicy';
 import type { TransactionContext } from '@pos/application/shared/ports';
 import { eq } from 'drizzle-orm';
-import { tenantModuleConfigs } from '../../../../shared/schema';
+import { tenantModuleConfigs } from '@pos/infrastructure/db/schema';
 import { db, type DbClient } from '../../database';
 import { DrizzleUnitOfWork } from '../../unit-of-work';
 

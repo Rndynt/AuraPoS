@@ -10,7 +10,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { db } from '@pos/infrastructure/database';
-import { tenantFeatures, tenantModuleConfigs } from '@shared/schema';
+import { tenantFeatures, tenantModuleConfigs } from '@pos/infrastructure/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { cacheKeys, deleteCacheKey, deleteCachePattern, getCacheJson, setCacheJson } from '../../services/distributedCache';
 import { invalidateFeatureAccessCache, invalidateModuleAccessCache } from '../../services/cacheInvalidation';

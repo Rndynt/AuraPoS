@@ -16,7 +16,7 @@ import {
   type OrderItem,
   type OrderItemModifier,
   type OrderPayment,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and, gte, lte, inArray, desc, sql } from 'drizzle-orm';
 import { toInsertOrderItemDb, toInsertOrderItemModifierDb, toDomainSelectedOption } from '../../../application/orders/mappers';
 import type { OrderItem as DomainOrderItem } from '@pos/domain/orders/types';

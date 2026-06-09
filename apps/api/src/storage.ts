@@ -3,7 +3,7 @@
  * Use repository pattern from @pos/infrastructure instead.
  */
 
-import { type User, type InsertUser } from "@shared/schema";
+import { type User, type InsertUser } from "@pos/infrastructure/db/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods

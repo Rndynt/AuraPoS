@@ -10,7 +10,7 @@ import {
   orderPayments,
   type OrderPayment,
   type InsertOrderPayment,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { and, eq } from 'drizzle-orm';
 
 export interface IOrderPaymentRepository {

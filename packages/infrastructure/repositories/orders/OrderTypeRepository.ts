@@ -12,7 +12,7 @@ import {
   type InsertOrderType,
   type TenantOrderType,
   type InsertTenantOrderType,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 export interface IOrderTypeRepository {

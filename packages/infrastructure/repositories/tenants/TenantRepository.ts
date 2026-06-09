@@ -9,7 +9,7 @@ import {
   tenants,
   type Tenant,
   type InsertTenant,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import type { Tenant as DomainTenant } from '@pos/domain/tenants/types';
 import { eq } from 'drizzle-orm';
 
