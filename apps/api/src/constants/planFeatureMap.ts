@@ -1,6 +1,10 @@
 /**
  * Canonical mapping of plan tier → allowed feature codes.
  * Single source of truth for registrationService + TenantsController.
+ *
+ * Basic Stock / Stok Dasar is intentionally not listed here because it is a
+ * module entitlement (`tenant_module_configs.enable_inventory`), not a
+ * tenant_features row. It is free/default onboarding entitlement.
  */
 export const PLAN_FEATURE_MAP: Record<string, string[]> = {
   free: [

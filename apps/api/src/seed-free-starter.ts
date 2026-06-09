@@ -45,12 +45,12 @@ async function run() {
     enableKitchenTicket: false,
     enableLoyalty: false,
     enableDelivery: false,
-    enableInventory: false,
+    enableInventory: true,
     enableInventoryAdvanced: false,
     enableAppointments: false,
     enableMultiLocation: false,
   } as any);
-  console.log('✅ Module config: semua OFF');
+  console.log('✅ Module config: Stok Dasar ON, paid modules OFF');
 
   await db.insert(tenantFeatures).values([
     { tenantId: tenant.id, featureCode: 'product_variants', source: 'plan_default', isActive: true },
@@ -60,7 +60,7 @@ async function run() {
     { tenantId: tenant.id, featureCode: 'receipt_printer',  source: 'plan_default', isActive: true },
     { tenantId: tenant.id, featureCode: 'sales_reports',    source: 'plan_default', isActive: true },
   ] as any);
-  console.log('✅ 6 free features (no kitchen, no analytics, no inventory)');
+  console.log('✅ 6 free features + Stok Dasar module (no kitchen, no analytics, no advanced inventory)');
 
   const ots = await db.select().from(orderTypes).where(
     inArray(orderTypes.code, ['DINE_IN', 'TAKE_AWAY'])

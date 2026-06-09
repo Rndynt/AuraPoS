@@ -5,8 +5,9 @@
  * BILLING SAFETY RULE:
  * Business type templates determine default workflows, starter catalog, order types,
  * and UI recommendations — they must NEVER grant paid plan access.
- * Every template uses plan_tier: 'free'. Paid features/modules appear as
- * locked/recommended in Marketplace but are never seeded as active entitlements.
+ * Every template uses plan_tier: 'free'. Basic Stock (`enable_inventory`)
+ * is included in onboarding; paid features/modules appear as locked/recommended
+ * in Marketplace but are never seeded as active entitlements.
  */
 
 import type { BusinessType, OrderTypeCode, FeatureCode } from '@pos/core';
@@ -39,7 +40,8 @@ export type BusinessTypeTemplate = {
  *
  * All templates use plan_tier: 'free' and only seed features allowed
  * by PLAN_FEATURE_MAP.free. Paid modules default to false — they appear
- * as upgrade recommendations in Marketplace only.
+ * as upgrade recommendations in Marketplace only. Basic Stock is the free
+ * default stock entitlement and is enabled for all onboarding templates.
  */
 export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate> = {
   CAFE_RESTAURANT: {
@@ -57,7 +59,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       enable_kitchen_ticket: false,
       enable_loyalty: false,
       enable_delivery: false,
-      enable_inventory: false,
+      enable_inventory: true,
       enable_inventory_advanced: false,
       enable_appointments: false,
       enable_multi_location: false,
@@ -127,7 +129,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       enable_kitchen_ticket: false,
       enable_loyalty: false,
       enable_delivery: false,
-      enable_inventory: false,
+      enable_inventory: true,
       enable_inventory_advanced: false,
       enable_appointments: false,
       enable_multi_location: false,
@@ -160,7 +162,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       enable_kitchen_ticket: false,
       enable_loyalty: false,
       enable_delivery: false,
-      enable_inventory: false,
+      enable_inventory: true,
       enable_inventory_advanced: false,
       enable_appointments: false,
       enable_multi_location: false,
@@ -194,7 +196,7 @@ export const BUSINESS_TYPE_TEMPLATES: Record<BusinessType, BusinessTypeTemplate>
       enable_kitchen_ticket: false,
       enable_loyalty: false,
       enable_delivery: false,
-      enable_inventory: false,
+      enable_inventory: true,
       enable_inventory_advanced: false,
       enable_appointments: false,
       enable_multi_location: false,

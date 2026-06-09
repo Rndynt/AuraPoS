@@ -440,14 +440,14 @@ async function seedNusantara(createdOrderTypes: any[]) {
   await db.insert(tenantOrderTypes).values(tenantOTs as InsertTenantOrderType[]);
   console.log(`✅ Order types enabled: Dine In, Take Away (no delivery)\n`);
 
-  // Module config — simple setup, no kitchen display, no delivery
+  // Module config — simple setup, basic stock enabled, no kitchen display, no delivery
   await db.insert(tenantModuleConfigs).values({
     tenantId: tenant.id,
     enableTableManagement: true,
     enableKitchenTicket: false,
     enableLoyalty: false,
     enableDelivery: false,
-    enableInventory: false,
+    enableInventory: true,
     enableInventoryAdvanced: false,
     enableAppointments: false,
     enableMultiLocation: false,
@@ -691,14 +691,14 @@ async function seedFreeStarter(createdOrderTypes: any[]) {
   if (dinein)   await db.insert(tenantOrderTypes).values({ tenantId: tenant.id, orderTypeId: dinein.id,   isEnabled: true } as InsertTenantOrderType);
   if (takeaway) await db.insert(tenantOrderTypes).values({ tenantId: tenant.id, orderTypeId: takeaway.id, isEnabled: true } as InsertTenantOrderType);
 
-  // No modules enabled on free plan
+  // Only Basic Stock module enabled on free plan
   await db.insert(tenantModuleConfigs).values({
     tenantId: tenant.id,
     enableTableManagement: false,
     enableKitchenTicket: false,
     enableLoyalty: false,
     enableDelivery: false,
-    enableInventory: false,
+    enableInventory: true,
     enableInventoryAdvanced: false,
     enableAppointments: false,
     enableMultiLocation: false,
