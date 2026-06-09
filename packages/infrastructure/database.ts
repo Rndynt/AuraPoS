@@ -8,7 +8,7 @@ import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import postgres from 'postgres';
-import * as schema from '../../shared/schema';
+import * as schema from '@pos/infrastructure/db/schema';
 
 // Get database URL from environment
 const DATABASE_URL = process.env.DATABASE_URL?.trim();

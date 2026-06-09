@@ -13,7 +13,7 @@ import {
   tenantOrderTypes,
   tenants,
   userOutletAssignments,
-} from '@shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { auth, authDb } from '../lib/auth';
 import { account, session, user as authUser } from '../lib/auth-schema';
 

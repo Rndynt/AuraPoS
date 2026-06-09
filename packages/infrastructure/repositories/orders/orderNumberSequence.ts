@@ -1,5 +1,5 @@
 import { sql, eq } from 'drizzle-orm';
-import { tenants } from '../../../../shared/schema';
+import { tenants } from '@pos/infrastructure/db/schema';
 import type { DbClient } from '../../database';
 import { formatOrderNumberForSequence, getBusinessDateForTimezone } from '@pos/application/orders/orderNumberSequence';
 

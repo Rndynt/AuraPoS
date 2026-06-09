@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { db } from '@pos/infrastructure/database';
-import { tenants } from '@shared/schema';
+import { tenants } from '@pos/infrastructure/db/schema';
 import { eq } from 'drizzle-orm';
 import { registerTenantOwner, RegistrationError } from '../../services/registrationService';
 import type { BusinessType } from '@pos/core';

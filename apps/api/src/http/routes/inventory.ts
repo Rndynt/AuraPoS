@@ -18,7 +18,7 @@ import {
   products,
   tenantModuleConfigs,
   inventoryMovements,
-} from '@shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and, desc, asc, gte, lte, sql } from 'drizzle-orm';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { z } from 'zod';

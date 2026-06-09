@@ -5,7 +5,7 @@ import { TableRepository } from "@pos/infrastructure/repositories/seating/TableR
 import { OrderRepository } from "@pos/infrastructure/repositories/orders/OrderRepository";
 import { ListTables } from "@pos/application/seating/ListTables";
 import { UpdateTableStatus } from "@pos/application/seating/UpdateTableStatus";
-import type { InsertTable } from "@shared/schema";
+import type { InsertTable } from "@pos/infrastructure/db/schema";
 import { requireModule } from "../middleware/featureGuard";
 
 const VALID_TABLE_STATUSES = ["available", "occupied", "reserved", "maintenance", "cleaning"] as const;

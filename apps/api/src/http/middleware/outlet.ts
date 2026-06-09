@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '@pos/infrastructure/database';
-import { outlets, userOutletAssignments } from '@shared/schema';
+import { outlets, userOutletAssignments } from '@pos/infrastructure/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 declare global {

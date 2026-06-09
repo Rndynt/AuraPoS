@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import * as TenantsController from '../controllers/TenantsController';
 import { db } from '@pos/infrastructure/database';
-import { tenants } from '@shared/schema';
+import { tenants } from '@pos/infrastructure/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireOwner, requireManager } from '../middleware/rbac';
 

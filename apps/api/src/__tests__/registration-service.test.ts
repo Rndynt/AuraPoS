@@ -19,7 +19,7 @@ const {
   tenantOrderTypes,
   tenants,
   userOutletAssignments,
-} = await import('@shared/schema');
+} = await import('@pos/infrastructure/db/schema');
 const { user: authUser } = await import('../lib/auth-schema');
 
 type InsertOperation = {

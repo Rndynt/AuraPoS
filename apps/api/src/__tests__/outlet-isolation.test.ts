@@ -6,7 +6,7 @@ import type { NextFunction, Request, Response } from 'express';
 process.env.DATABASE_URL ||= 'postgres://user:pass@127.0.0.1:5432/aurapos_test';
 process.env.BETTER_AUTH_SECRET ||= 'test-secret-with-at-least-32-characters';
 
-const { outlets, userOutletAssignments } = await import('@shared/schema');
+const { outlets, userOutletAssignments } = await import('@pos/infrastructure/db/schema');
 const { createOutletMiddleware } = await import('../http/middleware/outlet');
 const { ListOrderHistory } = await import('@pos/application/orders/ListOrderHistory');
 

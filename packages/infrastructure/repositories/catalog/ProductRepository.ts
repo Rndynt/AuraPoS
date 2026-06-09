@@ -17,7 +17,7 @@ import {
   type InsertProduct,
   type ProductOptionGroup as DBProductOptionGroup,
   type ProductOption as DBProductOption,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import type { 
   Product, 
   ProductOptionGroup, 

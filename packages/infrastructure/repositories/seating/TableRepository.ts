@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { Database } from "@pos/infrastructure/database";
-import { tables } from "@shared/schema";
-import type { Table, InsertTable } from "@shared/schema";
+import { tables } from "@pos/infrastructure/db/schema";
+import type { Table, InsertTable } from "@pos/infrastructure/db/schema";
 
 export class TableRepository {
   constructor(private db: Database) {}

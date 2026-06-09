@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { db } from '@pos/infrastructure/database';
-import { tenants, outlets, tenantModuleConfigs, tenantFeatures, tenantOrderTypes, orderTypes, productCategories, products } from '@shared/schema';
+import { tenants, outlets, tenantModuleConfigs, tenantFeatures, tenantOrderTypes, orderTypes, productCategories, products } from '@pos/infrastructure/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 
 async function run() {

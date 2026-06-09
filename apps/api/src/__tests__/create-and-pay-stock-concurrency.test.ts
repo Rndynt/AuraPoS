@@ -10,7 +10,7 @@ const { CreateAndPayOrder } = await import('@pos/application/orders/CreateAndPay
 const { SyncOfflineOrder } = await import('@pos/application/sync/SyncOfflineOrder');
 const { DrizzleCreateAndPayOrderRepository } = await import('@pos/infrastructure/repositories/orders/DrizzleCreateAndPayOrderRepository');
 const { DrizzleSyncOfflineOrderRepository } = await import('@pos/infrastructure/repositories/sync/DrizzleSyncOfflineOrderRepository');
-const { inventoryMovements, orderItems, orderPayments, orders, products, tenants, syncBatches, syncEvents, serverSyncConflicts, tables } = await import('@shared/schema');
+const { inventoryMovements, orderItems, orderPayments, orders, products, tenants, syncBatches, syncEvents, serverSyncConflicts, tables } = await import('@pos/infrastructure/db/schema');
 const { getBusinessDateForTimezone } = await import('@pos/application/orders/orderNumberSequence');
 
 type ProductRow = {

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { db } from '@pos/infrastructure/database';
-import { productCategories, outletProductConfigs } from '@shared/schema';
+import { productCategories, outletProductConfigs } from '@pos/infrastructure/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 
 /**

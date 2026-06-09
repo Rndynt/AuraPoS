@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { emitOrderQueueChanged } from '../services/orderQueueEvents';
-import { syncBatches, syncEvents, serverSyncConflicts } from '../../../../../shared/schema';
+import { syncBatches, syncEvents, serverSyncConflicts } from '@pos/infrastructure/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 
 const selectedOptionSchema = z.object({

@@ -6289,3 +6289,170 @@ Continue inside P6 only. Do not start P7. Keep backend/API/schema unchanged.
 ### Continuation Notes
 
 P6 S1-S4 is complete for this batch. Do not start P7 without explicit user approval. Recommended next action is manual browser smoke against a seeded/test tenant, then P7 only after approval.
+
+## Plan: P7 S1-S3 Schema Boundary Cleanup
+
+### Source
+
+- Tasklist: `roadmap/refactor/prompts/p7-s1-s3-schema-boundary-cleanup-prompt.md`
+- User request: Execute gradually, carefully, relevantly, and precisely for P7 S1-S3 schema boundary cleanup.
+- Date started: 2026-06-09
+- Current status: Implemented and validated
+
+### Goal
+
+Move Drizzle schema ownership from `shared/schema.ts` to infrastructure-owned schema modules without changing runtime database shape, migrations, or P3/P4/P5/P6 behavior. Keep `shared/schema.ts` as a compatibility re-export wrapper.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant roadmap docs (`main.md`, execution protocol, P2-P7 phase docs)
+- [x] Relevant source files (`shared/schema.ts`, `packages/infrastructure/package.json`, `drizzle.config.ts`, schema import sites)
+
+### Workstreams
+
+#### Backend/API Workstream
+
+- Scope: Keep API behavior stable while direct API schema import sites move to infrastructure schema ownership.
+- Files inspected: API schema import locations via `rg`; controller/middleware/seed/test import paths.
+- Findings: API direct schema imports were safe to migrate after the infrastructure schema barrel type-checked.
+- Tasks: Migrated API direct schema imports, seeds, and tests to `@pos/infrastructure/db/schema`.
+- Risks: Broad API import churn could obscure behavior changes; mitigated with API/root type-checks and unrelated behavior diff audit.
+- Validation: `pnpm --filter @pos/api type-check`, root `pnpm type-check`.
+
+#### Database/Schema Workstream
+
+- Scope: Split canonical Drizzle schema definitions into infrastructure schema modules.
+- Files inspected: `shared/schema.ts`, `drizzle.config.ts`, `packages/infrastructure/package.json`.
+- Findings: Existing schema was a single 736-line Drizzle source; definitions were moved by domain into infrastructure modules.
+- Tasks: Created infrastructure schema modules, converted shared wrapper, updated Drizzle schema path and infrastructure package exports.
+- Risks: Cross-module table references had to preserve names, columns, indexes, defaults, references, constraints, and export names.
+- Validation: infrastructure type-check, root type-check, `pnpm run db:check`.
+
+#### Frontend/UI Workstream
+
+- Scope: Preserve P6 frontend POS behavior; no UI changes intended.
+- Files inspected: frontend schema import locations via `rg`.
+- Findings: Frontend imports only shared table types; compatibility wrapper keeps them stable.
+- Tasks: No frontend behavior changes; frontend imports were intentionally left on `@shared/schema` compatibility.
+- Risks: None after wrapper and root type-check passed.
+- Validation: root `pnpm type-check` and empty POS feature diff audit.
+
+#### Tests/Validation Workstream
+
+- Scope: Execute required P7 validation and audits.
+- Files inspected: package scripts and required prompt commands.
+- Findings: Required commands all ran successfully, including `db:check` with the repository default DATABASE_URL fallback.
+- Tasks: Ran package/root type-checks, Drizzle check, application schema audit, schema diff review, unrelated behavior diff audit.
+- Risks: None remaining from validation.
+- Validation: See validation log.
+
+#### Documentation Workstream
+
+- Scope: Update active P7 roadmap document and PLANS.md honestly.
+- Files inspected: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`, prompt.
+- Findings: P7 roadmap needed status/files/modules/imports/validation/DB shape/application audit/P3-P6/P8 status.
+- Tasks: Updated roadmap and this active plan with implementation and validation results.
+- Risks: None.
+- Validation: Documentation diff review.
+
+#### Security/Tenant Isolation Workstream
+
+- Scope: Ensure schema movement does not weaken tenant-owned references or filters.
+- Files inspected: table definitions and schema import sites.
+- Findings: Tenant-owned FK/table definitions were moved without intentional shape changes; no tenant guard/runtime behavior was modified.
+- Tasks: Preserved all tenant columns/indexes/references and avoided business logic edits.
+- Risks: Accidental schema drift; mitigated with Drizzle check.
+- Validation: `pnpm run db:check` and diff audits.
+
+### Execution Order
+
+1. [x] Create canonical infrastructure schema modules with exact moved definitions.
+2. [x] Convert `shared/schema.ts` into compatibility re-export wrapper.
+3. [x] Export infrastructure schema path through package metadata and migrate infrastructure imports first.
+4. [x] Migrate safe API direct schema imports, jobs/seeds, and tests.
+5. [x] Update `drizzle.config.ts` after schema path is available.
+6. [x] Run validations and audits.
+7. [x] Update P7 roadmap and PLANS.md with honest results.
+
+### Progress
+
+#### Completed
+
+- [x] Task: Create infrastructure-owned canonical schema modules.
+  - Files changed: `packages/infrastructure/db/schema/*.schema.ts`, `packages/infrastructure/db/schema/index.ts`.
+  - Validation: `pnpm --filter @pos/infrastructure type-check`, `pnpm type-check`, `pnpm run db:check`.
+  - Docs updated: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`, `PLANS.md`.
+- [x] Task: Reduce `shared/schema.ts` to compatibility re-export wrapper.
+  - Files changed: `shared/schema.ts`.
+  - Validation: `pnpm type-check`.
+  - Docs updated: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`.
+- [x] Task: Migrate safe schema imports.
+  - Files changed: `packages/infrastructure/**`, `apps/api/src/**`, `drizzle.config.ts`, `packages/infrastructure/package.json`.
+  - Validation: `pnpm --filter @pos/infrastructure type-check`, `pnpm --filter @pos/api type-check`, `pnpm type-check`.
+  - Docs updated: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`.
+- [x] Task: Preserve application schema-free boundary and P3/P4/P5/P6 behavior.
+  - Files changed: None under `packages/application`, `apps/api/src/realtime/cfd`, `apps/api/src/http/controllers/OrdersController.ts`, or `apps/pos-terminal-web/src/features/pos`.
+  - Validation: Required `rg` application audit had no matches; required unrelated behavior diff audit was empty.
+  - Docs updated: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`.
+
+#### Partially Completed
+
+- [ ] Task: Frontend imports from `@shared/schema`.
+  - Completed: Compatibility wrapper keeps existing frontend type imports valid.
+  - Remaining: Optional future import cleanup can happen after boundary enforcement planning.
+  - Reason: P7 required preserving P6 frontend behavior and did not require frontend import churn.
+
+#### Blocked
+
+- [ ] Task: None.
+  - Blocker: None.
+  - Required next step: None.
+
+#### Not Attempted
+
+- [ ] Task: P8 boundary enforcement.
+  - Reason: Explicitly out of scope; P8 was not started.
+
+### Validation Log
+
+- Command: `pnpm --filter @pos/infrastructure type-check`
+- Result: Pass.
+- Notes: Infrastructure schema modules and migrated imports type-check.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: Pass.
+- Notes: API controllers/middleware/routes/services/seeds/tests direct schema imports resolve through infrastructure schema.
+- Command: `pnpm type-check`
+- Result: Pass, 10/10 Turbo tasks.
+- Notes: Shared compatibility wrapper, frontend type imports, API, and workspace references all type-check.
+- Command: `pnpm run db:check`
+- Result: Pass.
+- Notes: Drizzle Kit reported everything is fine using the configured schema path.
+- Command: `rg -n "@shared/schema|shared/schema|@pos/infrastructure/db/schema|drizzle-orm" packages/application || true`
+- Result: Pass/no matches.
+- Notes: Application layer remains schema-free.
+- Command: `git diff -- shared/schema.ts packages/infrastructure/db/schema drizzle.config.ts`
+- Result: Reviewed.
+- Notes: Schema movement/re-export/config path change only.
+- Command: `git diff -- apps/pos-terminal-web/src/features/pos apps/api/src/realtime/cfd apps/api/src/http/controllers/OrdersController.ts packages/application/orders packages/application/inventory`
+- Result: Pass/empty diff.
+- Notes: P3/P4/P5/P6 behavior-preservation audit passed.
+
+### Documentation Updates
+
+- File: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`
+- Change: Updated P7 status, files changed, schema modules, shared wrapper role, imports migrated, validation results, DB shape/migration status, application audit, P3/P4/P5/P6 preservation, and P8 not-started status.
+- File: `PLANS.md`
+- Change: Updated active P7 plan with completed progress, validation log, partial frontend compatibility note, and continuation notes.
+
+### Checklist Updates
+
+- File: `roadmap/refactor/p7-s1-s3-schema-boundary-cleanup.md`
+- Change: Definition of done marked complete after validation.
+
+### Continuation Notes
+
+P7 S1-S3 is implemented and validated. Next safe future batch is P8 boundary enforcement planning/rules, if explicitly requested; do not start P8 in this P7 batch.

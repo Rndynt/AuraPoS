@@ -9,7 +9,7 @@ import {
   orderItemModifiers,
   type OrderItemModifier,
   type InsertOrderItemModifier,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 
 export interface IOrderItemModifierRepository {

@@ -9,7 +9,7 @@ import {
   tenantModuleConfigs,
   type TenantModuleConfig as DBTenantModuleConfig,
   type InsertTenantModuleConfig,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import type { TenantModuleConfig } from '@pos/domain/tenants/types';
 import { eq } from 'drizzle-orm';
 

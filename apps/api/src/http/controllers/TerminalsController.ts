@@ -7,7 +7,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
-import { terminals } from '../../../../../shared/schema';
+import { terminals } from '@pos/infrastructure/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**

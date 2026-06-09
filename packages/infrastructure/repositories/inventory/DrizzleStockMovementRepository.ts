@@ -6,7 +6,7 @@ import type {
 } from '@pos/application/inventory/ports';
 import { InsufficientStockError } from '@pos/application/inventory/stockMovements';
 import { and, eq, gte, inArray, sql } from 'drizzle-orm';
-import { inventoryMovements, products } from '../../../../shared/schema';
+import { inventoryMovements, products } from '@pos/infrastructure/db/schema';
 import { db, type DbClient } from '../../database';
 import { DrizzleUnitOfWork } from '../../unit-of-work';
 

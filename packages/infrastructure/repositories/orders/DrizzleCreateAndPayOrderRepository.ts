@@ -22,7 +22,7 @@ import {
   orderPayments,
   products,
   type InsertOrder,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from '@pos/application/orders/mappers';
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from '@pos/core/pricing';

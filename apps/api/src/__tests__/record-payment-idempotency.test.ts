@@ -5,7 +5,7 @@ import http from 'node:http';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { RecordPayment } from '@pos/application/orders/RecordPayment';
 import { DrizzleRecordPaymentRepository } from '@pos/infrastructure/repositories/orders/DrizzleRecordPaymentRepository';
-import { orderPayments } from '../../../../shared/schema';
+import { orderPayments } from '@pos/infrastructure/db/schema';
 
 process.env.DATABASE_URL ||= 'postgres://user:pass@127.0.0.1:5432/aurapos_test';
 process.env.BETTER_AUTH_SECRET ||= 'test-secret-with-at-least-32-characters';

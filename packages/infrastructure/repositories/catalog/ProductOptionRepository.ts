@@ -11,7 +11,7 @@ import {
   productOptions,
   type ProductOption,
   type InsertProductOption,
-} from '../../../../shared/schema';
+} from '@pos/infrastructure/db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { ProductOptionMutationData } from '@pos/application/catalog/CreateOrUpdateProduct';
 

@@ -33,7 +33,7 @@ const {
   outlets, productCategories, products, tenantFeatures,
   tenantModuleConfigs, tenantOrderTypes, tenants,
   userOutletAssignments, orderTypes,
-} = await import('@shared/schema');
+} = await import('@pos/infrastructure/db/schema');
 const { user: authUser } = await import('../lib/auth-schema');
 
 // ─── Fake deps (exact interface mirror of RegistrationDeps) ──────────────────

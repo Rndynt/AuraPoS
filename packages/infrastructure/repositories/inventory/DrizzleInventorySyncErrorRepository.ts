@@ -6,7 +6,7 @@ import type {
 import { errorMessage } from '@pos/application/inventory/inventorySyncErrors';
 import type { TransactionContext } from '@pos/application/shared/ports';
 import { and, asc, eq, isNull, lte, sql } from 'drizzle-orm';
-import { inventorySyncErrors } from '../../../../shared/schema';
+import { inventorySyncErrors } from '@pos/infrastructure/db/schema';
 import { db, type DbClient } from '../../database';
 import { DrizzleUnitOfWork } from '../../unit-of-work';
 

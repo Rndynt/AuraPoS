@@ -19,7 +19,9 @@
     "./repositories/inventory": "./repositories/inventory/index.ts",
     "./repositories/inventory/*": "./repositories/inventory/*.ts",
     "./unit-of-work": "./unit-of-work/index.ts",
-    "./unit-of-work/*": "./unit-of-work/*.ts"
+    "./unit-of-work/*": "./unit-of-work/*.ts",
+    "./db/schema": "./db/schema/index.ts",
+    "./db/schema/*": "./db/schema/*.ts"
   },
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit"
