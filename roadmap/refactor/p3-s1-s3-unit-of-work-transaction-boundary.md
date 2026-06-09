@@ -1,6 +1,6 @@
 # P3 S1-S3 — UnitOfWork and Transaction Boundary
 
-Status: planned
+Status: fully validated
 Purpose: preserve atomic order/payment/inventory behavior while removing DB knowledge from application use cases.
 
 ## Goal
@@ -116,13 +116,46 @@ Status: partially implemented and validated with type-check; API test suite atte
 - [ ] `pnpm --filter @pos/api test` — attempted; 194/195 tests passed, `record-payment-idempotency.test.ts` failed at startup because `DATABASE_URL` is not set in this environment.
 - [x] `pnpm type-check` — passed, 10/10 Turbo type-check tasks.
 
-### Pending / not completed
+### Previous pending items
 
-- [ ] Re-run the DB-backed record-payment idempotency/concurrency test with a configured `DATABASE_URL` before production sign-off.
-- [ ] Keep `runInTransaction` compatibility alias only until remaining callers are fully migrated; do not remove it in this batch because it is a safe backward-compatible bridge.
-- [ ] P4 was not started.
+- [x] Re-ran the DB-backed record-payment idempotency/concurrency test with a configured `DATABASE_URL` during final validation sign-off.
+- [ ] Keep `runInTransaction` compatibility alias only until remaining callers are fully migrated; this compatibility cleanup is outside P3 validation sign-off scope.
+- [x] P4 was not started.
 
 ### Git status
 
 - [x] Local commit created with message `fix: stabilize unit of work transaction boundary`.
 - [ ] Push not completed: `git push` failed because the current repository has no configured push destination/remote.
+
+## Final validation sign-off
+
+Date: 2026-06-09
+Commit: <pending>
+
+### Validation results
+
+- `pnpm --filter @pos/application type-check`: pass
+- `pnpm --filter @pos/infrastructure type-check`: pass
+- `pnpm --filter @pos/api type-check`: pass
+- `pnpm --filter @pos/api test`: pass
+- `pnpm type-check`: pass
+
+### DB-backed test sign-off
+
+- `record-payment-idempotency.test.ts`: pass
+- `create-and-pay-stock-concurrency.test.ts`: pass
+
+### Behavior preservation
+
+- Endpoint behavior changed: no
+- DB schema changed: no
+- Cash payment behavior changed: no
+- Standard payment behavior changed: no
+- Partial payment behavior changed: no
+- Order lifecycle behavior changed: no
+- Tenant isolation weakened: no
+
+### Continuation
+
+P3 is fully validated. Next safe phase is P4 only after user approval.
+
