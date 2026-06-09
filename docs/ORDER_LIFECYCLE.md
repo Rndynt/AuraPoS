@@ -118,6 +118,19 @@ Online order flows resolve a per-tenant inventory policy from `tenant_module_con
 - **Strict inventory**: tracked stock update and `inventory_movements` ledger insert must succeed before `/api/orders/:id/confirm`, kitchen-ticket auto-confirm, or quick-pay payment returns success. For quick-pay (`/api/orders/create-and-pay`), order, payment, stock update, and ledger insert are in the same database transaction.
 - **Allow-negative inventory**: tracked stock can go below zero. If the stock/ledger movement fails, the order response can still proceed, but the failure is persisted in `inventory_sync_errors` with the tenant/order/product context and is picked up by the retry job. This replaces silent `.catch(() => {})` inventory failures.
 
+
+## Inventory Stock Policy
+
+AuraPoS keeps fulfillment status and financial settlement separate from stock movement timing. The current stock policy is:
+
+- Tracked stock is deducted on the first successful payment recording for an order, including the first partial payment.
+- Additional payments on the same order do not deduct stock again; payment idempotency keys replay the prior payment instead of creating duplicate stock movements.
+- Unpaid draft/confirmed orders do not deduct stock. Cancelling an unpaid order must not restore stock because no sale deduction happened.
+- Cancelling a partially paid or paid order in a deducted lifecycle state restores stock through the existing cancel workflow. Refund/void endpoints are still not implemented as a separate public flow, so refund/void stock restoration remains a follow-up policy item.
+- Basic Stock / Stok Dasar controls access to `/api/inventory/products`; Advanced Inventory remains separately gated for movement/report endpoints.
+
+---
+
 ## Atomic Order+Payment (P3)
 
 To prevent "orphaned orders" (order created but payment fails), AuraPoS uses atomic creation:

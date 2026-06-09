@@ -1,8 +1,9 @@
 -- Align AuraPoS identifier columns to PostgreSQL native uuid.
 --
--- This migration intentionally casts legacy varchar/text UUID columns with
--- explicit preflight checks. If any value is not a valid UUID string, the
--- migration fails before altering data so the row can be corrected safely.
+-- This migration casts legacy varchar/text UUID columns with explicit preflight
+-- checks. Legacy slug tenant ids are repaired in-place by generating UUID
+-- tenant ids, preserving the original value in tenants.slug, and updating
+-- tenant-owned references before the native uuid cast.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -165,6 +166,76 @@ BEGIN
       PERFORM aurapos_drop_table_fks(to_regclass(table_name));
     END IF;
   END LOOP;
+END;
+$$;
+
+DO $$
+DECLARE
+  table_name text;
+BEGIN
+  -- Repair legacy tenants.id values such as 'thamada' before UUID casting.
+  -- FKs have already been dropped above, so tenant-owned references can be
+  -- updated consistently in the same migration transaction.
+  IF to_regclass('tenants') IS NOT NULL
+     AND aurapos_column_exists('tenants'::regclass, 'id')
+     AND aurapos_column_exists('tenants'::regclass, 'slug') THEN
+    CREATE TEMP TABLE IF NOT EXISTS aurapos_tenant_id_repair (
+      old_id text PRIMARY KEY,
+      new_id uuid NOT NULL UNIQUE
+    ) ON COMMIT DROP;
+
+    INSERT INTO aurapos_tenant_id_repair (old_id, new_id)
+    SELECT id::text, gen_random_uuid()
+    FROM tenants
+    WHERE id IS NOT NULL
+      AND id::text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    ON CONFLICT (old_id) DO NOTHING;
+
+    IF EXISTS (SELECT 1 FROM aurapos_tenant_id_repair) THEN
+      -- Preserve the legacy slug value before changing tenants.id. This is
+      -- idempotent for rows where slug already matches the old id.
+      UPDATE tenants t
+      SET slug = COALESCE(NULLIF(t.slug, ''), r.old_id)
+      FROM aurapos_tenant_id_repair r
+      WHERE t.id::text = r.old_id;
+
+      FOREACH table_name IN ARRAY ARRAY[
+        'outlets',
+        'tables',
+        'tenant_module_configs',
+        'product_categories',
+        'products',
+        'product_option_groups',
+        'product_options',
+        'tenant_order_types',
+        'order_number_sequences',
+        'orders',
+        'kitchen_tickets',
+        'tenant_features',
+        'terminals',
+        'sync_batches',
+        'sync_events',
+        'server_sync_conflicts',
+        'inventory_movements',
+        'inventory_sync_errors',
+        'cfd_devices',
+        'users'
+      ] LOOP
+        IF to_regclass(table_name) IS NOT NULL
+           AND aurapos_column_exists(to_regclass(table_name), 'tenant_id') THEN
+          EXECUTE format(
+            'UPDATE %s child SET tenant_id = repair.new_id::text FROM aurapos_tenant_id_repair repair WHERE child.tenant_id::text = repair.old_id',
+            to_regclass(table_name)
+          );
+        END IF;
+      END LOOP;
+
+      UPDATE tenants t
+      SET id = r.new_id::text
+      FROM aurapos_tenant_id_repair r
+      WHERE t.id::text = r.old_id;
+    END IF;
+  END IF;
 END;
 $$;
 

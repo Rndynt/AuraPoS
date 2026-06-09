@@ -6633,3 +6633,192 @@ Fix inventory stock listing so stock-tracked products are visible before movemen
 ### Continuation Notes
 
 Apply `migrations/0019_inventory_movement_traceability.sql` in the target DB, then run the manual smoke in the report: create/select a product, enable stock tracking, verify stock page visibility with no movement and zero stock, sell the product, and inspect movement references.
+
+## Plan: Post-P8.4 Stock Basic Entitlement, Migration Recovery, and Stock Policy
+
+### Source
+
+- Tasklist: `roadmap/refactor/prompts/post-p8-4-stock-basic-entitlement-migration-and-policy-prompt.md`
+- User request: `Eksekusi secara bertahap, hati hati, sesuai dan relevan dan presisi roadmap/refactor/prompts/post-p8-4-stock-basic-entitlement-migration-and-policy-prompt.md`
+- Date started: 2026-06-09
+- Current status: Implemented and validated in this batch; live staging/production manual rehearsal not run in this environment.
+
+### Goal
+
+Fix the Basic Starter Stok Dasar entitlement blocker, keep Advanced Inventory separately gated, repair/fail-fast the UUID migration path for legacy slug tenant ids, and document/enforce the current stock payment/cancel policy.
+
+### Context Read
+
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+
+#### Backend/API Workstream
+
+- Scope: Inventory entitlement helpers/route, registration onboarding defaults, migration runner.
+- Files inspected: `apps/api/src/http/routes/inventory.ts`, `apps/api/src/services/registrationService.ts`, `apps/api/src/index.ts`, `apps/api/src/constants/planFeatureMap.ts`, `apps/api/src/seed.ts`, `apps/api/src/seed-free-starter.ts`.
+- Findings: `/api/inventory/products` checks `tenant_module_configs.enable_inventory`; onboarding/seeds could set Basic Stock false despite free catalog policy.
+- Tasks: Enabled Basic Stock by default, added explicit entitlement helpers, extracted fail-fast migration runner.
+- Risks: Existing tenants intentionally disabled for Basic Stock will be backfilled if active `free`/`starter`; route-level gating still enforces 403 when module remains false.
+- Validation: API tests, type-checks, boundary check.
+
+#### Database/Schema Workstream
+
+- Scope: Migration 0015 repair and Basic Stock backfill migration.
+- Files inspected: `migrations/0015_native_uuid_alignment.sql`, `migrations/0019_inventory_movement_traceability.sql`, migration runner code.
+- Findings: 0015 failed on legacy slug tenant id; runner continued to 0019 after failure.
+- Tasks: Added in-migration repair for non-UUID tenant ids and migration `0020_basic_stock_default_entitlement.sql`.
+- Risks: Needs rehearsal on a copy of production data containing legacy slug ids before production deployment.
+- Validation: Static migration tests and `pnpm run db:check`.
+
+#### Frontend/UI Workstream
+
+- Scope: Marketplace/feature catalog policy review.
+- Files inspected: `apps/pos-terminal-web/src/lib/featureCatalog.ts`, stock/marketplace paths by search.
+- Findings: Frontend catalog already marks `enable_inventory` as free and `enable_inventory_advanced` as Growth.
+- Tasks: No UI code change needed.
+- Risks: Browser/manual stock page smoke not run in this environment.
+- Validation: Terminal web type-check.
+
+#### Tests/Validation Workstream
+
+- Scope: Automated coverage for entitlement, migration semantics, stock listing, cancel stock policy, and stock idempotency.
+- Files inspected/changed: `apps/api/src/__tests__/*` focused tests.
+- Findings: Existing stock-listing and create-and-pay concurrency tests already covered tracked zero/no movement and quick-pay idempotency.
+- Tasks: Added/updated focused tests; ran full API test suite with shell `DATABASE_URL`.
+- Risks: The package-script focused invocation still expands all tests; without shell `DATABASE_URL`, one existing test can fail before setting its fallback env.
+- Validation: Full command log in report.
+
+#### Documentation Workstream
+
+- Scope: Billing entitlement docs, order lifecycle stock policy, Post-P8.4 report.
+- Files changed: `docs/billing-entitlement.md`, `docs/ORDER_LIFECYCLE.md`, `roadmap/refactor/reports/post-p8-4-stock-basic-entitlement-migration-policy-report.md`.
+- Findings: Docs needed explicit Basic Stock default and cancel/unpaid stock policy.
+- Tasks: Synced docs with implementation.
+- Risks: Manual production evidence remains pending.
+- Validation: Documentation reviewed during final report creation.
+
+#### Security/Tenant Isolation Workstream
+
+- Scope: Tenant/outlet leakage safeguards and entitlement gating.
+- Files inspected: inventory route conditions/tests and tenant auth guard tests.
+- Findings: Product stock listing remains tenant-scoped; movement routes remain tenant/outlet scoped; advanced routes remain separately gated.
+- Tasks: Kept gating intact and explicit.
+- Risks: None identified in code changes.
+- Validation: Full API tests include tenant auth guard cross-tenant inventory route checks.
+
+### Execution Order
+
+1. Safety/security/data-integrity/tenant-isolation blockers — completed.
+2. Build/type/test blockers — completed.
+3. Dependency prerequisites — completed.
+4. Highest priority actionable tasks — completed.
+5. Lower priority actionable tasks — completed.
+6. Documentation sync — completed.
+7. Validation — completed.
+8. Final checklist update — report created; source prompt has no checkbox list to mark.
+
+### Progress
+
+#### Completed
+
+- [x] Task: Fix Basic Starter Stok Dasar entitlement/defaults.
+  - Files changed: `packages/application/tenants/businessTypeTemplates.ts`, `apps/api/src/services/registrationService.ts` tests, `apps/api/src/seed.ts`, `apps/api/src/seed-free-starter.ts`, `migrations/0020_basic_stock_default_entitlement.sql`, inventory entitlement helper/route.
+  - Validation: API tests, type-checks, boundary check.
+  - Docs updated: `docs/billing-entitlement.md`, Post-P8.4 report.
+
+- [x] Task: Keep tracked products visible through production-gated path.
+  - Files changed: `apps/api/src/http/helpers/inventoryEntitlement.ts`, `apps/api/src/http/routes/inventory.ts`, tests.
+  - Validation: Inventory entitlement/listing tests and tenant auth guard tests.
+  - Docs updated: Post-P8.4 report.
+
+- [x] Task: Handle migration 0015 legacy tenant id failure and runner fail-fast.
+  - Files changed: `migrations/0015_native_uuid_alignment.sql`, `apps/api/src/migrations/migrationRunner.ts`, `apps/api/src/index.ts`, tests.
+  - Validation: Migration static tests, migration-runner tests, type-check, db:check.
+  - Docs updated: Post-P8.4 report.
+
+- [x] Task: Document/enforce stock deduction/cancel/refund/restore policy.
+  - Files changed: `packages/application/orders/services/CancelOrderWorkflow.ts`, cancel stock policy tests, `docs/ORDER_LIFECYCLE.md`.
+  - Validation: Cancel policy tests and full API test suite.
+  - Docs updated: `docs/ORDER_LIFECYCLE.md`, Post-P8.4 report.
+
+#### Partially Completed
+
+- [ ] Task: Manual validation against production-like staging data.
+  - Completed: Automated tests and DB check.
+  - Remaining: Login as tenant owner, open stock page in browser, and rehearse migration against a DB copy containing `tenants.id = 'thamada'`.
+  - Reason: No live/staging browser/database fixture is available in this environment.
+
+#### Blocked
+
+- [ ] Task: Live production/staging migration rehearsal.
+  - Blocker: Requires a database copy or staging environment with legacy slug ids.
+  - Required next step: Run migrations on a safe copy and verify old tenant id references map to generated UUIDs.
+
+#### Not Attempted
+
+- [ ] Task: Implement refund/void stock restoration endpoints.
+  - Reason: Prompt explicitly says not to implement full refund/void restoration unless it already exists and only needs a small fix; endpoints are not present as a public flow.
+
+### Validation Log
+
+- Command: `pnpm check:boundaries`
+- Result: pass
+- Notes: 389 files, 0 violations.
+
+- Command: `pnpm --filter @pos/domain type-check`
+- Result: pass
+- Notes: no emit.
+
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Notes: no emit.
+
+- Command: `pnpm --filter @pos/infrastructure type-check`
+- Result: pass
+- Notes: no emit.
+
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Notes: no emit.
+
+- Command: `pnpm --filter @pos/terminal-web type-check`
+- Result: pass
+- Notes: no emit.
+
+- Command: `pnpm type-check`
+- Result: pass
+- Notes: 10/10 Turbo type-check tasks passed.
+
+- Command: `pnpm run db:check`
+- Result: pass
+- Notes: Drizzle reported everything fine.
+
+- Command: `DATABASE_URL=postgres://user:pass@127.0.0.1:5432/aurapos_test BETTER_AUTH_SECRET=test-secret-with-at-least-32-characters pnpm --filter @pos/api test`
+- Result: pass
+- Notes: 214 tests passed.
+
+### Documentation Updates
+
+- File: `docs/billing-entitlement.md`
+- Change: Basic Stock / Stok Dasar documented as free onboarding default stored in `tenant_module_configs`; Advanced Inventory remains Growth+.
+
+- File: `docs/ORDER_LIFECYCLE.md`
+- Change: Stock deduction, partial payment, cancel unpaid, paid/partial cancel restore, and refund/void follow-up policy documented.
+
+- File: `roadmap/refactor/reports/post-p8-4-stock-basic-entitlement-migration-policy-report.md`
+- Change: Required Post-P8.4 report created.
+
+### Checklist Updates
+
+- File: `roadmap/refactor/reports/post-p8-4-stock-basic-entitlement-migration-policy-report.md`
+- Change: Final decisions and validation results recorded. The prompt source has no checkbox tasklist to mark.
+
+### Continuation Notes
+
+Next agent should rehearse `0015_native_uuid_alignment.sql` and `0020_basic_stock_default_entitlement.sql` on a production-like database copy containing a legacy `tenants.id = 'thamada'`, then manually smoke a Basic Starter tenant stock page in a browser/staging environment.

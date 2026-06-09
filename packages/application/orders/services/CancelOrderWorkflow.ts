@@ -42,7 +42,7 @@ export class CancelOrderWorkflow {
           transaction: tx,
         });
 
-        if (STOCK_DEDUCTED_STATES.has(orderBeforeCancel.status) && orderBeforeCancel.items?.length) {
+        if (shouldRestoreStockOnCancel(orderBeforeCancel) && orderBeforeCancel.items?.length) {
           await applyOrderInventoryMovement(
             input.tenantId,
             orderItemsForStock(orderBeforeCancel),
@@ -67,7 +67,7 @@ export class CancelOrderWorkflow {
 
     if (
       orderBeforeCancel &&
-      STOCK_DEDUCTED_STATES.has(orderBeforeCancel.status) &&
+      shouldRestoreStockOnCancel(orderBeforeCancel) &&
       orderBeforeCancel.items?.length
     ) {
       await applyOrderInventoryMovement(
@@ -90,4 +90,11 @@ function assertOrderVisibleForOutlet(order: any | null, outletId?: string | null
   if (outletId && order.outletId !== outletId) {
     throw new OrderInventoryWorkflowError('Order not found for this outlet', 404, 'ORDER_NOT_FOUND');
   }
+}
+
+
+export function shouldRestoreStockOnCancel(order: any): boolean {
+  const paymentStatus = order?.payment_status ?? order?.paymentStatus ?? 'unpaid';
+
+  return paymentStatus !== 'unpaid' && STOCK_DEDUCTED_STATES.has(order?.status);
 }

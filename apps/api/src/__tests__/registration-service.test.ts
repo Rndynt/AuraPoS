@@ -232,9 +232,11 @@ describe('registerTenantOwner', () => {
     assert.equal(outletInsert?.values.slug, 'main');
     assert.equal(outletInsert?.values.isDefault, true);
 
-    // All paid modules must be disabled for new free tenants
+    // Basic Stock is a free/default onboarding module; paid modules stay disabled.
     const moduleInsert = fake.inserts.find((op) => op.table === tenantModuleConfigs);
     assert.equal(moduleInsert?.values.tenantId, 'tenant-1');
+    assert.equal(moduleInsert?.values.enableInventory, true, 'basic stock must be enabled for onboarding');
+    assert.equal(moduleInsert?.values.enableInventoryAdvanced, false, 'advanced inventory must remain disabled (growth feature)');
     assert.equal(moduleInsert?.values.enableTableManagement, false, 'table management must be disabled (growth feature)');
     assert.equal(moduleInsert?.values.enableKitchenTicket, false, 'kitchen ticket must be disabled (growth feature)');
     assert.equal(moduleInsert?.values.enableMultiLocation, false);
@@ -399,6 +401,14 @@ describe('BUSINESS_TYPE_TEMPLATES — entitlement safety', () => {
       }
     });
 
+    it(`${businessType}: Basic Stock must be enabled by default`, () => {
+      assert.equal(
+        template.moduleConfig.enable_inventory,
+        true,
+        `${businessType} template must enable Basic Stock as the free onboarding entitlement`,
+      );
+    });
+
     it(`${businessType}: paid modules must be disabled by default`, () => {
       for (const moduleKey of PAID_MODULES) {
         const value = (template.moduleConfig as Record<string, unknown>)[moduleKey];
@@ -484,6 +494,12 @@ describe('registerTenantOwner — all business types start on free plan', () => 
 
       const moduleInsert = fake.inserts.find((op) => op.table === tenantModuleConfigs);
       assert.ok(moduleInsert, 'module config must be inserted');
+
+      assert.equal(
+        moduleInsert.values.enableInventory,
+        true,
+        `${businessType}: Basic Stock must be enabled at registration`,
+      );
 
       const paidModules = [
         'enableTableManagement',
