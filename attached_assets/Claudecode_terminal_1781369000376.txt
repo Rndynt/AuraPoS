@@ -1,0 +1,937 @@
+trus di marketplace nya, kok item featurenya gak ada deskripsi/long
+  description dan icon lagi ? dan gak ada kategori fitur lagi yang bisa
+  disort, yang sebelumnya ada badge kategori dan deskripsi item fitur di
+  market place ini.                                                          
+● Betul, salahku. Waktu rewrite marketplace, aku cuma ambil {label, area}      dari SOT — deskripsi panjang, ikon, dan kategori yang bisa di-sort hilang.
+  Itu metadata presentasi (UI-only), bukan SOT gating, jadi boleh hidup di
+  frontend sebagai map per-entitlement-code. Aku kembalikan.
+                                                                               Pertama cek dulu state marketplace sekarang & ikon yang tersedia.
+                                                                             ● Bash(cd /root/AuraPoS; git checkout main 2>&1 | tail -1; sed -n '1,30p'          apps/pos-terminal-web/src/pages/marketplace.tsx | head -30)
+  ⎿  Your branch is up to date with 'origin/main'.
+     import { useMemo, useState } from "react";                                   import { useLocation } from "wouter";                                        … +27 lines (ctrl+o to expand)
+
+● I'll rewrite marketplace with a UI-only presentation map (icon, short/long
+  description, category) keyed by entitlement code — keeping the SOT as the
+  source for which entitlements exist and their active/included/purchasable    state.
+                                                                             ● Write(apps/pos-terminal-web/src/pages/marketplace.tsx)                       ⎿  Added 217 lines, removed 71 lines
+       5  import { useToast } from "@/hooks/use-toast";
+       6  import { PageHeader } from "@/components/design";
+       7  import {
+       8 -  Crown, Sparkles, ChevronRight, X, Lock, Info, CheckCircle2
+         -, ShieldCheck,                                                            8 +  Crown, Sparkles, ChevronRight, X, Lock, Info, CheckCircle2
+         +, ShieldCheck, Zap,
+       9 +  Package, PackageSearch, SplitSquareVertical, Wallet, Layer                +s, Receipt,                                                              10 +  ClipboardList, UtensilsCrossed, ChefHat, BarChart3, Downlo
+         +ad, MapPin,                                                              11 +  Tag, ScanLine, CreditCard, BookOpen, Webhook, KeyRound,
+      12  } from "lucide-react";
+      13  import {                                                                 14    ENTITLEMENT_CATALOG,
+     ...
+       18    type OfferCode,
+       19  } from "@pos/application/entitlements";
+       20                                                                           18 -// ─── Single source of truth (imported directly) ─────────
+          -───────────────────────
+       19 -// The marketplace renders exclusively from ENTITLEMENT_CAT                 -ALOG + the tenant's                                                      20 -// effective entitlements from /api/me/entitlements. There                  -is NO frontend                                                           21 -// plan/module/feature catalog and NO module/feature toggli
+          -ng.                                                                      21 +// ─── Single source of truth ─────────────────────────────
+          +───────────────────────                                                  22 +// WHICH entitlements exist, their plan inclusion, offers,                  +and required plans all                                                   23 +// come from ENTITLEMENT_CATALOG. The tenant's active/inclu
+          +ded state comes from
+       24 +// /api/me/entitlements. There is NO frontend plan/module/f
+          +eature catalog and NO
+       25 +// module/feature toggling.                                              26 +//
+       27 +// The map below is PRESENTATION-ONLY decoration (icon, cop
+          +y, category grouping).
+       28 +// It carries no plan, required-plan, or gating data — that
+          + stays in the SOT.                                                       29
+       30 +type EntitlementPresentation = {
+       31 +  icon: React.ElementType;                                               32 +  iconBg: string;                                                        33 +  iconColor: string;
+       34 +  category: string;                                                      35 +  description: string;                                                   36 +  longDesc: string;
+       37 +};
+       38 +
+       39 +const ENTITLEMENT_PRESENTATION: Record<EntitlementCode, Ent
+          +itlementPresentation> = {
+       40 +  inventory_basic_stock: {
+       41 +    icon: Package, iconBg: "bg-amber-100", iconColor: "text                 +-amber-600", category: "Inventori",
+       42 +    description: "Lihat stok per produk, status menipis/hab
+          +is, & adjust qty.",                                                      43 +    longDesc: "Fitur stok esensial: aktifkan tracking stok
+          +per produk, lihat status (aman, menipis, habis) secara real
+          +-time, dan lakukan penyesuaian stok langsung.",
+       44 +  },                                                                     45 +  inventory_advanced_stock: {
+       46 +    icon: PackageSearch, iconBg: "bg-emerald-100", iconColo                 +r: "text-emerald-600", category: "Inventori",
+       47 +    description: "Mutasi stok bertipe, riwayat audit trail,
+          + & laporan pergerakan.",                                                 48 +    longDesc: "Melengkapi Stok Dasar: catat mutasi stok ber
+          +tipe (pembelian, rusak, retur), riwayat lengkap setiap perg                 +erakan, dan laporan audit trail.",
+       49 +  },                                                                     50 +  payments_partial_payment: {
+       51 +    icon: SplitSquareVertical, iconBg: "bg-green-100", icon                 +Color: "text-green-600", category: "Pembayaran",
+       52 +    description: "Bayar sebagian, lunasi nanti — split bill                 + & cicilan.",
+       53 +    longDesc: "Terima pembayaran parsial atau split bill an
+          +tar pelanggan. Sisa tagihan tercatat dan bisa dilunasi di w
+          +aktu berbeda dengan metode berbeda.",
+       54 +  },                                                                     55 +  payments_multi_payment: {
+       56 +    icon: Wallet, iconBg: "bg-teal-100", iconColor: "text-t                 +eal-600", category: "Pembayaran",
+       57 +    description: "Satu transaksi dibayar dengan beberapa me
+          +tode sekaligus.",
+       58 +    longDesc: "Gabungkan beberapa metode pembayaran dalam s
+          +atu transaksi (mis. sebagian tunai, sebagian QRIS) dengan r
+          +ekonsiliasi otomatis.",
+       59 +  },                                                                     60 +  payments_split_payment: {
+       61 +    icon: Layers, iconBg: "bg-indigo-100", iconColor: "text
+          +-indigo-600", category: "Pembayaran",                                    62 +    description: "Pisah tagihan per orang atau per item dal
+          +am satu order.",
+       63 +    longDesc: "Bagi satu order menjadi beberapa tagihan ter
+          +pisah per pelanggan atau per item, masing-masing dengan pem
+          +bayarannya sendiri.",                                                    64 +  },                                                                     65 +  receipt_compact: {
+       66 +    icon: Receipt, iconBg: "bg-slate-100", iconColor: "text                 +-slate-600", category: "Struk",
+       67 +    description: "Format struk ringkas hemat kertas untuk p                 +rinter thermal.",
+       68 +    longDesc: "Layout struk yang lebih padat untuk menghema
+          +t kertas thermal, tetap memuat info penting transaksi, item                 +, pajak, dan metode bayar.",
+       69 +  },
+       70 +  orders_queue: {                                                        71 +    icon: ClipboardList, iconBg: "bg-indigo-100", iconColor
+          +: "text-indigo-600", category: "Order",                                  72 +    description: "Panel antrian semua order aktif real-time                 + di layar kasir.",
+       73 +    longDesc: "Panel samping yang menampilkan semua order a
+          +ktif secara real-time beserta status bayar. Kasir memantau
+          +pesanan tanpa berpindah layar.",
+       74 +  },
+       75 +  restaurant_table_service: {                                            76 +    icon: UtensilsCrossed, iconBg: "bg-blue-100", iconColor
+          +: "text-blue-600", category: "Restoran",
+       77 +    description: "Denah meja real-time, status duduk, & pes                 +anan per meja.",                                                         78 +    longDesc: "Denah meja interaktif: lihat status meja (te
+          +rsedia / terisi / reservasi) dan lanjutkan pesanan langsung
+          + dari tampilan lantai.",
+       79 +  },
+       80 +  restaurant_kitchen_ops: {                                              81 +    icon: ChefHat, iconBg: "bg-orange-100", iconColor: "tex                 +t-orange-600", category: "Restoran",
+       82 +    description: "Tiket dapur, layar KDS, & printer dapur d                 +alam satu paket.",
+       83 +    longDesc: "Operasional dapur terintegrasi: tiket pesana
+          +n otomatis ke dapur, layar display khusus staf dapur, dan d                 +ukungan printer thermal dapur.",
+       84 +  },
+       85 +  reports_advanced: {                                                    86 +    icon: BarChart3, iconBg: "bg-violet-100", iconColor: "t
+          +ext-violet-600", category: "Laporan",
+       87 +    description: "Dashboard analitik, grafik real-time, & i                 +nsight penjualan.",
+       88 +    longDesc: "Dashboard visual dengan grafik omzet, produk                 + terlaris, rata-rata nilai transaksi, dan insight bisnis. U
+          +pdate real-time, bisa difilter per periode.",                            89 +  },
+       90 +  reports_export: {                                                      91 +    icon: Download, iconBg: "bg-blue-100", iconColor: "text
+          +-blue-600", category: "Laporan",                                         92 +    description: "Ekspor laporan ke Excel/PDF untuk akuntan                 +si & arsip.",
+       93 +    longDesc: "Ekspor laporan penjualan dan inventori ke fo
+          +rmat Excel atau PDF untuk kebutuhan akuntansi, audit, atau
+          +arsip bulanan.",                                                         94 +  },                                                                     95 +  multi_location: {
+       96 +    icon: MapPin, iconBg: "bg-cyan-100", iconColor: "text-c
+          +yan-600", category: "Ekspansi",
+       97 +    description: "Kelola beberapa cabang dari satu dashboar                 +d terpusat.",
+       98 +    longDesc: "Buka dan kelola beberapa cabang dari satu ak                 +un: laporan per cabang, atur produk & harga per lokasi, dan
+          + transfer stok antar cabang.",                                           99 +  },                                                                    100 +  hardware_label_printer: {
+      101 +    icon: Tag, iconBg: "bg-teal-100", iconColor: "text-teal                 +-600", category: "Hardware",
+      102 +    description: "Cetak label harga, barcode, atau stiker p
+          +roduk.",                                                                103 +    longDesc: "Cetak label produk dengan barcode, harga, da
+          +n nama. Cocok untuk laundry (tag pakaian), retail (label ha
+          +rga), atau usaha dengan banyak SKU.",                                   104 +  },
+      105 +  hardware_barcode_scanner: {
+      106 +    icon: ScanLine, iconBg: "bg-purple-100", iconColor: "te                 +xt-purple-600", category: "Hardware",
+      107 +    description: "Scan produk dari kamera atau scanner USB/                 +Bluetooth.",
+      108 +    longDesc: "Tambahkan produk ke keranjang dengan scan ba                 +rcode. Mendukung scanner USB, Bluetooth, dan kamera perangk
+          +at untuk checkout retail lebih cepat.",                                 109 +  },                                                                    110 +  integrations_payment_gateway: {                                       111 +    icon: CreditCard, iconBg: "bg-green-100", iconColor: "t
+          +ext-green-600", category: "Integrasi",
+      112 +    description: "Terima QRIS, Virtual Account, GoPay, OVO,
+          + & kartu.",                                                             113 +    longDesc: "Integrasi payment gateway: QRIS, Virtual Acc                 +ount, GoPay, OVO, ShopeePay, dan kartu kredit. Rekonsiliasi
+          + otomatis ke laporan penjualan.",                                       114 +  },
+      115 +  integrations_accounting: {                                            116 +    icon: BookOpen, iconBg: "bg-emerald-100", iconColor: "t
+          +ext-emerald-600", category: "Integrasi",
+      117 +    description: "Sinkron transaksi ke Jurnal, Accurate, at
+          +au Excel.",
+      118 +    longDesc: "Sinkron data penjualan & pembayaran ke softw
+          +are akuntansi (Jurnal, Accurate) atau ekspor otomatis ke Ex                 +cel setiap tutup hari.",                                                119 +  },                                                                    120 +  integrations_webhook: {
+      121 +    icon: Webhook, iconBg: "bg-slate-100", iconColor: "text
+          +-slate-600", category: "Integrasi",
+      122 +    description: "Kirim event transaksi otomatis ke sistem
+          +eksternal.",
+      123 +    longDesc: "Webhook untuk mengirim event (order dibuat,                  +pembayaran selesai, dll.) secara real-time ke sistem ekster
+          +nal seperti ERP atau notifikasi.",
+      124 +  },                                                                    125 +  integrations_api_access: {
+      126 +    icon: KeyRound, iconBg: "bg-slate-100", iconColor: "tex
+          +t-slate-600", category: "Integrasi",                                    127 +    description: "API key untuk integrasi ke ERP, marketpla
+          +ce, atau internal.",
+      128 +    longDesc: "API key & dokumentasi REST untuk integrasi d
+          +engan sistem eksternal (ERP, marketplace, akuntansi) atau p                 +engembangan internal.",                                                 129 +  },
+      130 +};                                                                      131 +
+      132  const PLAN_ORDER: PlanCode[] = (Object.keys(ENTITLEMENT_CAT
+           ALOG.plans) as PlanCode[]).sort(                                        133    (a, b) => ENTITLEMENT_CATALOG.plans[a].sortOrder - ENTITL                  EMENT_CATALOG.plans[b].sortOrder,
+      134  );                                                                     ...
+      142    return new Intl.NumberFormat("id-ID", { style: "currency"
+           , currency: "IDR", minimumFractionDigits: 0 }).format(price
+           );
+      143  }
+      144                                                                           36 -type EntitlementRow = {
+      145 +type EntitlementRow = EntitlementPresentation & {
+      146    code: EntitlementCode;
+      147    label: string;
+       39 -  area: string;
+      148    /** Lowest plan that includes this entitlement cumulative                  ly, if any. */
+      149    includedFromPlan: PlanCode | null;                                    150    /** Offer that sells this entitlement as an add-on, if an
+           y. */                                                                  ...
+      166                                                                          167    return (Object.keys(ENTITLEMENT_CATALOG.entitlements) as                   EntitlementCode[]).map((code) => {                                      168      const meta = ENTITLEMENT_CATALOG.entitlements[code];
+      169 +    const presentation = ENTITLEMENT_PRESENTATION[code];                170      return {
+      171        code,
+      172        label: meta.label,
+       64 -      area: meta.area,                                                  173        includedFromPlan: includedFrom.get(code) ?? null,                 174        offerCode: offerByEntitlement.get(code) ?? null,
+      175 +      ...presentation,
+      176      };
+      177    });
+      178  }                                                                      ...
+      185
+      186    const [selected, setSelected] = useState<EntitlementRow |                   null>(null);
+      187    const [showPlans, setShowPlans] = useState(false);
+      188 +  const [category, setCategory] = useState("Semua");
+      189                                                                          190    const currentPlan: PlanCode =
+      191      (planTier as PlanCode) && ENTITLEMENT_CATALOG.plans[pla
+           nTier as PlanCode] ? (planTier as PlanCode) : "starter";                192
+      193    const rows = useMemo(() => buildEntitlementRows(), []);               194 +  const categories = useMemo(                                           195 +    () => ["Semua", ...Array.from(new Set(rows.map((r) => r                 +.category)))],
+      196 +    [rows],                                                             197 +  );
+      198                                                                          199    const can = (code: EntitlementCode) => entitlements[code]
+            === true;                                                              200                                                                           87 -  // An entitlement is included by the tenant's cumulative
+          -plan.
+      201    const includedByPlan = (row: EntitlementRow) =>                       202      row.includedFromPlan !== null && planSortOrder(currentP
+           lan) >= planSortOrder(row.includedFromPlan);                            203                                                                           91 -  // An offer can be purchased only if the tenant's plan me                 -ets the offer's
+       92 -  // requiredPlan AND the entitlement is not already includ
+          -ed by the plan.
+      204    const canPurchase = (row: EntitlementRow): boolean => {               205      if (!row.offerCode) return false;
+      206      if (includedByPlan(row)) return false;
+     ...
+      208      return planSortOrder(currentPlan) >= planSortOrder(offe
+           r.requiredPlan as PlanCode);                                            209    };                                                                    210
+      100 -  const grantFor = (code: EntitlementCode) =>                           101 -    grants.find((g) => g.entitlement_code === code) ?? null
+          -;
+      211 +  const grantFor = (code: EntitlementCode) => grants.find((
+          +g) => g.entitlement_code === code) ?? null;                             212
+      103 -  const statusOf = (row: EntitlementRow): "active" | "inclu                 -ded" | "purchasable" | "locked" => {
+      213 +  type Status = "active" | "included" | "purchasable" | "lo
+          +cked";                                                                  214 +  const statusOf = (row: EntitlementRow): Status => {                   215      if (can(row.code)) return "active";                                 216      if (includedByPlan(row)) return "included";
+      217      if (canPurchase(row)) return "purchasable";
+     ...                                                                           221    const activeCount = rows.filter((r) => can(r.code)).lengt                  h;                                                                      222    const totalCount = rows.length;                                       223
+      113 -  const handlePurchase = (row: EntitlementRow) => {
+      114 -    // BILLING SAFETY: entitlement purchases/upgrades are p
+          -rocessed by the
+      115 -    // billing/admin system only — never written from the b
+          -rowser.
+      224 +  const filteredRows = useMemo(() => {                                  225 +    const list = category === "Semua" ? rows : rows.filter(
+          +(r) => r.category === category);                                        226 +    const rank = (r: EntitlementRow) => {
+      227 +      const s = statusOf(r);                                            228 +      return s === "active" ? 0 : s === "included" ? 1 : s
+          +=== "purchasable" ? 2 : 3;
+      229 +    };
+      230 +    return [...list].sort((a, b) => rank(a) - rank(b));                 231 +    // eslint-disable-next-line react-hooks/exhaustive-deps
+      232 +  }, [rows, category, entitlements, currentPlan]);                      233 +
+      234 +  const handlePurchase = () => {                                        235 +    // BILLING SAFETY: purchases/upgrades are processed by                  +billing/admin only.                                                     236      toast({                                                             237        title: "Aktivasi via billing",
+      238        description:                                                     ...                                                                           242      setShowPlans(false);
+      243    };
+      244                                                                          125 -  const areaLabel = (area: string) => {
+      126 -    const map: Record<string, string> = {
+      127 -      inventory: "Inventori",
+      128 -      payments: "Pembayaran",                                           129 -      receipt: "Struk",
+      130 -      orders: "Order",                                                  131 -      restaurant: "Restoran",
+      132 -      reports: "Laporan",
+      133 -      multi_location: "Multi Lokasi",
+      134 -      hardware: "Hardware",
+      135 -      integrations: "Integrasi",
+      136 -    };
+      137 -    return map[area] ?? area;
+      138 -  };
+      139 -
+      245    return (                                                              246      <div className="flex-1 h-full bg-slate-50 overflow-y-au
+           to pb-8">                                                               247        <PageHeader
+      143 -        title="Marketplace Entitlement"                                 144 -        subtitle="Paket & add-on dari katalog resmi"
+      248 +        title="Marketplace Fitur"                                       249 +        subtitle="Aktifkan entitlement sesuai kebutuhan bis                 +nis"                                                                    250          onBack={() => setLocation("/hub")}
+      251          actions={                                                       252            <button
+     ...
+      287            </div>                                                        288          </div>
+      289                                                                          290 +        {/* ── CATEGORY FILTER (sortable) ── */}
+      291 +        <div className="flex gap-1.5 overflow-x-auto pb-1 n
+          +o-scrollbar">
+      292 +          {categories.map((cat) => (
+      293 +            <button
+      294 +              key={cat}                                                 295 +              onClick={() => setCategory(cat)}
+      296 +              className={`flex-shrink-0 px-3 py-1.5 rounded
+          +-xl text-xs font-bold transition-all ${                                 297 +                category === cat
+      298 +                  ? "bg-slate-800 text-white shadow-sm"
+      299 +                  : "bg-white text-slate-500 border border-
+          +slate-200 hover:border-slate-300"
+      300 +              }`}
+      301 +            >
+      302 +              {cat}
+      303 +            </button>
+      304 +          ))}
+      305 +        </div>
+      306 +
+      307          <div className="flex items-start gap-2.5 bg-blue-50
+            border border-blue-100 rounded-2xl px-3.5 py-3">
+      308            <Info size={13} className="text-blue-500 flex-shr
+           ink-0 mt-0.5" />
+      309            <p className="text-[11px] text-blue-700 leading-r
+           elaxed">                                                               ...                                                                           317            <div className="grid grid-cols-1 sm:grid-cols-2 g
+           ap-3">
+      318              {[...Array(6)].map((_, i) => (
+      319                <div key={i} className="bg-white rounded-2xl
+           border-2 border-slate-100 p-4 animate-pulse">
+      320 +                <div className="w-10 h-10 bg-slate-100 roun
+          +ded-2xl mb-3" />
+      321                  <div className="h-4 bg-slate-100 rounded w-
+           3/4 mb-2" />
+      322                  <div className="h-3 bg-slate-100 rounded w-
+           full" />                                                                323                </div>
+     ...                                                                           325            </div>
+      326          ) : (
+      327            <div className="grid grid-cols-1 sm:grid-cols-2 g
+           ap-3">
+      205 -            {rows.map((row) => {
+      328 +            {filteredRows.map((row) => {
+      329                const status = statusOf(row);
+      330                const grant = grantFor(row.code);                         331 +              const Icon = row.icon;
+      332                return (
+      333                  <button                                                 334                    key={row.code}
+     ...
+      340                    }`}                                                   341                    data-testid={`card-entitlement-${row.code
+           }`}
+      342                  >
+      219 -                  <div className="flex items-start justify-
+          -between mb-2">
+      220 -                    <span className="text-[10px] font-bold
+          -text-slate-400 uppercase tracking-wide bg-slate-50 px-2 py-
+          -0.5 rounded-full border border-slate-100">
+      221 -                      {areaLabel(row.area)}
+      343 +                  <div className="flex items-start justify-
+          +between mb-3">
+      344 +                    <div className={`w-10 h-10 rounded-2xl
+          +flex items-center justify-center ${row.iconBg}`}>
+      345 +                      <Icon size={18} className={row.iconCo                 +lor} />
+      346 +                    </div>
+      347 +                    <div className="flex items-center gap-1
+          +.5">                                                                    348 +                      {status === "active" && (
+      349 +                        <span className="flex items-center
+          +gap-1 text-[10px] font-black bg-emerald-500 text-white px-2
+          + py-0.5 rounded-full">                                                  350 +                          <CheckCircle2 size={9} /> Aktif
+      351 +                        </span>                                         352 +                      )}
+      353 +                      {status === "included" && (
+      354 +                        <span className="text-[10px] font-b                 +lack bg-blue-50 text-blue-600 border border-blue-200 px-2 p
+          +y-0.5 rounded-full">                                                    355 +                          Termasuk paket                                356 +                        </span>
+      357 +                      )}                                                358 +                      {status === "purchasable" && row.offe                 +rCode && (
+      359 +                        <span className="text-[10px] font-b
+          +lack bg-orange-50 text-orange-600 border border-orange-200                  +px-2 py-0.5 rounded-full">
+      360 +                          {formatPrice(ENTITLEMENT_CATALOG.
+          +offers[row.offerCode].price)}
+      361 +                        </span>
+      362 +                      )}
+      363 +                      {status === "locked" && <Lock size={1
+          +1} className="text-slate-300" />}
+      364 +                    </div>
+      365 +                  </div>
+      366 +                  <div className="flex items-center gap-1.5
+          + mb-1">
+      367 +                    <span className="text-[10px] font-bold
+          +text-slate-400 uppercase tracking-wide bg-slate-50 px-1.5 p
+          +y-0.5 rounded-full border border-slate-100">
+      368 +                      {row.category}
+      369                      </span>
+      223 -                    {status === "active" && (
+      224 -                      <span className="flex items-center ga
+          -p-1 text-[10px] font-black bg-emerald-500 text-white px-2 p
+          -y-0.5 rounded-full">                                                    225 -                        <CheckCircle2 size={9} /> Aktif
+      226 -                      </span>
+      227 -                    )}
+      228 -                    {status === "included" && (
+      229 -                      <span className="text-[10px] font-bla
+          -ck bg-blue-50 text-blue-600 border border-blue-200 px-2 py-
+          -0.5 rounded-full">                                                      230 -                        Termasuk paket
+      231 -                      </span>
+      232 -                    )}
+      233 -                    {status === "purchasable" && row.offerC
+          -ode && (
+      234 -                      <span className="text-[10px] font-bla                 -ck bg-orange-50 text-orange-600 border border-orange-200 px
+          --2 py-0.5 rounded-full">
+      235 -                        {formatPrice(ENTITLEMENT_CATALOG.of                 -fers[row.offerCode].price)}
+      236 -                      </span>
+      237 -                    )}
+      238 -                    {status === "locked" && <Lock size={11}                 - className="text-slate-300" />}
+      370                    </div>
+      371                    <h3 className="font-black text-slate-800
+           text-sm mb-1">{row.label}</h3>
+      241 -                  <p className="text-[11px] text-slate-400
+          -leading-relaxed">
+      242 -                    {row.includedFromPlan
+      243 -                      ? `Termasuk paket ${ENTITLEMENT_CATAL
+          -OG.plans[row.includedFromPlan].label}`
+      244 -                      : row.offerCode                                   245 -                        ? `Add-on (butuh paket ${ENTITLEMEN
+          -T_CATALOG.plans[ENTITLEMENT_CATALOG.offers[row.offerCode].r                 -equiredPlan as PlanCode].label})`
+      246 -                        : "Add-on komersial"}
+      247 -                    {grant?.status === "expired" && " · gra
+          -nt kedaluwarsa"}
+      248 -                    {grant?.status === "cancelled" && " · g
+          -rant dibatalkan"}                                                       249 -                  </p>
+      372 +                  <p className="text-[11px] text-slate-400
+          +leading-relaxed line-clamp-2">{row.description}</p>
+      373 +                  {(grant?.status === "expired" || grant?.s
+          +tatus === "cancelled") && (
+      374 +                    <p className="text-[10px] text-amber-60
+          +0 font-semibold mt-1.5">
+      375 +                      {grant.status === "expired" ? "Grant
+          +kedaluwarsa" : "Grant dibatalkan"}
+      376 +                    </p>
+      377 +                  )}
+      378                  </button>                                               379                );
+      380              })}
+     ...
+      392              </div>
+      393              <div className="px-5 pb-8 pt-3">
+      394                <div className="flex items-start justify-betw                  een mb-5">
+      267 -                <div>
+      268 -                  <h3 className="font-black text-slate-800
+          -text-base">{selected.label}</h3>
+      269 -                  <span className="text-[10px] text-slate-4
+          -00 font-medium bg-slate-50 px-2 py-0.5 rounded-full border
+          -border-slate-100">
+      270 -                    {areaLabel(selected.area)} · {selected.
+          -code}                                                                   271 -                  </span>
+      395 +                <div className="flex items-center gap-3">
+      396 +                  <div className={`w-12 h-12 rounded-2xl fl
+          +ex items-center justify-center ${selected.iconBg}`}>                    397 +                    <selected.icon size={22} className={sel
+          +ected.iconColor} />
+      398 +                  </div>
+      399 +                  <div>
+      400 +                    <h3 className="font-black text-slate-80
+          +0 text-base">{selected.label}</h3>
+      401 +                    <div className="flex flex-wrap items-ce
+          +nter gap-1.5 mt-0.5">
+      402 +                      <span className={`inline-flex items-c
+          +enter gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-ful
+          +l ${                                                                    403 +                        statusOf(selected) === "active" ? "
+          +bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-
+          +400"                                                                    404 +                      }`}>
+      405 +                        <span className={`w-1.5 h-1.5 round                 +ed-full ${statusOf(selected) === "active" ? "bg-emerald-500
+          +" : "bg-slate-300"}`} />
+      406 +                        {statusOf(selected) === "active" ?
+          +"Aktif" : "Tidak Aktif"}
+      407 +                      </span>
+      408 +                      <span className="text-[10px] font-med
+          +ium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full bor
+          +der border-slate-100">
+      409 +                        {selected.category}                             410 +                      </span>
+      411 +                    </div>
+      412 +                  </div>                                                413                  </div>
+      414                  <button onClick={() => setSelected(null)} c
+           lassName="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200
+           text-slate-500">
+      415                    <X size={16} />
+      416                  </button>                                               417                </div>
+      418
+      419 +              <p className="text-sm text-slate-600 leading-                 +relaxed mb-5">{selected.longDesc}</p>
+      420 +                                                                        421                {statusOf(selected) === "active" ? (
+      422                  <div className="w-full py-3.5 rounded-2xl b
+           g-emerald-50 border border-emerald-200 flex items-center ju                  stify-center gap-2">
+      423                    <ShieldCheck size={16} className="text-em
+           erald-600" />
+     ...
+      430                  </div>
+      431                ) : statusOf(selected) === "purchasable" ? (
+      432                  <button
+      290 -                  onClick={() => handlePurchase(selected)}
+      433 +                  onClick={handlePurchase}
+      434                    className="w-full py-3.5 rounded-2xl font                  -bold text-sm flex items-center justify-center gap-2 bg-sla
+           te-800 text-white hover:bg-slate-700"
+      435                  >
+      293 -                  <Crown size={16} /> Aktifkan Add-on                   436 +                  <Zap size={16} /> Aktifkan Add-on
+      437 +                  {selected.offerCode && (
+      438 +                    <span className="opacity-80">· {formatP                 +rice(ENTITLEMENT_CATALOG.offers[selected.offerCode].price)}
+          +/bln</span>
+      439 +                  )}
+      440                  </button>
+      441                ) : (                                                     442                  <button
+     ...
+      488                            <span className="text-[11px] font
+           -black bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-
+           xl">✓ Aktif</span>
+      489                          ) : (                                           490                            <button
+      345 -                            onClick={() => handlePurchase({
+          - code: included[0] as EntitlementCode, label: plan.label, a                 -rea: "", includedFromPlan: planCode, offerCode: null })}
+      491 +                            onClick={handlePurchase}
+      492                              className="text-xs font-black p                  x-3 py-1.5 rounded-xl text-white bg-violet-500 hover:bg-vio
+           let-600 transition-colors"
+      493                              data-testid={`button-select-pla
+           n-${planCode}`}
+      494                            >                                       
+❯ kamu perlu tambahkan ke sot nya sih, biar gampang manage nya
+
+● Bagus, lebih rapi. Pindahkan teks (category, description, longDesc) ke SOT   — itu data murni, aman dan ikut ke-serialize lewat /api/me/entitlements.
+  Yang tetap di frontend cuma ikon (komponen React, gak bisa masuk paket data
+  backend-shared). Mari update SOT dulu.
+
+● Update(packages/application/entitlements/entitlementCatalog.ts)
+  ⎿  Added 18 lines, removed 18 lines
+      42      },                                                                   43    },
+      44    entitlements: {
+      45 -    inventory_basic_stock: { label: 'Stok Dasar', kind: 'mod
+         -ule', area: 'inventory' },
+      46 -    inventory_advanced_stock: { label: 'Stok Lanjutan', kind
+         -: 'module', area: 'inventory' },
+      47 -    payments_partial_payment: { label: 'Pembayaran Sebagian'
+         -, kind: 'feature', area: 'payments' },                                   48 -    payments_multi_payment: { label: 'Multi Pembayaran', kin
+         -d: 'feature', area: 'payments' },
+      49 -    payments_split_payment: { label: 'Split Payment', kind:                 -'feature', area: 'payments' },
+      50 -    receipt_compact: { label: 'Struk Ringkas', kind: 'featur
+         -e', area: 'receipt' },
+      51 -    orders_queue: { label: 'Antrian Order', kind: 'feature',
+         - area: 'orders' },
+      52 -    restaurant_table_service: { label: 'Layanan Meja', kind:
+         - 'module', area: 'restaurant' },
+      53 -    restaurant_kitchen_ops: { label: 'Operasional Dapur', ki
+         -nd: 'module', area: 'restaurant' },                                      54 -    reports_advanced: { label: 'Laporan Lanjutan', kind: 'fe
+         -ature', area: 'reports' },
+      55 -    reports_export: { label: 'Ekspor Laporan', kind: 'featur
+         -e', area: 'reports' },
+      56 -    multi_location: { label: 'Multi Lokasi', kind: 'module',
+         - area: 'multi_location' },
+      57 -    hardware_label_printer: { label: 'Printer Label', kind:
+         -'feature', area: 'hardware' },                                           58 -    hardware_barcode_scanner: { label: 'Scanner Barcode', ki
+         -nd: 'feature', area: 'hardware' },
+      59 -    integrations_payment_gateway: { label: 'Payment Gateway'
+         -, kind: 'integration', area: 'integrations' },
+      60 -    integrations_accounting: { label: 'Akuntansi', kind: 'in
+         -tegration', area: 'integrations' },
+      61 -    integrations_webhook: { label: 'Webhook', kind: 'integra
+         -tion', area: 'integrations' },
+      62 -    integrations_api_access: { label: 'API Access', kind: 'i
+         -ntegration', area: 'integrations' },                                     45 +    inventory_basic_stock: { label: 'Stok Dasar', kind: 'mod
+         +ule', area: 'inventory', category: 'Inventori', description:
+         + 'Lihat stok per produk, status menipis/habis, & adjust qty.
+         +', longDesc: 'Fitur stok esensial: aktifkan tracking stok pe
+         +r produk, lihat status (aman, menipis, habis) secara real-ti
+         +me, dan lakukan penyesuaian stok langsung.' },
+      46 +    inventory_advanced_stock: { label: 'Stok Lanjutan', kind                +: 'module', area: 'inventory', category: 'Inventori', descri
+         +ption: 'Mutasi stok bertipe, riwayat audit trail, & laporan
+         +pergerakan.', longDesc: 'Melengkapi Stok Dasar: catat mutasi
+         + stok bertipe (pembelian, rusak, retur), riwayat lengkap set
+         +iap pergerakan, dan laporan audit trail.' },
+      47 +    payments_partial_payment: { label: 'Pembayaran Sebagian'
+         +, kind: 'feature', area: 'payments', category: 'Pembayaran',
+         + description: 'Bayar sebagian, lunasi nanti — split bill & c                +icilan.', longDesc: 'Terima pembayaran parsial atau split bi
+         +ll antar pelanggan. Sisa tagihan tercatat dan bisa dilunasi
+         +di waktu berbeda dengan metode berbeda.' },                              48 +    payments_multi_payment: { label: 'Multi Pembayaran', kin
+         +d: 'feature', area: 'payments', category: 'Pembayaran', desc
+         +ription: 'Satu transaksi dibayar dengan beberapa metode seka
+         +ligus.', longDesc: 'Gabungkan beberapa metode pembayaran dal                +am satu transaksi (mis. sebagian tunai, sebagian QRIS) denga
+         +n rekonsiliasi otomatis.' },
+      49 +    payments_split_payment: { label: 'Split Payment', kind:
+         +'feature', area: 'payments', category: 'Pembayaran', descrip
+         +tion: 'Pisah tagihan per orang atau per item dalam satu orde
+         +r.', longDesc: 'Bagi satu order menjadi beberapa tagihan ter
+         +pisah per pelanggan atau per item, masing-masing dengan pemb                +ayarannya sendiri.' },
+      50 +    receipt_compact: { label: 'Struk Ringkas', kind: 'featur
+         +e', area: 'receipt', category: 'Struk', description: 'Format
+         + struk ringkas hemat kertas untuk printer thermal.', longDes                +c: 'Layout struk yang lebih padat untuk menghemat kertas the
+         +rmal, tetap memuat info penting transaksi, item, pajak, dan
+         +metode bayar.' },
+      51 +    orders_queue: { label: 'Antrian Order', kind: 'feature',
+         + area: 'orders', category: 'Order', description: 'Panel antr
+         +ian semua order aktif real-time di layar kasir.', longDesc:
+         +'Panel samping yang menampilkan semua order aktif secara rea
+         +l-time beserta status bayar. Kasir memantau pesanan tanpa be                +rpindah layar.' },
+      52 +    restaurant_table_service: { label: 'Layanan Meja', kind:
+         + 'module', area: 'restaurant', category: 'Restoran', descrip
+         +tion: 'Denah meja real-time, status duduk, & pesanan per mej
+         +a.', longDesc: 'Denah meja interaktif: lihat status meja (te
+         +rsedia / terisi / reservasi) dan lanjutkan pesanan langsung
+         +dari tampilan lantai.' },                                                   +nd: 'module', area: 'restaurant', category: 'Restoran', desc
+         +ription: 'Tiket dapur, layar KDS, & printer dapur dalam satu
+         + paket.', longDesc: 'Operasional dapur terintegrasi: tiket p                +esanan otomatis ke dapur, layar display khusus staf dapur, d
+         +an dukungan printer thermal dapur.' },
+      54 +    reports_advanced: { label: 'Laporan Lanjutan', kind: 'fe
+         +ature', area: 'reports', category: 'Laporan', description: '                +Dashboard analitik, grafik real-time, & insight penjualan.',
+         + longDesc: 'Dashboard visual dengan grafik omzet, produk ter
+         +laris, rata-rata nilai transaksi, dan insight bisnis. Update
+         + real-time, bisa difilter per periode.' },
+      55 +    reports_export: { label: 'Ekspor Laporan', kind: 'featur
+         +e', area: 'reports', category: 'Laporan', description: 'Eksp
+         +or laporan ke Excel/PDF untuk akuntansi & arsip.', longDesc:                + 'Ekspor laporan penjualan dan inventori ke format Excel ata
+         +u PDF untuk kebutuhan akuntansi, audit, atau arsip bulanan.'
+         + },
+      56 +    multi_location: { label: 'Multi Lokasi', kind: 'module',
+         + area: 'multi_location', category: 'Ekspansi', description:
+         +'Kelola beberapa cabang dari satu dashboard terpusat.', long                +Desc: 'Buka dan kelola beberapa cabang dari satu akun: lapor
+         +an per cabang, atur produk & harga per lokasi, dan transfer
+         +stok antar cabang.' },
+      57 +    hardware_label_printer: { label: 'Printer Label', kind:                 +'feature', area: 'hardware', category: 'Hardware', descripti
+         +on: 'Cetak label harga, barcode, atau stiker produk.', longD
+         +esc: 'Cetak label produk dengan barcode, harga, dan nama. Co                +cok untuk laundry (tag pakaian), retail (label harga), atau
+         +usaha dengan banyak SKU.' },
+      58 +    hardware_barcode_scanner: { label: 'Scanner Barcode', ki                +nd: 'feature', area: 'hardware', category: 'Hardware', descr
+         +iption: 'Scan produk dari kamera atau scanner USB/Bluetooth.
+         +', longDesc: 'Tambahkan produk ke keranjang dengan scan barc
+         +ode. Mendukung scanner USB, Bluetooth, dan kamera perangkat
+         +untuk checkout retail lebih cepat.' },                                   59 +    integrations_payment_gateway: { label: 'Payment Gateway'
+         +, kind: 'integration', area: 'integrations', category: 'Inte
+         +grasi', description: 'Terima QRIS, Virtual Account, GoPay, O
+         +VO, & kartu.', longDesc: 'Integrasi payment gateway: QRIS, V
+         +irtual Account, GoPay, OVO, ShopeePay, dan kartu kredit. Rek                +onsiliasi otomatis ke laporan penjualan.' },
+      60 +    integrations_accounting: { label: 'Akuntansi', kind: 'in
+         +tegration', area: 'integrations', category: 'Integrasi', des
+         +cription: 'Sinkron transaksi ke Jurnal, Accurate, atau Excel                +.', longDesc: 'Sinkron data penjualan & pembayaran ke softwa
+         +re akuntansi (Jurnal, Accurate) atau ekspor otomatis ke Exce
+         +l setiap tutup hari.' },
+      61 +    integrations_webhook: { label: 'Webhook', kind: 'integra
+         +tion', area: 'integrations', category: 'Integrasi', descript                +ion: 'Kirim event transaksi otomatis ke sistem eksternal.',
+         +longDesc: 'Webhook untuk mengirim event (order dibuat, pemba
+         +yaran selesai, dll.) secara real-time ke sistem eksternal se                +perti ERP atau notifikasi.' },
+      62 +    integrations_api_access: { label: 'API Access', kind: 'i
+         +ntegration', area: 'integrations', category: 'Integrasi', de
+         +scription: 'API key untuk integrasi ke ERP, marketplace, ata
+         +u internal.', longDesc: 'API key & dokumentasi REST untuk in
+         +tegrasi dengan sistem eksternal (ERP, marketplace, akuntansi
+         +) atau pengembangan internal.' },                                        63    },
+      64    offers: {
+      65      receipt_compact_monthly: {
+
+● Now slim the marketplace presentation map to icons only and read
+  text/category from the SOT.                                                
+● Update(apps/pos-terminal-web/src/pages/marketplace.tsx)                      ⎿  Added 40 lines, removed 109 lines
+       19  } from "@pos/application/entitlements";
+       20                                                                           21  // ─── Single source of truth ─────────────────────────────
+           ───────────────────────
+       22 -// WHICH entitlements exist, their plan inclusion, offers,
+          -and required plans all
+       23 -// come from ENTITLEMENT_CATALOG. The tenant's active/inclu                 -ded state comes from
+       24 -// /api/me/entitlements. There is NO frontend plan/module/f
+          -eature catalog and NO
+       25 -// module/feature toggling.                                              22 +// WHICH entitlements exist, their labels, category, descri
+          +ptions, plan inclusion,
+       23 +// offers, and required plans all come from ENTITLEMENT_CAT
+          +ALOG. The tenant's
+       24 +// active/included state comes from /api/me/entitlements. T                 +here is NO frontend
+       25 +// plan/module/feature catalog and NO module/feature toggli
+          +ng.
+       26  //
+       27 -// The map below is PRESENTATION-ONLY decoration (icon, cop
+          -y, category grouping).
+       28 -// It carries no plan, required-plan, or gating data — that
+          - stays in the SOT.                                                       27 +// Only the ICON per entitlement lives in the frontend — ic
+          +ons are React
+       28 +// components and cannot live in the backend-shared pure-da                 +ta SOT. Everything
+       29 +// else (label, category, description, longDesc) is read fr
+          +om the catalog.
+       30
+       30 -type EntitlementPresentation = {
+       31 -  icon: React.ElementType;
+       32 -  iconBg: string;                                                        33 -  iconColor: string;
+       34 -  category: string;
+       35 -  description: string;
+       36 -  longDesc: string;                                                      37 -};
+       31 +type IconStyle = { icon: React.ElementType; iconBg: string;
+          + iconColor: string };
+       32
+       39 -const ENTITLEMENT_PRESENTATION: Record<EntitlementCode, Ent
+          -itlementPresentation> = {
+       40 -  inventory_basic_stock: {
+       41 -    icon: Package, iconBg: "bg-amber-100", iconColor: "text
+          --amber-600", category: "Inventori",                                      42 -    description: "Lihat stok per produk, status menipis/hab
+          -is, & adjust qty.",
+       43 -    longDesc: "Fitur stok esensial: aktifkan tracking stok
+          -per produk, lihat status (aman, menipis, habis) secara real                 --time, dan lakukan penyesuaian stok langsung.",
+       44 -  },
+       45 -  inventory_advanced_stock: {
+       46 -    icon: PackageSearch, iconBg: "bg-emerald-100", iconColo
+          -r: "text-emerald-600", category: "Inventori",                            47 -    description: "Mutasi stok bertipe, riwayat audit trail,
+          - & laporan pergerakan.",
+       48 -    longDesc: "Melengkapi Stok Dasar: catat mutasi stok ber
+          -tipe (pembelian, rusak, retur), riwayat lengkap setiap perg
+          -erakan, dan laporan audit trail.",                                       49 -  },
+       50 -  payments_partial_payment: {
+       51 -    icon: SplitSquareVertical, iconBg: "bg-green-100", icon
+          -Color: "text-green-600", category: "Pembayaran",
+       52 -    description: "Bayar sebagian, lunasi nanti — split bill
+          - & cicilan.",
+       53 -    longDesc: "Terima pembayaran parsial atau split bill an
+          -tar pelanggan. Sisa tagihan tercatat dan bisa dilunasi di w
+          -aktu berbeda dengan metode berbeda.",                                    54 -  },
+       55 -  payments_multi_payment: {
+       56 -    icon: Wallet, iconBg: "bg-teal-100", iconColor: "text-t
+          -eal-600", category: "Pembayaran",
+       57 -    description: "Satu transaksi dibayar dengan beberapa me
+          -tode sekaligus.",
+       58 -    longDesc: "Gabungkan beberapa metode pembayaran dalam s                 -atu transaksi (mis. sebagian tunai, sebagian QRIS) dengan r
+          -ekonsiliasi otomatis.",
+       59 -  },
+       60 -  payments_split_payment: {
+       61 -    icon: Layers, iconBg: "bg-indigo-100", iconColor: "text
+          --indigo-600", category: "Pembayaran",
+       62 -    description: "Pisah tagihan per orang atau per item dal                 -am satu order.",
+       63 -    longDesc: "Bagi satu order menjadi beberapa tagihan ter
+          -pisah per pelanggan atau per item, masing-masing dengan pem
+          -bayarannya sendiri.",
+       64 -  },
+       65 -  receipt_compact: {
+       66 -    icon: Receipt, iconBg: "bg-slate-100", iconColor: "text
+          --slate-600", category: "Struk",
+       67 -    description: "Format struk ringkas hemat kertas untuk p
+          -rinter thermal.",
+       68 -    longDesc: "Layout struk yang lebih padat untuk menghema                 -t kertas thermal, tetap memuat info penting transaksi, item
+          -, pajak, dan metode bayar.",
+       69 -  },
+       70 -  orders_queue: {
+       71 -    icon: ClipboardList, iconBg: "bg-indigo-100", iconColor
+          -: "text-indigo-600", category: "Order",
+       72 -    description: "Panel antrian semua order aktif real-time
+          - di layar kasir.",                                                       73 -    longDesc: "Panel samping yang menampilkan semua order a
+          -ktif secara real-time beserta status bayar. Kasir memantau
+          -pesanan tanpa berpindah layar.",                                         74 -  },
+       75 -  restaurant_table_service: {
+       76 -    icon: UtensilsCrossed, iconBg: "bg-blue-100", iconColor
+          -: "text-blue-600", category: "Restoran",
+       77 -    description: "Denah meja real-time, status duduk, & pes
+          -anan per meja.",
+       78 -    longDesc: "Denah meja interaktif: lihat status meja (te
+          -rsedia / terisi / reservasi) dan lanjutkan pesanan langsung
+          - dari tampilan lantai.",                                                 79 -  },
+       80 -  restaurant_kitchen_ops: {
+       81 -    icon: ChefHat, iconBg: "bg-orange-100", iconColor: "tex                 -t-orange-600", category: "Restoran",
+       82 -    description: "Tiket dapur, layar KDS, & printer dapur d
+          -alam satu paket.",
+       83 -    longDesc: "Operasional dapur terintegrasi: tiket pesana                 -n otomatis ke dapur, layar display khusus staf dapur, dan d
+          -ukungan printer thermal dapur.",
+       84 -  },
+       85 -  reports_advanced: {
+       86 -    icon: BarChart3, iconBg: "bg-violet-100", iconColor: "t                 -ext-violet-600", category: "Laporan",
+       87 -    description: "Dashboard analitik, grafik real-time, & i
+          -nsight penjualan.",                                                      88 -    longDesc: "Dashboard visual dengan grafik omzet, produk
+          - terlaris, rata-rata nilai transaksi, dan insight bisnis. U
+          -pdate real-time, bisa difilter per periode.",                            89 -  },
+       90 -  reports_export: {
+       91 -    icon: Download, iconBg: "bg-blue-100", iconColor: "text
+          --blue-600", category: "Laporan",
+       92 -    description: "Ekspor laporan ke Excel/PDF untuk akuntan
+          -si & arsip.",
+       93 -    longDesc: "Ekspor laporan penjualan dan inventori ke fo
+          -rmat Excel atau PDF untuk kebutuhan akuntansi, audit, atau
+          -arsip bulanan.",
+       94 -  },
+       95 -  multi_location: {
+       96 -    icon: MapPin, iconBg: "bg-cyan-100", iconColor: "text-c
+          -yan-600", category: "Ekspansi",
+       97 -    description: "Kelola beberapa cabang dari satu dashboar
+          -d terpusat.",
+       98 -    longDesc: "Buka dan kelola beberapa cabang dari satu ak
+          -un: laporan per cabang, atur produk & harga per lokasi, dan
+          - transfer stok antar cabang.",
+       99 -  },
+      100 -  hardware_label_printer: {
+      101 -    icon: Tag, iconBg: "bg-teal-100", iconColor: "text-teal
+          --600", category: "Hardware",
+      102 -    description: "Cetak label harga, barcode, atau stiker p
+          -roduk.",
+      103 -    longDesc: "Cetak label produk dengan barcode, harga, da
+          -n nama. Cocok untuk laundry (tag pakaian), retail (label ha
+          -rga), atau usaha dengan banyak SKU.",
+      104 -  },
+      105 -  hardware_barcode_scanner: {
+      106 -    icon: ScanLine, iconBg: "bg-purple-100", iconColor: "te
+          -xt-purple-600", category: "Hardware",
+      107 -    description: "Scan produk dari kamera atau scanner USB/                 -Bluetooth.",
+      108 -    longDesc: "Tambahkan produk ke keranjang dengan scan ba
+          -rcode. Mendukung scanner USB, Bluetooth, dan kamera perangk                 -at untuk checkout retail lebih cepat.",
+      109 -  },
+      110 -  integrations_payment_gateway: {
+      111 -    icon: CreditCard, iconBg: "bg-green-100", iconColor: "t
+          -ext-green-600", category: "Integrasi",
+      112 -    description: "Terima QRIS, Virtual Account, GoPay, OVO,
+          - & kartu.",
+      113 -    longDesc: "Integrasi payment gateway: QRIS, Virtual Acc
+          -ount, GoPay, OVO, ShopeePay, dan kartu kredit. Rekonsiliasi
+          - otomatis ke laporan penjualan.",
+      114 -  },                                                                    115 -  integrations_accounting: {
+      116 -    icon: BookOpen, iconBg: "bg-emerald-100", iconColor: "t
+          -ext-emerald-600", category: "Integrasi",
+      117 -    description: "Sinkron transaksi ke Jurnal, Accurate, at                 -au Excel.",
+      118 -    longDesc: "Sinkron data penjualan & pembayaran ke softw
+          -are akuntansi (Jurnal, Accurate) atau ekspor otomatis ke Ex                 -cel setiap tutup hari.",
+      119 -  },
+      120 -  integrations_webhook: {
+      121 -    icon: Webhook, iconBg: "bg-slate-100", iconColor: "text
+          --slate-600", category: "Integrasi",
+      122 -    description: "Kirim event transaksi otomatis ke sistem
+          -eksternal.",
+      123 -    longDesc: "Webhook untuk mengirim event (order dibuat,                  -pembayaran selesai, dll.) secara real-time ke sistem ekster
+          -nal seperti ERP atau notifikasi.",
+      124 -  },
+      125 -  integrations_api_access: {                                            126 -    icon: KeyRound, iconBg: "bg-slate-100", iconColor: "tex
+          -t-slate-600", category: "Integrasi",
+      127 -    description: "API key untuk integrasi ke ERP, marketpla
+          -ce, atau internal.",
+      128 -    longDesc: "API key & dokumentasi REST untuk integrasi d
+          -engan sistem eksternal (ERP, marketplace, akuntansi) atau p
+          -engembangan internal.",
+      129 -  },
+       33 +const ICON_BY_CODE: Record<EntitlementCode, IconStyle> = {
+       34 +  inventory_basic_stock: { icon: Package, iconBg: "bg-amber
+          +-100", iconColor: "text-amber-600" },
+       35 +  inventory_advanced_stock: { icon: PackageSearch, iconBg:
+          +"bg-emerald-100", iconColor: "text-emerald-600" },
+       36 +  payments_partial_payment: { icon: SplitSquareVertical, ic                 +onBg: "bg-green-100", iconColor: "text-green-600" },
+       37 +  payments_multi_payment: { icon: Wallet, iconBg: "bg-teal-
+          +100", iconColor: "text-teal-600" },
+       38 +  payments_split_payment: { icon: Layers, iconBg: "bg-indig
+          +o-100", iconColor: "text-indigo-600" },
+       39 +  receipt_compact: { icon: Receipt, iconBg: "bg-slate-100",                 + iconColor: "text-slate-600" },
+       40 +  orders_queue: { icon: ClipboardList, iconBg: "bg-indigo-1                 +00", iconColor: "text-indigo-600" },
+       41 +  restaurant_table_service: { icon: UtensilsCrossed, iconBg                 +: "bg-blue-100", iconColor: "text-blue-600" },
+       42 +  restaurant_kitchen_ops: { icon: ChefHat, iconBg: "bg-oran                 +ge-100", iconColor: "text-orange-600" },
+       43 +  reports_advanced: { icon: BarChart3, iconBg: "bg-violet-1
+          +00", iconColor: "text-violet-600" },
+       44 +  reports_export: { icon: Download, iconBg: "bg-blue-100",
+          +iconColor: "text-blue-600" },
+       45 +  multi_location: { icon: MapPin, iconBg: "bg-cyan-100", ic
+          +onColor: "text-cyan-600" },
+       47 +  hardware_barcode_scanner: { icon: ScanLine, iconBg: "bg-p
+          +urple-100", iconColor: "text-purple-600" },
+       48 +  integrations_payment_gateway: { icon: CreditCard, iconBg:
+          + "bg-green-100", iconColor: "text-green-600" },
+       49 +  integrations_accounting: { icon: BookOpen, iconBg: "bg-em
+          +erald-100", iconColor: "text-emerald-600" },
+       50 +  integrations_webhook: { icon: Webhook, iconBg: "bg-slate-
+          +100", iconColor: "text-slate-600" },
+       51 +  integrations_api_access: { icon: KeyRound, iconBg: "bg-sl
+          +ate-100", iconColor: "text-slate-600" },
+       52  };
+       53                                                                           54 +const FALLBACK_ICON: IconStyle = { icon: Package, iconBg: "
+          +100", iconColor: "text-slate-600" },
+       51 +  integrations_api_access: { icon: KeyRound, iconBg: "bg-sl
+          +ate-100", iconColor: "text-slate-600" },
+       52  };
+       53
+       54 +const FALLBACK_ICON: IconStyle = { icon: Package, iconBg: "
+          +bg-slate-100", iconColor: "text-slate-500" };
+       55 +
+       56  const PLAN_ORDER: PlanCode[] = (Object.keys(ENTITLEMENT_CAT
+           ALOG.plans) as PlanCode[]).sort(
+       57    (a, b) => ENTITLEMENT_CATALOG.plans[a].sortOrder - ENTITL
+           EMENT_CATALOG.plans[b].sortOrder,
+       58  );
+     ...
+       66    return new Intl.NumberFormat("id-ID", { style: "currency"
+           , currency: "IDR", minimumFractionDigits: 0 }).format(price
+           );
+       67  }
+       68
+      145 -type EntitlementRow = EntitlementPresentation & {
+       69 +type EntitlementRow = IconStyle & {                                      70    code: EntitlementCode;
+       71    label: string;
+       72 +  category: string;                                                      73 +  description: string;
+       74 +  longDesc: string;
+       75    /** Lowest plan that includes this entitlement cumulative
+           ly, if any. */
+       76    includedFromPlan: PlanCode | null;
+       77    /** Offer that sells this entitlement as an add-on, if an
+           y. */
+     ...
+       92    }                                                                      93
+       94    return (Object.keys(ENTITLEMENT_CATALOG.entitlements) as
+           EntitlementCode[]).map((code) => {
+      168 -    const meta = ENTITLEMENT_CATALOG.entitlements[code];
+      169 -    const presentation = ENTITLEMENT_PRESENTATION[code];                 95 +    const meta = ENTITLEMENT_CATALOG.entitlements[code] as
+          +{
+       96 +      label: string; category?: string; area?: string; desc
+          +ription?: string; longDesc?: string;
+       97 +    };
+       98      return {
+       99        code,                                                             100        label: meta.label,
+      101 +      category: meta.category ?? meta.area ?? "Lainnya",
+      102 +      description: meta.description ?? "",
+      103 +      longDesc: meta.longDesc ?? meta.description ?? "",
+      104        includedFromPlan: includedFrom.get(code) ?? null,
+           );
+       67  }
+       68
+      145 -type EntitlementRow = EntitlementPresentation & {                        69 +type EntitlementRow = IconStyle & {
+       70    code: EntitlementCode;
+       71    label: string;
+       72 +  category: string;
+       73 +  description: string;                                                   74 +  longDesc: string;
+       75    /** Lowest plan that includes this entitlement cumulative
+           ly, if any. */
+       76    includedFromPlan: PlanCode | null;
+       77    /** Offer that sells this entitlement as an add-on, if an                  y. */
+     ...                                                                            92    }
+       93
+       94    return (Object.keys(ENTITLEMENT_CATALOG.entitlements) as
+           EntitlementCode[]).map((code) => {                                      168 -    const meta = ENTITLEMENT_CATALOG.entitlements[code];
+      169 -    const presentation = ENTITLEMENT_PRESENTATION[code];
+       95 +    const meta = ENTITLEMENT_CATALOG.entitlements[code] as                  +{
+       96 +      label: string; category?: string; area?: string; desc
+          +ription?: string; longDesc?: string;                                     97 +    };
+       98      return {
+       99        code,                                                             100        label: meta.label,
+      101 +      category: meta.category ?? meta.area ?? "Lainnya",
+      102 +      description: meta.description ?? "",
+      103 +      longDesc: meta.longDesc ?? meta.description ?? "",
+      104        includedFromPlan: includedFrom.get(code) ?? null,                 105        offerCode: offerByEntitlement.get(code) ?? null,
+           );
+       67  }
+       68
+      145 -type EntitlementRow = EntitlementPresentation & {                        69 +type EntitlementRow = IconStyle & {
+       70    code: EntitlementCode;
+       71    label: string;                                                         72 +  category: string;
+       73 +  description: string;
+       74 +  longDesc: string;
+       75    /** Lowest plan that includes this entitlement cumulative                  ly, if any. */
+       76    includedFromPlan: PlanCode | null;
+       77    /** Offer that sells this entitlement as an add-on, if an                  y. */
+     ...
+       92    }                                                                      93
+       94    return (Object.keys(ENTITLEMENT_CATALOG.entitlements) as
+           EntitlementCode[]).map((code) => {                                      168 -    const meta = ENTITLEMENT_CATALOG.entitlements[code];
+      169 -    const presentation = ENTITLEMENT_PRESENTATION[code];
+       95 +    const meta = ENTITLEMENT_CATALOG.entitlements[code] as                  +{
+       96 +      label: string; category?: string; area?: string; desc
+          +ription?: string; longDesc?: string;
+       97 +    };
+       98      return {
+       99        code,
+      100        label: meta.label,
+      101 +      category: meta.category ?? meta.area ?? "Lainnya",
+      102 +      description: meta.description ?? "",
+      103 +      longDesc: meta.longDesc ?? meta.description ?? "",
+      104        includedFromPlan: includedFrom.get(code) ?? null,
+      105        offerCode: offerByEntitlement.get(code) ?? null,
+      175 -      ...presentation,                                                  107      };
+      108    });
+      109  }                                                                 
+● Now type-check the SOT change and the web marketplace.
+                                                                             ● Bash(cd /root/AuraPoS/packages/application && ../../node_modules/.bin/tsc
+      -p tsconfig.json --noEmit 2>&1 | head -10; echo "app exit $?"; cd
+       74 +  longDesc: string;                                                      75    /** Lowest plan that includes this entitlement cumulative
+           ly, if any. */
+       76    includedFromPlan: PlanCode | null;
+       77    /** Offer that sells this entitlement as an add-on, if an
+           y. */                                                                  ...
+       92    }
+       93                                                                           94    return (Object.keys(ENTITLEMENT_CATALOG.entitlements) as
+           EntitlementCode[]).map((code) => {
+      168 -    const meta = ENTITLEMENT_CATALOG.entitlements[code];
+      169 -    const presentation = ENTITLEMENT_PRESENTATION[code];                 95 +    const meta = ENTITLEMENT_CATALOG.entitlements[code] as
+          +{
+       96 +      label: string; category?: string; area?: string; desc                 +ription?: string; longDesc?: string;
+       97 +    };
+       98      return {                                                             99        code,
+      100        label: meta.label,
+      101 +      category: meta.category ?? meta.area ?? "Lainnya",
+      102 +      description: meta.description ?? "",
+      103 +      longDesc: meta.longDesc ?? meta.description ?? "",
+      104        includedFromPlan: includedFrom.get(code) ?? null,                 105        offerCode: offerByEntitlement.get(code) ?? null,
+      175 -      ...presentation,
+      106 +      ...(ICON_BY_CODE[code] ?? FALLBACK_ICON),
+      107      };
+      108    });                                                                   109  }
+                                                                             ● Now type-check the SOT change and the web marketplace.
+
+● Bash(cd /root/AuraPoS/packages/application && ../../node_modules/.bin/tsc
+      -p tsconfig.json --noEmit 2>&1 | head -10; echo "app exit $?"; cd
+      /root/AuraPoS/apps/pos-te…)
+  ⎿  app exit 0
+     web marketplace check done                                              
+● Both clean. Now verify the SOT entitlement tests still pass (added fields
+  shouldn't break key/shape assertions) and run the frontend                   marketplace-related tests.
+
+● Bash(cd /root/AuraPoS/apps/api && ../../node_modules/.bin/tsx --test
+      src/__tests__/inventory-entitlement.test.ts 2>&1 | grep -E "^#
+      (tests|pass|fail)"; echo "--- web…)
+  ⎿  # tests 12                                                                   # pass 12
+     # fail 0
+     --- web entitlement-catalog ---
