@@ -96,6 +96,11 @@ export default function HomePage() {
       subtitle: 'Aktifkan fitur bisnis', highlight: true,
     },
     {
+      id: 'my-features', title: 'Fitur Saya',
+      icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-600',
+      subtitle: 'Fitur yang sedang aktif',
+    },
+    {
       id: 'products', title: 'Produk',
       icon: Box, color: 'bg-orange-100 text-orange-600',
       subtitle: 'Kelola menu & katalog',
@@ -164,6 +169,7 @@ export default function HomePage() {
   const handleNavigate = (menuId: string) => {
     const routes: Record<string, string> = {
       marketplace:      "/marketplace",
+      "my-features":    "/my-features",
       dashboard:        "/dashboard",
       products:         "/products",
       stock:            "/stock",

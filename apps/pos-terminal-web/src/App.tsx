@@ -36,6 +36,7 @@ const LocalOrdersPage = lazy(() => import("@/pages/local-orders"));
 const SyncConflictsPage = lazy(() => import("@/pages/sync-conflicts"));
 const OutletsPage = lazy(() => import("@/pages/outlets"));
 const MarketplacePage = lazy(() => import("@/pages/marketplace"));
+const MyFeaturesPage = lazy(() => import("@/pages/my-features"));
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 
 function RedirectToRegister() {
@@ -88,6 +89,14 @@ const MarketplacePageWithLayout = () => (
   <MainLayout hideBottomNav>
     <Suspense fallback={<PageLoading />}>
       <MarketplacePage />
+    </Suspense>
+  </MainLayout>
+);
+
+const MyFeaturesPageWithLayout = () => (
+  <MainLayout hideBottomNav>
+    <Suspense fallback={<PageLoading />}>
+      <MyFeaturesPage />
     </Suspense>
   </MainLayout>
 );
@@ -288,6 +297,11 @@ function Router() {
       <Route path="/marketplace">
         <RequireAuth>
           <MarketplacePageWithLayout />
+        </RequireAuth>
+      </Route>
+      <Route path="/my-features">
+        <RequireAuth>
+          <MyFeaturesPageWithLayout />
         </RequireAuth>
       </Route>
       <Route path="/pos">
