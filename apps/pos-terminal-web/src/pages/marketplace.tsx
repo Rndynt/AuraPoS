@@ -178,7 +178,7 @@ export default function MarketplacePage() {
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-8">
       <PageHeader
         title="Marketplace Fitur"
-        subtitle="Aktifkan entitlement sesuai kebutuhan bisnis"
+        subtitle="Aktifkan fitur tambahan sesuai kebutuhan bisnis"
         onBack={() => setLocation("/hub")}
         actions={
           <button
@@ -200,7 +200,7 @@ export default function MarketplacePage() {
                 <span className="text-[10px] font-bold text-white/60 uppercase tracking-wide">Paket Aktif</span>
               </div>
               <h2 className="text-xl font-black">{ENTITLEMENT_CATALOG.plans[currentPlan]?.label ?? "Starter"}</h2>
-              <p className="text-white/50 text-[11px] mt-0.5">{activeCount} aktif dari {totalCount} entitlement</p>
+              <p className="text-white/50 text-[11px] mt-0.5">{activeCount} aktif dari {totalCount} fitur</p>
             </div>
             <button
               onClick={() => setShowPlans(true)}
@@ -239,8 +239,8 @@ export default function MarketplacePage() {
         <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-2xl px-3.5 py-3">
           <Info size={13} className="text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-blue-700 leading-relaxed">
-            Operasi dasar POS (katalog, order, pembayaran tunai, struk standar) selalu aktif tanpa entitlement.
-            Daftar di bawah hanya menampilkan entitlement komersial dari katalog resmi.
+            Fitur dasar POS (katalog produk, order, pembayaran tunai, struk standar) sudah aktif otomatis tanpa biaya tambahan.
+            Daftar di bawah adalah fitur tambahan yang bisa diaktifkan sesuai kebutuhan bisnis kamu.
           </p>
         </div>
 
@@ -392,7 +392,7 @@ export default function MarketplacePage() {
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100">
                 <div>
                   <h2 className="font-black text-slate-800 text-lg">Pilih Paket</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Entitlement kumulatif dari katalog resmi</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Fitur yang tersedia di setiap paket</p>
                 </div>
                 <button onClick={() => setShowPlans(false)} className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500">
                   <X size={16} />
