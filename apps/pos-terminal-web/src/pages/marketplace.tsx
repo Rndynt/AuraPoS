@@ -11,6 +11,7 @@ import {
   ENTITLEMENT_CATALOG,
   getPlanIncludedEntitlements,
   type EntitlementCode,
+  type EntitlementBundleItem,
   type PlanCode,
   type OfferCode,
 } from "@pos/application/entitlements";
@@ -50,6 +51,7 @@ type EntitlementRow = IconStyle & {
   category: string;
   description: string;
   longDesc: string;
+  bundleItems: EntitlementBundleItem[];
   /** Lowest plan that includes this entitlement cumulatively, if any. */
   includedFromPlan: PlanCode | null;
   /** Offer that sells this entitlement as an add-on, if any. */
@@ -72,6 +74,7 @@ function buildEntitlementRows(): EntitlementRow[] {
   return (Object.keys(ENTITLEMENT_CATALOG.entitlements) as EntitlementCode[]).map((code) => {
     const meta = ENTITLEMENT_CATALOG.entitlements[code] as {
       label: string; category?: string; area?: string; description?: string; longDesc?: string;
+      bundleItems?: EntitlementBundleItem[];
     };
     return {
       code,
@@ -79,11 +82,28 @@ function buildEntitlementRows(): EntitlementRow[] {
       category: meta.category ?? meta.area ?? "Lainnya",
       description: meta.description ?? "",
       longDesc: meta.longDesc ?? meta.description ?? "",
+      bundleItems: [...(meta.bundleItems ?? [])],
       includedFromPlan: includedFrom.get(code) ?? null,
       offerCode: offerByEntitlement.get(code) ?? null,
       ...(ENTITLEMENT_ICONS[code] ?? FALLBACK_ICON),
     };
   });
+}
+
+function BundleChips({ items }: { items: EntitlementBundleItem[] }) {
+  if (!items.length) return null;
+  return (
+    <div data-testid="bundle-chips" className="flex flex-wrap gap-1.5 mt-3">
+      {items.map((item) => (
+        <span
+          key={item.label}
+          className="text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full"
+        >
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function MarketplacePage() {
@@ -280,6 +300,7 @@ export default function MarketplacePage() {
                   </div>
                   <h3 className="font-black text-slate-800 text-sm mb-1">{row.label}</h3>
                   <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{row.description}</p>
+                  <BundleChips items={row.bundleItems} />
                   {(grant?.status === "expired" || grant?.status === "cancelled") && (
                     <p className="text-[10px] text-amber-600 font-semibold mt-1.5">
                       {grant.status === "expired" ? "Grant kedaluwarsa" : "Grant dibatalkan"}
@@ -326,36 +347,38 @@ export default function MarketplacePage() {
                 </button>
               </div>
 
-              <p className="text-sm text-slate-600 leading-relaxed mb-5">{selected.longDesc}</p>
-
-              {statusOf(selected) === "active" ? (
-                <div className="w-full py-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-2">
-                  <ShieldCheck size={16} className="text-emerald-600" />
-                  <span className="text-sm font-black text-emerald-700">Sudah Aktif</span>
-                </div>
-              ) : statusOf(selected) === "included" ? (
-                <div className="w-full py-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center gap-2">
-                  <CheckCircle2 size={16} className="text-blue-600" />
-                  <span className="text-sm font-black text-blue-700">Termasuk Paket Aktif</span>
-                </div>
-              ) : statusOf(selected) === "purchasable" ? (
-                <button
-                  onClick={handlePurchase}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-slate-800 text-white hover:bg-slate-700"
-                >
-                  <Zap size={16} /> Aktifkan Add-on
-                  {selected.offerCode && (
-                    <span className="opacity-80">· {formatPrice(ENTITLEMENT_CATALOG.offers[selected.offerCode].price)}/bln</span>
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setSelected(null); setShowPlans(true); }}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-violet-600 text-white hover:bg-violet-700"
-                >
-                  <Crown size={16} /> Upgrade Paket
-                </button>
-              )}
+              <p className="text-sm text-slate-600 leading-relaxed mb-3">{selected.longDesc}</p>
+              <BundleChips items={selected.bundleItems} />
+              <div className="mt-5">
+                {statusOf(selected) === "active" ? (
+                  <div className="w-full py-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-2">
+                    <ShieldCheck size={16} className="text-emerald-600" />
+                    <span className="text-sm font-black text-emerald-700">Sudah Aktif</span>
+                  </div>
+                ) : statusOf(selected) === "included" ? (
+                  <div className="w-full py-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center gap-2">
+                    <CheckCircle2 size={16} className="text-blue-600" />
+                    <span className="text-sm font-black text-blue-700">Termasuk Paket Aktif</span>
+                  </div>
+                ) : statusOf(selected) === "purchasable" ? (
+                  <button
+                    onClick={handlePurchase}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-slate-800 text-white hover:bg-slate-700"
+                  >
+                    <Zap size={16} /> Aktifkan Add-on
+                    {selected.offerCode && (
+                      <span className="opacity-80">· {formatPrice(ENTITLEMENT_CATALOG.offers[selected.offerCode].price)}/bln</span>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setSelected(null); setShowPlans(true); }}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-violet-600 text-white hover:bg-violet-700"
+                  >
+                    <Crown size={16} /> Upgrade Paket
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </>

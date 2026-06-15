@@ -161,3 +161,4 @@ export type EntitlementCode = keyof EntitlementCatalog['entitlements'];
 export type OfferCode = keyof EntitlementCatalog['offers'];
 export type BusinessTypeCode = keyof EntitlementCatalog['businessTypes'];
 export type BillingIntervalCode = keyof EntitlementCatalog['billingIntervals'];
+export type EntitlementBundleItem = { label: string };
