@@ -105,8 +105,6 @@ describe('POST /api/register E2E', () => {
 });
 
 // ─── Slug normalisation (route layer) ────────────────────────────────────────
-// The route lowercases the slug before passing it to registerTenantOwner.
-// The service itself stores whatever it receives — normalisation is the route's job.
 
 describe('Slug normalisation — route layer', () => {
   it('lowercases an all-uppercase slug before calling the service', async () => {
@@ -147,6 +145,69 @@ describe('Slug normalisation — route layer', () => {
   });
 });
 
+// ─── Slug auto-generation ─────────────────────────────────────────────────────
+
+describe('Slug auto-generation — slug omitted', () => {
+  it('registration succeeds when slug is omitted — slug is auto-generated from businessName', async () => {
+    const captured: { value?: any } = {};
+    const { app } = makeRouter({ capturedInput: captured });
+    const { slug: _omit, ...noSlug } = VALID_BODY;
+    const response = await request(app, '/api/register', noSlug);
+
+    assert.equal(response.status, 201, 'must return 201 when slug is omitted');
+    assert.ok(captured.value?.slug, 'a slug must be auto-generated and passed to service');
+    // 'Kopi Maju' normalises to 'kopi-maju'
+    assert.equal(captured.value.slug, 'kopi-maju', 'slug must be generated from businessName');
+  });
+
+  it('generated slug from businessName is passed to service and stored in response', async () => {
+    const captured: { value?: any } = {};
+    const { app } = makeRouter({ capturedInput: captured });
+    const response = await request(app, '/api/register', {
+      businessName: 'Warung Nasi Padang',
+      businessType: 'CAFE_RESTAURANT',
+      ownerName: 'Pak Budi',
+      ownerEmail: 'budi@padang.test',
+      ownerUsername: 'budi_padang',
+      ownerPassword: 'Secret123!',
+    });
+
+    assert.equal(response.status, 201);
+    assert.ok(captured.value?.slug);
+    // 'Warung Nasi Padang' → 'warung-nasi-padang'
+    assert.equal(captured.value.slug, 'warung-nasi-padang');
+    assert.equal(response.body.tenant.slug, 'warung-nasi-padang');
+  });
+
+  it('duplicate businessName → unique slug with numeric suffix', async () => {
+    const captured: { value?: any } = {};
+    // First slug 'kopi-maju' is taken, next attempt 'kopi-maju-2' is free
+    const checkSlugExists = async (slug: string) => slug === 'kopi-maju';
+    const { app } = makeRouter({ capturedInput: captured, checkSlugExists });
+    const { slug: _omit, ...noSlug } = VALID_BODY;
+    const response = await request(app, '/api/register', noSlug);
+
+    assert.equal(response.status, 201);
+    assert.equal(captured.value?.slug, 'kopi-maju-2', 'must append -2 suffix when base slug is taken');
+  });
+
+  it('omitting slug does not include it in the missing fields error list', async () => {
+    const { app } = makeRouter();
+    // Missing ownerEmail (required), but no slug — slug should NOT appear in missing fields
+    const response = await request(app, '/api/register', {
+      businessName: 'Kopi Maju',
+      ownerName: 'Owner',
+      ownerUsername: 'owner',
+      ownerPassword: 'Secret123!',
+      // ownerEmail intentionally omitted
+    });
+    assert.equal(response.status, 400);
+    assert.ok(Array.isArray(response.body.fields));
+    assert.ok(response.body.fields.includes('ownerEmail'), 'ownerEmail should be listed as missing');
+    assert.equal(response.body.fields.includes('slug'), false, 'slug must NOT be listed as a required field');
+  });
+});
+
 // ─── Business type validation ─────────────────────────────────────────────────
 
 describe('Business type handling — route layer', () => {
@@ -176,13 +237,6 @@ describe('Business type handling — route layer', () => {
 // ─── Required fields validation ───────────────────────────────────────────────
 
 describe('Required field validation — route layer', () => {
-  it('returns 400 when slug is missing', async () => {
-    const { app } = makeRouter();
-    const { slug: _omit, ...noSlug } = VALID_BODY;
-    const response = await request(app, '/api/register', noSlug);
-    assert.equal(response.status, 400);
-  });
-
   it('returns 400 when ownerEmail is missing', async () => {
     const { app } = makeRouter();
     const { ownerEmail: _omit, ...noEmail } = VALID_BODY;
@@ -195,5 +249,19 @@ describe('Required field validation — route layer', () => {
     const { ownerPassword: _omit, ...noPwd } = VALID_BODY;
     const response = await request(app, '/api/register', noPwd);
     assert.equal(response.status, 400);
+  });
+
+  it('returns 400 when businessName is missing', async () => {
+    const { app } = makeRouter();
+    const { businessName: _omit, ...noName } = VALID_BODY;
+    const response = await request(app, '/api/register', noName);
+    assert.equal(response.status, 400);
+  });
+
+  it('slug is not required — omitting slug succeeds if other fields are present', async () => {
+    const { app } = makeRouter();
+    const { slug: _omit, ...noSlug } = VALID_BODY;
+    const response = await request(app, '/api/register', noSlug);
+    assert.equal(response.status, 201, 'slug must be optional — auto-generated from businessName');
   });
 });

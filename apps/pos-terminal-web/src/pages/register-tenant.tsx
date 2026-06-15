@@ -1,24 +1,24 @@
-import { useState, useEffect, useRef } from "react";
-import { CheckCircle2, XCircle, Loader2, Store, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Loader2, Store, ChevronRight, Building2 } from "lucide-react";
 
 const BASE_DOMAIN = import.meta.env.VITE_BASE_DOMAIN || "aurapos.my.id";
 
-type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 type Step = "business" | "account" | "done";
 
-function slugify(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
-}
+const BUSINESS_TYPES = [
+  { code: "CAFE_RESTAURANT",     label: "Café / Restoran",       icon: "☕" },
+  { code: "RETAIL_MINIMARKET",   label: "Retail / Minimarket",   icon: "🛒" },
+  { code: "LAUNDRY",             label: "Laundry",               icon: "👕" },
+  { code: "SERVICE_APPOINTMENT", label: "Jasa / Appointment",    icon: "🔧" },
+  { code: "DIGITAL_PPOB",        label: "Digital / PPOB",        icon: "📱" },
+];
 
 export default function RegisterTenantPage() {
   const [step, setStep] = useState<Step>("business");
 
   // Business info
   const [businessName, setBusinessName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
-  const [slugMsg, setSlugMsg] = useState("");
-  const slugTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [businessType, setBusinessType] = useState("CAFE_RESTAURANT");
 
   // Account info
   const [ownerName, setOwnerName] = useState("");
@@ -28,37 +28,7 @@ export default function RegisterTenantPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<{ url: string; name: string } | null>(null);
-
-  // Auto-suggest slug dari business name
-  useEffect(() => {
-    if (businessName && step === "business") {
-      const suggested = slugify(businessName);
-      setSlug(suggested);
-    }
-  }, [businessName]);
-
-  // Check slug availability
-  useEffect(() => {
-    if (!slug) { setSlugStatus("idle"); setSlugMsg(""); return; }
-    if (!/^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/.test(slug)) {
-      setSlugStatus("invalid");
-      setSlugMsg("Min 3 karakter, huruf kecil, angka, dan tanda hubung saja.");
-      return;
-    }
-    setSlugStatus("checking");
-    clearTimeout(slugTimer.current);
-    slugTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/register/check-slug/${slug}`);
-        const body = await res.json();
-        setSlugStatus(body.available ? "available" : "taken");
-        setSlugMsg(body.available ? `${slug}.${BASE_DOMAIN}` : (body.reason ?? "Tidak tersedia"));
-      } catch {
-        setSlugStatus("idle");
-      }
-    }, 500);
-  }, [slug]);
+  const [result, setResult] = useState<{ url: string; name: string; slug: string } | null>(null);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -67,11 +37,18 @@ export default function RegisterTenantPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, businessName, ownerName, ownerEmail, ownerUsername, ownerPassword }),
+        body: JSON.stringify({
+          businessName,
+          businessType,
+          ownerName,
+          ownerEmail,
+          ownerUsername,
+          ownerPassword,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Registrasi gagal");
-      setResult({ url: body.tenant.url, name: body.tenant.name });
+      setResult({ url: body.tenant.url, name: body.tenant.name, slug: body.tenant.slug });
       setStep("done");
     } catch (e: any) {
       setError(e.message);
@@ -125,40 +102,42 @@ export default function RegisterTenantPage() {
             <div className="space-y-5">
               <div>
                 <label className={labelClass}>Nama Bisnis</label>
-                <input value={businessName} onChange={e => setBusinessName(e.target.value)}
-                  placeholder="Thamada Coffee Shop" className={inputClass} />
+                <input
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                  placeholder="Thamada Coffee Shop"
+                  className={inputClass}
+                  data-testid="input-business-name"
+                />
               </div>
 
               <div>
-                <label className={labelClass}>URL Subdomain</label>
-                <div className="flex items-center gap-0 border border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all bg-white">
-                  <input
-                    value={slug}
-                    onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                    placeholder="thamada"
-                    className="flex-1 bg-transparent px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none"
-                  />
-                  <span className="text-xs font-bold text-slate-400 pr-4 whitespace-nowrap">.{BASE_DOMAIN}</span>
+                <label className={labelClass}>Jenis Bisnis</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {BUSINESS_TYPES.map((bt) => (
+                    <button
+                      key={bt.code}
+                      type="button"
+                      onClick={() => setBusinessType(bt.code)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-bold text-left transition-all ${
+                        businessType === bt.code
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-slate-200 text-slate-600 hover:border-slate-300"
+                      }`}
+                      data-testid={`button-business-type-${bt.code}`}
+                    >
+                      <span className="text-lg">{bt.icon}</span>
+                      {bt.label}
+                    </button>
+                  ))}
                 </div>
-                {/* Slug status */}
-                {slug && (
-                  <div className={`flex items-center gap-2 mt-2 text-xs font-semibold ${
-                    slugStatus === "available" ? "text-green-600" :
-                    slugStatus === "taken" || slugStatus === "invalid" ? "text-red-500" :
-                    "text-slate-400"
-                  }`}>
-                    {slugStatus === "checking" && <Loader2 size={12} className="animate-spin" />}
-                    {slugStatus === "available" && <CheckCircle2 size={12} />}
-                    {(slugStatus === "taken" || slugStatus === "invalid") && <XCircle size={12} />}
-                    <span>{slugStatus === "checking" ? "Memeriksa..." : slugMsg}</span>
-                  </div>
-                )}
               </div>
 
               <button
                 onClick={() => setStep("account")}
-                disabled={slugStatus !== "available" || !businessName.trim()}
+                disabled={!businessName.trim()}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:cursor-not-allowed"
+                data-testid="button-next-step"
               >
                 Lanjut →
               </button>
@@ -168,42 +147,76 @@ export default function RegisterTenantPage() {
           {/* ── STEP 2: Account ── */}
           {step === "account" && (
             <div className="space-y-5">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center gap-3">
+                <Building2 size={16} className="text-slate-400 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-400 font-semibold">Bisnis</p>
+                  <p className="text-sm font-black text-slate-700">{businessName}</p>
+                </div>
+              </div>
+
               <div>
                 <label className={labelClass}>Nama Lengkap</label>
-                <input value={ownerName} onChange={e => setOwnerName(e.target.value)}
-                  placeholder="Ahmad Thamada" className={inputClass} />
+                <input
+                  value={ownerName}
+                  onChange={e => setOwnerName(e.target.value)}
+                  placeholder="Ahmad Thamada"
+                  className={inputClass}
+                  data-testid="input-owner-name"
+                />
               </div>
               <div>
                 <label className={labelClass}>Email</label>
-                <input type="email" value={ownerEmail} onChange={e => setOwnerEmail(e.target.value)}
-                  placeholder="ahmad@thamadacoffee.id" className={inputClass} />
+                <input
+                  type="email"
+                  value={ownerEmail}
+                  onChange={e => setOwnerEmail(e.target.value)}
+                  placeholder="ahmad@thamadacoffee.id"
+                  className={inputClass}
+                  data-testid="input-owner-email"
+                />
               </div>
               <div>
                 <label className={labelClass}>Username</label>
-                <input value={ownerUsername} onChange={e => setOwnerUsername(e.target.value.replace(/\s/g, ""))}
-                  placeholder="thamada_owner" className={inputClass} />
+                <input
+                  value={ownerUsername}
+                  onChange={e => setOwnerUsername(e.target.value.replace(/\s/g, ""))}
+                  placeholder="thamada_owner"
+                  className={inputClass}
+                  data-testid="input-owner-username"
+                />
               </div>
               <div>
                 <label className={labelClass}>Password</label>
-                <input type="password" value={ownerPassword} onChange={e => setOwnerPassword(e.target.value)}
-                  placeholder="Min. 8 karakter" className={inputClass} />
+                <input
+                  type="password"
+                  value={ownerPassword}
+                  onChange={e => setOwnerPassword(e.target.value)}
+                  placeholder="Min. 8 karakter"
+                  className={inputClass}
+                  data-testid="input-owner-password"
+                />
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-semibold px-4 py-3 rounded-xl">
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-semibold px-4 py-3 rounded-xl" data-testid="text-registration-error">
                   {error}
                 </div>
               )}
 
               <div className="flex gap-3">
-                <button onClick={() => setStep("business")}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-sm transition-all">
+                <button
+                  onClick={() => setStep("business")}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-sm transition-all"
+                  data-testid="button-back-step"
+                >
                   ← Kembali
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !ownerName || !ownerEmail || !ownerUsername || ownerPassword.length < 8}
                   className="flex-2 flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  data-testid="button-submit-registration"
                 >
                   {loading ? <><Loader2 size={16} className="animate-spin" /> Mendaftarkan...</> : "Daftar Sekarang"}
                 </button>
@@ -220,19 +233,26 @@ export default function RegisterTenantPage() {
               <div>
                 <h2 className="text-2xl font-black text-slate-800">{result.name} berhasil didaftarkan!</h2>
                 <p className="text-slate-400 mt-2">Akses POS Anda di:</p>
-                <a href={result.url} target="_blank" rel="noopener noreferrer"
-                  className="inline-block mt-2 text-blue-600 font-black text-lg hover:underline">
+                <a
+                  href={result.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-blue-600 font-black text-lg hover:underline"
+                  data-testid="link-tenant-url"
+                >
                   {result.url}
                 </a>
               </div>
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 text-left space-y-2">
                 <p className="text-xs font-black text-blue-700 uppercase tracking-wider">Langkah selanjutnya</p>
-                <p className="text-sm text-slate-600">1. Arahkan DNS wildcard <code className="bg-white px-1 rounded font-mono text-xs">*.{BASE_DOMAIN}</code> ke IP server</p>
-                <p className="text-sm text-slate-600">2. Buka URL di atas dan login dengan akun yang baru dibuat</p>
-                <p className="text-sm text-slate-600">3. Setup produk, kategori, dan mulai berjualan!</p>
+                <p className="text-sm text-slate-600">1. Buka URL di atas dan login dengan akun yang baru dibuat</p>
+                <p className="text-sm text-slate-600">2. Setup produk, kategori, dan mulai berjualan!</p>
               </div>
-              <a href={result.url}
-                className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 transition-all text-center">
+              <a
+                href={result.url}
+                className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 transition-all text-center"
+                data-testid="button-open-pos"
+              >
                 Buka POS Saya →
               </a>
             </div>

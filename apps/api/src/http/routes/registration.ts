@@ -8,7 +8,11 @@ import type { Request, Response } from 'express';
 import { db } from '@pos/infrastructure/database';
 import { tenants } from '@pos/infrastructure/db/schema';
 import { eq } from 'drizzle-orm';
-import { registerTenantOwner, RegistrationError } from '../../services/registrationService';
+import {
+  registerTenantOwner,
+  RegistrationError,
+  generateSlugFromBusinessName,
+} from '../../services/registrationService';
 import type { BusinessType } from '@pos/core';
 
 const BASE_DOMAIN = process.env.BASE_DOMAIN || 'aurapos.my.id';
@@ -55,6 +59,22 @@ function sendRegistrationResult(res: Response, result: Awaited<ReturnType<typeof
   });
 }
 
+/**
+ * Resolve a unique slug, adding a numeric suffix if the base slug is taken.
+ * Falls back to a timestamp fragment after 99 attempts.
+ */
+async function resolveUniqueSlug(
+  base: string,
+  checkExists: (slug: string) => Promise<boolean>,
+): Promise<string> {
+  if (!RESERVED_SLUGS.has(base) && !(await checkExists(base))) return base;
+  for (let i = 2; i <= 99; i++) {
+    const candidate = `${base.slice(0, 26)}-${i}`;
+    if (!RESERVED_SLUGS.has(candidate) && !(await checkExists(candidate))) return candidate;
+  }
+  return `${base.slice(0, 22)}-${Date.now().toString(36)}`;
+}
+
 export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
   const router = Router();
   const baseDomain = deps.baseDomain ?? BASE_DOMAIN;
@@ -86,9 +106,11 @@ export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
   // ── POST /api/register ────────────────────────────────────────────────────────
   // Daftarkan tenant baru + akun owner sekaligus. This is the canonical production
   // onboarding endpoint; /api/tenants/register is deprecated.
+  //
+  // `slug` is optional — if omitted it is auto-generated from `businessName`.
   router.post('/', async (req, res) => {
     const {
-      slug,
+      slug: rawSlug,
       businessName,
       businessType,
       ownerName,
@@ -100,8 +122,8 @@ export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
       locale,
     } = getRequestBody(req);
 
-    // ── Validasi ──────────────────────────────────────────────────────────────
-    const requiredFields = { slug, businessName, ownerName, ownerEmail, ownerPassword, ownerUsername };
+    // ── Validasi field wajib (slug sudah tidak wajib) ─────────────────────────
+    const requiredFields = { businessName, ownerName, ownerEmail, ownerPassword, ownerUsername };
     const missing = Object.entries(requiredFields)
       .filter(([, value]) => !value)
       .map(([key]) => key);
@@ -109,16 +131,25 @@ export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
       return res.status(400).json({ error: 'Missing fields', fields: missing });
     }
 
-    const normalSlug = String(slug).toLowerCase();
-    if (!SLUG_REGEX.test(normalSlug)) {
-      return res.status(400).json({ error: 'Invalid slug format' });
-    }
-    if (RESERVED_SLUGS.has(normalSlug)) {
-      return res.status(400).json({ error: 'Slug is reserved' });
-    }
+    // ── Resolve slug ─────────────────────────────────────────────────────────
+    let normalSlug: string;
 
-    if (await checkSlugExists(normalSlug)) {
-      return res.status(409).json({ error: 'Slug already taken' });
+    if (rawSlug) {
+      // Slug diberikan oleh user — validasi format + reserved + uniqueness
+      normalSlug = String(rawSlug).toLowerCase();
+      if (!SLUG_REGEX.test(normalSlug)) {
+        return res.status(400).json({ error: 'Invalid slug format' });
+      }
+      if (RESERVED_SLUGS.has(normalSlug)) {
+        return res.status(400).json({ error: 'Slug is reserved' });
+      }
+      if (await checkSlugExists(normalSlug)) {
+        return res.status(409).json({ error: 'Slug already taken' });
+      }
+    } else {
+      // Slug tidak diberikan — auto-generate dari businessName, pastikan unik
+      const baseSlug = generateSlugFromBusinessName(businessName);
+      normalSlug = await resolveUniqueSlug(baseSlug, checkSlugExists);
     }
 
     try {

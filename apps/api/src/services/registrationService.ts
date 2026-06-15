@@ -21,7 +21,8 @@ import { auth, authDb } from '../lib/auth';
 import { account, session, user as authUser } from '../lib/auth-schema';
 
 export type RegisterTenantOwnerInput = {
-  slug: string;
+  /** If omitted, a slug is auto-generated from businessName. */
+  slug?: string;
   businessName: string;
   businessType?: BusinessType;
   ownerName: string;
@@ -59,7 +60,7 @@ type BetterAuthSignUpResult = {
 export class RegistrationError extends Error {
   constructor(
     message: string,
-    public readonly code: 'DUPLICATE_SLUG' | 'DUPLICATE_EMAIL' | 'OWNER_SIGNUP_FAILED' | 'REGISTRATION_FAILED' | 'TEMPLATE_PLAN_MISMATCH',
+    public readonly code: 'DUPLICATE_SLUG' | 'DUPLICATE_EMAIL' | 'OWNER_SIGNUP_FAILED' | 'REGISTRATION_FAILED' | 'TEMPLATE_PLAN_MISMATCH' | 'INVALID_BUSINESS_TYPE',
     public readonly status: number,
     public readonly detail?: unknown,
   ) {
@@ -87,6 +88,26 @@ type RegistrationDeps = {
 };
 
 const DEFAULT_BUSINESS_TYPE: BusinessType = 'CAFE_RESTAURANT';
+
+/**
+ * Generate a URL-safe slug from a business name.
+ * Normalise: lowercase, trim, replace non-alphanumeric runs with hyphens,
+ * collapse repeated hyphens, strip leading/trailing hyphens, cap at 28 chars.
+ * Falls back to 'toko-id' for names that produce an empty/too-short result.
+ */
+export function generateSlugFromBusinessName(name: string): string {
+  const slug = (name ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 28);
+  // SLUG_REGEX requires at least 3 chars starting/ending with alphanumeric
+  if (slug.length >= 3) return slug;
+  const padded = (slug || 'toko') + '-id';
+  return padded;
+}
 
 type CatalogSeedProduct = {
   name: string;
@@ -266,6 +287,8 @@ export async function registerTenantOwner(
   deps: RegistrationDeps = createDefaultDeps(process.env.BASE_DOMAIN || 'aurapos.my.id'),
 ): Promise<RegisteredTenantOwner> {
   const businessType = input.businessType ?? DEFAULT_BUSINESS_TYPE;
+  // Derive slug: use provided value or auto-generate from businessName.
+  const slug = input.slug?.trim() || generateSlugFromBusinessName(input.businessName);
   let createdTenantId: string | null = null;
   let createdOwnerUserId: string | null = null;
 
@@ -277,7 +300,7 @@ export async function registerTenantOwner(
       if (!businessTypeDef) {
         throw new RegistrationError(
           `Unknown business type: ${businessType}`,
-          'REGISTRATION_FAILED',
+          'INVALID_BUSINESS_TYPE',
           400,
         );
       }
@@ -291,7 +314,7 @@ export async function registerTenantOwner(
         .values({
           id: tenantId,
           name: input.businessName,
-          slug: input.slug,
+          slug,
           businessName: input.businessName,
           businessType,
           settings: businessTypeDef.settings,
