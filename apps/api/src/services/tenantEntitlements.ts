@@ -14,6 +14,7 @@ import { and, eq, gt, isNull, or } from 'drizzle-orm';
 import {
   getEffectiveEntitlements,
   ENTITLEMENT_CATALOG,
+  ENTITLEMENT_ALIASES,
   type BusinessTypeCode,
   type EntitlementCode,
   type PlanCode,
@@ -106,11 +107,11 @@ export async function loadTenantEntitlementContext(
 export async function getEffectiveEntitlementMap(
   tenantId: string,
   database: EntitlementDatabase = db,
-): Promise<Record<EntitlementCode, boolean>> {
+): Promise<Record<string, boolean>> {
   const context = await loadTenantEntitlementContext(tenantId, database);
   const allCodes = Object.keys(ENTITLEMENT_CATALOG.entitlements) as EntitlementCode[];
 
-  const map = Object.fromEntries(allCodes.map((code) => [code, false])) as Record<EntitlementCode, boolean>;
+  const map = Object.fromEntries(allCodes.map((code) => [code, false])) as Record<string, boolean>;
   if (!context) return map;
 
   const effective = await getEffectiveEntitlements({
@@ -122,5 +123,10 @@ export async function getEffectiveEntitlementMap(
   for (const code of effective) {
     map[code] = true;
   }
+
+  for (const [legacyCode, canonicalCode] of Object.entries(ENTITLEMENT_ALIASES)) {
+    map[legacyCode] = map[canonicalCode] === true;
+  }
+
   return map;
 }

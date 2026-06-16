@@ -1,4 +1,4 @@
-import { ENTITLEMENT_CATALOG, type BusinessTypeCode, type EntitlementCode, type OfferCode, type PlanCode } from './entitlementCatalog';
+import { ENTITLEMENT_ALIASES, ENTITLEMENT_CATALOG, type AnyEntitlementCode, type BusinessTypeCode, type EntitlementCode, type OfferCode, type PlanCode } from './entitlementCatalog';
 
 export type TenantEntitlementGrantStatus = 'active' | 'expired' | 'cancelled';
 export type TenantEntitlementGrantSource = 'purchase' | 'manual_grant' | 'trial';
@@ -21,7 +21,7 @@ export type EffectiveEntitlementInput = GetActiveTenantEntitlementGrantsInput & 
 };
 
 export type EntitlementCheckInput = EffectiveEntitlementInput & {
-  entitlementCode: EntitlementCode;
+  entitlementCode: AnyEntitlementCode;
 };
 
 export type CanPurchaseOfferInput = {
@@ -30,10 +30,15 @@ export type CanPurchaseOfferInput = {
 };
 
 export class EntitlementRequiredError extends Error {
-  constructor(public readonly entitlementCode: EntitlementCode) {
+  constructor(public readonly entitlementCode: AnyEntitlementCode) {
     super(`Entitlement '${entitlementCode}' is required.`);
     this.name = 'EntitlementRequiredError';
   }
+}
+
+export function resolveEntitlementAlias(entitlementCode: AnyEntitlementCode | string): EntitlementCode | null {
+  if (entitlementCode in ENTITLEMENT_CATALOG.entitlements) return entitlementCode as EntitlementCode;
+  return ENTITLEMENT_ALIASES[entitlementCode as keyof typeof ENTITLEMENT_ALIASES] ?? null;
 }
 
 export function getPlanIncludedEntitlements(planCode: PlanCode): EntitlementCode[] {
@@ -64,9 +69,10 @@ export async function getActiveTenantEntitlementGrants(
 
   for (const grant of grants) {
     if (grant.status !== 'active') continue;
-    if (!(grant.entitlementCode in ENTITLEMENT_CATALOG.entitlements)) continue;
+    const entitlementCode = resolveEntitlementAlias(grant.entitlementCode);
+    if (!entitlementCode) continue;
     if (grant.expiresAt && new Date(grant.expiresAt) <= now) continue;
-    active.add(grant.entitlementCode as EntitlementCode);
+    active.add(entitlementCode);
   }
 
   return [...active];
@@ -89,7 +95,9 @@ export async function getEffectiveEntitlements(input: EffectiveEntitlementInput)
 }
 
 export async function hasEntitlement(input: EntitlementCheckInput): Promise<boolean> {
-  return (await getEffectiveEntitlements(input)).has(input.entitlementCode);
+  const entitlementCode = resolveEntitlementAlias(input.entitlementCode);
+  if (!entitlementCode) return false;
+  return (await getEffectiveEntitlements(input)).has(entitlementCode);
 }
 
 export async function requireEntitlement(input: EntitlementCheckInput): Promise<void> {

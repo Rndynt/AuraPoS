@@ -43,7 +43,7 @@ const COMMERCIAL_CODES = [
   'inventory_advanced_stock',
   'payments_partial_payment',
   'payments_multi_payment',
-  'payments_split_payment',
+  'payments_split_bill',
   'receipt_compact',
   'orders_queue',
   'restaurant_table_service',

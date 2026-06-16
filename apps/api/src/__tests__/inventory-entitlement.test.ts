@@ -54,7 +54,7 @@ const PHASE_1B_COMMERCIAL_CODES = [
   'inventory_advanced_stock',
   'payments_partial_payment',
   'payments_multi_payment',
-  'payments_split_payment',
+  'payments_split_bill',
   'receipt_compact',
   'orders_queue',
   'restaurant_table_service',
@@ -84,6 +84,16 @@ describe('entitlement catalog and engine', () => {
 
   it('catalog contains only Phase 1B commercial entitlement codes', () => {
     assert.deepEqual(Object.keys(ENTITLEMENT_CATALOG.entitlements).sort(), [...PHASE_1B_COMMERCIAL_CODES].sort());
+  });
+
+  it('payment entitlement wording separates DP, multi payment, and split bill', () => {
+    const partial = ENTITLEMENT_CATALOG.entitlements.payments_partial_payment;
+    const partialText = `${partial.label} ${partial.description} ${partial.longDesc}`.toLowerCase();
+    assert.doesNotMatch(partialText, /split/);
+    assert.doesNotMatch(partialText, /multi/);
+
+    assert.equal(ENTITLEMENT_CATALOG.entitlements.payments_multi_payment.label, 'Multi Payment');
+    assert.equal(ENTITLEMENT_CATALOG.entitlements.payments_split_bill.label, 'Split Bill');
   });
 
   it('catalog does not contain base order, catalog, payment, receipt, or split inventory sub-capability codes', () => {
@@ -156,6 +166,19 @@ describe('entitlement catalog and engine', () => {
         grants: [{ entitlementCode: 'integrations_api_access', status: 'cancelled' }],
       }),
       false,
+    );
+  });
+
+  it('legacy split payment grants resolve to canonical split bill entitlement', async () => {
+    const effective = await getEffectiveEntitlements({
+      planCode: 'starter',
+      grants: [{ entitlementCode: 'payments_split_payment', status: 'active' }],
+    });
+
+    assert.equal(effective.has('payments_split_bill'), true);
+    assert.equal(
+      await hasEntitlement({ planCode: 'starter', entitlementCode: 'payments_split_payment', grants: [{ entitlementCode: 'payments_split_payment', status: 'active' }] }),
+      true,
     );
   });
 

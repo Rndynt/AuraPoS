@@ -8,10 +8,10 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import type { EntitlementCode } from '@pos/application/entitlements';
+import type { AnyEntitlementCode } from '@pos/application/entitlements';
 import { getEffectiveEntitlementMap } from '../../services/tenantEntitlements';
 
-export function requireEntitlement(entitlementCode: EntitlementCode) {
+export function requireEntitlement(entitlementCode: AnyEntitlementCode) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const tenantId = req.tenantId;
     if (!tenantId) {
@@ -33,6 +33,33 @@ export function requireEntitlement(entitlementCode: EntitlementCode) {
       });
     } catch (err) {
       console.error('[entitlementGuard] requireEntitlement error:', err);
+      next(err);
+    }
+  };
+}
+
+export function requireAnyEntitlement(entitlementCodes: AnyEntitlementCode[]) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const tenantId = req.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ success: false, error: 'Tenant not identified', code: 'NO_TENANT' });
+      return;
+    }
+
+    try {
+      const map = await getEffectiveEntitlementMap(tenantId);
+      if (entitlementCodes.some((code) => map[code] === true)) {
+        next();
+        return;
+      }
+      res.status(403).json({
+        success: false,
+        error: `Fitur ini memerlukan salah satu entitlement: ${entitlementCodes.join(', ')}.`,
+        code: 'ENTITLEMENT_REQUIRED',
+        entitlement_codes: entitlementCodes,
+      });
+    } catch (err) {
+      console.error('[entitlementGuard] requireAnyEntitlement error:', err);
       next(err);
     }
   };

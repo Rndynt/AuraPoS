@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { emitOrderQueueChanged, subscribeOrderQueue } from '../services/orderQueueEvents';
+import { getEffectiveEntitlementMap } from '../../services/tenantEntitlements';
+import { DEFAULT_SERVICE_CHARGE_RATE, DEFAULT_TAX_RATE } from '@pos/core/pricing';
 
 
 function getIdempotencyKey(req: Request, bodyValue?: string): string | undefined {
@@ -30,6 +32,30 @@ async function assertOrderBelongsToOutlet(orderId: string, tenantId: string, out
     throw createError('Order not found for this outlet', 404, 'ORDER_NOT_FOUND');
   }
   return order;
+}
+
+async function requirePaymentEntitlement(tenantId: string, entitlementCode: string): Promise<void> {
+  const entitlements = await getEffectiveEntitlementMap(tenantId);
+  if (entitlements[entitlementCode] === true) return;
+
+  throw createError(
+    `Fitur pembayaran ini memerlukan entitlement '${entitlementCode}'.`,
+    403,
+    'ENTITLEMENT_REQUIRED',
+  );
+}
+
+function estimateCreateAndPayTotal(input: {
+  items: Array<{ base_price: number; quantity: number; variant_price_delta?: number; selected_options?: Array<{ price_delta: number }> }>;
+  tax_rate?: number;
+  service_charge_rate?: number;
+}): number {
+  const subtotal = input.items.reduce((total, item) => {
+    const optionsDelta = item.selected_options?.reduce((sum, option) => sum + option.price_delta, 0) ?? 0;
+    const unitPrice = item.base_price + (item.variant_price_delta ?? 0) + optionsDelta;
+    return total + unitPrice * item.quantity;
+  }, 0);
+  return subtotal + subtotal * (input.tax_rate ?? DEFAULT_TAX_RATE) + subtotal * (input.service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE);
 }
 
 /**
@@ -161,6 +187,7 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     transaction_ref: z.string().optional(),
     notes: z.string().optional(),
     idempotency_key: z.string().min(8).max(128).optional(),
+    payment_flow: z.enum(['full_payment', 'partial_payment_dp']).optional(),
   });
 
   const parsed = bodySchema.safeParse(req.body);
@@ -172,6 +199,10 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
   const transactionRef = parsed.data.transaction_ref?.trim();
 
   await assertOrderBelongsToOutlet(id, tenantId, req.outletId);
+
+  if (parsed.data.payment_flow === 'partial_payment_dp') {
+    await requirePaymentEntitlement(tenantId, 'payments_partial_payment');
+  }
 
   // Execute use case (P1.2: transaction-safe with row lock inside use case)
   const result = await container.recordPayment.execute({
@@ -756,6 +787,7 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
     payment_notes: z.string().optional(),
     idempotency_key: z.string().min(8).max(128).optional(),
     fulfillment_mode: z.enum(['standard', 'instant']).optional(),
+    payment_flow: z.enum(['full_payment', 'partial_payment_dp']).optional(),
   });
 
   const parsed = bodySchema.safeParse(req.body);
@@ -764,6 +796,11 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
   }
 
   const idempotencyKey = getIdempotencyKey(req, parsed.data.idempotency_key);
+  const estimatedTotal = estimateCreateAndPayTotal(parsed.data);
+  const isDpPayment = parsed.data.payment_flow === 'partial_payment_dp' || parsed.data.amount < estimatedTotal - 0.01;
+  if (isDpPayment) {
+    await requirePaymentEntitlement(tenantId, 'payments_partial_payment');
+  }
 
   // Execute via dedicated use case (single DB transaction – P0.2)
   const result = await container.createAndPayOrder.execute({

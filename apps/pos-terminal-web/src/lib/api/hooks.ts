@@ -304,6 +304,7 @@ export type RecordPaymentInput = {
   payment_method: "cash" | "card" | "ewallet" | "other";
   transaction_ref?: string;
   notes?: string;
+  payment_flow?: "full_payment" | "partial_payment_dp";
 };
 
 export type RecordPaymentResponse = {
@@ -402,6 +403,7 @@ export type CreateAndPayInput = CreateOrderInput & {
   transaction_ref?: string;
   payment_notes?: string;
   fulfillment_mode?: "standard" | "instant";
+  payment_flow?: "full_payment" | "partial_payment_dp";
 };
 
 export type CreateAndPayResponse = CreateOrderResponse & {

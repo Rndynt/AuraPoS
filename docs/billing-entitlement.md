@@ -82,9 +82,9 @@ Current commercial entitlement codes:
 
 - `inventory_basic_stock`
 - `inventory_advanced_stock`
-- `payments_partial_payment`
-- `payments_multi_payment`
-- `payments_split_payment`
+- `payments_partial_payment` — DP / Bayar Sebagian only
+- `payments_multi_payment` — Multi Payment / multi-metode only
+- `payments_split_bill` — Split Bill canonical entitlement; legacy grants using `payments_split_payment` resolve to this key
 - `receipt_compact`
 - `orders_queue`
 - `restaurant_table_service`

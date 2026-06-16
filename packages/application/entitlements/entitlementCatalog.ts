@@ -15,7 +15,7 @@ export const ENTITLEMENT_CATALOG = {
     growth: { label: 'Growth', sortOrder: 20, price: 99000, billingInterval: 'monthly', included: ['orders_queue', 'restaurant_kitchen_ops', 'reports_advanced'] },
     pro: {
       label: 'Pro', sortOrder: 30, price: 199000, billingInterval: 'monthly',
-      included: ['inventory_advanced_stock', 'payments_multi_payment', 'payments_split_payment', 'reports_export', 'multi_location', 'integrations_payment_gateway', 'integrations_api_access'],
+      included: ['inventory_advanced_stock', 'payments_multi_payment', 'payments_split_bill', 'reports_export', 'multi_location', 'integrations_payment_gateway', 'integrations_api_access'],
     },
   },
   entitlements: {
@@ -31,19 +31,19 @@ export const ENTITLEMENT_CATALOG = {
       bundleItems: [{ label: 'Mutasi Stok' }, { label: 'Opname' }, { label: 'Transfer Stok' }, { label: 'Low Stock Alert' }, { label: 'Laporan Stok' }],
     },
     payments_partial_payment: {
-      label: 'Pembayaran Sebagian', kind: 'feature', area: 'payments', category: 'Pembayaran',
-      description: 'Bayar sebagian, lunasi nanti — split bill & cicilan.',
-      longDesc: 'Terima pembayaran parsial atau split bill antar pelanggan dengan sisa tagihan tercatat.',
+      label: 'DP / Bayar Sebagian', kind: 'feature', area: 'payments', category: 'Pembayaran',
+      description: 'Terima uang muka dan lunasi sisa tagihan nanti.',
+      longDesc: 'Satu order dengan satu total tagihan: customer membayar sebagian sebagai DP/uang muka, lalu sisa tagihan dilunasi kemudian.',
     },
     payments_multi_payment: {
-      label: 'Multi Pembayaran', kind: 'feature', area: 'payments', category: 'Pembayaran',
-      description: 'Satu transaksi dibayar dengan beberapa metode sekaligus.',
-      longDesc: 'Gabungkan beberapa metode pembayaran dalam satu transaksi dengan rekonsiliasi otomatis.',
+      label: 'Multi Payment', kind: 'feature', area: 'payments', category: 'Pembayaran',
+      description: 'Lunasi satu tagihan dengan beberapa metode pembayaran.',
+      longDesc: 'Satu order dibayar dalam satu checkout menggunakan beberapa metode, misalnya tunai + QRIS. Target normalnya adalah lunas dalam satu sesi bayar.',
     },
-    payments_split_payment: {
-      label: 'Split Payment', kind: 'feature', area: 'payments', category: 'Pembayaran',
-      description: 'Pisah tagihan per orang atau per item dalam satu order.',
-      longDesc: 'Bagi satu order menjadi beberapa tagihan terpisah per pelanggan atau per item.',
+    payments_split_bill: {
+      label: 'Split Bill', kind: 'feature', area: 'payments', category: 'Pembayaran',
+      description: 'Pecah satu order menjadi beberapa tagihan berdasarkan item yang dipilih.',
+      longDesc: 'Kasir dapat memilih item atau sebagian quantity item dari satu order untuk dibuat menjadi bill terpisah, lalu tiap bill dibayar masing-masing.',
     },
     receipt_compact: {
       label: 'Struk Ringkas', kind: 'feature', area: 'receipt', category: 'Struk',
@@ -162,3 +162,10 @@ export type OfferCode = keyof EntitlementCatalog['offers'];
 export type BusinessTypeCode = keyof EntitlementCatalog['businessTypes'];
 export type BillingIntervalCode = keyof EntitlementCatalog['billingIntervals'];
 export type EntitlementBundleItem = { label: string };
+
+export const ENTITLEMENT_ALIASES = {
+  payments_split_payment: 'payments_split_bill',
+} as const satisfies Record<string, EntitlementCode>;
+
+export type LegacyEntitlementCode = keyof typeof ENTITLEMENT_ALIASES;
+export type AnyEntitlementCode = EntitlementCode | LegacyEntitlementCode;
