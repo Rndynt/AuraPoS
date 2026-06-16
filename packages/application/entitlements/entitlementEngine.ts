@@ -30,6 +30,8 @@ export type CanPurchaseOfferInput = {
   planCode: PlanCode;
 };
 
+const GROWTH_AND_ABOVE_INCLUDED_ENTITLEMENTS: EntitlementCode[] = ['restaurant_table_service'];
+
 export class EntitlementRequiredError extends Error {
   constructor(public readonly entitlementCode: EntitlementCode | string) {
     super(`Entitlement '${entitlementCode}' is required.`);
@@ -57,6 +59,12 @@ export function getPlanIncludedEntitlements(planCode: PlanCode): EntitlementCode
       for (const code of plan.included) {
         if (!isComingSoonEntitlement(code)) entitlements.add(code as EntitlementCode);
       }
+    }
+  }
+
+  if (selectedPlan.sortOrder >= ENTITLEMENT_CATALOG.plans.growth.sortOrder) {
+    for (const code of GROWTH_AND_ABOVE_INCLUDED_ENTITLEMENTS) {
+      if (!isComingSoonEntitlement(code)) entitlements.add(code);
     }
   }
 
