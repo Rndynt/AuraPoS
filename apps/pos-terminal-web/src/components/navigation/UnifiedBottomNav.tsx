@@ -9,10 +9,9 @@ interface UnifiedBottomNavProps {
 
 export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavProps) {
   const [location, setLocation] = useLocation();
-  const { can, isLoading, planTier } = useTenant();
-  const planIncludesRestaurantOps = planTier === "growth" || planTier === "pro";
-  const isKitchenEnabled = !isLoading && (can("restaurant_kitchen_ops") || planIncludesRestaurantOps);
-  const isTablesEnabled = !isLoading && (can("restaurant_table_service") || planIncludesRestaurantOps);
+  const { can, isLoading } = useTenant();
+  const isKitchenEnabled = !isLoading && can("restaurant_kitchen_ops");
+  const isTablesEnabled = !isLoading && can("restaurant_table_service");
 
   const isActive = (path: string) =>
     path === "/" ? location === "/" : location.startsWith(path);
@@ -64,9 +63,7 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
             >
-              {active && (
-                <span className="absolute inset-0 rounded-xl bg-blue-50 transition-all" />
-              )}
+              {active && <span className="absolute inset-0 rounded-xl bg-blue-50 transition-all" />}
               <Icon
                 size={20}
                 strokeWidth={active ? 2.5 : 1.8}
