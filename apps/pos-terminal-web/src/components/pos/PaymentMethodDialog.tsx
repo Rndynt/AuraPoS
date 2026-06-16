@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Banknote, CreditCard, QrCode, Delete, SplitSquareVertical } from "lucide-react";
+import { Banknote, CreditCard, QrCode, Delete, SplitSquareVertical, Wallet, Layers } from "lucide-react";
 import type { PaymentMethod } from "@/hooks/useCart";
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
   isSubmitting?: boolean;
   defaultPaymentMethod?: PaymentMethod;
   allowPartial?: boolean;
+  allowMultiPayment?: boolean;
+  allowSplitBill?: boolean;
   initialPartialMode?: boolean;
 };
 
@@ -23,25 +25,26 @@ const fmtNum = (n: number) =>
   new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(n);
 
 const NUMPAD = ["7","8","9","4","5","6","1","2","3","000","0","⌫"] as const;
+type PaymentFlow = "full" | "dp" | "multi" | "split";
 
 export function PaymentMethodDialog({
-  open, onClose, onConfirm, onMethodChange,
-  cartTotal, isSubmitting = false, defaultPaymentMethod = "cash",
-  allowPartial = false, initialPartialMode = false,
-}: Props) {
-  const [method, setMethod] = useState<PaymentMethod>(defaultPaymentMethod);
-  const [cashRaw, setCashRaw] = useState("");
-  const [partialRaw, setPartialRaw] = useState("");
-  const [isPartialMode, setIsPartialMode] = useState(initialPartialMode);
-  const [isProcessing, setIsProcessing] = useState(false);
+    open, onClose, onConfirm, onMethodChange,
+    cartTotal, isSubmitting = false, defaultPaymentMethod = "cash",
+    allowPartial = false, allowMultiPayment = false, allowSplitBill = false, initialPartialMode = false,
+  }: Props) {
+    const [method, setMethod] = useState<PaymentMethod>(defaultPaymentMethod);
+    const [cashRaw, setCashRaw] = useState("");
+    const [partialRaw, setPartialRaw] = useState("");
+    const [flow, setFlow] = useState<PaymentFlow>(initialPartialMode ? "dp" : "full");
+    const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setMethod(defaultPaymentMethod);
-      setCashRaw("");
-      setPartialRaw("");
-      setIsPartialMode(initialPartialMode);
-      setIsProcessing(false);
+        setMethod(defaultPaymentMethod);
+        setCashRaw("");
+        setPartialRaw("");
+        setFlow(initialPartialMode ? "dp" : "full");
+        setIsProcessing(false);
     }
   }, [open, defaultPaymentMethod, initialPartialMode]);
 
@@ -64,26 +67,27 @@ export function PaymentMethodDialog({
   // Partial payment
   const partialAmount = parseInt(partialRaw) || 0;
   const remaining = cartTotal - partialAmount;
-  const isValidPartial = partialAmount > 0 && partialAmount < cartTotal;
+    const isValidPartial = partialAmount > 0 && partialAmount < cartTotal;
+    const isPartialMode = flow === "dp";
 
   const handleProcess = () => {
     if (isSubmitting || isProcessing) return;
-    if (isPartialMode) {
+      if (flow === "dp") {
       if (!isValidPartial) return;
       setIsProcessing(true);
       setTimeout(() => {
         setIsProcessing(false);
         onConfirm(method, undefined, partialAmount);
       }, 400);
-    } else {
+      } else if (flow === "full") {
       if (method === "cash" && !isEnough) return;
       setIsProcessing(true);
       setTimeout(() => {
         setIsProcessing(false);
         onConfirm(method, method === "cash" ? cashAmount || cartTotal : undefined);
       }, 400);
-    }
-  };
+      }
+    };
 
   const loading = isProcessing || isSubmitting;
 
@@ -98,8 +102,30 @@ export function PaymentMethodDialog({
 
         {/* ── KIRI: Metode ── */}
         <div className="w-44 flex-shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col p-3 gap-1">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Metode</p>
-          {([ ["cash","Tunai",Banknote], ["ewallet","QRIS",QrCode], ["card","Kartu",CreditCard] ] as const).map(([id, label, Icon]) => (
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2">Alur Bayar</p>
+            {([
+              ["full", "Bayar Penuh", CreditCard],
+              ...(allowPartial ? [["dp", "DP / Bayar Sebagian", SplitSquareVertical]] : []),
+              ...(allowMultiPayment ? [["multi", "Multi Payment", Wallet]] : []),
+              ...(allowSplitBill ? [["split", "Split Bill", Layers]] : []),
+            ] as const).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                onClick={() => { setFlow(id as PaymentFlow); setCashRaw(""); setPartialRaw(""); }}
+                className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl transition-all text-left border-2 ${
+                  flow === id
+                    ? "bg-white border-blue-600 text-blue-600 shadow-sm"
+                    : "hover:bg-white border-transparent text-slate-500 hover:text-slate-700"
+                }`}
+                data-testid={`button-payment-flow-${id}`}
+              >
+                <Icon size={16} />
+                <span className="font-bold text-xs leading-tight">{label}</span>
+              </button>
+            ))}
+
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mt-4 mb-2">Metode</p>
+            {([ ["cash","Tunai",Banknote], ["ewallet","QRIS",QrCode], ["card","Kartu",CreditCard] ] as const).map(([id, label, Icon]) => (
             <button
               key={id}
               onClick={() => selectMethod(id)}
@@ -115,38 +141,22 @@ export function PaymentMethodDialog({
             </button>
           ))}
 
-          {/* Total + partial toggle di bawah */}
-          <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
+            {/* Total di bawah */}
+            <div className="mt-auto pt-4 border-t border-slate-200 space-y-2">
             <div>
               <p className="text-[10px] text-slate-400 font-semibold px-1 mb-1">Total Tagihan</p>
               <p className="text-xl font-black text-slate-800 px-1 tabular-nums leading-tight" data-testid="text-payment-total">
                 {fmt(cartTotal)}
               </p>
             </div>
-
-            {/* Partial toggle — hanya tampil jika fitur aktif */}
-            {allowPartial && (
-              <button
-                onClick={() => { setIsPartialMode(p => !p); setPartialRaw(""); setCashRaw(""); }}
-                className={`w-full flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition-all border-2 ${
-                  isPartialMode
-                    ? "bg-amber-500 border-amber-500 text-white"
-                    : "bg-white border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600"
-                }`}
-                data-testid="button-toggle-partial"
-              >
-                <SplitSquareVertical size={13} />
-                {isPartialMode ? "Mode DP" : "Bayar Sebagian"}
-              </button>
-            )}
-          </div>
+            </div>
         </div>
 
         {/* ── KANAN: Panel pembayaran ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* ── MODE: PARTIAL (DP) ── */}
-          {isPartialMode && (
+            {flow === "dp" && (
             <div className="flex-1 flex flex-col">
               {/* Header */}
               <div className="px-5 pt-4 pb-3 border-b border-slate-100">
@@ -236,7 +246,42 @@ export function PaymentMethodDialog({
           )}
 
           {/* ── MODE: FULL PAYMENT ── */}
-          {!isPartialMode && (
+            {flow === "multi" && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
+                <div className="bg-teal-50 p-8 rounded-full">
+                  <Wallet size={56} className="text-teal-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800 text-lg">Multi Payment</p>
+                  <p className="text-sm text-slate-500 mt-1 max-w-sm">
+                    Flow ini dipisahkan dari DP. Backend atomic payment session belum tersedia pada patch ini,
+                    jadi kasir tidak dapat memproses multi-metode secara sequential agar tidak membuat pembayaran parsial palsu.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 text-xs text-teal-700">
+                  Target: tunai + QRIS/kartu dalam satu sesi, total dialokasikan harus sama dengan {fmt(cartTotal)}.
+                </div>
+              </div>
+            )}
+
+            {flow === "split" && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
+                <div className="bg-indigo-50 p-8 rounded-full">
+                  <Layers size={56} className="text-indigo-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800 text-lg">Split Bill</p>
+                  <p className="text-sm text-slate-500 mt-1 max-w-sm">
+                    Split Bill membutuhkan model item-level split bill di backend. Aksi ini sengaja belum memproses pembayaran agar tidak dipalsukan sebagai DP.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
+                  Scope final: pilih item/quantity, buat Bill A/B/C, lalu bayar tiap bill secara independen.
+                </div>
+              </div>
+            )}
+
+            {flow === "full" && (
             <>
               {/* ── TUNAI ── */}
               {method === "cash" && (

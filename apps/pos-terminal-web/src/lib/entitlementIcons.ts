@@ -25,7 +25,7 @@ export const ENTITLEMENT_ICONS: Record<EntitlementCode, EntitlementIconStyle> = 
   inventory_advanced_stock:     { icon: PackageSearch,       iconBg: "bg-emerald-100", iconColor: "text-emerald-600" },
   payments_partial_payment:     { icon: SplitSquareVertical, iconBg: "bg-green-100",   iconColor: "text-green-600" },
   payments_multi_payment:       { icon: Wallet,              iconBg: "bg-teal-100",    iconColor: "text-teal-600" },
-  payments_split_payment:       { icon: Layers,              iconBg: "bg-indigo-100",  iconColor: "text-indigo-600" },
+  payments_split_bill:          { icon: Layers,              iconBg: "bg-indigo-100",  iconColor: "text-indigo-600" },
   receipt_compact:              { icon: Receipt,             iconBg: "bg-slate-100",   iconColor: "text-slate-600" },
   orders_queue:                 { icon: ClipboardList,       iconBg: "bg-indigo-100",  iconColor: "text-indigo-600" },
   restaurant_table_service:     { icon: UtensilsCrossed,     iconBg: "bg-blue-100",    iconColor: "text-blue-600" },

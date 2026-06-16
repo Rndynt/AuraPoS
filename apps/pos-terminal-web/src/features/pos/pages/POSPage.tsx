@@ -160,6 +160,8 @@ export default function POSPage() {
   const { submitOrder, isSubmitting: isOfflineSubmitting } = useOfflineOrderSubmit();
 
   const hasPartialPayment = can("payments_partial_payment");
+  const hasMultiPayment = can("payments_multi_payment");
+  const hasSplitBill = can("payments_split_bill") || can("payments_split_payment");
   const hasKitchenTicket = can("restaurant_kitchen_ops");
 
   const ensureCartHasItems = () => {
@@ -405,6 +407,7 @@ export default function POSPage() {
           orderId: pendingOrderForPayment.orderId,
           amount: pendingOrderForPayment.totalAmount,
           payment_method: paymentMethod,
+          payment_flow: "full_payment",
         });
         toast({
           title: "Pembayaran berhasil",
@@ -445,6 +448,7 @@ export default function POSPage() {
           ...orderPayload,
           amount: partialAmount,
           payment_method: paymentMethod,
+          payment_flow: "partial_payment_dp",
         });
         const orderId = createResult.order?.id;
         const orderNumber = createResult.order?.order_number || cfdOrderNumber;
@@ -968,6 +972,8 @@ export default function POSPage() {
         isSubmitting={isProcessingQuickCharge}
         defaultPaymentMethod={cart.paymentMethod}
         allowPartial={hasPartialPayment}
+        allowMultiPayment={hasMultiPayment}
+        allowSplitBill={hasSplitBill}
       />
 
       {/* Quick Charge Processing Overlay */}

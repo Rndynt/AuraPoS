@@ -125,6 +125,7 @@ type RecordPaymentInput = {
   amount: number;
   payment_method: "cash" | "card" | "ewallet" | "other";
   notes?: string;
+  payment_flow?: "full_payment" | "partial_payment_dp";
 };
 
 export function useRecordPayment(orderId: string) {

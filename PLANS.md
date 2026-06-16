@@ -7382,3 +7382,121 @@ Phase 1B SOT cleanup is complete. Continue with dedicated legacy feature/module 
 ### Continuation Notes
 
 Next safest batch: create a dedicated legacy feature/module compatibility removal plan. Start by mapping all live uses of `tenantFeatures`, `tenantModuleConfigs`, `featureGuard`, tenant admin module toggles, marketplace legacy feature display, and repository tests before changing schema exports or migrations.
+
+## Plan: Payment Flow Entitlement Separation
+
+### Source
+- Tasklist: `roadmap/orders/payment_flow_entitlement_separation_prompt.md`
+- User request: Eksekusi roadmap payment flow entitlement separation dengan teliti dan presisi.
+- Date started: 2026-06-16
+- Current status: Implemented safe separation batch; remaining backend multi-payment and split-bill persistence are documented blockers.
+
+### Goal
+Memisahkan DP/Bayar Sebagian, Multi Payment, dan Split Bill sebagai entitlement, wording, UI entry point, dan backend guard yang berbeda tanpa mengklaim split bill selesai sebelum model item-level tersedia.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs (`docs/billing-entitlement.md`)
+- [x] Relevant source files (entitlement catalog/engine, tenant entitlements, POS payment dialog/page, order routes/controllers)
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: entitlement alias resolution, order payment entitlement guards, payment API docs/report.
+- Files inspected: packages/application/entitlements/entitlementCatalog.ts, packages/application/entitlements/entitlementEngine.ts, apps/api/src/services/tenantEntitlements.ts, apps/api/src/http/controllers/OrdersController.ts, apps/api/src/http/routes/orders.ts.
+- Findings: SOT used ambiguous `payments_partial_payment` wording and legacy `payments_split_payment`; payment endpoints did not distinguish DP metadata.
+- Tasks: canonical split bill key/alias implemented; explicit DP metadata and create-and-pay underpayment guard implemented; fake split bill backend avoided.
+- Risks: legacy generic existing-order payments can only be strictly guarded when the client sends `payment_flow: partial_payment_dp`; full remaining settlement stays allowed.
+- Validation: application/api/POS type-check plus entitlement tests passed.
+
+#### Frontend/UI Workstream
+- Scope: POS payment dialog entry point, DP wording, Multi Payment gated action, Split Bill gated coming-soon state.
+- Files inspected: apps/pos-terminal-web/src/components/pos/PaymentMethodDialog.tsx, apps/pos-terminal-web/src/features/pos/pages/POSPage.tsx, apps/pos-terminal-web/src/lib/entitlementIcons.ts.
+- Findings: Current dialog mixed DP as a toggle inside payment-method sidebar and only checked `payments_partial_payment`.
+- Tasks: exposed separate Bayar Penuh, DP, Multi Payment, Split Bill actions using independent entitlements; Multi/Split panels intentionally do not submit until backend models exist.
+- Risks: no split bill persistence yet; UI blocks fake split bill.
+- Validation: POS terminal type-check passed.
+
+#### Documentation Workstream
+- Scope: billing entitlement docs and required separation report.
+- Files inspected: docs/billing-entitlement.md, roadmap prompt.
+- Findings: docs listed legacy split payment key only.
+- Tasks: updated billing docs and created `roadmap/orders/payment_flow_entitlement_separation_report.md` with honest implementation/blocker status.
+- Risks: none remaining for docs; docs explicitly state incomplete backend items.
+- Validation: reviewed generated report and docs.
+
+### Execution Order
+1. Safety/security/data-integrity/tenant-isolation blockers — done for entitlement guards and no fake split bill.
+2. Build/type/test blockers — type-checks passed.
+3. Dependency prerequisites — canonical entitlement alias implemented.
+4. Highest priority actionable tasks — SOT wording, alias, UI entry separation, explicit DP guard implemented.
+5. Lower priority actionable tasks — Multi/Split panels separated but backend processing deferred safely.
+6. Documentation sync — done.
+7. Validation — done.
+8. Final checklist/report update — done via required report.
+
+### Progress
+#### Completed
+- [x] Task: Product wording and entitlement cleanup.
+  - Files changed: packages/application/entitlements/entitlementCatalog.ts, packages/application/entitlements/entitlementEngine.ts, apps/api/src/services/tenantEntitlements.ts, apps/pos-terminal-web/src/lib/entitlementIcons.ts.
+  - Validation: type-check and entitlement tests passed.
+  - Docs updated: docs/billing-entitlement.md, roadmap report.
+- [x] Task: UI payment entry point separation.
+  - Files changed: apps/pos-terminal-web/src/components/pos/PaymentMethodDialog.tsx, apps/pos-terminal-web/src/features/pos/pages/POSPage.tsx.
+  - Validation: POS type-check passed.
+  - Docs updated: roadmap report.
+- [x] Task: Explicit DP metadata/guarding for safe implemented flows.
+  - Files changed: apps/api/src/http/controllers/OrdersController.ts, apps/pos-terminal-web/src/lib/api/hooks.ts, apps/pos-terminal-web/src/hooks/api/useOrders.ts, apps/pos-terminal-web/src/features/pos/pages/POSPage.tsx.
+  - Validation: API and POS type-check passed.
+  - Docs updated: roadmap report.
+
+#### Partially Completed
+- [ ] Task: Multi-payment atomic endpoint.
+  - Completed: independent entitlement and UI panel separation.
+  - Remaining: `create-and-pay-multi` / `payments/multi` atomic session APIs and idempotent payment batch persistence.
+  - Reason: implementing sequential frontend payments would risk false DP/partial audit state; deferred safely.
+- [ ] Task: Split bill full backend model.
+  - Completed: canonical entitlement, alias compatibility, independent gated UI panel.
+  - Remaining: item-level split bill persistence/API/payment linkage.
+  - Reason: large schema/domain change; roadmap says not to claim complete until tables are ready.
+
+#### Blocked
+- [ ] Task: Real Split Bill checkout.
+  - Blocker: missing `order_split_bills`, `order_split_bill_items`, and `order_payments.split_bill_id` persistence.
+  - Required next step: schema migration + domain/API implementation.
+
+#### Not Attempted
+- [ ] Task: Split equally/custom amount split methods.
+  - Reason: roadmap scopes these as optional later.
+
+### Validation Log
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: application SOT types passed.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API DP guard and alias map types passed.
+- Command: pnpm --filter @pos/terminal-web type-check
+- Result: pass
+- Notes: POS payment dialog props/types passed.
+- Command: pnpm --filter @pos/api test -- inventory-entitlement
+- Result: pass
+- Notes: script executed API suite successfully.
+- Command: pnpm --filter @pos/terminal-web exec tsx --test src/__tests__/entitlement-catalog.test.ts
+- Result: pass
+- Notes: frontend SOT test passed.
+
+### Documentation Updates
+- File: docs/billing-entitlement.md
+- Change: payment entitlement list now describes DP, Multi Payment, and canonical Split Bill/legacy alias semantics.
+- File: roadmap/orders/payment_flow_entitlement_separation_report.md
+- Change: required report created with implemented, partial, and blocker status.
+
+### Checklist Updates
+- File: roadmap/orders/payment_flow_entitlement_separation_report.md
+- Change: records status fields requested by roadmap because source roadmap is a prompt, not a checkbox checklist.
+
+### Continuation Notes
+Next safest batch: implement real atomic multi-payment backend session endpoints before enabling Multi Payment submit; then add split bill schema/domain/API before enabling the Split Bill wizard.
