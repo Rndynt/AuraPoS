@@ -1,20 +1,7 @@
-/**
- * Tenant entitlement context loader.
- *
- * Single backend gateway for resolving a tenant's effective entitlements from
- * the entitlement SOT (packages/application/entitlements):
- *   effective = cumulative plan included + business-type defaults + active grants
- *
- * There is no projection table and no self-heal. Default entitlements are NOT
- * persisted — they are derived at runtime. Only purchased/granted add-ons live
- * in tenant_entitlements.
- */
-
 import { and, eq, gt, isNull, or } from 'drizzle-orm';
 import {
   getEffectiveEntitlements,
   ENTITLEMENT_CATALOG,
-  ENTITLEMENT_ALIASES,
   type BusinessTypeCode,
   type EntitlementCode,
   type PlanCode,
@@ -54,10 +41,6 @@ export type TenantEntitlementContext = {
 
 type EntitlementDatabase = { select: (...args: any[]) => any };
 
-/**
- * Loads plan/business-type/active-grants for a tenant. Returns null when the
- * tenant row does not exist.
- */
 export async function loadTenantEntitlementContext(
   tenantId: string,
   database: EntitlementDatabase = db,
@@ -100,10 +83,6 @@ export async function loadTenantEntitlementContext(
   };
 }
 
-/**
- * Resolves the full effective entitlement map for a tenant: every known
- * entitlement code mapped to a boolean. Unknown tenant → all false.
- */
 export async function getEffectiveEntitlementMap(
   tenantId: string,
   database: EntitlementDatabase = db,
@@ -122,10 +101,6 @@ export async function getEffectiveEntitlementMap(
 
   for (const code of effective) {
     map[code] = true;
-  }
-
-  for (const [legacyCode, canonicalCode] of Object.entries(ENTITLEMENT_ALIASES)) {
-    map[legacyCode] = map[canonicalCode] === true;
   }
 
   return map;
