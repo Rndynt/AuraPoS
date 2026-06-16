@@ -120,11 +120,19 @@ export class DrizzleRecordPaymentRepository {
       // Use raw SQL update to match DB column names (snake_case).
       // Use NOW() for updated_at to avoid Date-object serialization issues
       // with the postgres driver in raw sql template contexts.
+      //
+      // Business rule: a draft order is not financially active.
+      // When the first payment is recorded against a draft, promote it to
+      // 'confirmed' so it is no longer treated as an editable draft.
+      // payment_status is a separate dimension and stays as-is.
+      const shouldConfirmOrder = orderRow.status === 'draft' && newPaidAmount > 0;
+
       const updatedOrders = await tx.execute(sql`
         UPDATE orders
         SET
           paid_amount    = ${newPaidAmount.toString()},
           payment_status = ${newPaymentStatus},
+          status         = CASE WHEN ${shouldConfirmOrder} THEN 'confirmed' ELSE status END,
           updated_at     = NOW()
         WHERE id = ${input.order_id}
           AND tenant_id = ${input.tenant_id}

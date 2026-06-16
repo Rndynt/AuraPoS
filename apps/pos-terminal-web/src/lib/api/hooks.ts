@@ -406,6 +406,8 @@ export type CreateAndPayInput = CreateOrderInput & {
 
 export type CreateAndPayResponse = CreateOrderResponse & {
   payment: OrderPayment;
+  remainingAmount?: number;
+  idempotent_replay?: boolean;
 };
 
 export function useCreateAndPay() {

@@ -433,6 +433,12 @@ export default function OrdersPage() {
                             </span>
                           </div>
                         </div>
+                        {order.payment_status === "partial" && order.paid_amount > 0 && (
+                          <div className="mt-2 pt-2 border-t border-amber-100 flex justify-between text-xs">
+                            <span className="text-green-700 font-medium">Dibayar {formatPrice(order.paid_amount)}</span>
+                            <span className="text-amber-700 font-bold">Sisa {formatPrice(Math.max(0, order.total_amount - order.paid_amount))}</span>
+                          </div>
+                        )}
                       </button>
                     );
                   })
@@ -560,6 +566,68 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Payment Summary Section */}
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
+                      Pembayaran
+                    </h3>
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-600">Status</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${PAYMENT_STATUS_CONFIG[selectedOrder.payment_status]?.color ?? PAYMENT_STATUS_CONFIG.unpaid.color}`}>
+                          {PAYMENT_STATUS_CONFIG[selectedOrder.payment_status]?.label ?? "UNPAID"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Total</span>
+                        <span className="text-slate-800 font-medium">{formatPrice(selectedOrder.total_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Dibayar</span>
+                        <span className={`font-medium ${selectedOrder.paid_amount > 0 ? "text-green-700" : "text-slate-400"}`}>
+                          {formatPrice(selectedOrder.paid_amount)}
+                        </span>
+                      </div>
+                      {selectedOrder.payment_status !== "paid" && (
+                        <div className="flex justify-between text-sm border-t border-slate-100 pt-2">
+                          <span className="text-slate-600 font-medium">Sisa</span>
+                          <span className="font-bold text-amber-700">
+                            {formatPrice(Math.max(0, selectedOrder.total_amount - selectedOrder.paid_amount))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payment History Section */}
+                  {Array.isArray((selectedOrder as any).payments) && (selectedOrder as any).payments.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
+                        Riwayat Pembayaran
+                      </h3>
+                      <div className="space-y-2">
+                        {(selectedOrder as any).payments.map((p: any, idx: number) => (
+                          <div key={p.id ?? idx} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="text-xs font-bold text-slate-700 capitalize">{p.payment_method ?? p.paymentMethod}</div>
+                                <div className="text-xs text-slate-400">{formatDate(p.payment_date ?? p.paymentDate)}</div>
+                                {(p.reference_number ?? p.referenceNumber) && (
+                                  <div className="text-xs text-slate-400 font-mono truncate max-w-[140px]">
+                                    {p.reference_number ?? p.referenceNumber}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-sm font-bold text-green-700">
+                                +{formatPrice(Number(p.amount ?? 0))}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Panel Footer — horizontal layout saves vertical space */}
@@ -579,7 +647,11 @@ export default function OrdersPage() {
                     onClick={handleProcessTransaction}
                     disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
                   >
-                    {recordPaymentMutation.isPending ? "Memproses..." : "Proses Transaksi"}
+                    {recordPaymentMutation.isPending
+                      ? "Memproses..."
+                      : selectedOrder.payment_status === "partial"
+                        ? "Lunasi Sisa"
+                        : "Proses Transaksi"}
                   </Button>
 
                 </div>

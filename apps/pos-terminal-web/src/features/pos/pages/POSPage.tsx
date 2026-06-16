@@ -5,7 +5,7 @@ import { PaymentMethodDialog } from "@/components/pos/PaymentMethodDialog";
 import { CombinedDraftSheet } from "@/components/pos/CombinedDraftSheet";
 import type { PaymentMethod, OrderType } from "@/hooks/useCart";
 import { useCart } from "@/hooks/useCart";
-import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment, useOrders } from "@/lib/api/hooks";
+import { useProducts, useCreateOrder, useUpdateOrder, useCreateKitchenTicket, useOrderTypes, useRecordPayment, useOrders, useCreateAndPay } from "@/lib/api/hooks";
 import { useOfflineOrderSubmit } from "@/hooks/useOfflineOrderSubmit";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption, Order } from "@pos/domain/orders/types";
@@ -25,7 +25,8 @@ import { cartItemsToKitchenTicketItems } from "../mappers/kitchenTicketPayloadMa
 import { getLocalDraftItems, getProductsById } from "../mappers/orderToCart";
 import { buildReceiptPayload } from "../mappers/receiptPayloadMapper";
 import { fetchOrderForPOS, updatePOSOrderStatus } from "../services/posOrderService";
-import { recordPOSPartialPayment } from "../services/posPaymentService";
+
+
 import { enqueueReceiptPrintJob, hasPairedReceiptPrinter, markReceiptPrintFailed, printReceiptNow } from "../services/posPrinterService";
 import { usePOSCustomerDisplayFlow } from "../hooks/usePOSCustomerDisplayFlow";
 import { usePOSOrderQueueInvalidation } from "../hooks/usePOSOrderQueueFlow";
@@ -155,6 +156,7 @@ export default function POSPage() {
   const updateOrderMutation = useUpdateOrder();
   const createKitchenTicketMutation = useCreateKitchenTicket();
   const recordPaymentMutation = useRecordPayment();
+  const createAndPayMutation = useCreateAndPay();
   const { submitOrder, isSubmitting: isOfflineSubmitting } = useOfflineOrderSubmit();
 
   const hasPartialPayment = can("payments_partial_payment");
@@ -333,8 +335,28 @@ export default function POSPage() {
   const handleCharge = async () => {
     if (!ensureCartHasItems()) return;
     
-    // If continuing an order, update it then show payment dialog
+    // If continuing an order, check if it is partially paid first.
+    // A partially paid order is financially active and must NOT be routed
+    // into the normal draft-update path. Instead, open the payment dialog
+    // so the cashier can settle the remaining balance.
     if (continueOrderId) {
+      const continueOrder = orders.find(o => (o as any).id === continueOrderId) as any;
+      const paymentStatus = continueOrder?.payment_status ?? continueOrder?.paymentStatus ?? 'unpaid';
+
+      if (paymentStatus === 'partial') {
+        const total = Number(continueOrder.total_amount ?? continueOrder.total ?? 0);
+        const paid = Number(continueOrder.paid_amount ?? continueOrder.paidAmount ?? 0);
+        const remaining = Math.max(0, total - paid);
+        setPendingOrderForPayment({
+          orderId: continueOrderId,
+          totalAmount: remaining,
+          orderNumber: String(continueOrder.order_number ?? continueOrder.orderNumber ?? ''),
+        });
+        setPaymentMethodDialogOpen(true);
+        setMobileCartOpen(false);
+        return;
+      }
+
       await handleUpdateContinueOrder();
       return;
     }
@@ -369,9 +391,45 @@ export default function POSPage() {
 
   // Handle payment method confirmation from dialog
   const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod, _cashReceived?: number, partialAmount?: number) => {
+    // ── SETTLE EXISTING PARTIAL ORDER ───────────────────────────────────────
+    // When pendingOrderForPayment is set the cashier is settling the remaining
+    // balance of an already-existing partial order. No new order is created;
+    // payment goes directly against the existing order via the record-payment
+    // endpoint. This path bypasses cart validation entirely.
+    if (pendingOrderForPayment) {
+      setIsProcessingQuickCharge(true);
+      const fmtRp = (n: number) =>
+        new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+      try {
+        await recordPaymentMutation.mutateAsync({
+          orderId: pendingOrderForPayment.orderId,
+          amount: pendingOrderForPayment.totalAmount,
+          payment_method: paymentMethod,
+        });
+        toast({
+          title: "Pembayaran berhasil",
+          description: `Order #${pendingOrderForPayment.orderNumber} — Dilunasi: ${fmtRp(pendingOrderForPayment.totalAmount)}`,
+        });
+        setPendingOrderForPayment(null);
+        setPaymentMethodDialogOpen(false);
+        setLocation("/pos");
+      } catch (error) {
+        toast({
+          title: "Pembayaran gagal",
+          description: error instanceof Error ? error.message : "Gagal mencatat pembayaran",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessingQuickCharge(false);
+      }
+      return;
+    }
+
     if (!ensureCartHasItems()) return;
 
     // ── PARTIAL PAYMENT (DP) FLOW ────────────────────────────────────────────
+    // Use atomic create-and-pay so the order starts as confirmed immediately;
+    // the 2-step createOrder→recordPayment pattern left orders as draft.
     if (partialAmount !== undefined) {
       setIsProcessingQuickCharge(true);
       const cfdOrderNumber = cart.orderNumber;
@@ -382,12 +440,15 @@ export default function POSPage() {
       }
 
       try {
-        const orderResult = await createOrderMutation.mutateAsync(buildOrderPayload());
-        const orderId = orderResult.order?.id;
-        const orderNumber = orderResult.order?.order_number || cfdOrderNumber;
-
-        const paymentData = await recordPOSPartialPayment(orderId, partialAmount, paymentMethod);
-        const remainingAmount = paymentData.data.remainingAmount;
+        const orderPayload = buildOrderPayload();
+        const createResult = await createAndPayMutation.mutateAsync({
+          ...orderPayload,
+          amount: partialAmount,
+          payment_method: paymentMethod,
+        });
+        const orderId = createResult.order?.id;
+        const orderNumber = createResult.order?.order_number || cfdOrderNumber;
+        const remainingAmount = createResult.remainingAmount ?? 0;
 
         // Kirim ke dapur jika fitur aktif — pesanan tetap perlu disiapkan meski belum lunas
         if (hasKitchenTicket && orderId) {
