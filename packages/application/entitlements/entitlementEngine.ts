@@ -41,6 +41,12 @@ export function resolveEntitlementCode(entitlementCode: EntitlementCode | string
   return null;
 }
 
+export function isComingSoonEntitlement(entitlementCode: EntitlementCode | string): boolean {
+  const code = resolveEntitlementCode(entitlementCode);
+  if (!code) return false;
+  return (ENTITLEMENT_CATALOG.entitlements[code] as { comingSoon?: boolean }).comingSoon === true;
+}
+
 export function getPlanIncludedEntitlements(planCode: PlanCode): EntitlementCode[] {
   const selectedPlan = ENTITLEMENT_CATALOG.plans[planCode];
   const entitlements = new Set<EntitlementCode>();
@@ -48,7 +54,7 @@ export function getPlanIncludedEntitlements(planCode: PlanCode): EntitlementCode
   for (const plan of Object.values(ENTITLEMENT_CATALOG.plans)) {
     if (plan.sortOrder <= selectedPlan.sortOrder) {
       for (const code of plan.included) {
-        entitlements.add(code as EntitlementCode);
+        if (!isComingSoonEntitlement(code)) entitlements.add(code as EntitlementCode);
       }
     }
   }
@@ -57,7 +63,9 @@ export function getPlanIncludedEntitlements(planCode: PlanCode): EntitlementCode
 }
 
 export function getBusinessTypeDefaultEntitlements(businessType: BusinessTypeCode): EntitlementCode[] {
-  return [...ENTITLEMENT_CATALOG.businessTypes[businessType].defaultEntitlements] as EntitlementCode[];
+  return ([...ENTITLEMENT_CATALOG.businessTypes[businessType].defaultEntitlements] as EntitlementCode[]).filter(
+    (code) => !isComingSoonEntitlement(code),
+  );
 }
 
 export async function getActiveTenantEntitlementGrants(
@@ -71,6 +79,7 @@ export async function getActiveTenantEntitlementGrants(
     if (grant.status !== 'active') continue;
     const entitlementCode = resolveEntitlementCode(grant.entitlementCode);
     if (!entitlementCode) continue;
+    if (isComingSoonEntitlement(entitlementCode)) continue;
     if (grant.expiresAt && new Date(grant.expiresAt) <= now) continue;
     active.add(entitlementCode);
   }
@@ -97,6 +106,7 @@ export async function getEffectiveEntitlements(input: EffectiveEntitlementInput)
 export async function hasEntitlement(input: EntitlementCheckInput): Promise<boolean> {
   const entitlementCode = resolveEntitlementCode(input.entitlementCode);
   if (!entitlementCode) return false;
+  if (isComingSoonEntitlement(entitlementCode)) return false;
   return (await getEffectiveEntitlements(input)).has(entitlementCode);
 }
 
@@ -108,6 +118,7 @@ export async function requireEntitlement(input: EntitlementCheckInput): Promise<
 
 export function canPurchaseOffer(input: CanPurchaseOfferInput): boolean {
   const offer = ENTITLEMENT_CATALOG.offers[input.offerCode];
+  if (isComingSoonEntitlement(offer.entitlement as EntitlementCode)) return false;
   const tenantPlan = ENTITLEMENT_CATALOG.plans[input.planCode];
   const requiredPlan = ENTITLEMENT_CATALOG.plans[offer.requiredPlan];
   if (getPlanIncludedEntitlements(input.planCode).includes(offer.entitlement as EntitlementCode)) {
