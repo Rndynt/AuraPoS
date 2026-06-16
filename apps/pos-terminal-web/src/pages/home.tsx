@@ -70,15 +70,16 @@ function getInitials(name: string): string {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { tenantId, can, planTier } = useTenant();
+  const { tenantId, can } = useTenant();
   const { data: profile, isLoading: profileLoading } = useTenantProfile(tenantId);
 
-  const planIncludesRestaurantOps = planTier === "growth" || planTier === "pro";
+  // Entitlement gates — controls hub menu visibility.
+  // Do not gate hub features by planTier here. Plan inheritance must be resolved by the backend entitlement engine from ENTITLEMENT_CATALOG.
   const showDashboard     = can("reports_advanced");
-  const showTables        = can("restaurant_table_service") || planIncludesRestaurantOps;
-  const showKitchen       = can("restaurant_kitchen_ops") || planIncludesRestaurantOps;
+  const showTables        = can("restaurant_table_service");
+  const showKitchen       = can("restaurant_kitchen_ops");
   const showMultiLocation = can("multi_location");
-  const showCustomerDisplay = can("customer_display") || planTier === "pro";
+  const showCustomerDisplay = can("customer_display");
   const { user, loading: userLoading } = useCurrentUser();
   const { activeOutlet, outlets, setActiveOutlet, isLoading: outletLoading } = useOutlet();
   const [showOutletPicker, setShowOutletPicker] = useState(false);
