@@ -37,6 +37,7 @@ export const ENTITLEMENT_CATALOG = {
         "payments_split_bill",
         "reports_export",
         "multi_location",
+        "customer_display",
         "integrations_payment_gateway",
         "integrations_api_access",
       ],
@@ -176,6 +177,20 @@ export const ENTITLEMENT_CATALOG = {
         { label: "Cabang" },
         { label: "Stok Cabang" },
         { label: "Laporan Cabang" },
+      ],
+    },
+    customer_display: {
+      label: "Customer Facing Display",
+      kind: "feature",
+      area: "display",
+      category: "Display",
+      description: "Layar pelanggan untuk menampilkan item, total belanja, dan status pembayaran.",
+      longDesc:
+        "Customer Facing Display untuk layar kedua/customer display: pelanggan bisa melihat daftar item, total pembayaran, dan informasi transaksi secara real-time.",
+      bundleItems: [
+        { label: "Layar Pelanggan" },
+        { label: "Total Belanja" },
+        { label: "Status Pembayaran" },
       ],
     },
     hardware_label_printer: {
