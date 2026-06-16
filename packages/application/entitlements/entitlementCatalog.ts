@@ -24,7 +24,7 @@ export const ENTITLEMENT_CATALOG = {
       sortOrder: 20,
       price: 99000,
       billingInterval: "monthly",
-      included: ["orders_queue", "restaurant_kitchen_ops", "reports_advanced"],
+      included: ["orders_queue", "restaurant_table_service", "restaurant_kitchen_ops", "reports_advanced"],
     },
     pro: {
       label: "Pro",
