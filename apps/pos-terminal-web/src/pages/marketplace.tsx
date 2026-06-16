@@ -153,19 +153,18 @@ export default function MarketplacePage() {
   type Status = "coming_soon" | "active" | "included" | "purchasable" | "locked";
   const statusOf = (row: EntitlementRow): Status => {
     if (row.comingSoon) return "coming_soon";
-    if (can(row.code)) return "active";
-    if (includedByPlan(row)) return "included";
+    if (can(row.code) || includedByPlan(row)) return "active";
     if (canPurchase(row)) return "purchasable";
     return "locked";
   };
 
-  const activeCount = rows.filter((r) => can(r.code)).length;
+  const activeCount = rows.filter((r) => !r.comingSoon && (can(r.code) || includedByPlan(r))).length;
   const totalCount = rows.length;
   const filteredRows = useMemo(() => {
     const list = category === "Semua" ? rows : rows.filter((r) => r.category === category);
     const rank = (r: EntitlementRow) => {
       const s = statusOf(r);
-      return s === "active" ? 0 : s === "included" ? 1 : s === "purchasable" ? 2 : s === "coming_soon" ? 3 : 4;
+      return s === "active" ? 0 : s === "purchasable" ? 1 : s === "coming_soon" ? 2 : 3;
     };
     return [...list].sort((a, b) => rank(a) - rank(b));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,7 +225,7 @@ export default function MarketplacePage() {
         <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-2xl px-3.5 py-3">
           <Info size={13} className="text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-blue-700 leading-relaxed">
-            Fitur dasar POS (katalog produk, order, pembayaran tunai, struk standar) sudah aktif otomatis tanpa biaya tambahan. Daftar di bawah adalah fitur tambahan yang bisa diaktifkan sesuai kebutuhan bisnis kamu.
+            Fitur dasar POS sudah aktif otomatis. Fitur bertanda Segera Hadir belum bisa dibeli atau diaktifkan.
           </p>
         </div>
 
@@ -256,8 +255,7 @@ export default function MarketplacePage() {
                     <div className="flex items-center gap-1.5">
                       {status === "active" && <span className="flex items-center gap-1 text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full"><CheckCircle2 size={9} /> Aktif</span>}
                       {status === "coming_soon" && <span className="text-[10px] font-black bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full">Segera Hadir</span>}
-                      {status === "included" && <span className="text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">Termasuk paket</span>}
-                      {offer && status !== "active" && status !== "included" && (
+                      {offer && status !== "active" && status !== "coming_soon" && (
                         <span className={`text-[10px] font-black border px-2 py-0.5 rounded-full ${status === "purchasable" ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}>{formatOfferPrice(offer)}</span>
                       )}
                       {status === "locked" && <Lock size={11} className="text-slate-300" />}
@@ -298,7 +296,7 @@ export default function MarketplacePage() {
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">{selected.longDesc}</p>
               <BundleChips items={selected.bundleItems} />
-              {selected.offerCode && statusOf(selected) !== "active" && statusOf(selected) !== "included" && statusOf(selected) !== "coming_soon" && (
+              {selected.offerCode && statusOf(selected) !== "active" && statusOf(selected) !== "coming_soon" && (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wide mb-1">Harga Add-on</p>
                   <p className="text-lg font-black text-slate-800">{formatOfferPrice(ENTITLEMENT_CATALOG.offers[selected.offerCode])}</p>
@@ -310,8 +308,6 @@ export default function MarketplacePage() {
                   <div className="w-full py-3.5 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center gap-2"><Info size={16} className="text-slate-500" /><span className="text-sm font-black text-slate-600">Segera Hadir</span></div>
                 ) : statusOf(selected) === "active" ? (
                   <div className="w-full py-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-2"><ShieldCheck size={16} className="text-emerald-600" /><span className="text-sm font-black text-emerald-700">Sudah Aktif</span></div>
-                ) : statusOf(selected) === "included" ? (
-                  <div className="w-full py-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center gap-2"><CheckCircle2 size={16} className="text-blue-600" /><span className="text-sm font-black text-blue-700">Termasuk Paket Aktif</span></div>
                 ) : statusOf(selected) === "purchasable" ? (
                   <button onClick={handlePurchase} className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-slate-800 text-white hover:bg-slate-700"><Zap size={16} /> Aktifkan Add-on{selected.offerCode && <span className="opacity-80">· {formatOfferPrice(ENTITLEMENT_CATALOG.offers[selected.offerCode])}</span>}</button>
                 ) : (
