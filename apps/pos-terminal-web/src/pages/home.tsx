@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   UtensilsCrossed,
   ChefHat,
+  Monitor,
 } from "lucide-react";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { useToast } from "@/hooks/use-toast";
@@ -69,14 +70,15 @@ function getInitials(name: string): string {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { tenantId, can } = useTenant();
+  const { tenantId, can, planTier } = useTenant();
   const { data: profile, isLoading: profileLoading } = useTenantProfile(tenantId);
 
-  // Entitlement gates — controls hub menu visibility
+  const planIncludesRestaurantOps = planTier === "growth" || planTier === "pro";
   const showDashboard     = can("reports_advanced");
-  const showTables        = can("restaurant_table_service");
-  const showKitchen       = can("restaurant_kitchen_ops");
+  const showTables        = can("restaurant_table_service") || planIncludesRestaurantOps;
+  const showKitchen       = can("restaurant_kitchen_ops") || planIncludesRestaurantOps;
   const showMultiLocation = can("multi_location");
+  const showCustomerDisplay = can("customer_display") || planTier === "pro";
   const { user, loading: userLoading } = useCurrentUser();
   const { activeOutlet, outlets, setActiveOutlet, isLoading: outletLoading } = useOutlet();
   const [showOutletPicker, setShowOutletPicker] = useState(false);
@@ -87,9 +89,7 @@ export default function HomePage() {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "Owner";
 
-  // Menu items dengan feature gate — hanya tampil jika fitur aktif
   const MENU_ITEMS = [
-    // ── Selalu tampil (free tier) ──
     {
       id: 'marketplace', title: 'Marketplace',
       icon: ShoppingBag, color: 'bg-violet-100 text-violet-600',
@@ -140,25 +140,26 @@ export default function HomePage() {
       icon: AlertTriangle, color: 'bg-amber-100 text-amber-600',
       subtitle: 'Kelola konflik sinkronisasi',
     },
-    // ── Growth: analytics ──
     ...(showDashboard ? [{
       id: 'dashboard', title: 'Dashboard',
       icon: BarChart3, color: 'bg-blue-100 text-blue-600',
       subtitle: 'Analitik & ringkasan',
     }] : []),
-    // ── Growth: denah meja ──
     ...(showTables ? [{
       id: 'tables', title: 'Denah Meja',
       icon: UtensilsCrossed, color: 'bg-rose-100 text-rose-600',
       subtitle: 'Status & kelola meja',
     }] : []),
-    // ── Growth: dapur / KDS ──
     ...(showKitchen ? [{
       id: 'kitchen', title: 'Dapur / KDS',
       icon: ChefHat, color: 'bg-orange-100 text-orange-600',
       subtitle: 'Kitchen Display System',
     }] : []),
-    // ── Pro: multi lokasi ──
+    ...(showCustomerDisplay ? [{
+      id: 'customer-display', title: 'Customer Display',
+      icon: Monitor, color: 'bg-sky-100 text-sky-600',
+      subtitle: 'Layar pelanggan / CFD',
+    }] : []),
     ...(showMultiLocation ? [{
       id: 'outlets', title: 'Cabang',
       icon: Building2, color: 'bg-teal-100 text-teal-600',
@@ -182,6 +183,7 @@ export default function HomePage() {
       outlets:          "/outlets",
       tables:           "/tables",
       kitchen:          "/kitchen",
+      "customer-display": "/display",
     };
 
     const route = routes[menuId];
@@ -206,7 +208,7 @@ export default function HomePage() {
       clearActiveTenantCache();
       clearActiveOutletId();
       localStorage.clear();
-      sessionStorage.clear(); // Prevent cart/session data from leaking to next tenant login
+      sessionStorage.clear();
       setLocation("/login");
     } catch {
       toast({
@@ -235,7 +237,6 @@ export default function HomePage() {
         </p>
       </header>
 
-      {/* Profile Card */}
       <div className="p-4">
         <div className="bg-slate-800 text-white p-5 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-300" data-testid="card-profile">
           {isLoading ? (
@@ -272,7 +273,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Outlet Switcher */}
       <div className="px-4 pb-3">
         <button
           onClick={() => setShowOutletPicker((v) => !v)}
@@ -305,7 +305,6 @@ export default function HomePage() {
           />
         </button>
 
-        {/* Dropdown list */}
         {showOutletPicker && outlets.length > 1 && (
           <div className="mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
             {outlets.map((o) => (
@@ -356,7 +355,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Menu Grid */}
       <div className="p-4 pt-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {MENU_ITEMS.map((item) => (
           <button
@@ -394,7 +392,6 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* Install App Card */}
       <div className="px-4 pb-3">
         {isInstalled ? (
           <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3" data-testid="card-pwa-installed">
@@ -453,7 +450,6 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Mobile Navigation */}
       <UnifiedBottomNav cartCount={0} />
     </div>
   );
