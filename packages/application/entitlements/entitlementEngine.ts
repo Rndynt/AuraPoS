@@ -1,4 +1,5 @@
 import { ENTITLEMENT_CATALOG, type BusinessTypeCode, type EntitlementCode, type OfferCode, type PlanCode } from './entitlementCatalog';
+import { isComingSoonEntitlementCode } from './comingSoonEntitlements';
 
 export type TenantEntitlementGrantStatus = 'active' | 'expired' | 'cancelled';
 export type TenantEntitlementGrantSource = 'purchase' | 'manual_grant' | 'trial';
@@ -44,7 +45,7 @@ export function resolveEntitlementCode(entitlementCode: EntitlementCode | string
 export function isComingSoonEntitlement(entitlementCode: EntitlementCode | string): boolean {
   const code = resolveEntitlementCode(entitlementCode);
   if (!code) return false;
-  return (ENTITLEMENT_CATALOG.entitlements[code] as { comingSoon?: boolean }).comingSoon === true;
+  return isComingSoonEntitlementCode(code);
 }
 
 export function getPlanIncludedEntitlements(planCode: PlanCode): EntitlementCode[] {
