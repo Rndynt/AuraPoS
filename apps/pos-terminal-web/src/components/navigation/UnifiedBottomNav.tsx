@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { LayoutGrid, UtensilsCrossed, ShoppingBag, ChefHat, Grip, Receipt } from "lucide-react";
+import { LayoutGrid, UtensilsCrossed, ShoppingBag, ChefHat, Grip, Receipt, Monitor } from "lucide-react";
 import { useTenant } from "@/context/TenantContext";
 
 interface UnifiedBottomNavProps {
@@ -9,22 +9,22 @@ interface UnifiedBottomNavProps {
 
 export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavProps) {
   const [location, setLocation] = useLocation();
-  const { can, isLoading } = useTenant();
-  // Guard with isLoading so conditional tabs never flash from stale/wrong-tenant cache
-  const isKitchenEnabled = !isLoading && can("restaurant_kitchen_ops");
-  const isTablesEnabled  = !isLoading && can("restaurant_table_service");
+  const { can, isLoading, planTier } = useTenant();
+  const planIncludesRestaurantOps = planTier === "growth" || planTier === "pro";
+  const isKitchenEnabled = !isLoading && (can("restaurant_kitchen_ops") || planIncludesRestaurantOps);
+  const isTablesEnabled = !isLoading && (can("restaurant_table_service") || planIncludesRestaurantOps);
 
   const isActive = (path: string) =>
     path === "/" ? location === "/" : location.startsWith(path);
 
-  // Build nav items dynamically so spacing stays even
   const navItems = [
-    { path: "/pos",     icon: LayoutGrid,       label: "Kasir"     },
-    ...(isTablesEnabled  ? [{ path: "/tables",  icon: UtensilsCrossed,  label: "Meja"    }] : []),
-    { path: "__cart__", icon: ShoppingBag,      label: "Keranjang" },   // center FAB slot
-    { path: "/orders",  icon: Receipt,          label: "Pesanan"   },
-    ...(isKitchenEnabled ? [{ path: "/kitchen", icon: ChefHat,          label: "Dapur"   }] : []),
-    { path: "/hub",     icon: Grip,             label: "Hub"       },
+    { path: "/pos", icon: LayoutGrid, label: "Kasir" },
+    ...(isTablesEnabled ? [{ path: "/tables", icon: UtensilsCrossed, label: "Meja" }] : []),
+    { path: "__cart__", icon: ShoppingBag, label: "Keranjang" },
+    { path: "/orders", icon: Receipt, label: "Pesanan" },
+    ...(isKitchenEnabled ? [{ path: "/kitchen", icon: ChefHat, label: "Dapur" }] : []),
+    { path: "/display", icon: Monitor, label: "CFD" },
+    { path: "/hub", icon: Grip, label: "Hub" },
   ];
 
   return (
@@ -32,10 +32,8 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-center"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
     >
-      {/* Floating pill container */}
-      <div className="flex items-center gap-1 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl shadow-black/10 px-2 py-2 mx-4">
+      <div className="flex items-center gap-1 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl shadow-black/10 px-2 py-2 mx-4 overflow-x-auto max-w-[calc(100vw-24px)]">
         {navItems.map((item) => {
-          // ── Cart FAB (center) ──
           if (item.path === "__cart__") {
             return (
               <button
@@ -56,23 +54,20 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
             );
           }
 
-          // ── Regular nav item ──
           const active = isActive(item.path);
-          const Icon   = item.icon;
+          const Icon = item.icon;
 
           return (
             <button
               key={item.path}
               onClick={() => setLocation(item.path)}
-              className="relative flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-xl transition-all duration-200 active:scale-90"
+              className="relative flex-shrink-0 flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-xl transition-all duration-200 active:scale-90"
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
             >
-              {/* Active pill background */}
               {active && (
                 <span className="absolute inset-0 rounded-xl bg-blue-50 transition-all" />
               )}
-
               <Icon
                 size={20}
                 strokeWidth={active ? 2.5 : 1.8}
