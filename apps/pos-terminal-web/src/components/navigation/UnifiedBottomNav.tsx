@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { LayoutGrid, UtensilsCrossed, ShoppingBag, ChefHat, Grip, Receipt, Monitor } from "lucide-react";
+import { LayoutGrid, UtensilsCrossed, ShoppingBag, ChefHat, Grip, Receipt } from "lucide-react";
 import { useTenant } from "@/context/TenantContext";
 
 interface UnifiedBottomNavProps {
@@ -23,7 +23,6 @@ export function UnifiedBottomNav({ cartCount, onCartClick }: UnifiedBottomNavPro
     { path: "__cart__", icon: ShoppingBag, label: "Keranjang" },
     { path: "/orders", icon: Receipt, label: "Pesanan" },
     ...(isKitchenEnabled ? [{ path: "/kitchen", icon: ChefHat, label: "Dapur" }] : []),
-    { path: "/display", icon: Monitor, label: "CFD" },
     { path: "/hub", icon: Grip, label: "Hub" },
   ];
 
