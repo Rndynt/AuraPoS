@@ -80,6 +80,82 @@ export default function POSPage() {
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts();
   const products = productsData?.products || [];
 
+  // ── Outlet-aware stock guards (P5) ──────────────────────────────────────────
+  // Map of latest product-by-id so cart actions consult the freshest stock
+  // (rather than stale `item.product` snapshots).
+  const productById = useMemo(() => {
+    const map = new Map<string, Product>();
+    for (const p of products) map.set(p.id, p);
+    return map;
+  }, [products]);
+
+  // Aggregate cart quantity per product (sum across variants/options).
+  const cartQuantityByProductId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of cart.items) {
+      map.set(item.product.id, (map.get(item.product.id) ?? 0) + item.quantity);
+    }
+    return map;
+  }, [cart.items]);
+
+  /**
+   * Validates whether `addQty` units of `product` may be added to the cart given
+   * the current outlet stock and existing cart quantity for the same product.
+   * Returns `{ ok: true }` for non-tracked products, otherwise either
+   * `{ ok: true }` or `{ ok: false, reason }` with a user-facing message.
+   */
+  const evaluateStockForAdd = (product: Product, addQty: number): { ok: true } | { ok: false; reason: string } => {
+    const latest = productById.get(product.id) ?? product;
+    if (!latest.stock_tracking_enabled) return { ok: true };
+    const available =
+      typeof latest.availableQuantity === "number"
+        ? latest.availableQuantity
+        : latest.stock_qty ?? 0;
+    const cartQty = cartQuantityByProductId.get(product.id) ?? 0;
+    if (available <= 0) {
+      return { ok: false, reason: `Stok ${latest.name} habis di outlet ini.` };
+    }
+    const remaining = available - cartQty;
+    if (addQty > remaining) {
+      return {
+        ok: false,
+        reason: `Stok ${latest.name} tidak cukup. Tersedia: ${available}, sudah di cart: ${cartQty}.`,
+      };
+    }
+    return { ok: true };
+  };
+
+  /**
+   * Validates an in-cart quantity change (e.g. +/- buttons). `newQty` is the
+   * target value; `currentQty` is the qty already held by this cart row so it
+   * is excluded from the "already in cart" tally.
+   */
+  const evaluateStockForUpdate = (
+    product: Product,
+    currentQty: number,
+    newQty: number,
+  ): { ok: true } | { ok: false; reason: string } => {
+    if (newQty <= currentQty) return { ok: true };
+    const latest = productById.get(product.id) ?? product;
+    if (!latest.stock_tracking_enabled) return { ok: true };
+    const available =
+      typeof latest.availableQuantity === "number"
+        ? latest.availableQuantity
+        : latest.stock_qty ?? 0;
+    const cartQty = cartQuantityByProductId.get(product.id) ?? 0;
+    const required = newQty + (cartQty - currentQty);
+    if (available <= 0) {
+      return { ok: false, reason: `Stok ${latest.name} habis di outlet ini.` };
+    }
+    if (required > available) {
+      return {
+        ok: false,
+        reason: `Stok ${latest.name} tidak cukup. Tersedia: ${available}.`,
+      };
+    }
+    return { ok: true };
+  };
+
   // Fetch orders for queue display
   const { data: ordersData, refetch: refetchOrders } = useOrders(undefined, {
     refetchInterval: false, // SSE handles real-time updates; polling disabled to avoid redundant API calls
@@ -223,6 +299,18 @@ export default function POSPage() {
       return;
     }
 
+    // P5: Outlet stock guard — block tracked products without sufficient stock
+    // at the active outlet before they ever enter the cart.
+    const stockCheck = evaluateStockForAdd(product, 1);
+    if (!stockCheck.ok) {
+      toast({
+        title: "Stok tidak cukup",
+        description: stockCheck.reason,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if product has variants or option_groups that require selection
     const hasVariants = product.has_variants && product.variants && product.variants.length > 0;
     const hasOptionGroups = product.option_groups && product.option_groups.length > 0;
@@ -241,11 +329,23 @@ export default function POSPage() {
   };
 
   const handleVariantAdd = (
-    product: Product, 
-    variant: ProductVariant | undefined, 
-    selectedOptions: SelectedOption[], 
+    product: Product,
+    variant: ProductVariant | undefined,
+    selectedOptions: SelectedOption[],
     qty: number
   ) => {
+    // P5: Same outlet stock guard for the variant/options dialog path.
+    // Variants share the underlying product balance, so the check applies on
+    // the product as a whole, not per-variant.
+    const stockCheck = evaluateStockForAdd(product, qty);
+    if (!stockCheck.ok) {
+      toast({
+        title: "Stok tidak cukup",
+        description: stockCheck.reason,
+        variant: "destructive",
+      });
+      return;
+    }
     cart.addItem(product, variant, selectedOptions, qty);
     setSelectedProduct(null);
     
@@ -874,9 +974,31 @@ export default function POSPage() {
     }
   };
 
+  /**
+   * P5: Cart quantity guard. Wraps `cart.updateQuantity` so the +/- controls in
+   * the cart panel respect active-outlet stock for tracked products. The cart
+   * row's current quantity is excluded from the "already in cart" tally so the
+   * user can lower their qty freely.
+   */
+  const handleCartQuantityChange = (id: string, qty: number) => {
+    const targetItem = cart.items.find((item) => item.id === id);
+    if (targetItem && qty > targetItem.quantity) {
+      const stockCheck = evaluateStockForUpdate(targetItem.product, targetItem.quantity, qty);
+      if (!stockCheck.ok) {
+        toast({
+          title: "Stok tidak cukup",
+          description: stockCheck.reason,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    cart.updateQuantity(id, qty);
+  };
+
   const cartPanelProps = {
     items: cart.items,
-    onUpdateQty: cart.updateQuantity,
+    onUpdateQty: handleCartQuantityChange,
     onRemove: cart.removeItem,
     onClear: cart.clearCart,
     getItemPrice: cart.getItemPrice,

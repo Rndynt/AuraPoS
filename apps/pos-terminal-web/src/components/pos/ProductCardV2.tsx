@@ -9,19 +9,60 @@ type ProductCardProps = {
   onAddToCart: (product: Product) => void;
 };
 
+function isStockTracked(product: Product): boolean {
+  return Boolean(product.stock_tracking_enabled);
+}
+
+function resolveAvailableQuantity(product: Product): number | null {
+  if (!isStockTracked(product)) return null;
+  if (typeof product.availableQuantity === "number") return product.availableQuantity;
+  if (typeof product.stock_qty === "number") return product.stock_qty;
+  return 0;
+}
+
+function resolveOutOfStock(product: Product): boolean {
+  if (!isStockTracked(product)) return false;
+  if (typeof product.isOutOfStock === "boolean") return product.isOutOfStock;
+  return (resolveAvailableQuantity(product) ?? 0) <= 0;
+}
+
+function resolveLowStock(product: Product): boolean {
+  if (!isStockTracked(product)) return false;
+  if (resolveOutOfStock(product)) return false;
+  if (typeof product.isLowStock === "boolean") return product.isLowStock;
+  const available = resolveAvailableQuantity(product) ?? 0;
+  const threshold = product.lowStockThreshold ?? 10;
+  return available > 0 && available <= threshold;
+}
+
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
   const hasVariants = product.has_variants || (product.option_groups && product.option_groups.length > 0);
-  const isUnavailable = !product.is_active;
+  const isInactive = !product.is_active;
+  const stockTracked = isStockTracked(product);
+  const isOutOfStock = resolveOutOfStock(product);
+  const isLowStock = resolveLowStock(product);
+  const availableQuantity = resolveAvailableQuantity(product);
+  const isDisabled = isInactive || isOutOfStock;
+
+  const handleClick = () => {
+    if (isDisabled) return;
+    onAddToCart(product);
+  };
 
   return (
     <div
-      onClick={() => onAddToCart(product)}
+      onClick={handleClick}
+      role="button"
+      aria-disabled={isDisabled}
+      tabIndex={isDisabled ? -1 : 0}
       className={`group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-98 hover:shadow-md relative h-full flex flex-col transition-transform duration-150 ${
-        isUnavailable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+        isDisabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"
       }`}
       data-testid={`card-product-${product.id}`}
+      data-out-of-stock={isOutOfStock ? "true" : undefined}
+      data-low-stock={isLowStock ? "true" : undefined}
     >
       {/* Product Image */}
       <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg mb-2 bg-slate-100">
@@ -30,7 +71,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             src={product.image_url}
             alt={product.name}
             className={`w-full h-full object-cover transition-transform duration-500 ${
-              isUnavailable ? "" : "group-hover:scale-105"
+              isDisabled ? "" : "group-hover:scale-105"
             }`}
             loading="lazy"
             decoding="async"
@@ -40,11 +81,40 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <ProductAvatar name={product.name} textClassName="text-2xl font-bold" />
         )}
 
+        {/* Out of stock overlay (precedence over inactive) */}
+        {isOutOfStock && !isInactive && (
+          <div
+            className="absolute inset-0 bg-black/45 flex items-center justify-center"
+            data-testid={`overlay-out-of-stock-${product.id}`}
+          >
+            <span className="text-white font-semibold text-sm">Stok Habis</span>
+          </div>
+        )}
 
-        {/* Unavailable Overlay */}
-        {isUnavailable && (
+        {/* Inactive overlay */}
+        {isInactive && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="text-white font-semibold text-sm">Tidak Tersedia</span>
+          </div>
+        )}
+
+        {/* Low-stock badge (top-left) */}
+        {!isOutOfStock && isLowStock && availableQuantity !== null && (
+          <div
+            className="absolute top-1.5 left-1.5 bg-amber-500/95 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm"
+            data-testid={`badge-low-stock-${product.id}`}
+          >
+            Stok Rendah · {availableQuantity}
+          </div>
+        )}
+
+        {/* Available-stock badge for tracked products with healthy stock */}
+        {stockTracked && !isOutOfStock && !isLowStock && availableQuantity !== null && (
+          <div
+            className="absolute top-1.5 left-1.5 bg-emerald-500/90 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm"
+            data-testid={`badge-stock-${product.id}`}
+          >
+            Stok {availableQuantity}
           </div>
         )}
 

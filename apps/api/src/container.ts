@@ -21,6 +21,7 @@ import { DrizzleSyncOfflineOrderRepository } from '@pos/infrastructure/repositor
 import { TenantRepository } from '@pos/infrastructure/repositories/tenants/TenantRepository';
 import { DrizzleUnitOfWork } from '@pos/infrastructure/unit-of-work';
 import {
+  DrizzleInventoryBalanceRepository,
   DrizzleInventoryPolicyRepository,
   DrizzleInventorySyncErrorRepository,
   DrizzleStockMovementRepository,
@@ -81,6 +82,7 @@ class Container {
   public readonly inventoryPolicyRepository: DrizzleInventoryPolicyRepository;
   public readonly inventorySyncErrorRepository: DrizzleInventorySyncErrorRepository;
   public readonly stockMovementRepository: DrizzleStockMovementRepository;
+  public readonly inventoryBalanceRepository: DrizzleInventoryBalanceRepository;
   public readonly unitOfWork: DrizzleUnitOfWork;
 
   // Catalog Use Cases
@@ -125,6 +127,7 @@ class Container {
     this.inventoryPolicyRepository = new DrizzleInventoryPolicyRepository(db);
     this.inventorySyncErrorRepository = new DrizzleInventorySyncErrorRepository(db);
     this.stockMovementRepository = new DrizzleStockMovementRepository(db);
+    this.inventoryBalanceRepository = new DrizzleInventoryBalanceRepository();
     configureInventoryPolicyPort(this.inventoryPolicyRepository);
     configureInventorySyncErrorPort(this.inventorySyncErrorRepository);
     configureStockMovementPort(this.stockMovementRepository);
@@ -134,7 +137,8 @@ class Container {
     this.getProducts = new GetProducts(this.productRepository as any);
     this.getProductById = new GetProductById(this.productRepository as any);
     this.checkProductAvailability = new CheckProductAvailability(
-      this.productRepository as any
+      this.productRepository as any,
+      this.inventoryBalanceRepository,
     );
     this.createOrUpdateProduct = new CreateOrUpdateProduct(
       this.unitOfWork,

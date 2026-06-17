@@ -98,6 +98,8 @@ export function useOfflineOrderSubmit() {
           // Only mirror if we want offline order history caching (future feature)
           
           queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+          // P5: refresh outlet-scoped catalog stock so badges update post-sale.
+          queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
           return { ...serverResult, isLocal: false };
         }
 

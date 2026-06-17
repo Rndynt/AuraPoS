@@ -80,7 +80,9 @@ async function fetchWithTenantHeader(url: string) {
   return response.data;
 }
 
-// Helper to add tenant header to mutations
+// Helper to add tenant header to mutations.
+// P5: parse structured error body so user-facing messages (e.g. INSUFFICIENT_STOCK)
+// surface in the toast verbatim instead of the technical "409: {json...}" string.
 async function mutateWithTenantHeader(
   method: string,
   url: string,
@@ -96,8 +98,23 @@ async function mutateWithTenantHeader(
   });
 
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const rawText = (await res.text()) || res.statusText;
+    let parsed: any = null;
+    try {
+      parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      parsed = null;
+    }
+    const friendlyMessage = (parsed && (parsed.message || parsed.error)) || `${res.status}: ${rawText}`;
+    const err = new Error(friendlyMessage) as Error & {
+      status?: number;
+      code?: string;
+      body?: any;
+    };
+    err.status = res.status;
+    if (parsed?.code) err.code = parsed.code;
+    if (parsed) err.body = parsed;
+    throw err;
   }
 
   const response = await res.json();
@@ -322,6 +339,8 @@ export function useRecordPayment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders", variables.orderId] });
+      // P5: refresh outlet-scoped catalog stock so cards show updated qty/badges.
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
     },
   });
 }
@@ -422,6 +441,10 @@ export function useCreateAndPay() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      // P5: stock was deducted from inventory_balances — refresh catalog so
+      // out-of-stock / low-stock states update immediately. Query key prefix
+      // match invalidates every per-outlet variant of the catalog query.
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
     },
   });
 }

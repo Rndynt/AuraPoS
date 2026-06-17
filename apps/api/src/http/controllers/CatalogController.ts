@@ -10,6 +10,7 @@ import { asyncHandler, createError } from '../middleware/errorHandler';
 import { db } from '@pos/infrastructure/database';
 import { productCategories, outletProductConfigs } from '@pos/infrastructure/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
+import { enrichCatalogProductsWithStock } from '../helpers/catalogStockEnrichment';
 
 /**
  * GET /api/catalog/products
@@ -63,11 +64,26 @@ export const listProducts = asyncHandler(async (req: Request, res: Response) => 
     }
   }
 
+  // POS stock enforcement (P5): enrich tracked products with active-outlet
+  // balance fields from `inventory_balances`. Management mode (includeUnavailable)
+  // also receives the enrichment so the UI can surface stock state consistently.
+  let enrichedProducts: any[] = filteredProducts;
+  if (filteredProducts.length > 0) {
+    const balances = outletId
+      ? await container.inventoryBalanceRepository.listBalances(tenantId, outletId)
+      : [];
+    enrichedProducts = enrichCatalogProductsWithStock({
+      products: filteredProducts,
+      balances,
+      outletId: outletId ?? null,
+    });
+  }
+
   res.status(200).json({
     success: true,
     data: {
-      products: filteredProducts,
-      total: filteredProducts.length,
+      products: enrichedProducts,
+      total: enrichedProducts.length,
     },
   });
 });
@@ -197,10 +213,11 @@ export const checkAvailability = asyncHandler(async (req: Request, res: Response
 
   const { quantity } = parsed.data;
 
-  // Execute use case
+  // Execute use case (P5: outlet-scoped against inventory_balances)
   const result = await container.checkProductAvailability.execute({
     productId: id,
     tenantId,
+    outletId: req.outletId ?? null,
     requestedQuantity: quantity,
   });
 

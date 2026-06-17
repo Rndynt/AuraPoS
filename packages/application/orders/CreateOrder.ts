@@ -127,15 +127,20 @@ export class CreateOrder {
         const availability = await this.productAvailabilityService.execute({
           productId,
           tenantId: input.tenant_id,
+          outletId: input.outlet_id ?? null,
           requestedQuantity,
         });
 
         if (!availability.isAvailable) {
-          const productName = productNames.get(productId);
-          const productLabel = productName ? `${productName} (${productId})` : productId;
-          throw new Error(
-            availability.reason || `${productLabel} is not available in requested quantity`
-          );
+          const productName = productNames.get(productId) ?? availability.product?.name ?? productId;
+          const available = availability.availableQuantity ?? 0;
+          const message = available <= 0
+            ? `Stok ${productName} di outlet ini habis.`
+            : `Stok ${productName} di outlet ini tidak cukup. Tersedia: ${available}, diminta: ${requestedQuantity}.`;
+          const error = new Error(message) as Error & { code?: string; statusCode?: number };
+          error.code = 'INSUFFICIENT_STOCK';
+          error.statusCode = 409;
+          throw error;
         }
       }
 

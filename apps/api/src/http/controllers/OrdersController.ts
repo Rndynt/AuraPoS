@@ -802,23 +802,41 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
     await requirePaymentEntitlement(tenantId, 'payments_partial_payment');
   }
 
-  // Execute via dedicated use case (single DB transaction – P0.2)
-  const result = await container.createAndPayOrder.execute({
-    tenant_id: tenantId,
-    outlet_id: req.outletId ?? null,
-    items: parsed.data.items,
-    order_type_id: parsed.data.order_type_id,
-    customer_name: parsed.data.customer_name,
-    table_number: parsed.data.table_number,
-    tax_rate: parsed.data.tax_rate,
-    service_charge_rate: parsed.data.service_charge_rate,
-    amount: parsed.data.amount,
-    payment_method: parsed.data.payment_method,
-    transaction_ref: parsed.data.transaction_ref,
-    payment_notes: parsed.data.payment_notes,
-    idempotency_key: idempotencyKey,
-    fulfillment_mode: parsed.data.fulfillment_mode,
-  });
+  // Execute via dedicated use case (single DB transaction – P0.2).
+  // P5: re-wrap InsufficientStockError into a user-friendly Indonesian message
+  // carrying the offending product name so the POS toast surfaces a clear
+  // business error instead of a technical exception.
+  let result;
+  try {
+    result = await container.createAndPayOrder.execute({
+      tenant_id: tenantId,
+      outlet_id: req.outletId ?? null,
+      items: parsed.data.items,
+      order_type_id: parsed.data.order_type_id,
+      customer_name: parsed.data.customer_name,
+      table_number: parsed.data.table_number,
+      tax_rate: parsed.data.tax_rate,
+      service_charge_rate: parsed.data.service_charge_rate,
+      amount: parsed.data.amount,
+      payment_method: parsed.data.payment_method,
+      transaction_ref: parsed.data.transaction_ref,
+      payment_notes: parsed.data.payment_notes,
+      idempotency_key: idempotencyKey,
+      fulfillment_mode: parsed.data.fulfillment_mode,
+    });
+  } catch (err: any) {
+    if (err?.code === 'INSUFFICIENT_STOCK' && err?.productId) {
+      const offendingItem = parsed.data.items.find((it) => it.product_id === err.productId);
+      const productName = offendingItem?.product_name ?? err.productId;
+      const available = Number(err.availableQuantity ?? 0);
+      const requested = Number(err.requestedQuantity ?? 0);
+      const message = available <= 0
+        ? `Stok ${productName} di outlet ini habis.`
+        : `Stok ${productName} di outlet ini tidak cukup. Tersedia: ${available}, diminta: ${requested}.`;
+      throw createError(message, 409, 'INSUFFICIENT_STOCK');
+    }
+    throw err;
+  }
 
   emitOrderQueueChanged(tenantId, { source: 'create_and_pay', orderId: result.order.id });
 

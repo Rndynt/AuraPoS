@@ -79,7 +79,20 @@ export type Product = {
   stock_tracking_enabled: boolean;
   stock_qty?: number;
   sku?: string;
-  
+
+  /**
+   * Active-outlet stock enrichment (P5 — POS stock enforcement).
+   * Populated by the catalog endpoint by joining `inventory_balances` for the
+   * requesting outlet. UI uses these fields to drive out-of-stock state,
+   * low-stock badges, and add-to-cart guards. They are optional so management
+   * pages without outlet context still receive a valid Product.
+   */
+  availableQuantity?: number;
+  isOutOfStock?: boolean;
+  isLowStock?: boolean;
+  lowStockThreshold?: number;
+  outletId?: string | null;
+
   // Status and metadata
   is_active: boolean;
   created_at?: Date;
