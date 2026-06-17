@@ -13,14 +13,17 @@ export type MigrationRunSummary = {
 };
 
 const ALREADY_APPLIED_CODES = new Set([
-  '42P07', // relation already exists
-  '42710', // duplicate object
-  '42701', // duplicate column
-  '23505', // unique violation on DDL/tracking insert
-  '42704', // undefined object on already-removed schema items
-  // NOTE: 42830 (invalid FK) intentionally omitted — FK errors must fail fast.
-  // In the clean baseline all FK targets exist when the referencing table is created.
+  '42P07',
+  '42710',
+  '42701',
+  '23505',
+  '42704',
 ]);
+
+const DOMAIN_BASELINE_TABLES: Array<{ migration: string; tables: string[] }> = [
+  { migration: '0009_kitchen_kds.sql', tables: ['kitchen_tickets', 'kds_devices'] },
+  { migration: '0010_cfd_sync.sql', tables: ['terminals', 'sync_batches', 'sync_events', 'server_sync_conflicts', 'cfd_devices'] },
+];
 
 export function isAlreadyAppliedMigrationError(error: unknown): boolean {
   const err = error as { code?: unknown; message?: unknown } | null;
@@ -43,21 +46,7 @@ export function createMigrationFailure(summary: MigrationRunSummary): Error {
   );
 }
 
-/**
- * Run DB migrations one file at a time while preserving dependency safety.
- *
- * The runner is intentionally fail-fast for non-idempotency errors: if a migration
- * fails for a real data/schema reason, later migrations are not applied because
- * they may depend on the failed migration's state.
- */
-export async function runDbMigrations(log: MigrationLogger): Promise<MigrationRunSummary> {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const migrationsFolder = path.resolve(__dirname, '../../../../migrations');
-
-  const { sql: rawSql } = await import('@pos/infrastructure/database');
-  log(`Running DB migrations from ${migrationsFolder} (background)...`);
-
+async function ensureMigrationTable(rawSql: any): Promise<void> {
   await rawSql`CREATE SCHEMA IF NOT EXISTS drizzle`.catch(() => undefined);
   await rawSql`
     CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
@@ -66,14 +55,65 @@ export async function runDbMigrations(log: MigrationLogger): Promise<MigrationRu
       created_at bigint
     )
   `.catch(() => undefined);
+}
 
-  const applied = await rawSql<{ hash: string }[]>`
+async function loadAppliedMigrationHashes(rawSql: any): Promise<Set<string>> {
+  return rawSql<{ hash: string }[]>`
     SELECT hash FROM drizzle.__drizzle_migrations
-  `.then((rows) => new Set(rows.map((row) => row.hash))).catch(() => new Set<string>());
+  `.then((rows: { hash: string }[]) => new Set(rows.map((row) => row.hash))).catch(() => new Set<string>());
+}
+
+async function tableExists(rawSql: any, tableName: string): Promise<boolean> {
+  const rows = await rawSql<{ exists: string | null }[]>`
+    SELECT to_regclass(${`public.${tableName}`})::text AS "exists"
+  `;
+  return Boolean(rows[0]?.exists);
+}
+
+async function unmarkDriftedDomainBaselines(rawSql: any, applied: Set<string>, log: MigrationLogger): Promise<Set<string>> {
+  const next = new Set(applied);
+
+  for (const domain of DOMAIN_BASELINE_TABLES) {
+    if (!next.has(domain.migration)) continue;
+
+    const missing: string[] = [];
+    for (const table of domain.tables) {
+      if (!(await tableExists(rawSql, table))) missing.push(table);
+    }
+
+    if (missing.length === 0) continue;
+
+    await rawSql`
+      DELETE FROM drizzle.__drizzle_migrations
+      WHERE hash = ${domain.migration}
+    `;
+    next.delete(domain.migration);
+    log(
+      `Detected baseline drift for ${domain.migration}; missing tables: ${missing.join(', ')}. `
+      + 'Migration marker removed so the idempotent baseline file can run again.',
+      'migrate',
+    );
+  }
+
+  return next;
+}
+
+export async function runDbMigrations(log: MigrationLogger): Promise<MigrationRunSummary> {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const migrationsFolder = path.resolve(__dirname, '../../../../migrations');
+
+  const { sql: rawSql } = await import('@pos/infrastructure/database');
+  log(`Running DB migrations from ${migrationsFolder} (background)...`);
+
+  await ensureMigrationTable(rawSql);
 
   const files = fs.readdirSync(migrationsFolder)
     .filter((file) => file.endsWith('.sql'))
     .sort();
+
+  let applied = await loadAppliedMigrationHashes(rawSql);
+  applied = await unmarkDriftedDomainBaselines(rawSql, applied, log);
 
   const summary: MigrationRunSummary = { applied: 0, skipped: 0, errors: 0 };
 
