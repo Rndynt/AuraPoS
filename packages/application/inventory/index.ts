@@ -58,3 +58,13 @@ export {
   InsufficientTransferStockError,
   type TransferDeps,
 } from './transfer';
+
+export {
+  ensureProductBalanceForOutlet,
+  ensureTrackedProductBalancesForOutlet,
+  getInitialBalanceQuantity,
+  type EnsureBalanceDeps,
+  type ProductStockReaderPort,
+  type OutletContextPort,
+  type TrackedProductStockRecord,
+} from './balance';

@@ -37,7 +37,7 @@ export function clearActiveOutletId() {
 export function buildApiHeaders(extra?: Record<string, string>): Record<string, string> {
   const headers = buildTenantAwareHeaders(extra);
   const outletId = getActiveOutletId();
-  if (outletId) {
+  if (outletId && !headers["x-outlet-id"]) {
     headers["x-outlet-id"] = outletId;
   }
   return headers;

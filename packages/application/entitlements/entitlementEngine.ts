@@ -32,6 +32,10 @@ export type CanPurchaseOfferInput = {
 
 const GROWTH_AND_ABOVE_INCLUDED_ENTITLEMENTS: EntitlementCode[] = ['restaurant_table_service'];
 
+const LEGACY_ENTITLEMENT_ALIASES: Record<string, EntitlementCode> = {
+  payments_split_payment: 'payments_split_bill',
+};
+
 export class EntitlementRequiredError extends Error {
   constructor(public readonly entitlementCode: EntitlementCode | string) {
     super(`Entitlement '${entitlementCode}' is required.`);
@@ -40,6 +44,8 @@ export class EntitlementRequiredError extends Error {
 }
 
 export function resolveEntitlementCode(entitlementCode: EntitlementCode | string): EntitlementCode | null {
+  const canonical = LEGACY_ENTITLEMENT_ALIASES[entitlementCode];
+  if (canonical) return canonical;
   if (entitlementCode in ENTITLEMENT_CATALOG.entitlements) return entitlementCode as EntitlementCode;
   return null;
 }

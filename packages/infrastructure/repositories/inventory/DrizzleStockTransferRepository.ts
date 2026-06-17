@@ -6,7 +6,7 @@ import type {
   CreateTransferInput,
   TransferStatus,
 } from '@pos/application/inventory/ports';
-import { and, eq, desc } from 'drizzle-orm';
+import { and, eq, desc, or } from 'drizzle-orm';
 import { stockTransfers, stockTransferItems } from '@pos/infrastructure/db/schema';
 import { db, type DbClient } from '../../database';
 import { DrizzleUnitOfWork } from '../../unit-of-work';
@@ -106,13 +106,19 @@ export class DrizzleStockTransferRepository implements StockTransferRepositoryPo
 
   async list(
     tenantId: string,
-    opts: { fromOutletId?: string; toOutletId?: string; status?: TransferStatus; limit?: number; offset?: number } = {},
+    opts: { fromOutletId?: string; toOutletId?: string; outletId?: string; scope?: 'all' | 'source' | 'destination' | 'involved'; status?: TransferStatus; limit?: number; offset?: number } = {},
     ctx?: TransactionContext,
   ): Promise<StockTransferRecord[]> {
     const client = getClient(ctx);
     const conditions = [eq(stockTransfers.tenantId, tenantId)];
-    if (opts.fromOutletId) conditions.push(eq(stockTransfers.fromOutletId, opts.fromOutletId));
-    if (opts.toOutletId) conditions.push(eq(stockTransfers.toOutletId, opts.toOutletId));
+    if (opts.outletId && opts.scope && opts.scope !== 'all') {
+      if (opts.scope === 'source') conditions.push(eq(stockTransfers.fromOutletId, opts.outletId));
+      if (opts.scope === 'destination') conditions.push(eq(stockTransfers.toOutletId, opts.outletId));
+      if (opts.scope === 'involved') conditions.push(or(eq(stockTransfers.fromOutletId, opts.outletId), eq(stockTransfers.toOutletId, opts.outletId))!);
+    } else {
+      if (opts.fromOutletId) conditions.push(eq(stockTransfers.fromOutletId, opts.fromOutletId));
+      if (opts.toOutletId) conditions.push(eq(stockTransfers.toOutletId, opts.toOutletId));
+    }
     if (opts.status) conditions.push(eq(stockTransfers.status, opts.status));
 
     const rows = await client

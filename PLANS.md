@@ -7588,3 +7588,151 @@ Patch existing active baseline SQL migrations so root `migrations/*.sql` contain
 
 ### Continuation Notes
 Next safe step is clean DB smoke on a disposable PostgreSQL target, then endpoint smoke with a seeded/registered tenant context.
+
+## Plan: P2 Advanced Stock Bugfix & Source-of-Truth Hardening
+
+### Source
+- Tasklist: `roadmap/inventory/replit_codex_P2_advanced_stock_bugfix_prompt.md`
+- User request: Eksekusi hati hati, tepat, sesuai konsep tujuan dan presisi roadmap/inventory/replit_codex_P2_advanced_stock_bugfix_prompt.md
+- Date started: 2026-06-17
+- Current status: Completed for P2 scope after follow-up review fixes; full API test suite now passes.
+
+### Goal
+Harden advanced stock so active/source-outlet `inventory_balances` drives stock list, low-stock, manual movement, basic adjust compatibility, transfer submit availability, and transfer visibility/UX without loosening entitlement gates or cloning stock across outlets.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: inventory products, adjust, movements, low-stock, threshold, transfers.
+- Files inspected: `apps/api/src/http/routes/inventory.ts`, `apps/api/src/http/routes/inventory-advanced.ts`, `apps/api/src/http/helpers/inventoryStockListing.ts`.
+- Findings: stock list/movement/adjust were legacy-column based while low-stock was balance based.
+- Tasks: implemented active-outlet balance initialization, source-outlet product stock fetch via outlet header, and transfer submit source-balance initialization.
+- Risks: none remaining for P2 scope.
+- Validation: `pnpm --filter @pos/api type-check` pass.
+
+#### Database/Schema Workstream
+- Scope: no schema changes.
+- Files inspected: inventory/catalog/outlet schema and migrations references.
+- Findings: existing `inventory_balances` schema supports required source-of-truth model.
+- Tasks: no migration added; legacy `products.stock_qty` mirror now updates only for default-outlet balance writes.
+- Risks: none remaining for P2 scope.
+- Validation: type-check pass.
+
+#### Frontend/UI Workstream
+- Scope: stock transfer lifecycle copy, created-draft detail opening, invalidation, product initial-stock copy, source-outlet product selector stock.
+- Files inspected: `apps/pos-terminal-web/src/pages/stock.tsx`, hooks, product form.
+- Findings: transfer creation closed after refetch and selector stock was not tied to selected source outlet.
+- Tasks: draft-specific copy, status helper text, opened created transfer detail, broader query invalidation, selected-source-outlet stock fetch.
+- Risks: none remaining for P2 scope.
+- Validation: `pnpm --filter @pos/terminal-web type-check` pass.
+
+#### Tests/Validation Workstream
+- Scope: targeted balance initialization, transfer submit initialization, and type-checks.
+- Files inspected: existing inventory tests.
+- Findings: package-level test script may run unrelated full glob when forwarded args are appended.
+- Tasks: added pure balance initialization and transfer submit source-balance initialization tests; added `test:file`; restored missing native UUID migration fixture; aligned entitlement SOT tests.
+- Risks: none remaining for P2 scope.
+- Validation: targeted direct test pass, full API test pass, full type-check pass.
+
+#### Documentation Workstream
+- Scope: active roadmap, report, execution plan.
+- Files inspected: roadmap prompt and prior reports.
+- Findings: required report did not exist before the previous commit.
+- Tasks: created report, updated checklist, and added follow-up completion addendum.
+- Risks: none remaining for P2 scope.
+- Validation: documentation reviewed by static read.
+
+#### Security/Tenant Isolation Workstream
+- Scope: tenant/outlet scoped balance reads/writes and transfer list.
+- Files inspected: routes, middleware, repositories.
+- Findings: tenant filters already present; transfer list needed involved outlet scope; source-outlet fetch must use existing outlet middleware authorization.
+- Tasks: preserved entitlement gates and tenant filters, used `x-outlet-id` with existing outlet middleware for selected source outlet, added source/destination/involved transfer scope.
+- Risks: none remaining for P2 scope.
+- Validation: type-check pass.
+
+### Execution Order
+1. Added application balance initialization service and infrastructure readers.
+2. Patched stock-list, low-stock, threshold, basic adjust, manual movement.
+3. Patched transfer list scope and frontend lifecycle UX.
+4. Follow-up: patched selected-source-outlet stock fetch, transfer submit source initialization, and default-outlet-only legacy mirror.
+5. Added targeted tests.
+6. Updated roadmap checklist and report.
+7. Ran validation.
+
+### Progress
+
+#### Completed
+- [x] Stock list uses active/source outlet balance.
+  - Files changed: `apps/api/src/http/routes/inventory.ts`, `apps/api/src/http/helpers/inventoryStockListing.ts`, `packages/application/inventory/balance.ts`, `apps/pos-terminal-web/src/hooks/api/useInventory.ts`, `apps/pos-terminal-web/src/pages/stock.tsx`.
+  - Validation: type-check pass.
+  - Docs updated: report and roadmap checklist.
+- [x] Low-stock and threshold use initialized balances.
+  - Files changed: `apps/api/src/http/routes/inventory-advanced.ts`, `packages/infrastructure/repositories/inventory/DrizzleInventoryBalanceRepository.ts`.
+  - Validation: type-check pass.
+  - Docs updated: report.
+- [x] Basic adjust and manual movement update balances.
+  - Files changed: `apps/api/src/http/routes/inventory.ts`.
+  - Validation: type-check pass.
+  - Docs updated: report.
+- [x] Transfer draft/list/submit/receive lifecycle is balance-aware and visible for source/destination involvement.
+  - Files changed: transfer repository/port/use case, route, hooks, stock page.
+  - Validation: type-check pass; targeted test pass.
+  - Docs updated: report.
+- [x] Product initial stock does not clone into all outlets and legacy mirror no longer overwrites global stock from non-default outlet writes.
+  - Files changed: balance service and balance repository.
+  - Validation: type-check pass; targeted test pass for no clone.
+  - Docs updated: report.
+- [x] Balance initialization and transfer submit initialization tests added.
+  - Files changed: `apps/api/src/__tests__/inventory-balance-initialization.test.ts`.
+  - Validation: targeted direct test pass.
+  - Docs updated: report.
+
+#### Partially Completed
+- None for P2 scope.
+
+#### Blocked
+- None for P2 scope.
+
+#### Not Attempted
+- None for P2 scope.
+
+### Validation Log
+- Command: `pnpm --dir apps/api exec tsx --test src/__tests__/inventory-balance-initialization.test.ts`
+- Result: pass
+- Notes: 4 tests passed.
+- Command: `pnpm --filter @pos/api test:file -- src/__tests__/inventory-entitlement.test.ts src/__tests__/native-uuid-migration-repair.test.ts`
+- Result: pass
+- Notes: 16 tests passed.
+- Command: `pnpm --filter @pos/api test`
+- Result: pass
+- Notes: 150 tests passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Notes: API TypeScript passed.
+- Command: `pnpm --filter @pos/terminal-web type-check`
+- Result: pass
+- Notes: POS terminal TypeScript passed.
+- Command: `pnpm type-check`
+- Result: pass
+- Notes: 10/10 packages successful.
+
+### Documentation Updates
+- File: `roadmap/inventory/advanced_stock_bugfix_report.md`
+- Change: Added follow-up completion addendum and removed P2 partial/blocked implementation notes.
+- File: `roadmap/inventory/replit_codex_P2_advanced_stock_bugfix_prompt.md`
+- Change: Completion checklist remains complete for P2.
+
+### Checklist Updates
+- File: `roadmap/inventory/replit_codex_P2_advanced_stock_bugfix_prompt.md`
+- Change: P2 completion checklist remains fully checked after follow-up fixes.
+
+### Continuation Notes
+P2 advanced stock bugfix scope is complete. The prior full-suite entitlement and migration-fixture blockers were resolved in this follow-up, and `pnpm --filter @pos/api test` now passes.

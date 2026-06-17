@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getActiveTenantId } from "@/lib/tenant";
-import { buildApiHeaders } from "@/lib/outlet";
+import { buildApiHeaders, getActiveOutletId } from "@/lib/outlet";
 
-async function apiFetch(url: string) {
-  const res = await fetch(url, { headers: buildApiHeaders(), credentials: "include" });
+async function apiFetch(url: string, headers?: Record<string, string>) {
+  const res = await fetch(url, { headers: buildApiHeaders(headers), credentials: "include" });
   if (!res.ok) { const t = await res.text(); throw new Error(t || res.statusText); }
   return res.json();
 }
@@ -108,11 +108,13 @@ export const MOVEMENT_TYPE_LABELS: Record<string, { label: string; color: string
 
 // ── FREE ──────────────────────────────────────────────────────────────────────
 
-export function useStockProducts() {
+export function useStockProducts(outletIdOverride?: string) {
   const tenantId = getActiveTenantId();
+  const activeOutletId = getActiveOutletId();
+  const effectiveOutletId = outletIdOverride || activeOutletId || null;
   return useQuery<{ success: boolean; data: { items: StockProduct[]; summary: StockSummary } }>({
-    queryKey: ["/api/inventory/products", tenantId],
-    queryFn: () => apiFetch("/api/inventory/products"),
+    queryKey: ["/api/inventory/products", tenantId, effectiveOutletId],
+    queryFn: () => apiFetch("/api/inventory/products", outletIdOverride ? { "x-outlet-id": outletIdOverride } : undefined),
     enabled: !!tenantId,
     staleTime: 30_000,
   });

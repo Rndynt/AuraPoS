@@ -192,6 +192,7 @@ export default function ProductForm({
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-slate-700">Lacak Stok?</p>
+              <p className="text-xs text-slate-400 max-w-sm">Stok awal berlaku untuk outlet aktif/default saja. Untuk outlet lain, gunakan opname atau transfer stok.</p>
             </div>
             <div className="flex items-center gap-3">
               {formData.stockTracking && (

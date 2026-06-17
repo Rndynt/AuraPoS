@@ -62,6 +62,7 @@ const PHASE_1B_COMMERCIAL_CODES = [
   'reports_advanced',
   'reports_export',
   'multi_location',
+  'customer_display',
   'hardware_label_printer',
   'hardware_barcode_scanner',
   'integrations_payment_gateway',
@@ -144,8 +145,8 @@ describe('entitlement catalog and engine', () => {
     assert.equal(
       await hasEntitlement({
         planCode: 'starter',
-        entitlementCode: 'integrations_api_access',
-        grants: [{ entitlementCode: 'integrations_api_access', status: 'active', expiresAt: new Date(Date.now() + 86_400_000) }],
+        entitlementCode: 'reports_export',
+        grants: [{ entitlementCode: 'reports_export', status: 'active', expiresAt: new Date(Date.now() + 86_400_000) }],
       }),
       true,
     );
@@ -153,8 +154,8 @@ describe('entitlement catalog and engine', () => {
     assert.equal(
       await hasEntitlement({
         planCode: 'starter',
-        entitlementCode: 'integrations_api_access',
-        grants: [{ entitlementCode: 'integrations_api_access', status: 'active', expiresAt: new Date(Date.now() - 86_400_000) }],
+        entitlementCode: 'reports_export',
+        grants: [{ entitlementCode: 'reports_export', status: 'active', expiresAt: new Date(Date.now() - 86_400_000) }],
       }),
       false,
     );
@@ -162,8 +163,8 @@ describe('entitlement catalog and engine', () => {
     assert.equal(
       await hasEntitlement({
         planCode: 'starter',
-        entitlementCode: 'integrations_api_access',
-        grants: [{ entitlementCode: 'integrations_api_access', status: 'cancelled' }],
+        entitlementCode: 'reports_export',
+        grants: [{ entitlementCode: 'reports_export', status: 'cancelled' }],
       }),
       false,
     );
@@ -185,7 +186,7 @@ describe('entitlement catalog and engine', () => {
   it('offer requiredPlan rules are enforced for active catalog offers', () => {
     assert.equal(canPurchaseOffer({ offerCode: 'receipt_compact_monthly', planCode: 'starter' }), true);
     assert.equal(canPurchaseOffer({ offerCode: 'integrations_webhook_monthly', planCode: 'starter' }), false);
-    assert.equal(canPurchaseOffer({ offerCode: 'integrations_webhook_monthly', planCode: 'growth' }), true);
+    assert.equal(canPurchaseOffer({ offerCode: 'integrations_webhook_monthly', planCode: 'growth' }), false);
   });
 
   it('business type defaults include only Basic Stock from SOT by default', () => {

@@ -5,3 +5,5 @@ export { DrizzleInventoryBalanceRepository } from './DrizzleInventoryBalanceRepo
 export { DrizzleStockOpnameRepository } from './DrizzleStockOpnameRepository';
 export { DrizzleStockTransferRepository } from './DrizzleStockTransferRepository';
 export { DrizzleInventoryMovementWriter } from './DrizzleInventoryMovementWriter';
+
+export { DrizzleInventoryProductStockReader, DrizzleOutletContextRepository } from './DrizzleInventoryProductStockReader';

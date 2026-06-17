@@ -1063,6 +1063,12 @@ function TransferDetailDrawer({ transferId, onClose }: { transferId: string; onC
               {transfer.notes && (
                 <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600">{transfer.notes}</div>
               )}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
+                {transfer.status === "draft" && "Draft belum mengurangi stok. Klik Kirim Transfer untuk mengurangi stok outlet asal."}
+                {transfer.status === "submitted" && "Stok outlet asal sudah dikurangi. Klik Terima Stok untuk menambah stok outlet tujuan."}
+                {transfer.status === "received" && "Transfer selesai. Stok outlet tujuan sudah bertambah."}
+                {transfer.status === "cancelled" && "Transfer dibatalkan; tidak ada aksi lanjutan yang tersedia."}
+              </div>
               <div>
                 <p className="text-xs font-bold text-slate-500 mb-2">ITEM TRANSFER</p>
                 <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -1109,19 +1115,19 @@ function TransferDetailDrawer({ transferId, onClose }: { transferId: string; onC
 // ── Create Transfer Drawer ────────────────────────────────────────────────────
 type TransferItem = { productId: string; quantity: number };
 
-function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onCreated: (transferId?: string) => void }) {
+  const [fromOutletId, setFromOutletId] = useState("");
+  const [toOutletId, setToOutletId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [items, setItems] = useState<TransferItem[]>([{ productId: "", quantity: 1 }]);
+
   const { data: outletsData } = useOutlets();
-  const { data: productsData } = useStockProducts();
+  const { data: productsData } = useStockProducts(fromOutletId || undefined);
   const createTransfer = useCreateTransfer();
   const { addToast } = useToast();
 
   const outlets = outletsData?.outlets ?? [];
   const trackedProducts = (productsData?.data?.items ?? []).filter((p: StockProduct) => p.stockTrackingEnabled);
-
-  const [fromOutletId, setFromOutletId] = useState("");
-  const [toOutletId, setToOutletId] = useState("");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<TransferItem[]>([{ productId: "", quantity: 1 }]);
 
   const addItem = () => setItems((prev) => [...prev, { productId: "", quantity: 1 }]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
@@ -1138,9 +1144,9 @@ function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onC
   const handleCreate = async () => {
     if (!canSubmit) return;
     try {
-      await createTransfer.mutateAsync({ fromOutletId, toOutletId, notes: notes || undefined, items });
-      addToast("Transfer stok berhasil dibuat (status: Draft)", "success");
-      onCreated();
+      const result = await createTransfer.mutateAsync({ fromOutletId, toOutletId, notes: notes || undefined, items });
+      addToast("Draft transfer dibuat. Stok belum berpindah sampai Kirim Transfer.", "success");
+      onCreated(result?.data?.id);
       onClose();
     } catch (e: any) {
       addToast(e?.message ?? "Gagal membuat transfer", "error");
@@ -1159,7 +1165,7 @@ function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onC
         <div className="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
           <div>
             <h3 className="font-bold text-slate-800">Buat Transfer Stok</h3>
-            <p className="text-xs text-slate-500">Pindahkan stok antar outlet</p>
+            <p className="text-xs text-slate-500">Buat draft dulu; stok baru berpindah saat dikirim dan diterima.</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
         </div>
@@ -1230,7 +1236,7 @@ function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onC
                     >
                       <option value="">Pilih produk</option>
                       {trackedProducts.map((p: StockProduct) => (
-                        <option key={p.id} value={p.id}>{p.name} — stok: {p.stockQty ?? 0}</option>
+                        <option key={p.id} value={p.id}>{p.name} — stok outlet sumber: {p.stockQty ?? 0}</option>
                       ))}
                     </select>
                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -1325,7 +1331,7 @@ function TransferTab() {
         <TransferDetailDrawer transferId={selectedId} onClose={() => { setSelectedId(null); refetch(); }} />
       )}
       {showCreate && (
-        <CreateTransferDrawer onClose={() => setShowCreate(false)} onCreated={() => refetch()} />
+        <CreateTransferDrawer onClose={() => setShowCreate(false)} onCreated={(transferId) => { refetch(); if (transferId) setSelectedId(transferId); }} />
       )}
     <div className="space-y-3">
       {noMultiLocation ? (

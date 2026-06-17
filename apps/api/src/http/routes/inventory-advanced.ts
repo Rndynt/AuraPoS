@@ -40,6 +40,8 @@ import {
   DrizzleStockOpnameRepository,
   DrizzleStockTransferRepository,
   DrizzleInventoryMovementWriter,
+  DrizzleInventoryProductStockReader,
+  DrizzleOutletContextRepository,
 } from '@pos/infrastructure/repositories/inventory';
 import { DrizzleUnitOfWork } from '@pos/infrastructure/unit-of-work';
 import {
@@ -52,6 +54,8 @@ import {
   submitTransfer,
   receiveTransfer,
   cancelTransfer,
+  ensureProductBalanceForOutlet,
+  ensureTrackedProductBalancesForOutlet,
 } from '@pos/application/inventory';
 
 const router = Router();
@@ -61,6 +65,9 @@ const opnameRepo = new DrizzleStockOpnameRepository();
 const transferRepo = new DrizzleStockTransferRepository();
 const movementWriter = new DrizzleInventoryMovementWriter();
 const unitOfWork = new DrizzleUnitOfWork();
+const productReader = new DrizzleInventoryProductStockReader();
+const outletContext = new DrizzleOutletContextRepository();
+const balanceDeps = { balanceRepo, productReader, outletContext };
 
 const DEFAULT_THRESHOLD = 10;
 
@@ -93,7 +100,11 @@ router.get('/low-stock', asyncHandler(async (req, res) => {
   const outletId = req.outletId;
   if (!outletId) throw createError('Outlet context diperlukan', 400);
 
-  const balances = await balanceRepo.listLowStock(tenantId, outletId, DEFAULT_THRESHOLD);
+  const allBalances = await ensureTrackedProductBalancesForOutlet(balanceDeps, { tenantId, outletId });
+  const balances = [...allBalances.values()].filter((balance) => {
+    const threshold = balance.lowStockThreshold ?? DEFAULT_THRESHOLD;
+    return balance.quantity <= threshold;
+  });
   const productIds = balances.map((b) => b.productId);
 
   if (productIds.length === 0) {
@@ -157,6 +168,7 @@ router.put('/products/:id/threshold', requireManager, asyncHandler(async (req, r
 
   if (!product) throw createError('Produk tidak ditemukan', 404);
 
+  await ensureProductBalanceForOutlet(balanceDeps, { tenantId, outletId, productId });
   const balance = await balanceRepo.setThreshold(tenantId, outletId, productId, body.threshold);
 
   return res.json({
@@ -204,8 +216,8 @@ router.post('/opnames', requireManager, asyncHandler(async (req, res) => {
     .where(and(eq(products.tenantId, tenantId), eq(products.stockTrackingEnabled, true)));
 
   for (const p of trackedProducts) {
-    const balance = await balanceRepo.getBalance(tenantId, outletId, p.id);
-    const systemQty = balance?.quantity ?? p.stockQty ?? 0;
+    const balance = await ensureProductBalanceForOutlet(balanceDeps, { tenantId, outletId, productId: p.id });
+    const systemQty = balance.quantity;
     await opnameRepo.upsertItem({
       opnameId: opname.id,
       productId: p.id,
@@ -379,13 +391,15 @@ router.get('/transfers', asyncHandler(async (req, res) => {
   await requireMultiLocation(tenantId);
 
   const query = z.object({
+    scope: z.enum(['all', 'source', 'destination', 'involved']).default('involved'),
     status: z.enum(['draft', 'submitted', 'received', 'cancelled']).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     offset: z.coerce.number().int().min(0).default(0),
   }).parse(req.query);
 
   const transfers = await transferRepo.list(tenantId, {
-    fromOutletId: req.outletId ?? undefined,
+    outletId: req.outletId ?? undefined,
+    scope: query.scope,
     status: query.status as any,
     limit: query.limit,
     offset: query.offset,
@@ -420,7 +434,13 @@ router.post('/transfers/:id/submit', requireManager, asyncHandler(async (req, re
   const body = z.object({ submittedBy: z.string().optional() }).parse(req.body);
 
   const result = await submitTransfer(
-    { transferRepo, balanceRepo, movementWriter, unitOfWork },
+    {
+      transferRepo,
+      balanceRepo,
+      movementWriter,
+      unitOfWork,
+      ensureBalanceForOutlet: (input, ctx) => ensureProductBalanceForOutlet(balanceDeps, input, ctx),
+    },
     { transferId: req.params.id, tenantId, submittedBy: body.submittedBy },
   );
 
@@ -439,7 +459,13 @@ router.post('/transfers/:id/receive', requireManager, asyncHandler(async (req, r
   const body = z.object({ receivedBy: z.string().optional() }).parse(req.body);
 
   const result = await receiveTransfer(
-    { transferRepo, balanceRepo, movementWriter, unitOfWork },
+    {
+      transferRepo,
+      balanceRepo,
+      movementWriter,
+      unitOfWork,
+      ensureBalanceForOutlet: (input, ctx) => ensureProductBalanceForOutlet(balanceDeps, input, ctx),
+    },
     { transferId: req.params.id, tenantId, receivedBy: body.receivedBy },
   );
 
@@ -458,7 +484,13 @@ router.post('/transfers/:id/cancel', requireManager, asyncHandler(async (req, re
   const body = z.object({ cancelledBy: z.string().optional() }).parse(req.body);
 
   const result = await cancelTransfer(
-    { transferRepo, balanceRepo, movementWriter, unitOfWork },
+    {
+      transferRepo,
+      balanceRepo,
+      movementWriter,
+      unitOfWork,
+      ensureBalanceForOutlet: (input, ctx) => ensureProductBalanceForOutlet(balanceDeps, input, ctx),
+    },
     { transferId: req.params.id, tenantId, cancelledBy: body.cancelledBy },
   );
 
