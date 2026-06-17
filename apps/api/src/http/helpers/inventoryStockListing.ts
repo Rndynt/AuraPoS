@@ -6,6 +6,7 @@ export type StockListProductRow = {
   imageUrl: string | null;
   sku: string | null;
   stockQty: number | null;
+  lowStockThreshold?: number | null;
   isActive: boolean;
   stockTrackingEnabled: boolean;
 };
@@ -31,12 +32,13 @@ export function toStockListResponse(
     .filter((product) => product.stockTrackingEnabled)
     .map((product) => {
       const stockQty = product.stockQty ?? 0;
+      const effectiveThreshold = product.lowStockThreshold ?? lowStockThreshold;
       return {
         ...product,
         stockQty,
-        isLowStock: stockQty < lowStockThreshold,
+        isLowStock: stockQty > 0 && stockQty <= effectiveThreshold,
         isOutOfStock: stockQty <= 0,
-        lowStockThreshold,
+        lowStockThreshold: effectiveThreshold,
       };
     });
 

@@ -52,7 +52,7 @@ export interface StockTransferRepositoryPort {
 
   list(
     tenantId: string,
-    opts?: { fromOutletId?: string; toOutletId?: string; status?: TransferStatus; limit?: number; offset?: number },
+    opts?: { fromOutletId?: string; toOutletId?: string; outletId?: string; scope?: 'all' | 'source' | 'destination' | 'involved'; status?: TransferStatus; limit?: number; offset?: number },
     ctx?: TransactionContext,
   ): Promise<StockTransferRecord[]>;
 

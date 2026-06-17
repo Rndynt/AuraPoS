@@ -131,6 +131,9 @@ export function useSetLowStockThreshold() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/inventory/low-stock", tenantId] });
       qc.invalidateQueries({ queryKey: ["/api/inventory/products", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/low-stock", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/report", tenantId] });
     },
   });
 }
@@ -225,12 +228,15 @@ export function useCancelOpname() {
 
 // ── Transfer ──────────────────────────────────────────────────────────────────
 
-export function useTransfers(status?: TransferStatus) {
+export function useTransfers(status?: TransferStatus, scope: "all" | "source" | "destination" | "involved" = "involved") {
   const tenantId = getActiveTenantId();
-  const params = status ? `?status=${status}` : "";
+  const params = new URLSearchParams();
+  params.set("scope", scope);
+  if (status) params.set("status", status);
+  const query = params.toString();
   return useQuery<{ success: boolean; data: { transfers: StockTransfer[] } }>({
-    queryKey: ["/api/inventory/transfers", tenantId, status],
-    queryFn: () => apiFetch(`/api/inventory/transfers${params}`),
+    queryKey: ["/api/inventory/transfers", tenantId, status, scope],
+    queryFn: () => apiFetch(`/api/inventory/transfers${query ? `?${query}` : ""}`),
     enabled: !!tenantId,
     staleTime: 30_000,
     retry: false,
@@ -259,7 +265,13 @@ export function useCreateTransfer() {
       createdBy?: string;
       items: Array<{ productId: string; quantity: number; notes?: string }>;
     }) => apiPost("/api/inventory/transfers", body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/inventory/transfers", tenantId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/inventory/transfers", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/products", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/low-stock", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/report", tenantId] });
+    },
   });
 }
 
@@ -272,6 +284,9 @@ export function useSubmitTransfer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/inventory/transfers", tenantId] });
       qc.invalidateQueries({ queryKey: ["/api/inventory/products", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/low-stock", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/report", tenantId] });
     },
   });
 }
@@ -285,6 +300,9 @@ export function useReceiveTransfer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/inventory/transfers", tenantId] });
       qc.invalidateQueries({ queryKey: ["/api/inventory/products", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/low-stock", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/report", tenantId] });
     },
   });
 }
@@ -298,6 +316,9 @@ export function useCancelTransfer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/inventory/transfers", tenantId] });
       qc.invalidateQueries({ queryKey: ["/api/inventory/products", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/low-stock", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/movements", tenantId] });
+      qc.invalidateQueries({ queryKey: ["/api/inventory/report", tenantId] });
     },
   });
 }

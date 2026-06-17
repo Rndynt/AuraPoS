@@ -24,8 +24,18 @@ import { z } from 'zod';
 import { requireManager } from '../middleware/rbac';
 import { toStockListResponse } from '../helpers/inventoryStockListing';
 import { requireTenantEntitlement } from '../helpers/inventoryEntitlement';
+import { DrizzleInventoryBalanceRepository, DrizzleInventoryProductStockReader, DrizzleOutletContextRepository, DrizzleInventoryMovementWriter } from '@pos/infrastructure/repositories/inventory';
+import { DrizzleUnitOfWork } from '@pos/infrastructure/unit-of-work';
+import { ensureProductBalanceForOutlet, ensureTrackedProductBalancesForOutlet } from '@pos/application/inventory';
 
 const router = Router();
+
+const balanceRepo = new DrizzleInventoryBalanceRepository();
+const productReader = new DrizzleInventoryProductStockReader();
+const outletContext = new DrizzleOutletContextRepository();
+const movementWriter = new DrizzleInventoryMovementWriter();
+const unitOfWork = new DrizzleUnitOfWork();
+const balanceDeps = { balanceRepo, productReader, outletContext };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,6 +81,11 @@ router.get('/products', asyncHandler(async (req, res) => {
   await requireTenantEntitlement(db, tenantId, 'inventory_basic_stock');
   const LOW_STOCK_THRESHOLD = 10;
 
+  const outletId = req.outletId;
+  if (!outletId) throw createError('Outlet context diperlukan', 400);
+
+  const balances = await ensureTrackedProductBalancesForOutlet(balanceDeps, { tenantId, outletId });
+
   const rows = await db
     .select({
       id: products.id,
@@ -92,7 +107,14 @@ router.get('/products', asyncHandler(async (req, res) => {
     )
     .orderBy(asc(products.category), asc(products.name));
 
-  const data = toStockListResponse(rows, LOW_STOCK_THRESHOLD);
+  const data = toStockListResponse(rows.map((row) => {
+    const balance = balances.get(row.id);
+    return {
+      ...row,
+      stockQty: balance?.quantity ?? row.stockQty ?? 0,
+      lowStockThreshold: balance?.lowStockThreshold ?? LOW_STOCK_THRESHOLD,
+    };
+  }), LOW_STOCK_THRESHOLD);
 
   res.json({ success: true, data });
 }));
@@ -124,13 +146,14 @@ router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res)
   if (!product) throw createError('Produk tidak ditemukan', 404);
   if (!product.stockTrackingEnabled) throw createError('Produk ini tidak menggunakan tracking stok', 400);
 
-  const before = product.stockQty ?? 0;
-  const after = body.mode === 'delta' ? before + body.qty : body.qty;
+  const outletId = req.outletId;
+  if (!outletId) throw createError('Outlet context diperlukan', 400);
 
-  await db
-    .update(products)
-    .set({ stockQty: after, updatedAt: new Date() })
-    .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)));
+  const currentBalance = await ensureProductBalanceForOutlet(balanceDeps, { tenantId, outletId, productId });
+  const before = currentBalance.quantity;
+  const after = body.mode === 'delta' ? before + body.qty : body.qty;
+  if (after < 0) throw createError('Stok tidak boleh negatif', 400);
+  const delta = after - before;
 
   // Catat ke ledger jika modul advanced aktif
   let advanced = true;
@@ -139,24 +162,26 @@ router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res)
   } catch {
     advanced = false;
   }
-  if (advanced) {
-    const delta = after - before;
-    const movementType: MovementType = delta >= 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT';
-    await db.insert(inventoryMovements).values({
-      tenantId,
-      outletId: req.outletId ?? null,
-      productId,
-      movementType,
-      quantityDelta: delta,
-      quantityBefore: before,
-      quantityAfter: after,
-      notes: body.notes ?? 'Manual adjustment',
-      actorId: body.actorId ?? null,
-      referenceType: 'manual_adjustment',
-      referenceId: productId,
-      metadata: { mode: body.mode, source: 'basic_adjust' },
-    });
-  }
+
+  await unitOfWork.transaction(async (ctx) => {
+    await balanceRepo.setQuantity({ tenantId, outletId, productId, quantity: after }, ctx);
+    if (advanced && delta !== 0) {
+      const movementType: MovementType = delta >= 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT';
+      await movementWriter.record({
+        tenantId,
+        outletId,
+        productId,
+        movementType,
+        quantityDelta: delta,
+        quantityBefore: before,
+        quantityAfter: after,
+        notes: body.notes ?? 'Manual adjustment',
+        referenceType: 'manual_adjustment',
+        referenceId: body.referenceId ?? productId,
+        metadata: { mode: body.mode, source: 'basic_adjust', actorId: body.actorId ?? null },
+      }, ctx);
+    }
+  });
 
   res.json({ success: true, data: { productId, before, after, delta: after - before } });
 }));
@@ -190,29 +215,36 @@ router.post('/movements', requireManager, asyncHandler(async (req, res) => {
 
   if (!product) throw createError('Produk tidak ditemukan', 404);
 
-  const before = product.stockQty ?? 0;
+  const outletId = req.outletId;
+  if (!outletId) throw createError('Outlet context diperlukan', 400);
+
+  const currentBalance = await ensureProductBalanceForOutlet(balanceDeps, { tenantId, outletId, productId: body.productId });
+  const before = currentBalance.quantity;
   const after = before + body.quantityDelta;
+  if (after < 0) throw createError('Stok tidak boleh negatif', 400);
 
-  await db
-    .update(products)
-    .set({ stockQty: after, updatedAt: new Date() })
-    .where(and(eq(products.id, body.productId), eq(products.tenantId, tenantId)));
-
-  const [movement] = await db.insert(inventoryMovements).values({
-    tenantId,
-    outletId: req.outletId ?? null,
-    productId: body.productId,
-    movementType: body.movementType,
-    quantityDelta: body.quantityDelta,
-    quantityBefore: before,
-    quantityAfter: after,
-    unitCost: body.unitCost,
-    notes: body.notes,
-    actorId: body.actorId,
-    referenceType: body.movementType.startsWith('ADJUSTMENT') ? 'manual_adjustment' : 'manual_movement',
-    referenceId: body.referenceId ?? body.productId,
-    metadata: { source: 'advanced_movement' },
-  }).returning();
+  let movement: unknown;
+  await unitOfWork.transaction(async (ctx) => {
+    const updatedBalance = await balanceRepo.applyDelta({
+      tenantId,
+      outletId,
+      productId: body.productId,
+      quantityDelta: body.quantityDelta,
+    }, ctx);
+    movement = await movementWriter.record({
+      tenantId,
+      outletId,
+      productId: body.productId,
+      movementType: body.movementType,
+      quantityDelta: body.quantityDelta,
+      quantityBefore: before,
+      quantityAfter: updatedBalance.quantity,
+      notes: body.notes,
+      referenceType: body.movementType.startsWith('ADJUSTMENT') ? 'manual_adjustment' : 'manual_movement',
+      referenceId: body.referenceId ?? body.productId,
+      metadata: { source: 'advanced_movement', actorId: body.actorId ?? null, unitCost: body.unitCost ?? null },
+    }, ctx);
+  });
 
   res.status(201).json({ success: true, data: { movement, before, after } });
 }));
@@ -405,16 +437,24 @@ router.get('/report', asyncHandler(async (req, res) => {
     ORDER BY "count" DESC
   `);
 
-  // 3. Nilai stok saat ini (produk aktif + tracking aktif)
+  // 3. Nilai stok saat ini (produk aktif + tracking aktif) from active outlet balances
+  if (outletId) {
+    await ensureTrackedProductBalancesForOutlet(balanceDeps, { tenantId, outletId });
+  }
+
   const stockValueResult = await db.execute(sql`
     SELECT
-      COALESCE(SUM(GREATEST(stock_qty, 0) * base_price::numeric), 0)::numeric AS "totalValue",
-      COUNT(*)::int AS "totalTracked",
-      COALESCE(SUM(GREATEST(stock_qty, 0)), 0)::int AS "totalUnits"
-    FROM products
-    WHERE tenant_id = ${tenantId}
-      AND stock_tracking_enabled = true
-      AND is_active = true
+      COALESCE(SUM(GREATEST(ib.quantity, 0) * p.base_price::numeric), 0)::numeric AS "totalValue",
+      COUNT(p.id)::int AS "totalTracked",
+      COALESCE(SUM(GREATEST(ib.quantity, 0)), 0)::int AS "totalUnits"
+    FROM products p
+    LEFT JOIN inventory_balances ib
+      ON ib.tenant_id = p.tenant_id
+      AND ib.product_id = p.id
+      AND (${outletId}::uuid IS NOT NULL AND ib.outlet_id = ${outletId}::uuid)
+    WHERE p.tenant_id = ${tenantId}
+      AND p.stock_tracking_enabled = true
+      AND p.is_active = true
   `);
 
   // 4. Total terjual (unit + transaksi) dalam periode

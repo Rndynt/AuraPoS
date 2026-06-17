@@ -16,7 +16,7 @@ import type {
   StockTransferWithItems,
   CreateTransferInput,
 } from './ports/StockTransferRepositoryPort';
-import type { InventoryBalanceRepositoryPort } from './ports/InventoryBalanceRepositoryPort';
+import type { InventoryBalanceRecord, InventoryBalanceRepositoryPort } from './ports/InventoryBalanceRepositoryPort';
 import type { InventoryMovementWriterPort } from './ports/InventoryMovementWriterPort';
 
 // ── Domain errors ────────────────────────────────────────────────────────────
@@ -62,6 +62,7 @@ export interface TransferDeps {
   balanceRepo: InventoryBalanceRepositoryPort;
   movementWriter: InventoryMovementWriterPort;
   unitOfWork: UnitOfWorkPort;
+  ensureBalanceForOutlet: (input: { tenantId: string; outletId: string; productId: string }, ctx?: TransactionContext) => Promise<InventoryBalanceRecord>;
 }
 
 // ── Use cases ────────────────────────────────────────────────────────────────
@@ -89,7 +90,7 @@ export async function createTransfer(
  *   - Updates transfer status to 'submitted'
  */
 export async function submitTransfer(
-  { transferRepo, balanceRepo, movementWriter, unitOfWork }: TransferDeps,
+  { transferRepo, balanceRepo, movementWriter, unitOfWork, ensureBalanceForOutlet }: TransferDeps,
   input: { transferId: string; tenantId: string; submittedBy?: string },
 ): Promise<StockTransferWithItems | null> {
   const transfer = await transferRepo.findById(input.transferId, input.tenantId);
@@ -100,10 +101,8 @@ export async function submitTransfer(
 
   await unitOfWork.transaction(async (ctx: TransactionContext) => {
     for (const item of transfer.items) {
-      const balance = await balanceRepo.getBalance(
-        input.tenantId,
-        transfer.fromOutletId,
-        item.productId,
+      const balance = await ensureBalanceForOutlet(
+        { tenantId: input.tenantId, outletId: transfer.fromOutletId, productId: item.productId },
         ctx,
       );
       const before = balance?.quantity ?? 0;

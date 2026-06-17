@@ -330,21 +330,21 @@ Report must include:
 
 ## Completion Checklist
 
-- [ ] Stock list uses active outlet balance.
-- [ ] Low-stock uses same source as stock list.
-- [ ] Threshold update does not create fake zero stock.
-- [ ] Basic adjust updates balance.
-- [ ] Advanced movement updates balance atomically.
-- [ ] Product initial stock does not clone into all outlets.
-- [ ] Transfer draft appears after creation.
-- [ ] Transfer submit decreases source outlet.
-- [ ] Transfer receive increases destination outlet.
-- [ ] Transfer list includes both source/destination involvement.
-- [ ] Single-outlet advanced works without multi_location.
-- [ ] Transfer remains gated by multi_location.
-- [ ] UI copy clarifies Draft/Submit/Receive lifecycle.
-- [ ] Tests added/updated.
-- [ ] Report created.
+- [x] Stock list uses active outlet balance.
+- [x] Low-stock uses same source as stock list.
+- [x] Threshold update does not create fake zero stock.
+- [x] Basic adjust updates balance.
+- [x] Advanced movement updates balance atomically.
+- [x] Product initial stock does not clone into all outlets.
+- [x] Transfer draft appears after creation.
+- [x] Transfer submit decreases source outlet.
+- [x] Transfer receive increases destination outlet.
+- [x] Transfer list includes both source/destination involvement.
+- [x] Single-outlet advanced works without multi_location.
+- [x] Transfer remains gated by multi_location.
+- [x] UI copy clarifies Draft/Submit/Receive lifecycle.
+- [x] Tests added/updated.
+- [x] Report created.
 
 ## Commit
 

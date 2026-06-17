@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "seed": "tsx src/seed.ts",
     "test": "tsx --test src/__tests__/**/*.test.ts",
+    "test:file": "tsx --test",
     "check:order-query-plans": "tsx src/scripts/checkOrderQueryPlans.ts"
   },
   "dependencies": {
