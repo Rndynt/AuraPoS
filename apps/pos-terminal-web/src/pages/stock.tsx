@@ -979,12 +979,26 @@ const TRANSFER_STATUS_LABEL: Record<string, string> = {
 // ── Transfer Detail Drawer ────────────────────────────────────────────────────
 function TransferDetailDrawer({ transferId, onClose }: { transferId: string; onClose: () => void }) {
   const { data, isLoading } = useTransferDetail(transferId);
+  const { data: outletsData } = useOutlets();
+  const { data: productsData } = useStockProducts();
   const submitTransfer = useSubmitTransfer();
   const receiveTransfer = useReceiveTransfer();
   const cancelTransfer = useCancelTransfer();
   const { addToast } = useToast();
 
   const transfer = data?.data;
+
+  const outletMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    (outletsData?.outlets ?? []).forEach((o) => { m[o.id] = o.name; });
+    return m;
+  }, [outletsData]);
+
+  const productMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    (productsData?.data?.items ?? []).forEach((p: StockProduct) => { m[p.id] = p.name; });
+    return m;
+  }, [productsData]);
 
   const handleSubmit = async () => {
     try {
@@ -1039,11 +1053,11 @@ function TransferDetailDrawer({ transferId, onClose }: { transferId: string; onC
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
                   <p className="text-[10px] font-bold text-orange-500 mb-1">DARI OUTLET</p>
-                  <p className="text-sm font-bold text-slate-700 truncate">{transfer.fromOutletId.slice(0, 16)}...</p>
+                  <p className="text-sm font-bold text-slate-700 truncate">{outletMap[transfer.fromOutletId] ?? "—"}</p>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                   <p className="text-[10px] font-bold text-blue-500 mb-1">KE OUTLET</p>
-                  <p className="text-sm font-bold text-slate-700 truncate">{transfer.toOutletId.slice(0, 16)}...</p>
+                  <p className="text-sm font-bold text-slate-700 truncate">{outletMap[transfer.toOutletId] ?? "—"}</p>
                 </div>
               </div>
               {transfer.notes && (
@@ -1055,7 +1069,7 @@ function TransferDetailDrawer({ transferId, onClose }: { transferId: string; onC
                   {transfer.items?.map((item, idx) => (
                     <div key={item.id} className={`flex items-center gap-3 p-3 ${idx > 0 ? "border-t border-slate-100" : ""}`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-700 truncate">{item.productId.slice(0, 20)}...</p>
+                        <p className="text-sm font-bold text-slate-700 truncate">{productMap[item.productId] ?? item.productId}</p>
                         {item.notes && <p className="text-[11px] text-slate-400">{item.notes}</p>}
                       </div>
                       <span className="font-black text-base text-slate-800">{item.quantity} <span className="text-[10px] font-bold text-slate-400">unit</span></span>
@@ -1133,12 +1147,15 @@ function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onC
     }
   };
 
+  const SEL = "w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 appearance-none";
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={onClose}>
       <div
         className="bg-white rounded-t-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
           <div>
             <h3 className="font-bold text-slate-800">Buat Transfer Stok</h3>
@@ -1147,44 +1164,50 @@ function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onC
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
         </div>
 
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+          {/* Outlet selectors */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Dari Outlet</label>
-              <select
-                value={fromOutletId}
-                onChange={(e) => setFromOutletId(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                data-testid="select-from-outlet"
-              >
-                <option value="">Pilih outlet asal</option>
-                {outlets.map((o) => (
-                  <option key={o.id} value={o.id} disabled={o.id === toOutletId}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500">Dari Outlet</label>
+              <div className="relative">
+                <select
+                  value={fromOutletId}
+                  onChange={(e) => setFromOutletId(e.target.value)}
+                  className={SEL}
+                  data-testid="select-from-outlet"
+                >
+                  <option value="">Pilih outlet</option>
+                  {outlets.map((o) => (
+                    <option key={o.id} value={o.id} disabled={o.id === toOutletId}>{o.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">Ke Outlet</label>
-              <select
-                value={toOutletId}
-                onChange={(e) => setToOutletId(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                data-testid="select-to-outlet"
-              >
-                <option value="">Pilih outlet tujuan</option>
-                {outlets.map((o) => (
-                  <option key={o.id} value={o.id} disabled={o.id === fromOutletId}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500">Ke Outlet</label>
+              <div className="relative">
+                <select
+                  value={toOutletId}
+                  onChange={(e) => setToOutletId(e.target.value)}
+                  className={SEL}
+                  data-testid="select-to-outlet"
+                >
+                  <option value="">Pilih outlet</option>
+                  {outlets.map((o) => (
+                    <option key={o.id} value={o.id} disabled={o.id === fromOutletId}>{o.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
+          {/* Items */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-500">Item Transfer</label>
               <button
                 onClick={addItem}
@@ -1196,80 +1219,87 @@ function CreateTransferDrawer({ onClose, onCreated }: { onClose: () => void; onC
             </div>
             <div className="space-y-2">
               {items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
-                  <select
-                    value={item.productId}
-                    onChange={(e) => updateItem(idx, { productId: e.target.value })}
-                    className="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400 bg-white"
-                    data-testid={`select-product-${idx}`}
-                  >
-                    <option value="">Pilih produk</option>
-                    {trackedProducts.map((p: StockProduct) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} (stok: {p.stockQty ?? 0})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => updateItem(idx, { quantity: Math.max(1, item.quantity - 1) })}
-                      className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100"
+                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                  {/* Product select */}
+                  <div className="relative">
+                    <select
+                      value={item.productId}
+                      onChange={(e) => updateItem(idx, { productId: e.target.value })}
+                      className={SEL}
+                      data-testid={`select-product-${idx}`}
                     >
-                      <Minus size={12} />
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(idx, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                      className="w-12 text-center border border-slate-200 rounded-lg px-1 py-1.5 text-sm font-bold focus:outline-none focus:border-blue-400"
-                      data-testid={`input-qty-${idx}`}
-                    />
-                    <button
-                      onClick={() => updateItem(idx, { quantity: item.quantity + 1 })}
-                      className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100"
-                    >
-                      <Plus size={12} />
-                    </button>
+                      <option value="">Pilih produk</option>
+                      {trackedProducts.map((p: StockProduct) => (
+                        <option key={p.id} value={p.id}>{p.name} — stok: {p.stockQty ?? 0}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
-                  {items.length > 1 && (
-                    <button
-                      onClick={() => removeItem(idx)}
-                      className="w-7 h-7 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-100 flex-shrink-0"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
+                  {/* Qty row */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Jumlah</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => updateItem(idx, { quantity: Math.max(1, item.quantity - 1) })}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(idx, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                        className="w-14 text-center border border-slate-300 rounded-lg px-1 py-1 text-sm font-bold focus:outline-none focus:border-blue-400"
+                        data-testid={`input-qty-${idx}`}
+                      />
+                      <button
+                        onClick={() => updateItem(idx, { quantity: item.quantity + 1 })}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                      >
+                        <Plus size={12} />
+                      </button>
+                      {items.length > 1 && (
+                        <button
+                          onClick={() => removeItem(idx)}
+                          className="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center ml-1"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
             {trackedProducts.length === 0 && (
-              <p className="text-xs text-amber-600 mt-2">Belum ada produk dengan tracking stok aktif.</p>
+              <p className="text-xs text-amber-600 mt-1">Belum ada produk dengan tracking stok aktif.</p>
             )}
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Catatan (opsional)</label>
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500">Catatan (opsional)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Catatan transfer stok..."
-              rows={2}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+              placeholder="Contoh: Restock dari cabang utama"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none h-16"
               data-testid="input-transfer-notes"
             />
           </div>
         </div>
 
+        {/* Footer */}
         <div className="p-4 border-t border-slate-100 flex gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">
             Batal
           </button>
           <button
             onClick={handleCreate}
             disabled={!canSubmit || createTransfer.isPending}
             data-testid="button-submit-transfer"
-            className="flex-1 py-2 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
             <ArrowLeftRight size={14} />
             {createTransfer.isPending ? "Membuat..." : "Buat Transfer (Draft)"}
