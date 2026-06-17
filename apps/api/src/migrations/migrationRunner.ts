@@ -102,11 +102,27 @@ function splitSqlStatements(sql: string): string[] {
   const statements: string[] = [];
   let current = '';
   let quote: 'single' | 'double' | null = null;
+  let inLineComment = false;
 
   for (let i = 0; i < sql.length; i += 1) {
     const char = sql[i];
-    const prev = sql[i - 1];
+    const next = sql[i + 1];
 
+    // End line comment on newline
+    if (inLineComment) {
+      current += char;
+      if (char === '\n') inLineComment = false;
+      continue;
+    }
+
+    // Detect start of -- line comment (only outside quotes)
+    if (char === '-' && next === '-' && quote === null) {
+      inLineComment = true;
+      current += char;
+      continue;
+    }
+
+    const prev = sql[i - 1];
     if (char === "'" && quote !== 'double' && prev !== '\\') {
       quote = quote === 'single' ? null : 'single';
     } else if (char === '"' && quote !== 'single' && prev !== '\\') {
