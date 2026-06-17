@@ -13,11 +13,11 @@ export type MigrationRunSummary = {
 };
 
 const ALREADY_APPLIED_CODES = new Set([
-  '42P07',
-  '42710',
-  '42701',
-  '23505',
-  '42704',
+  '42P07', // relation already exists
+  '42710', // duplicate object
+  '42701', // duplicate column
+  '23505', // duplicate key / already tracked
+  '42704', // undefined object on already-removed schema items
 ]);
 
 const DOMAIN_BASELINE_TABLES: Array<{ migration: string; tables: string[] }> = [
@@ -90,12 +90,59 @@ async function unmarkDriftedDomainBaselines(rawSql: any, applied: Set<string>, l
     next.delete(domain.migration);
     log(
       `Detected baseline drift for ${domain.migration}; missing tables: ${missing.join(', ')}. `
-      + 'Migration marker removed so the idempotent baseline file can run again.',
+      + 'Migration marker removed so the owning baseline file can run again.',
       'migrate',
     );
   }
 
   return next;
+}
+
+function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let quote: 'single' | 'double' | null = null;
+
+  for (let i = 0; i < sql.length; i += 1) {
+    const char = sql[i];
+    const prev = sql[i - 1];
+
+    if (char === "'" && quote !== 'double' && prev !== '\\') {
+      quote = quote === 'single' ? null : 'single';
+    } else if (char === '"' && quote !== 'single' && prev !== '\\') {
+      quote = quote === 'double' ? null : 'double';
+    }
+
+    if (char === ';' && quote === null) {
+      const statement = current.trim();
+      if (statement) statements.push(statement);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  const tail = current.trim();
+  if (tail) statements.push(tail);
+  return statements;
+}
+
+async function executeMigrationSql(rawSql: any, sqlContent: string, file: string, log: MigrationLogger): Promise<void> {
+  const statements = splitSqlStatements(sqlContent);
+
+  for (const statement of statements) {
+    try {
+      await rawSql.unsafe(statement);
+    } catch (error: unknown) {
+      if (isAlreadyAppliedMigrationError(error)) {
+        const message = error instanceof Error ? error.message : String(error);
+        log(`  ~ Statement already applied in ${file}: ${message}`, 'migrate');
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 export async function runDbMigrations(log: MigrationLogger): Promise<MigrationRunSummary> {
@@ -128,7 +175,7 @@ export async function runDbMigrations(log: MigrationLogger): Promise<MigrationRu
     }
 
     try {
-      await rawSql.unsafe(sqlContent);
+      await executeMigrationSql(rawSql, sqlContent, file, log);
       await rawSql`
         INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
         VALUES (${hash}, ${Date.now()})
@@ -138,17 +185,6 @@ export async function runDbMigrations(log: MigrationLogger): Promise<MigrationRu
       log(`  ✓ Applied migration: ${file}`, 'migrate');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-
-      if (isAlreadyAppliedMigrationError(error)) {
-        await rawSql`
-          INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-          VALUES (${hash}, ${Date.now()})
-          ON CONFLICT DO NOTHING
-        `.catch(() => undefined);
-        summary.applied += 1;
-        log(`  ~ Skipped (already applied): ${file} — ${message}`, 'migrate');
-        continue;
-      }
 
       summary.errors += 1;
       summary.failedMigration = file;
