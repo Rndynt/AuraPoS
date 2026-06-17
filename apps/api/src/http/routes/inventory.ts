@@ -43,6 +43,9 @@ const MOVEMENT_TYPES = [
   'DAMAGE',
   'RETURN',
   'INITIAL',
+  'OPNAME_ADJUSTMENT',
+  'TRANSFER_OUT',
+  'TRANSFER_IN',
 ] as const;
 
 type MovementType = typeof MOVEMENT_TYPES[number];

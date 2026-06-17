@@ -20,6 +20,15 @@ import {
   DollarSign,
   ShoppingCart,
   Filter,
+  FileSearch,
+  ArrowLeftRight,
+  BellRing,
+  ChevronDown,
+  ChevronRight,
+  Send,
+  Truck,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/design";
 import {
@@ -33,6 +42,25 @@ import {
   type StockProduct,
   type MovementsFilter,
 } from "@/hooks/api/useInventory";
+import {
+  useLowStockItems,
+  useSetLowStockThreshold,
+  useOpnames,
+  useOpnameDetail,
+  useCreateOpname,
+  useUpdateOpnameItem,
+  useSubmitOpname,
+  useApproveOpname,
+  useCancelOpname,
+  useTransfers,
+  useTransferDetail,
+  useCreateTransfer,
+  useSubmitTransfer,
+  useReceiveTransfer,
+  useCancelTransfer,
+  type StockOpname,
+  type StockTransfer,
+} from "@/hooks/api/useInventoryAdvanced";
 import { useTenant } from "@/context/TenantContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -289,6 +317,9 @@ const ALL_MOVEMENT_FILTER_OPTIONS = [
   { value: "DAMAGE", label: "Rusak" },
   { value: "RETURN", label: "Retur" },
   { value: "INITIAL", label: "Awal" },
+  { value: "OPNAME_ADJUSTMENT", label: "Opname" },
+  { value: "TRANSFER_OUT", label: "Transfer Keluar" },
+  { value: "TRANSFER_IN", label: "Transfer Masuk" },
 ];
 
 // ── All Movements Tab ─────────────────────────────────────────────────────────
@@ -573,6 +604,573 @@ function LaporanTab() {
   );
 }
 
+// ── Low Stock Tab ──────────────────────────────────────────────────────────────
+function LowStockTab() {
+  const { data, isLoading, refetch, isFetching } = useLowStockItems();
+  const setThreshold = useSetLowStockThreshold();
+  const { addToast } = useToast();
+  const items = data?.data.items ?? [];
+  const [editingThreshold, setEditingThreshold] = useState<{ productId: string; value: string } | null>(null);
+
+  const handleSaveThreshold = async (productId: string, value: string) => {
+    const t = parseInt(value, 10);
+    if (isNaN(t) || t < 0) return;
+    try {
+      await setThreshold.mutateAsync({ productId, threshold: t });
+      addToast("Threshold stok rendah diperbarui", "success");
+      setEditingThreshold(null);
+    } catch {
+      addToast("Gagal memperbarui threshold", "error");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">Produk yang stoknya berada di bawah atau sama dengan threshold</p>
+        <button onClick={() => refetch()} disabled={isFetching} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+          <RefreshCw size={13} className={isFetching ? "animate-spin" : ""} />
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12 text-slate-400 text-sm">Memuat data stok rendah...</div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center py-12 gap-3">
+          <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+            <CheckCircle2 size={22} className="text-emerald-600" />
+          </div>
+          <p className="font-bold text-slate-700 text-sm">Semua stok aman</p>
+          <p className="text-xs text-slate-400">Tidak ada produk di bawah threshold stok rendah</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-2 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
+            <BellRing size={13} className="text-orange-500" />
+            <span className="text-xs font-bold text-orange-700">{items.length} produk butuh perhatian</span>
+          </div>
+          {items.map((item, idx) => (
+            <div key={item.productId} data-testid={`low-stock-row-${item.productId}`} className={`p-3 flex items-center gap-3 ${idx > 0 ? "border-t border-slate-100" : ""}`}>
+              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.isOutOfStock ? "bg-red-500" : "bg-orange-400"}`} />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-slate-800 text-sm truncate">{item.productName}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-slate-400">{item.category}</span>
+                  {item.sku && <span className="text-[10px] text-slate-400">SKU: {item.sku}</span>}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="text-right">
+                  <p className={`font-black text-base ${item.isOutOfStock ? "text-red-600" : "text-orange-600"}`}>{item.quantity}</p>
+                  <p className="text-[10px] text-slate-400">stok saat ini</p>
+                </div>
+                <div className="text-right">
+                  {editingThreshold?.productId === item.productId ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-center focus:outline-none focus:border-blue-400"
+                        value={editingThreshold.value}
+                        onChange={(e) => setEditingThreshold({ productId: item.productId, value: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveThreshold(item.productId, editingThreshold.value);
+                          if (e.key === "Escape") setEditingThreshold(null);
+                        }}
+                        autoFocus
+                      />
+                      <button onClick={() => handleSaveThreshold(item.productId, editingThreshold.value)} className="w-6 h-6 bg-emerald-500 text-white rounded-md flex items-center justify-center">
+                        <Check size={11} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setEditingThreshold({ productId: item.productId, value: String(item.threshold) })}
+                      className="text-right hover:bg-slate-50 rounded-lg p-1 transition-colors"
+                      title="Klik untuk ubah threshold"
+                      data-testid={`threshold-edit-${item.productId}`}
+                    >
+                      <p className="font-bold text-xs text-slate-500">{item.threshold}</p>
+                      <p className="text-[10px] text-slate-400">threshold</p>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+        <p className="text-xs text-blue-700">
+          <span className="font-bold">💡 Tips:</span> Klik angka threshold untuk mengubah batas stok rendah per produk. Default: 10 unit.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Opname Status Badge ───────────────────────────────────────────────────────
+const OPNAME_STATUS_STYLE: Record<string, string> = {
+  draft: "bg-slate-100 text-slate-600 border-slate-200",
+  submitted: "bg-blue-100 text-blue-700 border-blue-200",
+  approved: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  cancelled: "bg-red-100 text-red-600 border-red-200",
+};
+const OPNAME_STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Diajukan",
+  approved: "Disetujui",
+  cancelled: "Dibatalkan",
+};
+
+// ── Opname Detail Drawer ──────────────────────────────────────────────────────
+function OpnameDetailDrawer({ opnameId, onClose }: { opnameId: string; onClose: () => void }) {
+  const { data, isLoading } = useOpnameDetail(opnameId);
+  const updateItem = useUpdateOpnameItem();
+  const submitOpname = useSubmitOpname();
+  const approveOpname = useApproveOpname();
+  const cancelOpname = useCancelOpname();
+  const { addToast } = useToast();
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const opname = data?.data;
+
+  const handleSaveCount = async (productId: string) => {
+    if (!opname) return;
+    const qty = parseInt(editValue, 10);
+    if (isNaN(qty) || qty < 0) return;
+    try {
+      await updateItem.mutateAsync({ opnameId, productId, countedQuantity: qty });
+      setEditingProductId(null);
+    } catch {
+      addToast("Gagal menyimpan hitungan", "error");
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!opname) return;
+    try {
+      await submitOpname.mutateAsync({ opnameId });
+      addToast("Opname diajukan untuk persetujuan", "success");
+      onClose();
+    } catch {
+      addToast("Gagal mengajukan opname", "error");
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!opname) return;
+    try {
+      await approveOpname.mutateAsync({ opnameId });
+      addToast("Opname disetujui — stok telah diperbarui", "success");
+      onClose();
+    } catch {
+      addToast("Gagal menyetujui opname", "error");
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!opname) return;
+    try {
+      await cancelOpname.mutateAsync({ opnameId });
+      addToast("Opname dibatalkan", "success");
+      onClose();
+    } catch {
+      addToast("Gagal membatalkan opname", "error");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
+          <div>
+            <h3 className="font-bold text-slate-800">Stock Opname</h3>
+            {opname && <p className="text-xs text-slate-500">{opname.opnameNumber} · <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${OPNAME_STATUS_STYLE[opname.status]}`}>{OPNAME_STATUS_LABEL[opname.status]}</span></p>}
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {isLoading ? (
+            <div className="text-center py-8 text-slate-400 text-sm">Memuat data opname...</div>
+          ) : !opname ? null : (
+            <>
+              {opname.notes && (
+                <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600">{opname.notes}</div>
+              )}
+              <div className="grid grid-cols-3 gap-1 text-[10px] font-bold text-center mb-2">
+                <span className="text-slate-400">PRODUK</span>
+                <span className="text-blue-500">SISTEM</span>
+                <span className="text-emerald-600">HITUNG</span>
+              </div>
+              {opname.items?.map((item) => (
+                <div key={item.id} className={`flex items-center gap-3 p-3 rounded-xl border ${item.varianceQuantity !== 0 ? "border-orange-200 bg-orange-50" : "border-slate-100 bg-white"}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-slate-800 truncate">{item.productId.slice(0, 8)}...</p>
+                    {item.varianceQuantity !== 0 && (
+                      <span className={`text-[10px] font-bold ${item.varianceQuantity > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        Selisih: {item.varianceQuantity > 0 ? "+" : ""}{item.varianceQuantity}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-blue-600 w-10 text-center">{item.systemQuantity}</span>
+                  {opname.status === "draft" && editingProductId === item.productId ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        className="w-16 border border-slate-300 rounded-lg px-2 py-1 text-sm font-bold text-center focus:outline-none focus:border-blue-400"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveCount(item.productId);
+                          if (e.key === "Escape") setEditingProductId(null);
+                        }}
+                        autoFocus
+                      />
+                      <button onClick={() => handleSaveCount(item.productId)} className="w-7 h-7 bg-emerald-500 text-white rounded-md flex items-center justify-center">
+                        <Check size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { if (opname.status === "draft") { setEditingProductId(item.productId); setEditValue(String(item.countedQuantity)); }}}
+                      disabled={opname.status !== "draft"}
+                      className={`w-16 text-center text-sm font-black rounded-lg py-1 ${opname.status === "draft" ? "hover:bg-white border border-slate-200 cursor-pointer" : "cursor-default"} ${item.varianceQuantity !== 0 ? "text-orange-600" : "text-emerald-700"}`}
+                    >
+                      {item.countedQuantity}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {opname && (
+          <div className="p-4 border-t border-slate-100 flex gap-2">
+            {opname.status === "draft" && (
+              <>
+                <button onClick={handleCancel} className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-sm font-bold hover:bg-red-50 transition-colors">
+                  Batalkan
+                </button>
+                <button onClick={handleSubmit} disabled={submitOpname.isPending} className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  <Send size={13} /> {submitOpname.isPending ? "Mengajukan..." : "Ajukan untuk Persetujuan"}
+                </button>
+              </>
+            )}
+            {opname.status === "submitted" && (
+              <>
+                <button onClick={handleCancel} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 transition-colors">
+                  Batalkan
+                </button>
+                <button onClick={handleApprove} disabled={approveOpname.isPending} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  <CheckCircle2 size={13} /> {approveOpname.isPending ? "Memproses..." : "Setujui & Perbarui Stok"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Opname Tab ────────────────────────────────────────────────────────────────
+function OpnameTab() {
+  const { data, isLoading, refetch, isFetching } = useOpnames();
+  const createOpname = useCreateOpname();
+  const { addToast } = useToast();
+  const opnames = data?.data.opnames ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const handleCreate = async () => {
+    try {
+      const result = await createOpname.mutateAsync({});
+      addToast("Opname baru dibuat", "success");
+      setSelectedId(result.data.id);
+    } catch {
+      addToast("Gagal membuat opname", "error");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {selectedId && (
+        <OpnameDetailDrawer opnameId={selectedId} onClose={() => { setSelectedId(null); refetch(); }} />
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">Catat penghitungan stok fisik dan sesuaikan dengan sistem</p>
+        <button
+          onClick={handleCreate}
+          disabled={createOpname.isPending}
+          data-testid="button-create-opname"
+          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          <Plus size={13} /> Opname Baru
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12 text-slate-400 text-sm">Memuat data opname...</div>
+      ) : opnames.length === 0 ? (
+        <div className="flex flex-col items-center py-12 gap-3">
+          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+            <FileSearch size={22} className="text-blue-500" />
+          </div>
+          <p className="font-bold text-slate-700 text-sm">Belum ada opname</p>
+          <p className="text-xs text-slate-400 text-center max-w-xs">Buat opname untuk menghitung stok fisik dan menyesuaikan dengan sistem</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          {opnames.map((opname, idx) => (
+            <button
+              key={opname.id}
+              data-testid={`opname-row-${opname.id}`}
+              onClick={() => setSelectedId(opname.id)}
+              className={`w-full p-3 flex items-center gap-3 hover:bg-slate-50 text-left transition-colors ${idx > 0 ? "border-t border-slate-100" : ""}`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-slate-800 text-sm">{opname.opnameNumber}</p>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${OPNAME_STATUS_STYLE[opname.status]}`}>
+                    {OPNAME_STATUS_LABEL[opname.status]}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {new Date(opname.startedAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                  {opname.startedBy && ` · ${opname.startedBy}`}
+                </p>
+              </div>
+              <ChevronRight size={14} className="text-slate-300 flex-shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-center">
+        <button onClick={() => refetch()} disabled={isFetching} className="text-xs text-slate-400 flex items-center gap-1 hover:text-slate-600 transition-colors">
+          <RefreshCw size={11} className={isFetching ? "animate-spin" : ""} /> Refresh
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Transfer Status Badge ──────────────────────────────────────────────────────
+const TRANSFER_STATUS_STYLE: Record<string, string> = {
+  draft: "bg-slate-100 text-slate-600 border-slate-200",
+  submitted: "bg-blue-100 text-blue-700 border-blue-200",
+  received: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  cancelled: "bg-red-100 text-red-600 border-red-200",
+};
+const TRANSFER_STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Dikirim",
+  received: "Diterima",
+  cancelled: "Dibatalkan",
+};
+
+// ── Transfer Detail Drawer ────────────────────────────────────────────────────
+function TransferDetailDrawer({ transferId, onClose }: { transferId: string; onClose: () => void }) {
+  const { data, isLoading } = useTransferDetail(transferId);
+  const submitTransfer = useSubmitTransfer();
+  const receiveTransfer = useReceiveTransfer();
+  const cancelTransfer = useCancelTransfer();
+  const { addToast } = useToast();
+
+  const transfer = data?.data;
+
+  const handleSubmit = async () => {
+    try {
+      await submitTransfer.mutateAsync({ transferId });
+      addToast("Transfer dikirim — stok outlet asal dikurangi", "success");
+      onClose();
+    } catch (e: any) {
+      addToast(e?.message ?? "Gagal mengirim transfer", "error");
+    }
+  };
+
+  const handleReceive = async () => {
+    try {
+      await receiveTransfer.mutateAsync({ transferId });
+      addToast("Transfer diterima — stok outlet tujuan bertambah", "success");
+      onClose();
+    } catch {
+      addToast("Gagal menerima transfer", "error");
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await cancelTransfer.mutateAsync({ transferId });
+      addToast("Transfer dibatalkan", "success");
+      onClose();
+    } catch {
+      addToast("Gagal membatalkan transfer", "error");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl">
+          <div>
+            <h3 className="font-bold text-slate-800">Transfer Stok</h3>
+            {transfer && (
+              <p className="text-xs text-slate-500">
+                {transfer.transferNumber} · <span className={`px-1.5 py-0.5 rounded border text-[10px] font-bold ${TRANSFER_STATUS_STYLE[transfer.status]}`}>{TRANSFER_STATUS_LABEL[transfer.status]}</span>
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {isLoading ? (
+            <div className="text-center py-8 text-slate-400 text-sm">Memuat data transfer...</div>
+          ) : !transfer ? null : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                  <p className="text-[10px] font-bold text-orange-500 mb-1">DARI OUTLET</p>
+                  <p className="text-sm font-bold text-slate-700 truncate">{transfer.fromOutletId.slice(0, 16)}...</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                  <p className="text-[10px] font-bold text-blue-500 mb-1">KE OUTLET</p>
+                  <p className="text-sm font-bold text-slate-700 truncate">{transfer.toOutletId.slice(0, 16)}...</p>
+                </div>
+              </div>
+              {transfer.notes && (
+                <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600">{transfer.notes}</div>
+              )}
+              <div>
+                <p className="text-xs font-bold text-slate-500 mb-2">ITEM TRANSFER</p>
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  {transfer.items?.map((item, idx) => (
+                    <div key={item.id} className={`flex items-center gap-3 p-3 ${idx > 0 ? "border-t border-slate-100" : ""}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-700 truncate">{item.productId.slice(0, 20)}...</p>
+                        {item.notes && <p className="text-[11px] text-slate-400">{item.notes}</p>}
+                      </div>
+                      <span className="font-black text-base text-slate-800">{item.quantity} <span className="text-[10px] font-bold text-slate-400">unit</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {transfer && (
+          <div className="p-4 border-t border-slate-100 flex gap-2">
+            {transfer.status === "draft" && (
+              <>
+                <button onClick={handleCancel} className="px-3 py-2 rounded-xl border border-red-200 text-red-600 text-sm font-bold hover:bg-red-50 transition-colors">Batalkan</button>
+                <button onClick={handleSubmit} disabled={submitTransfer.isPending} className="flex-1 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  <Send size={13} /> {submitTransfer.isPending ? "Memproses..." : "Kirim Transfer"}
+                </button>
+              </>
+            )}
+            {transfer.status === "submitted" && (
+              <>
+                <button onClick={handleCancel} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 transition-colors">Batalkan</button>
+                <button onClick={handleReceive} disabled={receiveTransfer.isPending} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  <Truck size={13} /> {receiveTransfer.isPending ? "Memproses..." : "Terima Stok"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Transfer Tab ──────────────────────────────────────────────────────────────
+function TransferTab() {
+  const { data, isLoading, refetch, isFetching, error } = useTransfers();
+  const { addToast } = useToast();
+  const transfers = data?.data.transfers ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const noMultiLocation = (error as any)?.message?.includes("403") || (error as any)?.message?.includes("Multi Lokasi");
+
+  return (
+    <div className="space-y-3">
+      {selectedId && (
+        <TransferDetailDrawer transferId={selectedId} onClose={() => { setSelectedId(null); refetch(); }} />
+      )}
+
+      {noMultiLocation ? (
+        <div className="flex flex-col items-center py-12 gap-3">
+          <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+            <Lock size={22} className="text-amber-600" />
+          </div>
+          <p className="font-bold text-slate-700 text-sm">Modul Multi Lokasi Diperlukan</p>
+          <p className="text-xs text-slate-400 text-center max-w-xs">Transfer stok antar outlet membutuhkan modul Multi Lokasi. Aktifkan dari halaman Marketplace.</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">Transfer stok antar outlet dalam satu tenant</p>
+            <button onClick={() => refetch()} disabled={isFetching} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+              <RefreshCw size={13} className={isFetching ? "animate-spin" : ""} />
+            </button>
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-12 text-slate-400 text-sm">Memuat data transfer...</div>
+          ) : transfers.length === 0 ? (
+            <div className="flex flex-col items-center py-12 gap-3">
+              <div className="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center">
+                <ArrowLeftRight size={22} className="text-violet-500" />
+              </div>
+              <p className="font-bold text-slate-700 text-sm">Belum ada transfer stok</p>
+              <p className="text-xs text-slate-400 text-center max-w-xs">Transfer stok dibuat via API dari sistem POS atau dashboard admin</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              {transfers.map((transfer, idx) => (
+                <button
+                  key={transfer.id}
+                  data-testid={`transfer-row-${transfer.id}`}
+                  onClick={() => setSelectedId(transfer.id)}
+                  className={`w-full p-3 flex items-center gap-3 hover:bg-slate-50 text-left transition-colors ${idx > 0 ? "border-t border-slate-100" : ""}`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    transfer.status === "received" ? "bg-emerald-100 text-emerald-600" :
+                    transfer.status === "submitted" ? "bg-blue-100 text-blue-600" :
+                    transfer.status === "cancelled" ? "bg-red-100 text-red-400" :
+                    "bg-slate-100 text-slate-500"
+                  }`}>
+                    <ArrowLeftRight size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-slate-800 text-sm">{transfer.transferNumber}</p>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${TRANSFER_STATUS_STYLE[transfer.status]}`}>
+                        {TRANSFER_STATUS_LABEL[transfer.status]}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {transfer.items?.length ?? 0} item · {new Date(transfer.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Upgrade Prompt ────────────────────────────────────────────────────────────
 function UpgradePrompt({ feature }: { feature: string }) {
   const [, setLocation] = useLocation();
@@ -606,9 +1204,11 @@ export default function StockPage() {
   const items = data?.data.items ?? [];
   const summary = data?.data.summary ?? { total: 0, lowStock: 0, outOfStock: 0 };
 
+  const isMultiLocation = can("multi_location");
+
   const [filter, setFilter] = useState<"all" | "low" | "out">("all");
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"stock" | "history" | "report">("stock");
+  const [activeTab, setActiveTab] = useState<"stock" | "history" | "report" | "opname" | "transfer" | "lowstock">("stock");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [advancedDialogProduct, setAdvancedDialogProduct] = useState<StockProduct | null>(null);
   const [historyProduct, setHistoryProduct] = useState<StockProduct | null>(null);
@@ -653,11 +1253,11 @@ export default function StockPage() {
           </button>
         }
         tabs={
-          <div className="flex gap-6">
+          <div className="flex gap-5 overflow-x-auto scrollbar-none">
             <button
               onClick={() => setActiveTab("stock")}
               data-testid="tab-stock"
-              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-1.5 ${
+              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${
                 activeTab === "stock" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
@@ -666,7 +1266,7 @@ export default function StockPage() {
             <button
               onClick={() => setActiveTab("history")}
               data-testid="tab-history"
-              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
+              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                 activeTab === "history" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
@@ -676,11 +1276,41 @@ export default function StockPage() {
             <button
               onClick={() => setActiveTab("report")}
               data-testid="tab-report"
-              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
+              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                 activeTab === "report" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
               <BarChart2 size={14} /> Laporan
+              {!isAdvanced && <Lock size={11} className="text-amber-500" />}
+            </button>
+            <button
+              onClick={() => setActiveTab("lowstock")}
+              data-testid="tab-lowstock"
+              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
+                activeTab === "lowstock" ? "border-orange-500 text-orange-600" : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <BellRing size={14} /> Stok Rendah
+              {!isAdvanced && <Lock size={11} className="text-amber-500" />}
+            </button>
+            <button
+              onClick={() => setActiveTab("opname")}
+              data-testid="tab-opname"
+              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
+                activeTab === "opname" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <FileSearch size={14} /> Opname
+              {!isAdvanced && <Lock size={11} className="text-amber-500" />}
+            </button>
+            <button
+              onClick={() => setActiveTab("transfer")}
+              data-testid="tab-transfer"
+              className={`py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
+                activeTab === "transfer" ? "border-violet-600 text-violet-600" : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <ArrowLeftRight size={14} /> Transfer
               {!isAdvanced && <Lock size={11} className="text-amber-500" />}
             </button>
           </div>
@@ -694,6 +1324,18 @@ export default function StockPage() {
       ) : activeTab === "report" ? (
         <div className="flex-1 overflow-y-auto p-4 pb-20">
           {isAdvanced ? <LaporanTab /> : <UpgradePrompt feature="Laporan Inventaris" />}
+        </div>
+      ) : activeTab === "lowstock" ? (
+        <div className="flex-1 overflow-y-auto p-4 pb-20">
+          {isAdvanced ? <LowStockTab /> : <UpgradePrompt feature="Pantauan Stok Rendah" />}
+        </div>
+      ) : activeTab === "opname" ? (
+        <div className="flex-1 overflow-y-auto p-4 pb-20">
+          {isAdvanced ? <OpnameTab /> : <UpgradePrompt feature="Stock Opname" />}
+        </div>
+      ) : activeTab === "transfer" ? (
+        <div className="flex-1 overflow-y-auto p-4 pb-20">
+          {isAdvanced ? <TransferTab /> : <UpgradePrompt feature="Transfer Stok Antar Outlet" />}
         </div>
       ) : (
         <>
