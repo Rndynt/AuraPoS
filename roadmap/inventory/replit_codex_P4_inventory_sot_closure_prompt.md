@@ -6,13 +6,35 @@ Repository: `Rndynt/AuraPoS`
 
 Finish the inventory stock source-of-truth refactor after PR #92.
 
-The final operational stock source is:
+The final operational stock source is `inventory_balances.quantity` scoped by `tenant_id + outlet_id + product_id`.
 
-```txt
-inventory_balances.quantity scoped by tenant_id + outlet_id + product_id
-```
+Product page is catalog only. Stock & Inventaris is the only stock operation center.
 
-`products.stock_qty` / `products.stockQty` must not be used by stock UI, stock API, sale deduction, return reversal, low stock, opening stock, transfer, opname, or report.
+`products.stock_qty` / `products.stockQty` must not be used by stock UI, stock API, sale deduction, return reversal, low stock, set stock, transfer, opname, or report.
+
+## Flow Decision
+
+Do not create a separate user-facing `opening stock` flow.
+
+Correct flow:
+
+1. User creates product in Product page.
+2. User turns on `Lacak Stok`.
+3. Product appears in Stock & Inventaris.
+4. User sets/edits the quantity directly from the product row/card in Stock & Inventaris.
+
+Use simple UI labels:
+
+- `Set Stok`
+- `Ubah Stok`
+
+Do not show `Opening Stock` / `Stok Awal` as a separate main feature. First stock input and later correction are the same user action: set the stock quantity for the selected outlet.
+
+If `inventory_advanced_stock` is active, setting stock writes a movement by delta:
+
+- `ADJUSTMENT_IN` if new quantity is greater than old quantity.
+- `ADJUSTMENT_OUT` if new quantity is lower than old quantity.
+- no movement if unchanged.
 
 ## Required Fixes
 
@@ -20,92 +42,64 @@ inventory_balances.quantity scoped by tenant_id + outlet_id + product_id
    - Sale deduction must use `inventory_balances`.
    - Return reversal must use `inventory_balances`.
    - Require outlet context for stock-tracked sale/return.
-   - Create missing outlet/product balance as 0, then apply operation.
+   - Missing outlet/product balance starts at 0.
    - Preserve negative stock protection.
    - Write movement rows with correct balance before/after.
    - Do not read or write product stock columns.
 
-2. Add Stock page opening stock UI.
-   - Use existing `POST /api/inventory/opening-stock` and `useSetOpeningStock()`.
-   - Action label: `Atur Stok Awal`.
-   - Product page stays catalog-only.
+2. Add direct Stock page set-stock UI.
+   - Use the existing set endpoint/hook or rename/wrap it to `set stock` semantics.
+   - Product with `stockTrackingEnabled = true` appears in Stock page.
+   - Each product row/card has `Set Stok` / `Ubah Stok`.
+   - Product page remains catalog-only.
    - Single outlet uses active/default outlet.
    - Multi outlet requires a concrete outlet.
    - Aggregate/all-outlet view is read-only for stock-changing actions.
    - Invalidate stock list, low stock, movements, and report after success.
 
 3. Clean Stock page interaction UI.
-   - Mobile uses existing drawer/sheet pattern.
-   - Tablet/desktop uses existing centered dialog/modal pattern.
-   - Apply to opening stock and any touched stock forms.
+   - Mobile uses drawer/sheet pattern.
+   - Tablet/desktop uses centered dialog/modal pattern.
+   - Apply to set stock and touched stock forms.
    - Keep styling consistent with current AuraPoS components.
    - Extract components/hooks instead of growing `stock.tsx`.
 
-4. Update final report:
-
-```txt
-roadmap/inventory/inventory_sot_no_legacy_flow_refactor_report.md
-```
-
-Report must include:
-
-- final SOT decision;
-- sale/return conversion proof;
-- opening stock UI proof;
-- Product page catalog-only proof;
-- single outlet proof;
-- multi outlet proof;
-- entitlement matrix;
-- responsive UI notes;
-- validation command output;
-- remaining issues: none, unless truly externally blocked.
+4. Update `roadmap/inventory/inventory_sot_no_legacy_flow_refactor_report.md`.
+   - Include sale/return conversion proof.
+   - Include Set/Ubah Stok UI proof.
+   - Include product catalog-only proof.
+   - Include entitlement matrix.
+   - Include validation command output.
+   - Remaining issues must be `none` unless externally blocked.
 
 ## Entitlement Rules
 
-```txt
-inventory_basic_stock:
-- stock list
-- opening stock
-- basic adjustment
+- `inventory_basic_stock`: stock list, direct Set/Ubah Stok, basic adjustment if kept.
+- `inventory_advanced_stock`: typed movement, history, report, threshold/low stock, opname.
+- `inventory_advanced_stock + multi_location`: transfer.
 
-inventory_advanced_stock:
-- typed movement
-- history
-- report
-- threshold / low stock
-- opname
-
-inventory_advanced_stock + multi_location:
-- transfer
-```
-
-Do not hardcode plan names. Do not rely on UI-only gating. Backend must still return 403 when blocked.
+No hardcoded plan names. No UI-only gating. Backend still returns 403 when blocked.
 
 ## Validation
 
 Run:
 
-```bash
-pnpm type-check
-pnpm --filter @pos/api type-check
-pnpm --filter @pos/terminal-web type-check
-pnpm --filter @pos/api test
-```
+- `pnpm type-check`
+- `pnpm --filter @pos/api type-check`
+- `pnpm --filter @pos/terminal-web type-check`
+- `pnpm --filter @pos/api test`
 
 Manual smoke:
 
-```txt
 1. Product page: tracking toggle only, no operational stock input.
-2. Stock page: Atur Stok Awal sets active outlet stock.
-3. Low stock matches stock list source.
-4. Sale reduces active outlet inventory balance.
-5. Return restores active outlet inventory balance.
-6. Multi outlet stock is independent.
-7. Transfer still requires inventory_advanced_stock + multi_location.
-```
+2. Stock page: tracked product appears automatically.
+3. Stock page: Set/Ubah Stok sets active outlet stock directly.
+4. Low stock matches stock list source.
+5. Sale reduces active outlet inventory balance.
+6. Return restores active outlet inventory balance.
+7. Multi outlet stock is independent.
+8. Transfer still requires `inventory_advanced_stock + multi_location`.
 
 ## Commit
 
-```txt
-fix(inventory): close stock SOT flow without leftovers
-```
+`fix(inventory): close stock SOT flow without leftovers`
