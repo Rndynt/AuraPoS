@@ -1290,14 +1290,14 @@ function TransferTab() {
   const noMultiLocation = (error as any)?.message?.includes("403") || (error as any)?.message?.includes("Multi Lokasi");
 
   return (
-    <div className="space-y-3">
+    <>
       {selectedId && (
         <TransferDetailDrawer transferId={selectedId} onClose={() => { setSelectedId(null); refetch(); }} />
       )}
       {showCreate && (
         <CreateTransferDrawer onClose={() => setShowCreate(false)} onCreated={() => refetch()} />
       )}
-
+    <div className="space-y-3">
       {noMultiLocation ? (
         <div className="flex flex-col items-center py-12 gap-3">
           <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
@@ -1379,6 +1379,7 @@ function TransferTab() {
         </>
       )}
     </div>
+    </>
   );
 }
 
