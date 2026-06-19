@@ -189,15 +189,6 @@ export default function MyFeaturesPage() {
         title="Fitur Saya"
         subtitle="Semua fitur yang sedang aktif di akun kamu"
         onBack={() => setLocation("/hub")}
-        actions={
-          <button
-            onClick={() => setLocation("/marketplace")}
-            data-testid="button-go-to-marketplace"
-            className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 text-violet-700 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-violet-100 transition-colors"
-          >
-            <ShoppingBag size={13} /> Tambah
-          </button>
-        }
       />
 
       <div className="px-4 pt-4 space-y-5">

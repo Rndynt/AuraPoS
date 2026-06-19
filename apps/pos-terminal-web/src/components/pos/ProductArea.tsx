@@ -117,8 +117,8 @@ export function ProductArea({
         </div>
       )}
 
-      {/* Search bar + Draft button — on top */}
-      <div className="px-4 md:px-8 pt-3 pb-2 bg-white border-b border-slate-100 flex-shrink-0">
+      {/* Search bar + Draft button — on top, full width */}
+      <div className="px-4 pt-3 pb-2 bg-white border-b border-slate-100 flex-shrink-0">
         <ModernPOSHeader
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -129,9 +129,9 @@ export function ProductArea({
         />
       </div>
 
-      {/* Category Chips — below search */}
-      <div className="px-4 md:px-8 py-2 bg-white border-b border-slate-100 flex-shrink-0">
-        <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+      {/* Category Chips — edge-to-edge horizontal scroll */}
+      <div className="py-2 bg-white border-b border-slate-100 flex-shrink-0">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar px-4">
           {isLoading ? (
             <>
               <Skeleton className="h-8 w-20 rounded-full flex-shrink-0" />

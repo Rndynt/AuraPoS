@@ -185,11 +185,6 @@ export default function MarketplacePage() {
         title="Marketplace Fitur"
         subtitle="Aktifkan fitur tambahan sesuai kebutuhan bisnis"
         onBack={() => setLocation("/hub")}
-        actions={
-          <button onClick={() => setShowPlans(true)} className="flex items-center gap-1.5 bg-violet-50 border border-violet-200 text-violet-700 text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-violet-100 transition-colors">
-            <Crown size={13} /> Paket
-          </button>
-        }
       />
 
       <div className="px-4 pt-4 space-y-4">

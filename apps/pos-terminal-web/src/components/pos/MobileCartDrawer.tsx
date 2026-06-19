@@ -502,52 +502,38 @@ export function MobileCartDrawer({
                     <button
                       onClick={onSaveDraft}
                       disabled={isProcessing || isDraftSaving || items.length === 0}
-                      className="w-14 flex-shrink-0 bg-white border-2 border-slate-200 text-slate-600 py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                      className="w-12 flex-shrink-0 bg-white border-2 border-slate-200 text-slate-500 h-11 rounded-xl font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
                       data-testid="button-save-draft"
-                      title="Tunda — simpan draft, lanjut nanti"
+                      title="Tunda — simpan draft"
                     >
-                      {isDraftSaving ? (
-                        <Loader2 size={18} className="animate-spin text-blue-500" />
-                      ) : (
-                        <>
-                          <ShoppingBag size={18} />
-                          <span className="text-[9px] font-normal opacity-70">Tunda</span>
-                        </>
-                      )}
+                      {isDraftSaving
+                        ? <Loader2 size={16} className="animate-spin text-blue-500" />
+                        : <ShoppingBag size={16} />
+                      }
                     </button>
 
                     {hasKitchen && (
                       <button
                         onClick={onConfirmAndKitchen}
                         disabled={isProcessing || isKitchenSending || items.length === 0}
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl font-bold flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
                         data-testid="button-confirm-and-kitchen"
                       >
-                        {isKitchenSending ? (
-                          <Loader2 size={18} className="animate-spin" />
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <ChefHat size={18} />
-                              <span>Dapur</span>
-                            </div>
-                            <span className="text-[9px] opacity-80 font-normal">Bayar belakangan</span>
-                          </>
-                        )}
+                        {isKitchenSending
+                          ? <Loader2 size={16} className="animate-spin" />
+                          : <><ChefHat size={16} /><span>Dapur</span></>
+                        }
                       </button>
                     )}
 
                     <button
                       onClick={onCharge}
                       disabled={isProcessing || items.length === 0}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 flex flex-col items-center justify-center leading-none gap-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
                       data-testid="button-complete-payment"
                     >
-                      <div className="flex items-center gap-2 text-sm">
-                        <Banknote size={18} />
-                        <span>Bayar</span>
-                      </div>
-                      <span className="text-[9px] opacity-80 font-normal">Proses Pembayaran</span>
+                      <Banknote size={16} />
+                      <span>Bayar</span>
                     </button>
                   </div>
                 </div>

@@ -324,16 +324,6 @@ export default function OrdersPage() {
           title="Pesanan"
           subtitle="Kelola dan pantau semua pesanan"
           onBack={() => setLocation("/hub")}
-          actions={
-            <div className="flex gap-2 text-xs font-bold">
-              <div className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg" data-testid="badge-confirmed-count">
-                {filterCounts.confirmed} Confirmed
-              </div>
-              <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg" data-testid="badge-preparing-count">
-                {filterCounts.preparing} Prep
-              </div>
-            </div>
-          }
           bottomContent={
             <div className="flex flex-col md:flex-row gap-3">
               <div className="relative w-full md:w-80">
