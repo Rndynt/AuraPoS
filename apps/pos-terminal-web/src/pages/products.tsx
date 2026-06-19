@@ -709,7 +709,7 @@ export default function ProductsPage() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
         {activeTab === "products" && (
           <div className="space-y-4">
             {isLoadingProducts ? (

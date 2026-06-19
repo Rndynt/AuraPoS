@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Store } from "lucide-react";
-import { InputField, PageHeader } from "@/components/design";
+import { Store, ChevronLeft, Save } from "lucide-react";
+import { InputField } from "@/components/design";
 import { useTenant } from "@/context/TenantContext";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,6 @@ export default function StoreProfilePage() {
     address: "",
   });
 
-  // Sync form with real tenant data once loaded
   useEffect(() => {
     if (profile?.tenant) {
       setFormData({
@@ -28,33 +27,41 @@ export default function StoreProfilePage() {
     }
   }, [profile]);
 
-  const handleBack = () => {
-    setLocation("/hub");
-  };
-
+  const handleBack = () => setLocation("/hub");
   const handleSave = () => {
     // TODO: wire up save API
   };
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-in fade-in slide-in-from-bottom-4">
-      <PageHeader
-        title="Profil Toko"
-        subtitle="Informasi & identitas bisnis kamu"
-        onBack={handleBack}
-        actions={
+
+      {/* Header — matches ProductForm/VariantForm style */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-10 flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleSave}
-            className="text-blue-600 font-extrabold text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
-            data-testid="button-save"
+            onClick={handleBack}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            data-testid="button-back"
           >
-            Simpan
+            <ChevronLeft size={20} className="text-slate-600" />
           </button>
-        }
-      />
+          <div>
+            <h1 className="text-base font-bold text-slate-800 leading-tight">Profil Toko</h1>
+            <p className="text-[11px] text-slate-400 leading-none">Informasi &amp; identitas bisnis kamu</p>
+          </div>
+        </div>
+        <button
+          onClick={handleSave}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-blue-700 shadow-md shadow-blue-200 transition-colors"
+          data-testid="button-save"
+        >
+          <Save size={15} /> Simpan
+        </button>
+      </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full space-y-6 pb-28">
+
         {/* Store Info Card */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center text-center">
           <div
@@ -82,9 +89,7 @@ export default function StoreProfilePage() {
 
         {/* Information Form */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h3 className="font-bold text-slate-800 mb-2 border-b pb-2">
-            Informasi
-          </h3>
+          <h3 className="font-bold text-slate-800 mb-2 border-b pb-2">Informasi</h3>
 
           {isLoading ? (
             <div className="space-y-4">
@@ -97,9 +102,7 @@ export default function StoreProfilePage() {
               <InputField
                 label="Nama Usaha"
                 value={formData.businessName}
-                onChange={(e) =>
-                  setFormData({ ...formData, businessName: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
                 placeholder="Masukkan nama usaha"
                 data-testid="input-business-name"
               />
@@ -107,9 +110,7 @@ export default function StoreProfilePage() {
               <InputField
                 label="Telepon"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="Masukkan nomor telepon"
                 type="tel"
                 data-testid="input-phone"
@@ -120,9 +121,7 @@ export default function StoreProfilePage() {
                 <textarea
                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Masukkan alamat usaha"
                   rows={3}
                   data-testid="textarea-address"
