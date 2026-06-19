@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useOrder, useOrders, useRecordPayment } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
@@ -17,42 +16,50 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
 import { PageHeader } from "@/components/design";
-import { 
-  X, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  X,
   ChefHat,
-  CheckCircle,
   Search,
   ShoppingBag,
   Printer,
   CreditCard,
   Banknote,
   Wallet,
+  Receipt,
+  Clock,
+  CheckCircle2,
+  Package,
 } from "lucide-react";
 import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
-import { enqueuePrintJob, markPrinting, markPrinted, markPrintFailed, getOrCreateTerminalIdentity } from "@pos/offline";
+import {
+  enqueuePrintJob,
+  markPrinting,
+  markPrinted,
+  markPrintFailed,
+  getOrCreateTerminalIdentity,
+} from "@pos/offline";
 import { bluetoothReceiptPrinter } from "@/lib/receiptPrinter";
 import { getActiveTenantId } from "@/lib/tenant";
 import { useTenantProfile } from "@/hooks/api/useTenantProfile";
 
-const ORDER_STATUS_CONFIG = {
-  draft: { label: "Draft", color: "bg-gray-100 text-gray-700" },
-  confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-700" },
-  preparing: { label: "Preparing", color: "bg-orange-100 text-orange-700" },
-  ready: { label: "Ready", color: "bg-emerald-100 text-emerald-700" },
-  served: { label: "Disajikan", color: "bg-teal-100 text-teal-700" },
-  completed: { label: "Completed", color: "bg-green-100 text-green-700" },
-  cancelled: { label: "Cancelled", color: "bg-red-100 text-red-700" },
+/* ─────────────────── Status configs ─────────────────── */
+const STATUS_CFG: Record<string, { label: string; badge: string; dot: string }> = {
+  draft:     { label: "Ditunda",       badge: "bg-slate-100 text-slate-600",    dot: "bg-slate-300" },
+  confirmed: { label: "Dikonfirmasi",  badge: "bg-blue-100 text-blue-700",      dot: "bg-blue-400" },
+  preparing: { label: "Diproses",      badge: "bg-orange-100 text-orange-700",  dot: "bg-orange-400" },
+  ready:     { label: "Siap Saji",     badge: "bg-emerald-100 text-emerald-700",dot: "bg-emerald-400" },
+  served:    { label: "Disajikan",     badge: "bg-teal-100 text-teal-700",      dot: "bg-teal-400" },
+  completed: { label: "Selesai",       badge: "bg-green-100 text-green-700",    dot: "bg-green-400" },
+  cancelled: { label: "Dibatalkan",    badge: "bg-red-100 text-red-700",        dot: "bg-red-400" },
 };
 
-const PAYMENT_STATUS_CONFIG = {
-  paid: { label: "PAID", color: "bg-green-100 text-green-700" },
-  partial: { label: "PARTIAL", color: "bg-amber-100 text-amber-700" },
-  unpaid: { label: "UNPAID", color: "bg-gray-100 text-gray-700" },
+const PAYMENT_CFG: Record<string, { label: string; badge: string }> = {
+  paid:    { label: "Lunas",       badge: "bg-emerald-100 text-emerald-700" },
+  partial: { label: "Sebagian",    badge: "bg-amber-100 text-amber-700" },
+  unpaid:  { label: "Belum Bayar", badge: "bg-slate-100 text-slate-500" },
 };
 
+/* ─────────────────── Types ─────────────────── */
 type OrderStatusFilter = "all" | "draft" | "confirmed" | "preparing" | "ready" | "served" | "completed";
 
 type NormalizedMoneyFields = {
@@ -75,47 +82,42 @@ type NormalizedOrder = Omit<Order, keyof NormalizedMoneyFields | "created_at"> &
     payment_status: Order["payment_status"];
   };
 
-const normalizeMoney = (value: unknown): number => {
-  const numeric = Number(value ?? 0);
-  return Number.isFinite(numeric) ? numeric : 0;
+/* ─────────────────── Normalizers ─────────────────── */
+const normNum = (v: unknown) => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
 };
 
 const normalizeItem = (item: Partial<OrderItem>): NormalizedOrderItem => ({
   id: item.id || crypto.randomUUID(),
   product_id: item.product_id || "",
   product_name: item.product_name || (item as any).productName || "",
-  base_price: normalizeMoney(item.base_price ?? (item as any).basePrice),
+  base_price: normNum(item.base_price ?? (item as any).basePrice),
   variant_id: item.variant_id || (item as any).variantId,
   variant_name: item.variant_name || (item as any).variantName,
-  variant_price_delta: normalizeMoney(item.variant_price_delta ?? (item as any).variantPriceDelta),
+  variant_price_delta: normNum(item.variant_price_delta ?? (item as any).variantPriceDelta),
   selected_options: item.selected_options as SelectedOption[] | undefined,
   selected_option_groups: item.selected_option_groups,
   quantity: item.quantity || 0,
-  item_subtotal: normalizeMoney(item.item_subtotal ?? (item as any).itemSubtotal),
+  item_subtotal: normNum(item.item_subtotal ?? (item as any).itemSubtotal),
   notes: item.notes,
   status: item.status as NormalizedOrderItem["status"],
 });
 
 const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
   const created_at = order.created_at || (order as any).createdAt || (order as any).orderDate;
-
   return {
     id: order.id || "",
     tenant_id: order.tenant_id || (order as any).tenantId || "",
     order_type_id: order.order_type_id || (order as any).orderTypeId,
-    sales_channel:
-      (order.sales_channel as NormalizedOrder["sales_channel"]) || (order as any).salesChannel,
-    items: Array.isArray(order.items)
-      ? order.items.map((item) => normalizeItem(item))
-      : [],
-    subtotal: normalizeMoney(order.subtotal ?? (order as any).subtotal),
-    tax_amount: normalizeMoney(order.tax_amount ?? (order as any).taxAmount),
-    service_charge_amount: normalizeMoney(
-      order.service_charge_amount ?? (order as any).serviceCharge ?? (order as any).service_charge
-    ),
-    discount_amount: normalizeMoney(order.discount_amount ?? (order as any).discountAmount),
-    total_amount: normalizeMoney(order.total_amount ?? (order as any).total),
-    paid_amount: normalizeMoney(order.paid_amount ?? (order as any).paidAmount),
+    sales_channel: (order.sales_channel as NormalizedOrder["sales_channel"]) || (order as any).salesChannel,
+    items: Array.isArray(order.items) ? order.items.map((item) => normalizeItem(item)) : [],
+    subtotal: normNum(order.subtotal ?? (order as any).subtotal),
+    tax_amount: normNum(order.tax_amount ?? (order as any).taxAmount),
+    service_charge_amount: normNum(order.service_charge_amount ?? (order as any).serviceCharge ?? (order as any).service_charge),
+    discount_amount: normNum(order.discount_amount ?? (order as any).discountAmount),
+    total_amount: normNum(order.total_amount ?? (order as any).total),
+    paid_amount: normNum(order.paid_amount ?? (order as any).paidAmount),
     payment_status: order.payment_status || (order as any).paymentStatus || "unpaid",
     payments: (order as any).payments,
     order_number: order.order_number || (order as any).orderNumber || "-",
@@ -129,6 +131,364 @@ const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
   };
 };
 
+/* ─────────────────── Helpers ─────────────────── */
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(price);
+
+const formatDateTime = (date: Date | string | undefined | null) => {
+  if (!date) return "-";
+  const d = new Date(date);
+  if (!Number.isFinite(d.getTime())) return "-";
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+};
+
+const formatTime = (date: Date | string | undefined | null) => {
+  if (!date) return "-";
+  const d = new Date(date);
+  if (!Number.isFinite(d.getTime())) return "-";
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+};
+
+/* ─────────────────── Sub-components ─────────────────── */
+function StatusDot({ status }: { status: string }) {
+  const dot = STATUS_CFG[status]?.dot ?? "bg-slate-300";
+  return <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />;
+}
+
+function OrderCard({
+  order,
+  selected,
+  onClick,
+}: {
+  order: NormalizedOrder;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const statusCfg = STATUS_CFG[order.status] ?? STATUS_CFG.draft;
+  const paymentCfg = PAYMENT_CFG[order.payment_status] ?? PAYMENT_CFG.unpaid;
+  const remaining = Math.max(0, order.total_amount - order.paid_amount);
+
+  return (
+    <button
+      onClick={onClick}
+      data-testid={`order-card-${order.id}`}
+      className={`w-full text-left bg-white rounded-2xl border shadow-sm p-4 transition-all hover:shadow-md focus:outline-none ${
+        selected
+          ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md"
+          : "border-slate-100 hover:border-slate-200"
+      }`}
+    >
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <StatusDot status={order.status} />
+          <div className="min-w-0">
+            <span className="text-sm font-bold text-slate-800 block truncate">
+              {order.customer_name || "Walk-in"}
+              {order.table_number ? ` · Meja ${order.table_number}` : ""}
+            </span>
+            <span className="text-xs text-slate-400 font-mono">#{order.order_number}</span>
+          </div>
+        </div>
+        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0 ${statusCfg.badge}`}>
+          {statusCfg.label}
+        </span>
+      </div>
+
+      {/* Items preview */}
+      <div className="bg-slate-50 rounded-xl px-3 py-2 mb-3 space-y-0.5">
+        {order.items && order.items.slice(0, 3).map((item, idx) => (
+          <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-600">
+            <span className="font-bold text-slate-400 w-5 text-right">{item.quantity}×</span>
+            <span className="truncate">{item.product_name}</span>
+          </div>
+        ))}
+        {order.items && order.items.length > 3 && (
+          <div className="text-[11px] text-slate-400 pl-6">
+            +{order.items.length - 3} item lainnya
+          </div>
+        )}
+        {(!order.items || order.items.length === 0) && (
+          <span className="text-xs text-slate-400">Tidak ada item</span>
+        )}
+      </div>
+
+      {/* Bottom row */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+          <Clock size={11} />
+          {formatDateTime(order.created_at)}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${paymentCfg.badge}`}>
+            {paymentCfg.label}
+          </span>
+          <span className="font-black text-slate-800 text-sm">{formatPrice(order.total_amount)}</span>
+        </div>
+      </div>
+
+      {/* Partial payment bar */}
+      {order.payment_status === "partial" && order.paid_amount > 0 && order.total_amount > 0 && (
+        <div className="mt-2.5 pt-2.5 border-t border-amber-100">
+          <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden mb-1.5">
+            <div
+              className="h-full bg-amber-400 rounded-full"
+              style={{ width: `${Math.min(100, (order.paid_amount / order.total_amount) * 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[11px]">
+            <span className="text-emerald-600 font-semibold">Dibayar {formatPrice(order.paid_amount)}</span>
+            <span className="text-amber-600 font-bold">Sisa {formatPrice(remaining)}</span>
+          </div>
+        </div>
+      )}
+    </button>
+  );
+}
+
+/* ─────────────────── Detail Panel ─────────────────── */
+function DetailPanel({
+  order,
+  onClose,
+  onPrint,
+  onSettle,
+  isPrinting,
+  isSettling,
+}: {
+  order: NormalizedOrder | null;
+  onClose: () => void;
+  onPrint: () => void;
+  onSettle: () => void;
+  isPrinting: boolean;
+  isSettling: boolean;
+}) {
+  if (!order) {
+    return (
+      <div className="hidden md:flex h-full items-center justify-center text-slate-300 flex-col gap-3">
+        <Receipt size={40} strokeWidth={1.5} />
+        <p className="text-sm">Pilih pesanan untuk melihat detail</p>
+      </div>
+    );
+  }
+
+  const statusCfg = STATUS_CFG[order.status] ?? STATUS_CFG.draft;
+  const paymentCfg = PAYMENT_CFG[order.payment_status] ?? PAYMENT_CFG.unpaid;
+  const remaining = Math.max(0, order.total_amount - order.paid_amount);
+  const isFullyPaid = order.payment_status === "paid";
+
+  return (
+    <>
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-100 bg-white">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 rounded-full md:hidden" />
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-slate-800 text-base">
+              {order.customer_name || "Walk-in"}
+              {order.table_number ? ` · Meja ${order.table_number}` : ""}
+            </h2>
+            <p className="text-xs text-slate-400 font-mono mt-0.5">#{order.order_number}</p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${statusCfg.badge}`}>
+                {statusCfg.label}
+              </span>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${paymentCfg.badge}`}>
+                {paymentCfg.label}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 flex-shrink-0 transition-colors"
+            data-testid="button-close-details"
+          >
+            <X size={15} />
+          </button>
+        </div>
+        {order.created_at && (
+          <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+            <Clock size={10} />
+            {formatDateTime(order.created_at)}
+          </p>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto bg-slate-50/60">
+
+        {/* Items */}
+        <div className="px-5 pt-4 pb-2">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <ShoppingBag size={11} />
+            Item Pesanan ({order.items?.length || 0})
+          </div>
+
+          {!order.items || order.items.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 flex flex-col items-center gap-2 text-slate-400">
+              <ChefHat size={28} strokeWidth={1.5} className="opacity-40" />
+              <p className="text-sm">Tidak ada item</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              {order.items.map((item, idx) => {
+                const unitPrice = item.quantity > 0
+                  ? Math.round(item.item_subtotal / item.quantity)
+                  : item.base_price;
+                return (
+                  <div
+                    key={idx}
+                    className={`px-4 py-3 ${idx < order.items.length - 1 ? "border-b border-slate-50" : ""}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-xs font-black text-blue-600">{item.quantity}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 leading-snug">{item.product_name}</p>
+                          {item.variant_name && (
+                            <p className="text-[11px] text-slate-400 mt-0.5">{item.variant_name}</p>
+                          )}
+                          {item.notes && (
+                            <p className="text-[11px] text-amber-600 mt-0.5 italic">"{item.notes}"</p>
+                          )}
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {formatPrice(unitPrice)} × {item.quantity}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-slate-800 flex-shrink-0 mt-0.5">
+                        {formatPrice(item.item_subtotal)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Price breakdown */}
+        <div className="px-5 pt-2 pb-2">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 space-y-1.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Subtotal</span>
+              <span className="text-slate-700 font-medium">{formatPrice(order.subtotal)}</span>
+            </div>
+            {order.tax_amount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Pajak</span>
+                <span className="text-slate-700 font-medium">{formatPrice(order.tax_amount)}</span>
+              </div>
+            )}
+            {order.service_charge_amount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Biaya Layanan</span>
+                <span className="text-slate-700 font-medium">{formatPrice(order.service_charge_amount)}</span>
+              </div>
+            )}
+            {order.discount_amount > 0 && (
+              <div className="flex justify-between text-sm text-emerald-600">
+                <span>Diskon</span>
+                <span className="font-medium">−{formatPrice(order.discount_amount)}</span>
+              </div>
+            )}
+            <div className="border-t border-slate-100 pt-2 flex justify-between">
+              <span className="font-bold text-slate-800 text-sm">Total</span>
+              <span className="font-black text-slate-800 text-base">{formatPrice(order.total_amount)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment status */}
+        <div className="px-5 pt-2 pb-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 space-y-1.5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pembayaran</span>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${paymentCfg.badge}`}>
+                {paymentCfg.label}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Dibayar</span>
+              <span className={`font-bold ${order.paid_amount > 0 ? "text-emerald-600" : "text-slate-400"}`}>
+                {formatPrice(order.paid_amount)}
+              </span>
+            </div>
+            {!isFullyPaid && (
+              <div className="flex justify-between text-sm border-t border-slate-50 pt-1.5">
+                <span className="text-slate-600 font-medium">Sisa Tagihan</span>
+                <span className="font-black text-amber-600">{formatPrice(remaining)}</span>
+              </div>
+            )}
+
+            {/* Payment history */}
+            {Array.isArray((order as any).payments) && (order as any).payments.length > 0 && (
+              <div className="border-t border-slate-50 pt-2 space-y-1.5 mt-1">
+                {(order as any).payments.map((p: any, idx: number) => {
+                  const method = p.payment_method ?? p.paymentMethod ?? "other";
+                  const methodLabels: Record<string, string> = { cash: "Tunai", card: "Kartu", ewallet: "E-Wallet", other: "Lainnya" };
+                  return (
+                    <div key={p.id ?? idx} className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span className="capitalize">{methodLabels[method] ?? method}</span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-slate-400">{formatTime(p.payment_date ?? p.paymentDate)}</span>
+                      </div>
+                      <span className="font-bold text-emerald-600">+{formatPrice(Number(p.amount ?? 0))}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-slate-100 bg-white flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPrint}
+          disabled={isPrinting}
+          data-testid="button-reprint-receipt"
+          className="flex-shrink-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50"
+        >
+          <Printer size={15} />
+        </Button>
+        {!isFullyPaid && (
+          <Button
+            onClick={onSettle}
+            disabled={isSettling}
+            data-testid="button-process-transaction"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm"
+          >
+            {isSettling
+              ? "Memproses..."
+              : order.payment_status === "partial"
+              ? `Lunasi Sisa ${formatPrice(remaining)}`
+              : "Proses Pembayaran"}
+          </Button>
+        )}
+        {isFullyPaid && (
+          <div className="flex-1 flex items-center justify-center gap-1.5 text-emerald-600 text-sm font-bold">
+            <CheckCircle2 size={15} />
+            Pesanan Lunas
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────── Main Page ─────────────────── */
 export default function OrdersPage() {
   const [filterStatus, setFilterStatus] = useState<OrderStatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,79 +512,53 @@ export default function OrdersPage() {
     [data]
   );
 
+  const activeOrders = useMemo(
+    () => normalizedOrders.filter((o) => ["draft", "confirmed", "preparing", "ready", "served"].includes(o.status)),
+    [normalizedOrders]
+  );
+
+  const filterCounts: Record<OrderStatusFilter, number> = useMemo(() => ({
+    all:       activeOrders.length,
+    draft:     activeOrders.filter((o) => o.status === "draft").length,
+    confirmed: activeOrders.filter((o) => o.status === "confirmed").length,
+    preparing: activeOrders.filter((o) => o.status === "preparing").length,
+    ready:     activeOrders.filter((o) => o.status === "ready").length,
+    served:    normalizedOrders.filter((o) => o.status === "served").length,
+    completed: normalizedOrders.filter((o) => o.status === "completed").length,
+  }), [normalizedOrders, activeOrders]);
+
   const filteredOrders = useMemo(() => {
-    // When viewing "completed" or "served" tabs, filter from ALL orders
-    // When viewing "all" or active status tabs, show only active orders
     const isActiveStatus = ["draft", "confirmed", "preparing", "ready"].includes(filterStatus);
     const showAll = filterStatus === "all";
-    
-    let result = (showAll || isActiveStatus)
-      ? normalizedOrders.filter(o => 
-          ["draft", "confirmed", "preparing", "ready"].includes(o.status)
-        )
-      : normalizedOrders.filter(o => o.status === filterStatus);
-    
-    if (!showAll && isActiveStatus) {
-      result = result.filter(o => o.status === filterStatus);
-    }
-    
+
+    let result = showAll || isActiveStatus
+      ? normalizedOrders.filter((o) => ["draft", "confirmed", "preparing", "ready"].includes(o.status))
+      : normalizedOrders.filter((o) => o.status === filterStatus);
+
+    if (!showAll && isActiveStatus) result = result.filter((o) => o.status === filterStatus);
+
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(o =>
-        o.customer_name?.toLowerCase().includes(query) ||
-        o.order_number?.toLowerCase().includes(query) ||
-        o.table_number?.toString().includes(query)
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (o) =>
+          o.customer_name?.toLowerCase().includes(q) ||
+          o.order_number?.toLowerCase().includes(q) ||
+          o.table_number?.toString().includes(q)
       );
     }
-    
     return result;
   }, [normalizedOrders, filterStatus, searchQuery]);
 
   const selectedOrder = useMemo(() => {
     if (selectedOrderResponse) return normalizeOrder(selectedOrderResponse);
-    if (selectedOrderId) return normalizedOrders.find((order) => order.id === selectedOrderId) || null;
+    if (selectedOrderId) return normalizedOrders.find((o) => o.id === selectedOrderId) || null;
     return null;
   }, [normalizedOrders, selectedOrderId, selectedOrderResponse]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const formatDate = (date: Date | string | undefined | null) => {
-    if (!date) return "-";
-    const parsedDate = new Date(date);
-    if (!Number.isFinite(parsedDate.getTime())) return "-";
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(parsedDate);
-  };
-
-  const activeOrders = normalizedOrders.filter(o =>
-    ["draft", "confirmed", "preparing", "ready", "served"].includes(o.status)
-  );
-
-  const filterCounts = {
-    all:       activeOrders.length,
-    draft:     activeOrders.filter(o => o.status === "draft").length,
-    confirmed: activeOrders.filter(o => o.status === "confirmed").length,
-    preparing: activeOrders.filter(o => o.status === "preparing").length,
-    ready:     activeOrders.filter(o => o.status === "ready").length,
-    served:    normalizedOrders.filter(o => o.status === "served").length,
-    completed: normalizedOrders.filter(o => o.status === "completed").length,
-  };
-
+  /* ── Print ── */
   const handleReprintReceipt = async () => {
     if (!selectedOrder) return;
     setIsPrinting(true);
-
     const receiptPayload = {
       orderNumber: selectedOrder.order_number,
       tenantName,
@@ -256,9 +590,7 @@ export default function OrdersPage() {
         payload: receiptPayload,
       });
       printJobId = job.id;
-    } catch {
-      // non-critical
-    }
+    } catch { /* non-critical */ }
 
     try {
       if (printJobId) await markPrinting(printJobId).catch(() => undefined);
@@ -280,10 +612,10 @@ export default function OrdersPage() {
     }
   };
 
+  /* ── Settle ── */
   const handleOpenSettleDialog = () => {
     if (!selectedOrder) return;
-    const remainingAmount = selectedOrder.total_amount - selectedOrder.paid_amount;
-    if (remainingAmount <= 0) {
+    if (selectedOrder.total_amount - selectedOrder.paid_amount <= 0) {
       toast({ title: "Sudah Terbayar", description: "Pesanan ini sudah lunas.", variant: "destructive" });
       return;
     }
@@ -293,20 +625,16 @@ export default function OrdersPage() {
 
   const handleConfirmSettle = async () => {
     if (!selectedOrder) return;
-    const remainingAmount = selectedOrder.total_amount - selectedOrder.paid_amount;
-    if (remainingAmount <= 0) return;
-
+    const remaining = selectedOrder.total_amount - selectedOrder.paid_amount;
+    if (remaining <= 0) return;
     setSettleDialogOpen(false);
     try {
       await recordPaymentMutation.mutateAsync({
         orderId: selectedOrder.id,
-        amount: remainingAmount,
+        amount: remaining,
         payment_method: settlePaymentMethod,
       });
-      toast({
-        title: "Berhasil",
-        description: `Pembayaran ${formatPrice(remainingAmount)} berhasil dicatat.`,
-      });
+      toast({ title: "Pembayaran berhasil", description: `${formatPrice(remaining)} telah dicatat.` });
     } catch (error) {
       toast({
         title: "Gagal",
@@ -316,366 +644,125 @@ export default function OrdersPage() {
     }
   };
 
+  const FILTER_TABS: { id: OrderStatusFilter; label: string }[] = [
+    { id: "all",       label: "Semua" },
+    { id: "draft",     label: "Ditunda" },
+    { id: "confirmed", label: "Dikonfirmasi" },
+    { id: "preparing", label: "Diproses" },
+    { id: "ready",     label: "Siap Saji" },
+    { id: "served",    label: "Disajikan" },
+    { id: "completed", label: "Selesai" },
+  ];
+
   return (
     <div className="flex h-full overflow-hidden bg-slate-50 relative">
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative pb-[60px] md:pb-0">
         <PageHeader
           title="Pesanan"
           subtitle="Kelola dan pantau semua pesanan"
           onBack={() => setLocation("/hub")}
           bottomContent={
-            <div className="flex flex-col md:flex-row gap-3">
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <div className="flex flex-col gap-2.5">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Cari pesanan..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                  placeholder="Cari nama, nomor order, atau meja..."
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   data-testid="input-search-orders"
                 />
               </div>
+
+              {/* Filter tabs */}
               <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                {(["all", "draft", "confirmed", "preparing", "ready", "served", "completed"] as const).map((status) => {
-                  const labels: Record<string, string> = {
-                    all:       "Semua",
-                    draft:     "Ditunda",
-                    confirmed: "Dikonfirmasi",
-                    preparing: "Diproses",
-                    ready:     "Siap Saji",
-                    served:    "Disajikan",
-                    completed: "Selesai",
-                  };
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => setFilterStatus(status)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${
-                        filterStatus === status
-                          ? "bg-white text-slate-800 shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                      data-testid={`filter-${status}`}
-                    >
-                      {labels[status] ?? status}
-                      {` (${filterCounts[status]})`}
-                    </button>
-                  );
-                })}
+                {FILTER_TABS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => setFilterStatus(id)}
+                    data-testid={`filter-${id}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                      filterStatus === id
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    {label}
+                    {filterCounts[id] > 0 && (
+                      <span className={`ml-1 ${filterStatus === id ? "text-blue-600" : "text-slate-400"}`}>
+                        ({filterCounts[id]})
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
           }
         />
 
-        {/* Content Area */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Orders List */}
+          {/* Orders list */}
           <div className="flex-1 flex flex-col overflow-hidden md:border-r border-slate-200">
             <ScrollArea className="flex-1 overflow-auto">
-              <div className="p-4 md:p-6 pb-24 md:pb-8 space-y-4">
+              <div className="p-4 pb-24 md:pb-8 space-y-3">
                 {isLoading ? (
-                  <div className="text-center py-16 text-slate-500">
-                    Memuat pesanan...
+                  <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
+                    <Package size={28} className="animate-pulse opacity-50" />
+                    <p className="text-sm">Memuat pesanan...</p>
                   </div>
                 ) : filteredOrders.length === 0 ? (
-                  <div className="text-center py-16 text-slate-500">
-                    Tidak ada pesanan
+                  <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
+                    <ShoppingBag size={28} strokeWidth={1.5} className="opacity-40" />
+                    <p className="text-sm font-medium">Tidak ada pesanan</p>
+                    {searchQuery && <p className="text-xs text-slate-300">Coba hapus kata kunci pencarian</p>}
                   </div>
                 ) : (
-                  filteredOrders.map((order) => {
-                    const statusConfig = ORDER_STATUS_CONFIG[order.status];
-                    const paymentConfig = PAYMENT_STATUS_CONFIG[order.payment_status] || PAYMENT_STATUS_CONFIG["unpaid"];
-
-                    return (
-                      <button
-                        key={order.id}
-                        onClick={() => setSelectedOrderId(order.id)}
-                        className={`w-full text-left bg-white rounded-xl border border-slate-200 shadow-sm p-4 transition-all hover:border-slate-300 hover:shadow-md ${
-                          selectedOrder?.id === order.id 
-                            ? "ring-2 ring-blue-500 border-blue-500" 
-                            : ""
-                        }`}
-                        data-testid={`order-card-${order.id}`}
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit mb-1">
-                              #{order.order_number}
-                            </div>
-                            <div className="font-bold text-slate-800 text-sm">
-                              {order.customer_name || "Pelanggan"}
-                            </div>
-                          </div>
-                          <div className={`text-[10px] font-bold px-2 py-0.5 rounded ${statusConfig.color}`}>
-                            {statusConfig.label}
-                          </div>
-                        </div>
-
-                        <div className="space-y-1 mb-3">
-                          <div className="text-xs text-slate-600">
-                            {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? "s" : ""}
-                          </div>
-                          {order.items && order.items.slice(0, 2).map((item: any, idx: number) => (
-                            <div key={idx} className="text-xs text-slate-500">
-                              {item.product_name} x{item.quantity}
-                            </div>
-                          ))}
-                          {order.items && order.items.length > 2 && (
-                            <div className="text-xs text-slate-400 italic">
-                              +{order.items.length - 2} more items
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex justify-between items-center pt-3 border-t border-slate-100">
-                          <span className="text-sm font-bold text-slate-600">
-                            {formatDate(order.created_at)}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <div className={`text-[10px] font-bold px-2 py-0.5 rounded ${paymentConfig.color}`}>
-                              {paymentConfig.label}
-                            </div>
-                            <span className="text-lg font-black text-slate-800">
-                              {formatPrice(order.total_amount)}
-                            </span>
-                          </div>
-                        </div>
-                        {order.payment_status === "partial" && order.paid_amount > 0 && (
-                          <div className="mt-2 pt-2 border-t border-amber-100 flex justify-between text-xs">
-                            <span className="text-green-700 font-medium">Dibayar {formatPrice(order.paid_amount)}</span>
-                            <span className="text-amber-700 font-bold">Sisa {formatPrice(Math.max(0, order.total_amount - order.paid_amount))}</span>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })
+                  filteredOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      selected={selectedOrder?.id === order.id}
+                      onClick={() => setSelectedOrderId(order.id)}
+                    />
+                  ))
                 )}
               </div>
             </ScrollArea>
           </div>
 
-          {/* Detail Panel */}
+          {/* Detail panel */}
           <div
-            className={`fixed md:relative inset-x-0 bottom-0 md:inset-auto md:w-[400px] md:h-full z-[60] bg-white border-l border-slate-200 shadow-2xl md:shadow-none flex flex-col transition-transform duration-300 ease-out ${
+            className={`fixed md:relative inset-x-0 bottom-0 md:inset-auto md:w-[400px] md:h-full z-[60] bg-white border-l border-slate-100 shadow-2xl md:shadow-none flex flex-col transition-transform duration-300 ease-out ${
               selectedOrder
                 ? "translate-y-0"
                 : "translate-y-full md:translate-x-full md:translate-y-0 md:w-0 md:border-none"
-            } rounded-t-3xl md:rounded-none h-[85vh] md:h-auto`}
+            } rounded-t-3xl md:rounded-none h-[88vh] md:h-auto`}
           >
-            {selectedOrder ? (
-              <>
-                {/* Panel Header — compact single row */}
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                  {/* Drag handle on mobile */}
-                  <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 rounded-full md:hidden" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-800 text-base truncate">
-                        {selectedOrder.customer_name || "Pelanggan"}
-                      </span>
-                      <span className="text-xs text-slate-400 font-mono truncate">
-                        #{selectedOrder.order_number}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold capitalize ${ORDER_STATUS_CONFIG[selectedOrder.status].color}`}>
-                        {selectedOrder.status}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        {selectedOrder.items?.length || 0} item
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedOrderId(null)}
-                    className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 flex-shrink-0"
-                    data-testid="button-close-details"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                {/* Panel Content */}
-                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50 space-y-4">
-
-
-                  {/* Order Items Section */}
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <ShoppingBag size={13} /> Item Pesanan ({selectedOrder.items?.length || 0})
-                    </h3>
-                    {!selectedOrder.items || selectedOrder.items.length === 0 ? (
-                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center flex flex-col items-center gap-2 text-slate-400">
-                        <ChefHat size={32} className="opacity-50" />
-                        <p className="text-sm">Tidak ada item</p>
-                      </div>
-                    ) : (
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
-                        {selectedOrder.items.map((item, idx) => (
-                          <div key={idx} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                            <div className="flex items-start gap-2 min-w-0">
-                              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">
-                                {item.quantity}×
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-slate-800 leading-tight">{item.product_name}</p>
-                                {item.variant_name && (
-                                  <p className="text-[11px] text-slate-400 leading-tight">{item.variant_name}</p>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-sm font-bold text-slate-700 flex-shrink-0 mt-0.5">
-                              {formatPrice(item.item_subtotal)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Summary Section */}
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
-                      Ringkasan
-                    </h3>
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Subtotal</span>
-                        <span className="text-slate-800 font-medium">{formatPrice(selectedOrder.subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Pajak</span>
-                        <span className="text-slate-800 font-medium">{formatPrice(selectedOrder.tax_amount)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Biaya Layanan</span>
-                        <span className="text-slate-800 font-medium">{formatPrice(selectedOrder.service_charge_amount)}</span>
-                      </div>
-                      {selectedOrder.discount_amount > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Diskon</span>
-                          <span>-{formatPrice(selectedOrder.discount_amount)}</span>
-                        </div>
-                      )}
-                      <div className="border-t border-slate-100 pt-2 flex justify-between font-bold text-base">
-                        <span className="text-slate-800">Total</span>
-                        <span className="text-slate-800">{formatPrice(selectedOrder.total_amount)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Payment Summary Section */}
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
-                      Pembayaran
-                    </h3>
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-600">Status</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${PAYMENT_STATUS_CONFIG[selectedOrder.payment_status]?.color ?? PAYMENT_STATUS_CONFIG.unpaid.color}`}>
-                          {PAYMENT_STATUS_CONFIG[selectedOrder.payment_status]?.label ?? "UNPAID"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Total</span>
-                        <span className="text-slate-800 font-medium">{formatPrice(selectedOrder.total_amount)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Dibayar</span>
-                        <span className={`font-medium ${selectedOrder.paid_amount > 0 ? "text-green-700" : "text-slate-400"}`}>
-                          {formatPrice(selectedOrder.paid_amount)}
-                        </span>
-                      </div>
-                      {selectedOrder.payment_status !== "paid" && (
-                        <div className="flex justify-between text-sm border-t border-slate-100 pt-2">
-                          <span className="text-slate-600 font-medium">Sisa</span>
-                          <span className="font-bold text-amber-700">
-                            {formatPrice(Math.max(0, selectedOrder.total_amount - selectedOrder.paid_amount))}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Payment History Section */}
-                  {Array.isArray((selectedOrder as any).payments) && (selectedOrder as any).payments.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
-                        Riwayat Pembayaran
-                      </h3>
-                      <div className="space-y-2">
-                        {(selectedOrder as any).payments.map((p: any, idx: number) => (
-                          <div key={p.id ?? idx} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="text-xs font-bold text-slate-700 capitalize">{p.payment_method ?? p.paymentMethod}</div>
-                                <div className="text-xs text-slate-400">{formatDate(p.payment_date ?? p.paymentDate)}</div>
-                                {(p.reference_number ?? p.referenceNumber) && (
-                                  <div className="text-xs text-slate-400 font-mono truncate max-w-[140px]">
-                                    {p.reference_number ?? p.referenceNumber}
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-sm font-bold text-green-700">
-                                +{formatPrice(Number(p.amount ?? 0))}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Panel Footer — horizontal layout saves vertical space */}
-                <div className="px-4 py-3 border-t border-slate-200 bg-white flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-shrink-0 font-semibold py-2 px-3 rounded-lg text-sm"
-                    data-testid="button-reprint-receipt"
-                    onClick={handleReprintReceipt}
-                    disabled={isPrinting}
-                  >
-                    <Printer size={14} />
-                  </Button>
-                  <Button 
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-sm"
-                    data-testid="button-process-transaction"
-                    onClick={handleOpenSettleDialog}
-                    disabled={recordPaymentMutation.isPending || selectedOrder.payment_status === "paid"}
-                  >
-                    {recordPaymentMutation.isPending
-                      ? "Memproses..."
-                      : selectedOrder.payment_status === "partial"
-                        ? "Lunasi Sisa"
-                        : "Proses Transaksi"}
-                  </Button>
-
-                </div>
-              </>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-400">
-                Pilih pesanan
-              </div>
-            )}
+            <DetailPanel
+              order={selectedOrder}
+              onClose={() => setSelectedOrderId(null)}
+              onPrint={handleReprintReceipt}
+              onSettle={handleOpenSettleDialog}
+              isPrinting={isPrinting}
+              isSettling={recordPaymentMutation.isPending}
+            />
           </div>
         </div>
       </div>
 
-      {/* Mobile Overlay */}
+      {/* Mobile backdrop */}
       {selectedOrder && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55] md:hidden"
+          className="fixed inset-0 bg-black/25 backdrop-blur-[1px] z-[55] md:hidden"
           onClick={() => setSelectedOrderId(null)}
         />
       )}
 
-      {/* Mobile Bottom Navigation */}
       <UnifiedBottomNav cartCount={0} />
 
-      {/* Settle Payment Confirmation Dialog */}
+      {/* Settle dialog */}
       <AlertDialog open={settleDialogOpen} onOpenChange={setSettleDialogOpen}>
         <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
           <AlertDialogHeader>
@@ -685,40 +772,38 @@ export default function OrdersPage() {
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-1">
                 {selectedOrder && (
-                  <div className="bg-slate-50 rounded-xl p-3 space-y-1.5 text-sm">
+                  <div className="bg-slate-50 rounded-xl p-3.5 space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Order</span>
+                      <span className="text-slate-500">Pesanan</span>
                       <span className="font-bold text-slate-800">#{selectedOrder.order_number}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Sisa tagihan</span>
-                      <span className="font-bold text-amber-700">
+                      <span className="font-black text-amber-600">
                         {formatPrice(Math.max(0, selectedOrder.total_amount - selectedOrder.paid_amount))}
                       </span>
                     </div>
                   </div>
                 )}
-
-                {/* Payment method picker */}
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Metode Pembayaran</p>
+                  <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Metode Pembayaran</p>
                   <div className="grid grid-cols-3 gap-2">
                     {(
                       [
-                        { value: "cash",    label: "Tunai",  Icon: Banknote },
-                        { value: "card",    label: "Kartu",  Icon: CreditCard },
+                        { value: "cash",    label: "Tunai",    Icon: Banknote },
+                        { value: "card",    label: "Kartu",    Icon: CreditCard },
                         { value: "ewallet", label: "E-Wallet", Icon: Wallet },
                       ] as const
                     ).map(({ value, label, Icon }) => (
                       <button
                         key={value}
                         onClick={() => setSettlePaymentMethod(value)}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        data-testid={`settle-method-${value}`}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-xs font-bold transition-all ${
                           settlePaymentMethod === value
                             ? "border-blue-500 bg-blue-50 text-blue-700"
                             : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                         }`}
-                        data-testid={`settle-method-${value}`}
                       >
                         <Icon size={18} />
                         {label}
@@ -729,7 +814,7 @@ export default function OrdersPage() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 mt-2">
+          <AlertDialogFooter className="gap-2 mt-1">
             <AlertDialogCancel className="flex-1 rounded-xl font-semibold" data-testid="button-settle-cancel">
               Batal
             </AlertDialogCancel>
