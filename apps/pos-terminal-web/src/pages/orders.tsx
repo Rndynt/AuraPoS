@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { useOrder, useOrders, useRecordPayment } from "@/lib/api/hooks";
+import { useOrder, useOrders, useOrderTypes, useRecordPayment } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -30,7 +30,7 @@ import {
   CheckCircle2,
   Package,
 } from "lucide-react";
-import type { Order, OrderItem, SelectedOption } from "@pos/domain/orders/types";
+import type { Order, OrderItem, OrderType, SelectedOption } from "@pos/domain/orders/types";
 import {
   enqueuePrintJob,
   markPrinting,
@@ -164,10 +164,12 @@ function OrderCard({
   order,
   selected,
   onClick,
+  orderTypeName,
 }: {
   order: NormalizedOrder;
   selected: boolean;
   onClick: () => void;
+  orderTypeName?: string;
 }) {
   const statusCfg = STATUS_CFG[order.status] ?? STATUS_CFG.draft;
   const paymentCfg = PAYMENT_CFG[order.payment_status] ?? PAYMENT_CFG.unpaid;
@@ -184,38 +186,29 @@ function OrderCard({
       }`}
     >
       {/* Top row */}
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <StatusDot status={order.status} />
           <div className="min-w-0">
-            <span className="text-sm font-bold text-slate-800 block truncate">
-              {order.customer_name || "Walk-in"}
-              {order.table_number ? ` · Meja ${order.table_number}` : ""}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {orderTypeName && (
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md">
+                  {orderTypeName}
+                </span>
+              )}
+              {order.table_number && (
+                <span className="text-xs text-slate-500">Meja {order.table_number}</span>
+              )}
+              {order.customer_name && (
+                <span className="text-xs text-slate-500 truncate max-w-[120px]">{order.customer_name}</span>
+              )}
+            </div>
             <span className="text-xs text-slate-400 font-mono">#{order.order_number}</span>
           </div>
         </div>
         <span className={`text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0 ${statusCfg.badge}`}>
           {statusCfg.label}
         </span>
-      </div>
-
-      {/* Items preview */}
-      <div className="bg-slate-50 rounded-xl px-3 py-2 mb-3 space-y-0.5">
-        {order.items && order.items.slice(0, 3).map((item, idx) => (
-          <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-bold text-slate-400 w-5 text-right">{item.quantity}×</span>
-            <span className="truncate">{item.product_name}</span>
-          </div>
-        ))}
-        {order.items && order.items.length > 3 && (
-          <div className="text-[11px] text-slate-400 pl-6">
-            +{order.items.length - 3} item lainnya
-          </div>
-        )}
-        {(!order.items || order.items.length === 0) && (
-          <span className="text-xs text-slate-400">Tidak ada item</span>
-        )}
       </div>
 
       {/* Bottom row */}
@@ -289,7 +282,7 @@ function DetailPanel({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-bold text-slate-800 text-base">
-              {order.customer_name || "Walk-in"}
+              {order.customer_name || "Pelanggan"}
               {order.table_number ? ` · Meja ${order.table_number}` : ""}
             </h2>
             <p className="text-xs text-slate-400 font-mono mt-0.5">#{order.order_number}</p>
@@ -349,10 +342,38 @@ function DetailPanel({
                         <div className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <span className="text-xs font-black text-blue-600">{item.quantity}</span>
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-slate-800 leading-snug">{item.product_name}</p>
                           {item.variant_name && (
-                            <p className="text-[11px] text-slate-400 mt-0.5">{item.variant_name}</p>
+                            <p className="text-[11px] text-blue-500 mt-0.5 font-medium">{item.variant_name}</p>
+                          )}
+                          {/* Selected options/modifiers */}
+                          {item.selected_options && item.selected_options.length > 0 && (
+                            <div className="mt-0.5 space-y-0.5">
+                              {item.selected_options.map((opt, oi) => (
+                                <p key={oi} className="text-[11px] text-slate-400">
+                                  {opt.group_name}: <span className="text-slate-600 font-medium">{opt.option_name}</span>
+                                  {opt.price_delta > 0 && (
+                                    <span className="text-emerald-500"> +{formatPrice(opt.price_delta)}</span>
+                                  )}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          {/* Nested option groups */}
+                          {item.selected_option_groups && item.selected_option_groups.length > 0 && (
+                            <div className="mt-0.5 space-y-0.5">
+                              {item.selected_option_groups.map((grp, gi) =>
+                                grp.selected_options.map((opt, oi) => (
+                                  <p key={`${gi}-${oi}`} className="text-[11px] text-slate-400">
+                                    {grp.group_name}: <span className="text-slate-600 font-medium">{opt.option_name}</span>
+                                    {opt.price_delta > 0 && (
+                                      <span className="text-emerald-500"> +{formatPrice(opt.price_delta)}</span>
+                                    )}
+                                  </p>
+                                ))
+                              )}
+                            </div>
                           )}
                           {item.notes && (
                             <p className="text-[11px] text-amber-600 mt-0.5 italic">"{item.notes}"</p>
@@ -492,6 +513,7 @@ function DetailPanel({
 export default function OrdersPage() {
   const [filterStatus, setFilterStatus] = useState<OrderStatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
@@ -505,7 +527,15 @@ export default function OrdersPage() {
 
   const { data, isLoading } = useOrders({ limit: 100 });
   const { data: selectedOrderResponse } = useOrder(selectedOrderId || undefined);
+  const { data: orderTypes = [] } = useOrderTypes();
   const recordPaymentMutation = useRecordPayment();
+
+  /* Build a quick id→name map for order types */
+  const orderTypeMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (orderTypes as OrderType[]).forEach((ot) => { map[ot.id] = ot.name; });
+    return map;
+  }, [orderTypes]);
 
   const normalizedOrders = useMemo(
     () => (data?.orders || []).map((order) => normalizeOrder(order)),
@@ -661,22 +691,37 @@ export default function OrdersPage() {
           title="Pesanan"
           subtitle="Kelola dan pantau semua pesanan"
           onBack={() => setLocation("/hub")}
+          actions={
+            <button
+              onClick={() => { setSearchOpen((v) => !v); }}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                searchOpen ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+              data-testid="button-toggle-search"
+              title="Cari pesanan"
+            >
+              <Search size={16} />
+            </button>
+          }
           bottomContent={
-            <div className="flex flex-col gap-2.5">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Cari nama, nomor order, atau meja..."
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  data-testid="input-search-orders"
-                />
-              </div>
+            <div className="flex flex-col gap-2">
+              {/* Collapsible search */}
+              {searchOpen && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Cari nama, nomor order, atau meja..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    data-testid="input-search-orders"
+                    autoFocus
+                  />
+                </div>
+              )}
 
-              {/* Filter tabs */}
+              {/* Filter tabs — always visible */}
               <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
                 {FILTER_TABS.map(({ id, label }) => (
                   <button
@@ -725,6 +770,7 @@ export default function OrdersPage() {
                       order={order}
                       selected={selectedOrder?.id === order.id}
                       onClick={() => setSelectedOrderId(order.id)}
+                      orderTypeName={order.order_type_id ? orderTypeMap[order.order_type_id] : undefined}
                     />
                   ))
                 )}

@@ -224,16 +224,16 @@ export default function KitchenDisplayPage() {
           </p>
 
           {activeCode && (
-            <div className="bg-slate-900 rounded-xl p-5 flex flex-col items-center gap-3"
+            <div className="bg-slate-900 rounded-xl p-4 flex flex-col items-center gap-3"
               data-testid="card-active-code">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Kode Aktivasi</p>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5 sm:gap-3 w-full justify-center">
                 {activeCode.code.split("").map((digit, i) => (
                   <div
                     key={i}
-                    className="w-14 h-16 bg-orange-500 rounded-xl flex items-center justify-center"
+                    className="flex-1 max-w-[52px] h-12 sm:h-16 bg-orange-500 rounded-xl flex items-center justify-center"
                   >
-                    <span className="text-3xl font-black text-white tabular-nums">{digit}</span>
+                    <span className="text-2xl sm:text-3xl font-black text-white tabular-nums">{digit}</span>
                   </div>
                 ))}
               </div>
