@@ -267,6 +267,7 @@ function OrderCard({
 /* ─────────────────── Detail Panel ─────────────────── */
 function DetailPanel({
   order,
+  orderTypeName,
   onClose,
   onPrint,
   onSettle,
@@ -274,6 +275,7 @@ function DetailPanel({
   isSettling,
 }: {
   order: NormalizedOrder | null;
+  orderTypeName?: string;
   onClose: () => void;
   onPrint: () => void;
   onSettle: () => void;
@@ -297,38 +299,64 @@ function DetailPanel({
   return (
     <>
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 bg-white">
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 rounded-full md:hidden" />
+      <div className="relative px-5 pt-6 pb-4 md:pt-4 border-b border-slate-100 bg-white">
+        {/* Drag handle — mobile only */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 rounded-full md:hidden" />
+
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-bold text-slate-800 text-base">
-              {order.customer_name || "Pelanggan"}
-              {order.table_number ? ` · Meja ${order.table_number}` : ""}
-            </h2>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">#{order.order_number}</p>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${statusCfg.badge}`}>
+          <div className="min-w-0 flex-1">
+            {/* Order number — most prominent */}
+            <p className="font-mono text-sm font-black text-slate-800 tracking-tight leading-none">
+              #{order.order_number}
+            </p>
+
+            {/* Order type + table + customer */}
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              {orderTypeName && (
+                <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                  {orderTypeName}
+                </span>
+              )}
+              {order.table_number && (
+                <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                  Meja {order.table_number}
+                </span>
+              )}
+              {order.customer_name && (
+                <span className="text-[11px] text-slate-500 font-medium truncate max-w-[140px]">
+                  {order.customer_name}
+                </span>
+              )}
+            </div>
+
+            {/* Status badges */}
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${statusCfg.badge}`}>
                 {statusCfg.label}
               </span>
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${paymentCfg.badge}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${paymentCfg.badge}`}>
                 {paymentCfg.label}
               </span>
             </div>
+
+            {/* Timestamp */}
+            {order.created_at && (
+              <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                <Clock size={10} />
+                {formatDateTime(order.created_at)}
+              </p>
+            )}
           </div>
+
+          {/* Close */}
           <button
             onClick={onClose}
-            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 flex-shrink-0 transition-colors"
+            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 flex-shrink-0 transition-colors"
             data-testid="button-close-details"
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
-        {order.created_at && (
-          <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
-            <Clock size={10} />
-            {formatDateTime(order.created_at)}
-          </p>
-        )}
       </div>
 
       {/* Body */}
@@ -817,16 +845,17 @@ export default function OrdersPage() {
             </ScrollArea>
           </div>
 
-          {/* Detail panel */}
+          {/* Detail panel — bottom sheet on mobile, side panel on desktop */}
           <div
-            className={`fixed md:relative inset-x-0 bottom-0 md:inset-auto md:w-[400px] md:h-full z-[60] bg-white border-l border-slate-100 shadow-2xl md:shadow-none flex flex-col transition-transform duration-300 ease-out ${
+            className={`fixed md:relative inset-x-0 bottom-0 md:inset-auto md:w-[400px] md:h-full z-[60] bg-white md:border-l border-slate-200 md:shadow-none flex flex-col transition-transform duration-300 ease-out rounded-t-3xl md:rounded-none ${
               selectedOrder
-                ? "translate-y-0"
-                : "translate-y-full md:translate-x-full md:translate-y-0 md:w-0 md:border-none"
-            } rounded-t-3xl md:rounded-none h-[88vh] md:h-auto`}
+                ? "translate-y-0 shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
+                : "translate-y-full md:translate-y-0 md:hidden"
+            } h-[90vh] md:h-auto`}
           >
             <DetailPanel
               order={selectedOrder}
+              orderTypeName={selectedOrder?.order_type_id ? orderTypeMap[selectedOrder.order_type_id] : undefined}
               onClose={() => setSelectedOrderId(null)}
               onPrint={handleReprintReceipt}
               onSettle={handleOpenSettleDialog}
