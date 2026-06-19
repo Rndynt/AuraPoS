@@ -198,9 +198,9 @@ export function CartPanel({
       </div>
 
       {/* ── CART ITEMS (scrollable, maximized) ── */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-2.5 space-y-2">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {items.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2">
+          <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 p-4">
             <ShoppingBag size={36} className="opacity-50" />
             <p className="text-xs font-medium" data-testid="text-empty-cart">Belum ada pesanan</p>
           </div>

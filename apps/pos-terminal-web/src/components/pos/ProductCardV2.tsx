@@ -57,15 +57,15 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
       role="button"
       aria-disabled={isDisabled}
       tabIndex={isDisabled ? -1 : 0}
-      className={`group bg-white rounded-xl p-2.5 shadow-sm border border-slate-100 active:scale-98 hover:shadow-md relative h-full flex flex-col transition-transform duration-150 ${
+      className={`group bg-white rounded-xl shadow-sm border border-slate-100 active:scale-[0.96] hover:shadow-md relative flex flex-col transition-all duration-150 overflow-hidden ${
         isDisabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "cursor-pointer"
       }`}
       data-testid={`card-product-${product.id}`}
       data-out-of-stock={isOutOfStock ? "true" : undefined}
       data-low-stock={isLowStock ? "true" : undefined}
     >
-      {/* Product Image */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg mb-2 bg-slate-100">
+      {/* Product Image — full width, flush to card edges */}
+      <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100 flex-shrink-0">
         {product.image_url && !imageFailed ? (
           <img
             src={product.image_url}
@@ -81,67 +81,65 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <ProductAvatar name={product.name} textClassName="text-2xl font-bold" />
         )}
 
-        {/* Out of stock overlay (precedence over inactive) */}
+        {/* Out of stock overlay */}
         {isOutOfStock && !isInactive && (
           <div
             className="absolute inset-0 bg-black/45 flex items-center justify-center"
             data-testid={`overlay-out-of-stock-${product.id}`}
           >
-            <span className="text-white font-semibold text-sm">Stok Habis</span>
+            <span className="text-white font-semibold text-xs">Stok Habis</span>
           </div>
         )}
 
         {/* Inactive overlay */}
         {isInactive && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="text-white font-semibold text-sm">Tidak Tersedia</span>
+            <span className="text-white font-semibold text-xs">Tidak Tersedia</span>
           </div>
         )}
 
-        {/* Low-stock badge (top-left) */}
+        {/* Low-stock badge */}
         {!isOutOfStock && isLowStock && availableQuantity !== null && (
           <div
-            className="absolute top-1.5 left-1.5 bg-amber-500/95 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm"
+            className="absolute top-1.5 left-1.5 bg-amber-500/95 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm"
             data-testid={`badge-low-stock-${product.id}`}
           >
-            Stok Rendah · {availableQuantity}
+            Stok {availableQuantity}
           </div>
         )}
 
-        {/* Available-stock badge for tracked products with healthy stock */}
+        {/* Available-stock badge */}
         {stockTracked && !isOutOfStock && !isLowStock && availableQuantity !== null && (
           <div
-            className="absolute top-1.5 left-1.5 bg-emerald-500/90 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm"
+            className="absolute top-1.5 left-1.5 bg-emerald-500/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-sm"
             data-testid={`badge-stock-${product.id}`}
           >
             Stok {availableQuantity}
           </div>
         )}
 
-        {/* Variants Indicator - Bottom Right */}
+        {/* Variants Indicator */}
         {hasVariants && (
-          <div className="absolute bottom-1.5 right-1.5 bg-white/90 text-slate-800 p-1 rounded shadow-sm">
-            <SlidersHorizontal size={14} />
+          <div className="absolute bottom-1.5 right-1.5 bg-white/90 text-slate-700 p-1 rounded-md shadow-sm">
+            <SlidersHorizontal size={12} />
           </div>
         )}
       </div>
 
       {/* Product Info */}
-      <div className="flex-1 flex flex-col">
+      <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1">
         <h3
-          className="font-bold text-slate-700 text-sm leading-tight mb-1 line-clamp-2"
+          className="font-bold text-slate-800 text-[11px] leading-snug line-clamp-2"
           data-testid={`text-product-name-${product.id}`}
         >
           {product.name}
         </h3>
-        <div className="mt-auto">
-          <span
-            className="text-blue-600 font-bold text-base"
-            data-testid={`text-price-${product.id}`}
-          >
-            {formatIDR(product.base_price).replace(',00', '')}
-          </span>
-        </div>
+        <span
+          className="text-blue-600 font-black text-sm tabular-nums"
+          data-testid={`text-price-${product.id}`}
+        >
+          {formatIDR(product.base_price).replace(',00', '')}
+        </span>
       </div>
     </div>
   );
