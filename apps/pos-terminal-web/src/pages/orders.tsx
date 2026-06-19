@@ -15,11 +15,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { UnifiedBottomNav } from "@/components/navigation/UnifiedBottomNav";
-import { PageHeader } from "@/components/design";
 import {
   X,
   ChefHat,
   Search,
+  ArrowLeft,
   ShoppingBag,
   Printer,
   CreditCard,
@@ -88,21 +88,41 @@ const normNum = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-const normalizeItem = (item: Partial<OrderItem>): NormalizedOrderItem => ({
-  id: item.id || crypto.randomUUID(),
-  product_id: item.product_id || "",
-  product_name: item.product_name || (item as any).productName || "",
-  base_price: normNum(item.base_price ?? (item as any).basePrice),
-  variant_id: item.variant_id || (item as any).variantId,
-  variant_name: item.variant_name || (item as any).variantName,
-  variant_price_delta: normNum(item.variant_price_delta ?? (item as any).variantPriceDelta),
-  selected_options: item.selected_options as SelectedOption[] | undefined,
-  selected_option_groups: item.selected_option_groups,
-  quantity: item.quantity || 0,
-  item_subtotal: normNum(item.item_subtotal ?? (item as any).itemSubtotal),
-  notes: item.notes,
-  status: item.status as NormalizedOrderItem["status"],
+const normalizeSelectedOption = (opt: any): SelectedOption => ({
+  group_id: opt.group_id ?? opt.groupId ?? "",
+  group_name: opt.group_name ?? opt.groupName ?? "",
+  option_id: opt.option_id ?? opt.optionId ?? "",
+  option_name: opt.option_name ?? opt.optionName ?? "",
+  price_delta: normNum(opt.price_delta ?? opt.priceDelta),
+  child_groups: opt.child_groups ?? opt.childGroups,
 });
+
+const normalizeItem = (item: Partial<OrderItem>): NormalizedOrderItem => {
+  const rawOpts = (item.selected_options ?? (item as any).selectedOptions) as any[] | undefined;
+  const rawGroups = (item.selected_option_groups ?? (item as any).selectedOptionGroups) as any[] | undefined;
+  return {
+    id: item.id || crypto.randomUUID(),
+    product_id: item.product_id || "",
+    product_name: item.product_name || (item as any).productName || "",
+    base_price: normNum(item.base_price ?? (item as any).basePrice),
+    variant_id: item.variant_id || (item as any).variantId,
+    variant_name: item.variant_name || (item as any).variantName,
+    variant_price_delta: normNum(item.variant_price_delta ?? (item as any).variantPriceDelta),
+    selected_options: rawOpts ? rawOpts.map(normalizeSelectedOption) : undefined,
+    selected_option_groups: rawGroups
+      ? rawGroups.map((grp: any) => ({
+          group_id: grp.group_id ?? grp.groupId ?? "",
+          group_name: grp.group_name ?? grp.groupName ?? "",
+          selection_type: grp.selection_type ?? grp.selectionType,
+          selected_options: (grp.selected_options ?? grp.selectedOptions ?? []).map(normalizeSelectedOption),
+        }))
+      : undefined,
+    quantity: item.quantity || 0,
+    item_subtotal: normNum(item.item_subtotal ?? (item as any).itemSubtotal),
+    notes: item.notes,
+    status: item.status as NormalizedOrderItem["status"],
+  };
+};
 
 const normalizeOrder = (order: Partial<Order>): NormalizedOrder => {
   const created_at = order.created_at || (order as any).createdAt || (order as any).orderDate;
@@ -687,65 +707,78 @@ export default function OrdersPage() {
   return (
     <div className="flex h-full overflow-hidden bg-slate-50 relative">
       <div className="flex-1 flex flex-col min-w-0 h-full relative pb-[60px] md:pb-0">
-        <PageHeader
-          title="Pesanan"
-          subtitle="Kelola dan pantau semua pesanan"
-          onBack={() => setLocation("/hub")}
-          actions={
+        {/* ── Header ── */}
+        <header className="bg-white border-b border-slate-100 sticky top-0 z-10">
+          {/* Title row */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLocation("/hub")}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors -ml-1"
+                data-testid="button-back"
+              >
+                <ArrowLeft size={18} className="text-slate-600" />
+              </button>
+              <div>
+                <h1 className="text-base font-bold text-slate-800 leading-tight">Pesanan</h1>
+                <p className="text-[11px] text-slate-400 leading-none">Kelola dan pantau semua pesanan</p>
+              </div>
+            </div>
             <button
               onClick={() => { setSearchOpen((v) => !v); }}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                searchOpen ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              className={`p-2 rounded-full transition-colors ${
+                searchOpen ? "bg-blue-100 text-blue-600" : "hover:bg-slate-100 text-slate-500"
               }`}
               data-testid="button-toggle-search"
               title="Cari pesanan"
             >
-              <Search size={16} />
+              <Search size={18} />
             </button>
-          }
-          bottomContent={
-            <div className="flex flex-col gap-2">
-              {/* Collapsible search */}
-              {searchOpen && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Cari nama, nomor order, atau meja..."
-                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    data-testid="input-search-orders"
-                    autoFocus
-                  />
-                </div>
-              )}
+          </div>
 
-              {/* Filter tabs — always visible */}
-              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                {FILTER_TABS.map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => setFilterStatus(id)}
-                    data-testid={`filter-${id}`}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                      filterStatus === id
-                        ? "bg-white text-slate-800 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    {label}
-                    {filterCounts[id] > 0 && (
-                      <span className={`ml-1 ${filterStatus === id ? "text-blue-600" : "text-slate-400"}`}>
-                        ({filterCounts[id]})
-                      </span>
-                    )}
-                  </button>
-                ))}
+          {/* Collapsible search */}
+          {searchOpen && (
+            <div className="px-4 pb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Cari nama, nomor order, atau meja..."
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  data-testid="input-search-orders"
+                  autoFocus
+                />
               </div>
             </div>
-          }
-        />
+          )}
+
+          {/* Filter tabs */}
+          <div className="px-4 pb-2">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+              {FILTER_TABS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setFilterStatus(id)}
+                  data-testid={`filter-${id}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                    filterStatus === id
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {label}
+                  {filterCounts[id] > 0 && (
+                    <span className={`ml-1 ${filterStatus === id ? "text-blue-600" : "text-slate-400"}`}>
+                      ({filterCounts[id]})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
 
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Orders list */}
