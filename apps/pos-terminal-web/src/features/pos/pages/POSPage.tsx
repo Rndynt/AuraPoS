@@ -1091,6 +1091,7 @@ export default function POSPage() {
         onMethodChange={handleCFDMethodChange}
         onConfirm={handlePaymentMethodConfirm}
         cartTotal={pendingOrderForPayment?.totalAmount || cart.total}
+        cartItems={cart.items}
         isSubmitting={isProcessingQuickCharge}
         defaultPaymentMethod={cart.paymentMethod}
         allowPartial={hasPartialPayment}
