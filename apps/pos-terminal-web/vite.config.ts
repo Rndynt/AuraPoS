@@ -42,8 +42,8 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: {
               cacheName: "api-catalog-cache",
-              networkTimeoutSeconds: 4,
-              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 15,
+              cacheableResponse: { statuses: [200] },
               expiration: { maxEntries: 5, maxAgeSeconds: 24 * 60 * 60 },
             },
           },
@@ -52,8 +52,8 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: {
               cacheName: "api-catalog-categories-cache",
-              networkTimeoutSeconds: 4,
-              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 15,
+              cacheableResponse: { statuses: [200] },
               expiration: { maxEntries: 5, maxAgeSeconds: 24 * 60 * 60 },
             },
           },
@@ -62,8 +62,8 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: {
               cacheName: "api-order-types-cache",
-              networkTimeoutSeconds: 4,
-              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 15,
+              cacheableResponse: { statuses: [200] },
               expiration: { maxEntries: 5, maxAgeSeconds: 24 * 60 * 60 },
             },
           },
@@ -72,8 +72,8 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: {
               cacheName: "api-features-cache",
-              networkTimeoutSeconds: 4,
-              cacheableResponse: { statuses: [0, 200] },
+              networkTimeoutSeconds: 15,
+              cacheableResponse: { statuses: [200] },
               expiration: { maxEntries: 5, maxAgeSeconds: 24 * 60 * 60 },
             },
           },

@@ -10,7 +10,16 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-    });
+    if (import.meta.env.DEV) {
+      // In development, unregister any stale service workers so they don't
+      // intercept API requests with cached error responses or short timeouts.
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+          reg.unregister();
+        }
+      });
+    } else {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
   });
 }
