@@ -503,8 +503,8 @@ export default function OrdersPage() {
 
                   {/* Order Items Section */}
                   <div>
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <ShoppingBag size={16} /> Item Pesanan ({selectedOrder.items?.length || 0})
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <ShoppingBag size={13} /> Item Pesanan ({selectedOrder.items?.length || 0})
                     </h3>
                     {!selectedOrder.items || selectedOrder.items.length === 0 ? (
                       <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center flex flex-col items-center gap-2 text-slate-400">
@@ -512,33 +512,23 @@ export default function OrdersPage() {
                         <p className="text-sm">Tidak ada item</p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
                         {selectedOrder.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="font-bold text-slate-800 text-sm">
-                                {item.product_name}
+                          <div key={idx} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                            <div className="flex items-start gap-2 min-w-0">
+                              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">
+                                {item.quantity}×
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-800 leading-tight">{item.product_name}</p>
+                                {item.variant_name && (
+                                  <p className="text-[11px] text-slate-400 leading-tight">{item.variant_name}</p>
+                                )}
                               </div>
-                              <span className="text-sm font-bold text-slate-800">
-                                x{item.quantity}
-                              </span>
                             </div>
-                            {item.variant_name && (
-                              <div className="text-xs text-slate-600 mb-2">
-                                {item.variant_name}
-                              </div>
-                            )}
-                            <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                              <span className="text-xs text-slate-600">
-                                Unit
-                              </span>
-                              <span className="text-sm font-bold text-slate-800">
-                                {formatPrice(item.item_subtotal / item.quantity)}
-                              </span>
-                            </div>
+                            <span className="text-sm font-bold text-slate-700 flex-shrink-0 mt-0.5">
+                              {formatPrice(item.item_subtotal)}
+                            </span>
                           </div>
                         ))}
                       </div>
