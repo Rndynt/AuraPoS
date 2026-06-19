@@ -229,83 +229,76 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 h-full bg-slate-50 overflow-y-auto pb-20">
-      <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10">
-        <h1 className="text-xl font-extrabold text-slate-800" data-testid="text-page-title">
-          Manajemen
-        </h1>
-        <p className="text-xs text-slate-500" data-testid="text-page-subtitle">
-          Pengaturan toko & laporan
-        </p>
-      </header>
 
-      <div className="p-4">
-        <div className="bg-slate-800 text-white p-5 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-300" data-testid="card-profile">
-          {isLoading ? (
-            <Skeleton className="w-12 h-12 rounded-full bg-white/20" />
-          ) : (
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0" data-testid="text-avatar">
-              {storeInitials}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
+      {/* ── Native-app style header ── */}
+      <div className="sticky top-0 z-10">
+        <div className="bg-slate-800 px-4 pt-4 pb-4" data-testid="card-profile">
+          <div className="flex items-center gap-3">
             {isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-36 bg-white/20 rounded" />
-                <Skeleton className="h-3 w-24 bg-white/10 rounded" />
-              </div>
+              <Skeleton className="w-10 h-10 rounded-2xl bg-white/20 flex-shrink-0" />
             ) : (
-              <>
-                <h3 className="font-bold text-lg truncate" data-testid="text-store-name">
-                  {storeName}
-                </h3>
-                <p className="text-xs text-slate-300" data-testid="text-branch-info">
-                  {user?.name ? `${user.name} • ` : ""}{userRole}
-                </p>
-              </>
+              <div
+                className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0 text-white"
+                data-testid="text-avatar"
+              >
+                {storeInitials}
+              </div>
             )}
+
+            <div className="flex-1 min-w-0">
+              {isLoading ? (
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-32 bg-white/20 rounded" />
+                  <Skeleton className="h-3 w-20 bg-white/10 rounded" />
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-slate-400 leading-none mb-0.5">Toko Anda</p>
+                  <h3 className="font-bold text-white text-sm leading-tight truncate" data-testid="text-store-name">
+                    {storeName}
+                  </h3>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {!isLoading && user?.name && (
+                <span className="text-[10px] text-slate-400 font-medium hidden sm:block" data-testid="text-branch-info">
+                  {user.name} · {userRole}
+                </span>
+              )}
+              <button
+                className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+                data-testid="button-edit-profile"
+                onClick={() => setLocation("/store-profile")}
+              >
+                <Edit2 size={15} className="text-white" />
+              </button>
+            </div>
           </div>
-          <button 
-            className="p-2 bg-white/10 rounded-lg hover:bg-white/20 flex-shrink-0"
-            data-testid="button-edit-profile"
-            onClick={() => setLocation("/store-profile")}
+        </div>
+
+        {/* Outlet switcher — part of sticky header */}
+        <div className="bg-white border-b border-slate-200 px-4 py-2.5">
+          <button
+            onClick={() => setShowOutletPicker((v) => !v)}
+            className="w-full flex items-center gap-2 text-left"
+            data-testid="button-outlet-switcher"
           >
-            <Edit2 size={16} />
+            <MapPin size={13} className="text-slate-400 flex-shrink-0" />
+            <span className="flex-1 min-w-0 text-xs text-slate-600 font-semibold truncate">
+              {outletLoading ? "..." : (activeOutlet?.name ?? "—")}
+            </span>
+            <ChevronDown
+              size={13}
+              className={`text-slate-400 transition-transform flex-shrink-0 ${showOutletPicker ? "rotate-180" : ""}`}
+            />
           </button>
         </div>
       </div>
 
-      <div className="px-4 pb-3">
-        <button
-          onClick={() => setShowOutletPicker((v) => !v)}
-          className="w-full flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 text-left hover:border-blue-300 hover:shadow-sm transition-all"
-          data-testid="button-outlet-switcher"
-        >
-          <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Building2 size={16} className="text-teal-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            {outletLoading ? (
-              <Skeleton className="h-4 w-32" />
-            ) : (
-              <>
-                <p className="text-xs font-semibold text-slate-500">Cabang Aktif</p>
-                <p className="text-sm font-bold text-slate-800 truncate">
-                  {activeOutlet?.name ?? "—"}
-                  {activeOutlet?.address && (
-                    <span className="font-normal text-slate-400 ml-1.5 text-xs">
-                      <MapPin size={10} className="inline -mt-0.5" /> {activeOutlet.address}
-                    </span>
-                  )}
-                </p>
-              </>
-            )}
-          </div>
-          <ChevronDown
-            size={16}
-            className={`text-slate-400 transition-transform flex-shrink-0 ${showOutletPicker ? "rotate-180" : ""}`}
-          />
-        </button>
-
+      {/* Outlet picker dropdown */}
+      <div className="px-4">
         {showOutletPicker && outlets.length > 1 && (
           <div className="mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
             {outlets.map((o) => (
@@ -356,7 +349,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="p-4 pt-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="p-4 pt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {MENU_ITEMS.map((item) => (
           <button
             key={item.id}

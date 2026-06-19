@@ -470,30 +470,28 @@ export function MobileCartDrawer({
                     />
                   </div>
 
-                  {/* Total Section */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div
-                      onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                      className="cursor-pointer group"
-                    >
-                      <p className="text-xs text-slate-400 font-medium group-hover:text-blue-600 transition-colors">
-                        Total Tagihan
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-2xl font-black text-slate-800" data-testid="text-total">
-                          {fmt(total)}
+                  {/* Total Section — horizontal left/right */}
+                  <div
+                    className="flex items-center justify-between mb-3 cursor-pointer"
+                    onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                  >
+                    <div>
+                      <p className="text-xs text-slate-400 font-medium">Total Tagihan</p>
+                      {totalDiscountAmount > 0 && (
+                        <span className="text-[11px] font-bold text-green-600">
+                          Hemat {fmt(totalDiscountAmount)}
                         </span>
-                        {totalDiscountAmount > 0 && (
-                          <span className="text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-lg">
-                            Hemat {fmt(totalDiscountAmount)}
-                          </span>
-                        )}
-                        {!totalDiscountAmount && (
-                          <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
-                            Detail
-                          </span>
-                        )}
-                      </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-black text-slate-800" data-testid="text-total">
+                        {fmt(total)}
+                      </span>
+                      {!totalDiscountAmount && (
+                        <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+                          Detail
+                        </span>
+                      )}
                     </div>
                   </div>
 

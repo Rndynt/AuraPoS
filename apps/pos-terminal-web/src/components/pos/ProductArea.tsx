@@ -144,7 +144,6 @@ export function ProductArea({
                 key={category}
                 id={category}
                 name={category}
-                icon={getCategoryIcon(category)}
                 isActive={selectedCategory === category}
                 onClick={() => setSelectedCategory(category)}
               />
