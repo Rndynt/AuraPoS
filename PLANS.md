@@ -9194,3 +9194,158 @@ Automated cleanup is complete; continue with manual browser smoke using real ten
 
 #### Continuation Notes
 Next safest batch is browser/manual smoke with real tenant profiles and entitlement combinations, then implement any future paid F&B/service controls as cashier-native controls rather than internal capability panels.
+
+## Plan: P6.2 Business Flow Browser Smoke + Runtime Verification
+
+### Source
+- Tasklist: `roadmap/business-flows/replit_codex_P6_2_business_flow_browser_smoke_runtime_verification_prompt.md`
+- User request: Analisa mendalam, pahami/pelajari, tambahkan temuan di report, dan eksekusi P6.2 roadmap prompt.
+- Date started: 2026-06-20
+- Current status: Completed terminal/runtime verification; browser manual smoke not run because no browser environment is available in this terminal session.
+
+### Goal
+Verify business-flow routing, baseline checkout invariants, entitlement separation, and cashier UI cleanup after P5.1/P6/P6.1 without adding new paid panels or refactoring runtime flow code.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs/reports: P5.1, P6, P6.1, business-flows main roadmap
+- [x] Relevant source files under POS flow adapters, entitlement hooks, application business-flow resolvers/capabilities
+
+### Workstreams
+
+#### Frontend/UI Workstream
+- Scope: POS flow root/adapters and cashier UI debug-copy guard.
+- Files inspected: `apps/pos-terminal-web/src/features/pos-flows/root`, `retail`, `food-beverage`, `service`, `core`, `shared`, `restaurant`.
+- Findings: Runtime baseline adapters route correctly by tests; F&B/service/core reuse shared checkout view; forbidden debug copy is absent from active POS flow runtime source.
+- Tasks: Create P6.2 verification report.
+- Risks: Actual browser UI not verified in this environment.
+- Validation: terminal-web type-check/test and grep guards passed.
+
+#### Backend/API Workstream
+- Scope: API validation commands relevant to tenant/business-flow/order integrity.
+- Files inspected: Existing reports and API test output.
+- Findings: No P6.2 backend source change needed; API type-check/test pass.
+- Tasks: Record validation evidence.
+- Risks: No live API/browser smoke executed.
+- Validation: `pnpm --filter @pos/api type-check`, `pnpm --filter @pos/api test` passed.
+
+#### Database/Schema Workstream
+- Scope: Determine whether P6.2 needs schema/migration work.
+- Files inspected: P6.2 prompt and prior reports.
+- Findings: P6.2 forbids schema/migration rewrites and no schema issue was found.
+- Tasks: None.
+- Risks: Seed tenant setup still needed for real browser smoke.
+- Validation: Not applicable beyond automated checks.
+
+#### Tests/Validation Workstream
+- Scope: Required and practical commands from P6.2 prompt.
+- Files inspected: package scripts and test output.
+- Findings: Required and practical automated validation passed.
+- Tasks: Run and document commands.
+- Risks: Browser smoke gap remains.
+- Validation: All listed commands passed.
+
+#### Documentation Workstream
+- Scope: P6.2 report, roadmap progress, active plan.
+- Files inspected: `roadmap/business-flows/main.md`, P5.1/P6/P6.1 reports, active prompt.
+- Findings: Add an honest P6.2 report with manual smoke not-run statement.
+- Tasks: Create report and update roadmap/progress.
+- Risks: None.
+- Validation: Markdown content reviewed.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Tenant/business-type routing and entitlement separation.
+- Files inspected: business-flow resolver/capability files and tests.
+- Findings: No hardcoded tenant IDs added; optional paid entitlements do not block baseline full payment.
+- Tasks: Record capability separation evidence.
+- Risks: Cross-tenant browser test not covered in P6.2 terminal-only run.
+- Validation: application/API tests passed.
+
+### Execution Order
+1. Read required context and prior reports.
+2. Inspect relevant POS flow/resolver source.
+3. Run required and practical automated validation.
+4. Run cleanup grep guards.
+5. Create P6.2 report with pass/fail evidence and manual not-run statement.
+6. Update roadmap and PLANS.md.
+
+### Progress
+
+#### Completed
+- [x] P6.2 terminal/runtime verification report created.
+  - Files changed: `roadmap/business-flows/P6_2_business_flow_browser_smoke_runtime_verification_report.md`
+  - Validation: Required automated checks passed.
+  - Docs updated: P6.2 report.
+- [x] Business-flow roadmap progress updated for P6.2.
+  - Files changed: `roadmap/business-flows/main.md`
+  - Validation: Documentation review.
+  - Docs updated: roadmap progress.
+- [x] Active execution plan updated.
+  - Files changed: `PLANS.md`
+  - Validation: Documentation review.
+  - Docs updated: plan progress.
+
+#### Partially Completed
+- [ ] Browser/manual smoke execution.
+  - Completed: Automated/source verification and exact browser smoke checklist documented.
+  - Remaining: Run in a real browser with seeded tenants and collect screenshots/manual notes.
+  - Reason: Browser environment was not available in this terminal session.
+
+#### Blocked
+- [ ] Screenshot/browser evidence.
+  - Blocker: No browser/manual smoke environment available.
+  - Required next step: Run P6.2 matrix against seeded tenants in a browser-capable environment.
+
+#### Not Attempted
+- [ ] New browser smoke harness.
+  - Reason: P6.2 allows helper only if accepted pattern exists; no new harness was required to complete terminal verification and avoid broad test infrastructure changes.
+
+### Validation Log
+- Command: `pnpm --filter @pos/terminal-web type-check`
+- Result: pass
+- Notes: Terminal-web TypeScript passed.
+- Command: `pnpm --filter @pos/terminal-web test`
+- Result: pass
+- Notes: POS payment/lifecycle/flow/cashier-copy tests passed.
+- Command: `pnpm type-check`
+- Result: pass
+- Notes: Turbo type-check passed for 10 packages.
+- Command: `pnpm --filter @pos/domain type-check`
+- Result: pass
+- Notes: Domain TypeScript passed.
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Notes: Application TypeScript passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Notes: API TypeScript passed.
+- Command: `pnpm --filter @pos/application test`
+- Result: pass
+- Notes: Application tests including business profile resolver passed.
+- Command: `pnpm --filter @pos/api test`
+- Result: pass
+- Notes: API tests passed.
+- Command: `rg -n "Food & Beverage mode|Service mode|Table & floor service|Kitchen / KDS|Entitlement aktif|Baseline:" apps/pos-terminal-web/src/features/pos-flows`
+- Result: pass
+- Notes: No forbidden cashier runtime/debug copy found.
+- Command: `rg -n "GenericPOSPage|features/pos/services|features/pos/mappers" apps/pos-terminal-web/src`
+- Result: pass
+- Notes: No GenericPOSPage or old compatibility shim imports found.
+
+### Documentation Updates
+- File: `roadmap/business-flows/P6_2_business_flow_browser_smoke_runtime_verification_report.md`
+- Change: Added detailed P6.2 runtime verification report with automated evidence and browser not-run statement.
+- File: `roadmap/business-flows/main.md`
+- Change: Added P6.2 progress entry and next-phase browser smoke requirement.
+- File: `PLANS.md`
+- Change: Added active plan/progress for P6.2.
+
+### Checklist Updates
+- File: `roadmap/business-flows/replit_codex_P6_2_business_flow_browser_smoke_runtime_verification_prompt.md`
+- Change: Source prompt left unchanged because it is an instruction prompt rather than a checkbox checklist.
+
+### Continuation Notes
+Next agent should run the P6.2 matrix in a browser-capable environment with seeded tenants, capture screenshots/manual notes, and update the P6.2 report from terminal-only verification to browser-smoke evidence.
