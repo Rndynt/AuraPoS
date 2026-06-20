@@ -669,3 +669,29 @@ Date: 2026-06-20
 ## P6 Update — Food Beverage + Service Core Flow Adapters (2026-06-20)
 
 P6 is implemented. `food_beverage` now routes to an explicit `FoodBeveragePOSFlow`, `service` routes to `ServiceCorePOSFlow`, and `core_standard`/null/unknown remain on `CoreStandardPOSFlow`. The new adapters reuse the POS checkout core while rendering capability-gated optional panels from the existing entitlement capability semantics. Full payment/cash checkout remains available without `orders_queue`, table service, kitchen ops, split bill, partial payment, or multi-payment entitlements. See `P6_food_beverage_service_core_flows_report.md` for validation and deferred paid capability work.
+
+## P6.2 Business Flow Browser Smoke + Runtime Verification — 2026-06-20
+
+Status: terminal/runtime verification completed; browser/manual smoke remains required in a browser-capable environment.
+
+Report: `roadmap/business-flows/P6_2_business_flow_browser_smoke_runtime_verification_report.md`
+
+Completed in this batch:
+
+- Verified source/test evidence for current intended routing:
+  - `retail_standard -> RetailStandardPOSFlow`
+  - `food_beverage -> FoodBeveragePOSFlow`
+  - `service -> ServiceCorePOSFlow`
+  - `core_standard` / null / unknown -> `CoreStandardPOSFlow`
+- Verified baseline checkout policy remains independent from paid entitlements such as order queue, table service, kitchen/KDS, split bill, partial payment, and multi-payment.
+- Verified cashier runtime debug-copy cleanup using automated tests and grep guards.
+- Ran required automated validation and practical package checks successfully.
+
+Not completed in this environment:
+
+- Real browser smoke for retail, F&B, service, and core fallback tenants.
+- Screenshot/manual evidence for catalog visibility, cart interaction, full cash payment, and receipt behavior.
+
+Next recommended phase:
+
+- Run the P6.2 browser matrix against seeded tenants in a browser-capable environment and update the report with screenshots or detailed manual notes.
