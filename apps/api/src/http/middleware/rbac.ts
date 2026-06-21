@@ -20,12 +20,14 @@ import { Request, Response, NextFunction } from 'express';
 import { auth, authDb } from '../../lib/auth';
 import { fromNodeHeaders } from 'better-auth/node';
 import { sql } from 'drizzle-orm';
+import { attachOrderActionPermissionContext } from '../auth/orderActionPermissionContext';
 
 // ── Role type ─────────────────────────────────────────────────────────────────
 
-export type PosRole = 'owner' | 'manager' | 'cashier' | 'kitchen' | 'viewer';
+export type PosRole = 'platform-admin' | 'owner' | 'manager' | 'cashier' | 'kitchen' | 'viewer';
 
 const ROLE_HIERARCHY: Record<PosRole, number> = {
+  'platform-admin': 60,
   owner:   50,
   manager: 40,
   cashier: 30,
@@ -206,7 +208,7 @@ export const resolveRoleFromRequest = createRoleResolver();
 export async function attachRole(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     req.posRole = await resolveRoleFromRequest(req);
-    next();
+    attachOrderActionPermissionContext(req, res, next);
   } catch (err) {
     if (err instanceof RbacHttpError) {
       sendRbacError(res, err);
@@ -245,7 +247,7 @@ export function createRequireRole(deps: RoleResolverDeps = {}) {
         }
 
         req.posRole = role;
-        next();
+        attachOrderActionPermissionContext(req, res, next);
       } catch (err) {
         if (err instanceof RbacHttpError) {
           sendRbacError(res, err);

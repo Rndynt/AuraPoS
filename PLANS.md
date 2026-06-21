@@ -9739,3 +9739,141 @@ Centralize order-action permission constants and role-derived permission mapping
 
 ### Continuation Notes
 Continue with P8.3: introduce a trusted persisted permission-claim source or middleware adapter, then wire RBAC middleware and any future refund/void/delete policy guards to that source without granting dangerous permissions by default.
+
+## Plan: P8.3 Trusted Permission Claim Source + Middleware Adapter
+
+### Source
+- Tasklist: roadmap/business-flows/replit_codex_P8_3_trusted_permission_claim_source_prompt.md
+- User request: Analisa mendalam, pahami dan pelajari, tambahkan report jika ada ketidaksesuaian, eksekusi P8.3.
+- Date started: 2026-06-21
+- Current status: Implemented and validated
+
+### Goal
+Introduce a trusted API permission context adapter for order-action policy inputs, wire OrdersController to consume request-level effective permissions, document the current role-derived trust model and persisted-claim gap, and validate P8/P8.1/P8.2 regressions remain safe.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs (P8, P8.1, P8.2 reports)
+- [x] Relevant source files (permission registry, OrdersController, RBAC/tenant middleware, orders routes, direct-bypass tests)
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: Request permission context adapter and OrdersController integration.
+- Files inspected: apps/api/src/http/controllers/OrdersController.ts, apps/api/src/http/middleware/rbac.ts, apps/api/src/http/middleware/tenant.ts, apps/api/src/http/routes/orders.ts.
+- Findings: RBAC had trusted role resolution but no request-level effective permission context. Controllers were still responsible for constructing permission resolver input.
+- Tasks: Added typed adapter/middleware; attached context in RBAC role guards; refactored active cancel to consume effective permissions from request context.
+- Risks: Persisted permissions still do not exist; explicit claims remain intersection-only.
+- Validation: @pos/api type-check/test passed.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Trusted source and role/claim merge model.
+- Files inspected: RBAC and tenant middleware, Better Auth user schema.
+- Findings: No persisted permission claims currently exist; trusted source is authenticated session + DB user tenant/role + P8.2 registry.
+- Tasks: Documented persisted-claim gap; tested intersection and reserved permissions.
+- Risks: Future additive claims need server-side persisted claim source, provenance, tenant ownership, and audit tests before union behavior.
+- Validation: Adapter unit tests and direct-bypass tests passed.
+
+#### Tests/Validation Workstream
+- Scope: P8.3 adapter tests plus P8.1/P8.2 regression suite.
+- Files inspected: apps/api/src/__tests__/order-action-direct-bypass.test.ts, packages/application/business-flows/__tests__/orderActionPermissions.test.ts.
+- Findings: Registry tests remain sufficient for application helper behavior; API adapter tests were added.
+- Tasks: Added adapter tests; retained controller direct-bypass suite.
+- Risks: None observed in validation.
+- Validation: Required pnpm commands and cleanup greps passed.
+
+#### Documentation Workstream
+- Scope: P8.3 report, roadmap status, source prompt checklist, PLANS.
+- Files inspected: roadmap/business-flows/main.md and P8 reports.
+- Findings: P8.3 report needed explicit RBAC route audit and claim trust model.
+- Tasks: Created report; updated checklist, roadmap, and PLANS.
+- Risks: Documentation states persisted claims are not implemented.
+- Validation: Documentation synchronized with code and validation output.
+
+### Execution Order
+1. Safety/security/data-integrity/tenant-isolation blockers: no client-sent permissions trusted; explicit claims intersected.
+2. Build/type/test blockers: type-checks and tests passed.
+3. Dependency prerequisites: reused P8.2 registry, no new dependencies.
+4. Highest priority actionable tasks: adapter, middleware wiring, controller refactor.
+5. Lower priority actionable tasks: route RBAC audit and docs.
+6. Documentation sync: P8.3 report, roadmap, source checklist, PLANS.
+7. Validation: required commands and greps completed.
+
+### Progress
+#### Completed
+- [x] Trusted permission context type/helper added.
+  - Files changed: apps/api/src/http/auth/orderActionPermissionContext.ts
+  - Validation: pnpm --filter @pos/api type-check; pnpm --filter @pos/api test
+  - Docs updated: P8.3 report
+- [x] Middleware/adapter added and wired to RBAC.
+  - Files changed: apps/api/src/http/auth/orderActionPermissionContext.ts, apps/api/src/http/middleware/rbac.ts
+  - Validation: pnpm --filter @pos/api type-check; pnpm --filter @pos/api test
+  - Docs updated: P8.3 report
+- [x] OrdersController uses permission context/helper, not local role mapping.
+  - Files changed: apps/api/src/http/controllers/OrdersController.ts
+  - Validation: pnpm --filter @pos/api test; controller mapping grep no matches
+  - Docs updated: P8.3 report
+- [x] Adapter/middleware tests added.
+  - Files changed: apps/api/src/__tests__/order-action-permission-context.test.ts
+  - Validation: pnpm --filter @pos/api test
+  - Docs updated: P8.3 report
+- [x] Roadmap/report/checklist synchronized.
+  - Files changed: roadmap/business-flows/P8_3_trusted_permission_claim_source_report.md, roadmap/business-flows/main.md, roadmap/business-flows/replit_codex_P8_3_trusted_permission_claim_source_prompt.md, PLANS.md
+  - Validation: documentation reviewed against code and command results
+  - Docs updated: same files
+
+#### Partially Completed
+- [ ] Persisted first-class permission claims.
+  - Completed: Safe adapter path and documented trust model.
+  - Remaining: Design/load persisted trusted claims from DB/session.
+  - Reason: P8.3 scope forbids inventing schema unless an existing clear pattern is present; current code has no first-class permission table/session claim source.
+
+#### Blocked
+- [ ] Additive explicit-claim trust.
+  - Blocker: No trusted persisted permission claim source exists yet.
+  - Required next step: P8.4 schema/source audit and server-side claim loading with tenant/account validation.
+
+### Validation Log
+- Command: pnpm --filter @pos/api test:file src/__tests__/order-action-permission-context.test.ts
+- Result: pass
+- Notes: New adapter suite passed.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API TypeScript passed.
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: Application TypeScript passed.
+- Command: pnpm --filter @pos/application test
+- Result: pass
+- Notes: Existing P8.2 registry and policy suites passed.
+- Command: pnpm --filter @pos/api test
+- Result: pass
+- Notes: 181 API tests passed including direct-bypass and adapter suites.
+- Command: pnpm type-check
+- Result: pass
+- Notes: 10/10 Turbo type-check tasks passed.
+- Command: rg -n "orders_queue.*full payment|orders_queue.*recordPayment|recordPayment.*orders_queue|plan.*businessProfile|restaurant_table_service.*businessType|businessType.*restaurant_table_service|GenericPOSPage|features/pos/services|features/pos/mappers" apps packages shared || true
+- Result: pass/no matches
+- Notes: Required cleanup grep clean.
+- Command: rg -n "owner.*orders:cancel_active|manager.*orders:cancel_active|platform-admin.*orders:cancel_active|cancel_active.*owner|cancel_active.*manager|cancel_active.*platform-admin" apps/api/src/http/controllers || true
+- Result: pass/no matches
+- Notes: No controller-local active-cancel role mapping found.
+
+### Documentation Updates
+- File: roadmap/business-flows/P8_3_trusted_permission_claim_source_report.md
+- Change: New P8.3 implementation report, trust model, route audit, test matrix, validation, grep findings, risks, and next phase.
+- File: roadmap/business-flows/main.md
+- Change: Added P8.3 completed status.
+- File: roadmap/business-flows/replit_codex_P8_3_trusted_permission_claim_source_prompt.md
+- Change: Marked completion checklist as implemented/validated.
+- File: PLANS.md
+- Change: Updated active plan with completed work, validation, blockers, and continuation notes.
+
+### Checklist Updates
+- File: roadmap/business-flows/replit_codex_P8_3_trusted_permission_claim_source_prompt.md
+- Change: All P8.3 completion checklist items checked after implementation and validation.
+
+### Continuation Notes
+Next safest phase is P8.4: design a real persisted permission-claim source for tenant users/sensitive order actions, then load server-side claims into this adapter without switching from intersection to additive behavior until tenant/account validation and direct-bypass tests prove it safe.
