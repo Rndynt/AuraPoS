@@ -21,7 +21,7 @@ export interface SyncOrderItemInput {
   tax_rate?: number;
   service_charge_rate?: number;
   amount: number;
-  payment_method: 'cash' | 'card' | 'ewallet' | 'other';
+  payment_method: 'CASH' | 'MANUAL_TRANSFER' | 'MANUAL_QRIS';
   transaction_ref?: string;
   payment_notes?: string;
   fulfillment_mode?: 'standard' | 'instant';
