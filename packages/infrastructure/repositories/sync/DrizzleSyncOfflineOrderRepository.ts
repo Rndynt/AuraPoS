@@ -1,38 +1,16 @@
-/**
- * SyncOfflineOrder Use Case (Sprint 4 + Sprint 5)
- *
- * Accepts a batch of offline orders from a terminal and processes each atomically
- * via CreateAndPayOrder. Returns per-item results so the terminal can update its
- * local IndexedDB (serverId, serverOrderNumber, syncStatus).
- *
- * Sprint 5 additions:
- *  - Phase 10.2: Price conflict detection (PRICE_CHANGED) — accepts offline price + audit note
- *  - Phase 10.3: Stock conflict detection (STOCK_INSUFFICIENT) — allows negative stock (configurable)
- *  - Inventory stock/ledger ownership stays in CreateAndPayOrder to avoid duplicate deductions
- */
-
 import type { Database } from '../../database';
 import { CreateAndPayOrder } from '@pos/application/orders/CreateAndPayOrder';
 import type { CreateAndPayOrderItemInput } from '@pos/application/orders/CreateAndPayOrder';
-import {
-  syncBatches,
-  syncEvents,
-  serverSyncConflicts,
-  orders,
-  products,
-  tables,
-  inventoryBalances,
-} from '@pos/infrastructure/db/schema';
-import { eq, and, inArray, ne } from 'drizzle-orm';
+import { syncBatches, syncEvents, serverSyncConflicts, orders } from '@pos/infrastructure/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { ConflictType } from '@pos/application/sync/conflictTypes';
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
 import type { SyncBatchInput, SyncBatchOutput, SyncItemStatus, SyncOrderItemResult } from '@pos/application/sync/SyncOfflineOrder';
 import { DrizzleCreateAndPayOrderRepository } from '../orders/DrizzleCreateAndPayOrderRepository';
 import { DrizzleUnitOfWork } from '../../unit-of-work';
 
-interface LegacySyncOrderItemInput {
+type CanonicalOfflinePaymentMethod = 'CASH' | 'MANUAL_TRANSFER' | 'MANUAL_QRIS';
+
+type CanonicalSyncOrderItemInput = {
   local_order_id: string;
   local_order_number: string;
   idempotency_key: string;
@@ -44,24 +22,17 @@ interface LegacySyncOrderItemInput {
   tax_rate?: number;
   service_charge_rate?: number;
   amount: number;
-  payment_method: 'cash' | 'card' | 'ewallet' | 'other';
+  payment_method: CanonicalOfflinePaymentMethod;
   transaction_ref?: string;
   payment_notes?: string;
   fulfillment_mode?: 'standard' | 'instant';
   client_created_at?: string;
   source_terminal_id?: string;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
+};
 
 function classifyError(error: unknown): { status: SyncItemStatus; message: string } {
   const msg = error instanceof Error ? error.message : String(error);
-  if (
-    msg.includes('not found or inactive') ||
-    msg.includes('inactive') ||
-    msg.includes('FEATURE_DISABLED') ||
-    msg.includes('ORDER_TYPE_')
-  ) {
+  if (msg.includes('not found or inactive') || msg.includes('inactive') || msg.includes('FEATURE_DISABLED') || msg.includes('ORDER_TYPE_')) {
     return { status: 'conflict', message: msg };
   }
   if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
@@ -69,8 +40,6 @@ function classifyError(error: unknown): { status: SyncItemStatus; message: strin
   }
   return { status: 'failed', message: msg };
 }
-
-// ── Use Case ───────────────────────────────────────────────────────────────────
 
 export class DrizzleSyncOfflineOrderRepository {
   private readonly createAndPay: CreateAndPayOrder;
@@ -80,69 +49,19 @@ export class DrizzleSyncOfflineOrderRepository {
   }
 
   async syncOfflineOrder(input: SyncBatchInput): Promise<SyncBatchOutput> {
-    const { tenant_id, terminal_id, outlet_id, app_version, orders: orderInputs } = input;
+    const { tenant_id, terminal_id, outlet_id, app_version } = input;
+    const orderInputs = input.orders as CanonicalSyncOrderItemInput[];
 
     if (orderInputs.length === 0) {
       return { batch_id: 'empty', processed: 0, synced: 0, replayed: 0, failed: 0, conflicts: 0, results: [] };
     }
 
-    // ── Create audit batch record ─────────────────────────────────────────────
     const [batch] = await this.db
       .insert(syncBatches)
       .values({ tenantId: tenant_id, outletId: outlet_id ?? null, terminalId: terminal_id, batchSize: orderInputs.length, appVersion: app_version })
       .returning();
+
     const batchId = batch?.id ?? 'unknown';
-
-    // ── Pre-fetch current product prices for conflict detection ───────────────
-    const allProductIds = [...new Set(orderInputs.flatMap(o => o.items.map(i => i.product_id)))];
-    const serverProducts = await this.db
-      .select({ id: products.id, basePrice: products.basePrice, stockTrackingEnabled: products.stockTrackingEnabled, name: products.name })
-      .from(products)
-      .where(and(inArray(products.id, allProductIds), eq(products.tenantId, tenant_id)));
-
-    // Stock snapshot is per outlet (inventory_balances). Missing balance = 0.
-    const stockByProductId = new Map<string, number>();
-    if (outlet_id && allProductIds.length > 0) {
-      const balances = await this.db
-        .select({ productId: inventoryBalances.productId, quantity: inventoryBalances.quantity })
-        .from(inventoryBalances)
-        .where(
-          and(
-            eq(inventoryBalances.tenantId, tenant_id),
-            eq(inventoryBalances.outletId, outlet_id),
-            inArray(inventoryBalances.productId, allProductIds),
-          ),
-        );
-      for (const b of balances) stockByProductId.set(b.productId, b.quantity);
-    }
-
-    const productMap = new Map(
-      serverProducts.map((p) => [
-        p.id,
-        { ...p, stockQty: stockByProductId.get(p.id) ?? 0 },
-      ]),
-    );
-
-    // ── Phase 15.2: Pre-fetch occupied tables for conflict detection ──────────
-    const allTableNumbers = [...new Set(
-      orderInputs.map(o => o.table_number).filter((t): t is string => !!t)
-    )];
-    const occupiedTableNumbers = new Set<string>();
-
-    if (allTableNumbers.length > 0) {
-      const occupiedTables = await this.db
-        .select({ tableNumber: tables.tableNumber })
-        .from(tables)
-        .where(and(
-          eq(tables.tenantId, tenant_id),
-          inArray(tables.tableNumber, allTableNumbers),
-          ne(tables.status, 'available'),
-          ...(outlet_id ? [eq(tables.outletId, outlet_id)] : []),
-        ));
-      for (const t of occupiedTables) occupiedTableNumbers.add(t.tableNumber);
-    }
-
-    // ── Process each order independently ─────────────────────────────────────
     const results: SyncOrderItemResult[] = [];
     let synced = 0;
     let replayed = 0;
@@ -151,106 +70,8 @@ export class DrizzleSyncOfflineOrderRepository {
 
     for (const item of orderInputs) {
       let result: SyncOrderItemResult;
-      const warnings: string[] = [];
 
       try {
-        // ── Phase 10.2: Price Conflict Detection ──────────────────────────────
-        const priceConflicts: Array<{ productId: string; productName: string; offlinePrice: number; serverPrice: number }> = [];
-
-        for (const orderItem of item.items) {
-          const serverProduct = productMap.get(orderItem.product_id);
-          if (!serverProduct) continue;
-          const serverPrice = parseFloat(serverProduct.basePrice);
-          const offlinePrice = orderItem.base_price;
-          const diff = Math.abs(serverPrice - offlinePrice);
-          // Flag if price differs by more than 1 unit (accounting for rounding)
-          if (diff > 1) {
-            priceConflicts.push({
-              productId: orderItem.product_id,
-              productName: orderItem.product_name,
-              offlinePrice,
-              serverPrice,
-            });
-          }
-        }
-
-        if (priceConflicts.length > 0) {
-          const warningMsg = `Harga berubah untuk: ${priceConflicts.map(c => `${c.productName} (offline: ${c.offlinePrice}, server: ${c.serverPrice})`).join('; ')}`;
-          warnings.push(warningMsg);
-          // Default policy: accept offline price + log audit conflict (non-blocking)
-          await this.db
-            .insert(serverSyncConflicts)
-            .values({
-              tenantId: tenant_id,
-              outletId: outlet_id ?? null,
-              terminalId: terminal_id,
-              localOrderId: item.local_order_id,
-              conflictType: ConflictType.PRICE_CHANGED,
-              message: warningMsg,
-              conflictData: priceConflicts as any,
-              resolution: 'auto_resolved',
-              resolvedAt: new Date(),
-            })
-            .catch(() => undefined);
-        }
-
-        // ── Phase 10.3: Stock Conflict Detection ──────────────────────────────
-        const stockConflicts: Array<{ productId: string; productName: string; requested: number; available: number }> = [];
-
-        for (const orderItem of item.items) {
-          const serverProduct = productMap.get(orderItem.product_id);
-          if (!serverProduct || !serverProduct.stockTrackingEnabled) continue;
-          const available = serverProduct.stockQty ?? 0;
-          if (available < orderItem.quantity) {
-            stockConflicts.push({
-              productId: orderItem.product_id,
-              productName: orderItem.product_name,
-              requested: orderItem.quantity,
-              available,
-            });
-          }
-        }
-
-        if (stockConflicts.length > 0) {
-          const warningMsg = `Stok tidak cukup untuk: ${stockConflicts.map(c => `${c.productName} (diminta: ${c.requested}, tersedia: ${c.available})`).join('; ')}`;
-          warnings.push(warningMsg);
-          // Default policy: allow negative stock (offline sale goes through) + log warning
-          await this.db
-            .insert(serverSyncConflicts)
-            .values({
-              tenantId: tenant_id,
-              outletId: outlet_id ?? null,
-              terminalId: terminal_id,
-              localOrderId: item.local_order_id,
-              conflictType: ConflictType.STOCK_INSUFFICIENT,
-              message: warningMsg,
-              conflictData: stockConflicts as any,
-              resolution: 'auto_resolved',
-              resolvedAt: new Date(),
-            })
-            .catch(() => undefined);
-        }
-
-        // ── Phase 15.2: Table Availability Conflict Detection ─────────────────
-        if (item.table_number && occupiedTableNumbers.has(item.table_number)) {
-          const tableMsg = `Meja ${item.table_number} sedang terisi. Order offline tetap diproses — tinjau penugasan meja.`;
-          warnings.push(tableMsg);
-          await this.db
-            .insert(serverSyncConflicts)
-            .values({
-              tenantId: tenant_id,
-              outletId: outlet_id ?? null,
-              terminalId: terminal_id,
-              localOrderId: item.local_order_id,
-              conflictType: ConflictType.TABLE_UNAVAILABLE,
-              message: tableMsg,
-              conflictData: { tableNumber: item.table_number } as any,
-              resolution: 'pending',
-            })
-            .catch(() => undefined);
-        }
-
-        // ── Create order + payment ────────────────────────────────────────────
         const output = await this.createAndPay.execute({
           tenant_id,
           outlet_id: outlet_id ?? null,
@@ -262,7 +83,7 @@ export class DrizzleSyncOfflineOrderRepository {
           tax_rate: item.tax_rate,
           service_charge_rate: item.service_charge_rate,
           amount: item.amount,
-          payment_method: item.payment_method === "cash" ? "CASH" : item.payment_method === "ewallet" ? "MANUAL_QRIS" : item.payment_method === "card" ? "MANUAL_TRANSFER" : "CASH",
+          payment_method: item.payment_method,
           transaction_ref: item.transaction_ref ?? item.idempotency_key,
           payment_notes: item.payment_notes,
           idempotency_key: item.idempotency_key,
@@ -277,12 +98,11 @@ export class DrizzleSyncOfflineOrderRepository {
           status,
           server_order_id: output.order?.id,
           server_order_number: output.order?.orderNumber,
-          warnings: warnings.length > 0 ? warnings : undefined,
         };
+
         if (status === 'replayed') replayed++;
         else synced++;
 
-        // Stamp offline metadata onto the server order
         if (output.order?.id) {
           await this.db
             .update(orders)
@@ -294,19 +114,6 @@ export class DrizzleSyncOfflineOrderRepository {
             .where(and(eq(orders.id, output.order.id), eq(orders.tenantId, tenant_id)))
             .catch(() => undefined);
         }
-
-        // Keep the pre-fetched stock snapshot current for later conflict checks
-        // in this same batch. The actual stock update and movement ledger write
-        // are owned by CreateAndPayOrder/deductStockForItems.
-        if (!output.idempotent_replay) {
-          for (const orderItem of item.items) {
-            const serverProduct = productMap.get(orderItem.product_id);
-            if (serverProduct?.stockTrackingEnabled) {
-              serverProduct.stockQty = (serverProduct.stockQty ?? 0) - orderItem.quantity;
-            }
-          }
-        }
-
       } catch (err) {
         const { status, message } = classifyError(err);
         result = {
@@ -315,6 +122,7 @@ export class DrizzleSyncOfflineOrderRepository {
           status,
           error: message,
         };
+
         if (status === 'conflict') {
           conflicts++;
           await this.db
@@ -336,7 +144,6 @@ export class DrizzleSyncOfflineOrderRepository {
 
       results.push(result);
 
-      // Audit: insert sync event (non-critical)
       await this.db
         .insert(syncEvents)
         .values({
@@ -355,7 +162,6 @@ export class DrizzleSyncOfflineOrderRepository {
         .catch(() => undefined);
     }
 
-    // ── Update batch summary ──────────────────────────────────────────────────
     await this.db
       .update(syncBatches)
       .set({ syncedCount: synced, replayedCount: replayed, failedCount: failed, conflictCount: conflicts })
@@ -364,5 +170,4 @@ export class DrizzleSyncOfflineOrderRepository {
 
     return { batch_id: batchId, processed: orderInputs.length, synced, replayed, failed, conflicts, results };
   }
-
 }
