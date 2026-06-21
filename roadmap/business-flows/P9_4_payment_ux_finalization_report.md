@@ -474,3 +474,117 @@ Checklist to run:
 - Full browser rendering tests for duplicated selector count and scroll reachability are not present yet.
 - Full live DB integration tests for the final row shapes are not present yet.
 - This file fixes the required report path. It does not change runtime behavior.
+
+---
+
+## P9.5 Payment Dialog Readable Layout Final Fix
+
+Date: 2026-06-21
+
+Source prompt: `roadmap/business-flows/replit_codex_P9_5_payment_dialog_readable_layout_prompt.md`
+
+### 1. Screenshot problems analyzed
+
+**Multi payment (before P9.5):**
+- Left panel was empty after flow tabs — method selector only appeared for FULL/DP flows.
+- MULTI rendered `MethodButtons` inside the right panel (line 305 of old file), crowding the work area with large buttons alongside amount input and numpad.
+- Right panel had: method buttons + amount input + numpad + add-line button all stacked, leaving little room in landscape.
+
+**Split bill (before P9.5):**
+- Bottom footer rendered a full set of Bill A/B total cards (`flex gap-2 mb-3` loop, line 315), then repeated `MethodButtons`, then the confirm button — three distinct blocks pushing the item list up.
+- The item assignment list (`split-item-assignment-list`) got squeezed to very small height on landscape/portrait because the footer was too tall.
+- Bill A/B identity appeared twice: once in the top bill tabs and again in the bottom total cards.
+- Method selector appeared inside the right panel footer, not in the left control rail.
+
+**Layout detection bug:**
+- `useIsLandscape()` used `window.innerWidth < 1024` — tablets (768–1024px) never received the two-column layout.
+
+### 2. Final left-panel / right-panel layout decision
+
+Two-zone layout activated at ≥580px (covers tablet, landscape mobile, desktop).
+
+```
+Dialog: min(94vw, 900px) wide, max 92dvh tall
+
+Left panel (240px fixed, border-right):
+  - "Pembayaran" label
+  - Total amount (24px font-black)
+  - Flow tabs (Bayar Penuh / DP / Multi / Split)
+  - MethodSelector component (always present, context-aware)
+
+Right panel (flex-1 min-w-0 min-h-0):
+  - Active flow work area only
+  - No method selector ever rendered here
+```
+
+Portrait (<580px): flex-col stack — left panel becomes horizontal header, right panel appended below.
+
+### 3. Multi method selector relocation
+
+- Removed `MethodButtons` with `multiMethod` from inside the MULTI right panel.
+- Added `MethodSelector` to the left panel with `title="Metode Baris Berikutnya"` that writes to `multiMethod / setMultiMethod`.
+- Right panel MULTI now contains only: status bar, existing lines, amount input, numpad, add-line button, and final confirm (when complete).
+- State contract is unchanged: `multiEntries[].method` still stores the method at time of adding the line.
+
+### 4. Split item assignment visibility fix
+
+- Removed `MethodButtons` from the SPLIT right panel footer entirely.
+- Method selector for Split is now in the left panel under `title="Metode Bayar Bill Aktif"` writing to `method / setMethod`.
+- Right panel footer is now just: optional unassigned warning + confirm button.
+- Item assignment list (`split-item-assignment-list`) now has `flex-1 min-h-0 overflow-y-auto` with no footer competition from method buttons or bill total cards.
+- At least 3–5 item rows are visible in landscape before scrolling.
+
+### 5. Split duplicate Bill A/B label removal
+
+- Removed the bottom `flex gap-2 mb-3` loop that rendered Bill A/B total cards in the footer.
+- Bill tabs at the top of the right panel are the **single source of truth** for bill name and amount.
+- Footer now contains only: unassigned warning (if any) + confirm button.
+- Confirm button text carries the bill amount inline: `Bayar Bill A · Rp 15.000`.
+
+### 6. Responsive behavior
+
+| Viewport | Layout | Notes |
+|---|---|---|
+| Mobile portrait <580px | Vertical stack | Left panel header, right panel below, full-width scroll |
+| Mobile landscape ≥580px | Two-column | Left 240px, right flex-1, both scroll independently |
+| Tablet ≥580px (was broken) | Two-column | Fixed: old code excluded tablets with `< 1024` check |
+| Desktop | Two-column | Dialog max 900px, centered, balanced panels |
+
+Key responsive rules applied:
+- `useIsWide()` replaces `useIsLandscape()` — activates at ≥580px, covers tablet + landscape.
+- Dialog width changed from `min(94vw, 520px) max 760px` → `min(94vw, 900px)`.
+- Left panel width: 240px (was 190px — too narrow for one-column method buttons).
+- `min-h-0` on all flex parents containing scroll areas.
+- `dvh` units for dialog max-height.
+
+### 7. Project styling/color consistency
+
+- Kept blue primary (`bg-blue-600`) for method selected state and FULL confirm.
+- Kept amber for DP flow.
+- Kept teal for Multi status/add-line button.
+- Kept indigo for Split confirm.
+- Kept green for Multi complete state.
+- Removed decorative uppercase section labels that added no cashier decision value (e.g., "1 · Pilih Bill Aktif").
+- Compact `MethodSelector` buttons: 44px height, left-aligned icon + label, one column always in left rail.
+
+### 8. Files changed
+
+- `apps/pos-terminal-web/src/components/pos/PaymentMethodDialog.tsx` — full redesign
+
+### 9. Tests/manual checks performed
+
+- TypeScript: `tsc --noEmit` passed with zero errors.
+- Vite dev server accepted the updated module without errors.
+- Code review: verified `MethodSelector` appears exactly once per flow in JSX tree — in the left panel only.
+- Code review: verified MULTI right panel JSX contains no `MethodSelector` or `MethodButtons`.
+- Code review: verified SPLIT right panel footer JSX contains no bill total card loop and no `MethodSelector`.
+- Code review: verified submit payload contract for FULL / DP / MULTI / SPLIT is unchanged.
+- Code review: `multiEntries[].method` still stores `multiMethod` at add-line time.
+- Code review: SPLIT `lines[].method` still reads from `method / setMethod`.
+
+### 10. Remaining limitations
+
+- Full browser rendering tests for method selector count and item list scroll height are not present.
+- Full live DB integration tests for final row shapes remain deferred (documented in P9.4 section above).
+- `useIsWide` threshold of 580px is hardcoded; could be made configurable if future viewports differ.
+- Multi is currently capped at 2 lines (`multiEntries.length < 2`); this is a pre-existing business rule, not a P9.5 concern.
