@@ -294,17 +294,17 @@ if those files track phase progress.
 
 ## Completion checklist
 
-- [ ] Trusted permission context type/helper added.
-- [ ] Middleware/adapter added or safe limitation documented.
-- [ ] Request context permission resolution uses P8.2 registry.
-- [ ] OrdersController uses permission context/helper, not local role mapping.
-- [ ] Adapter/middleware tests added.
-- [ ] Direct-bypass regression tests still pass.
-- [ ] Reserved refund/void/delete permissions are not granted by default.
-- [ ] Full payment without orders_queue remains tested/passing.
-- [ ] Validation commands run and documented.
-- [ ] Cleanup greps documented.
-- [ ] P8.3 report created.
+- [x] Trusted permission context type/helper added.
+- [x] Middleware/adapter added or safe limitation documented.
+- [x] Request context permission resolution uses P8.2 registry.
+- [x] OrdersController uses permission context/helper, not local role mapping.
+- [x] Adapter/middleware tests added.
+- [x] Direct-bypass regression tests still pass.
+- [x] Reserved refund/void/delete permissions are not granted by default.
+- [x] Full payment without orders_queue remains tested/passing.
+- [x] Validation commands run and documented.
+- [x] Cleanup greps documented.
+- [x] P8.3 report created.
 
 ## Commit
 

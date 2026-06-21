@@ -14,6 +14,7 @@ declare global {
         id: string;
         tenantId: string | null;
         role: string | null;
+        permissions?: readonly string[] | null;
       };
     }
   }

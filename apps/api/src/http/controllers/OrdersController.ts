@@ -11,7 +11,8 @@ import { emitOrderQueueChanged, subscribeOrderQueue } from '../services/orderQue
 import { getEffectiveEntitlementMap, loadTenantEntitlementContext } from '../../services/tenantEntitlements';
 import { DEFAULT_SERVICE_CHARGE_RATE, DEFAULT_TAX_RATE } from '@pos/core/pricing';
 import { withOrderLifecycleDtoFields } from '@pos/application/orders/mappers/orderLifecycleDtoMapper';
-import { assertCanPerformOrderAction, resolveBusinessProfileFromBusinessType, resolveOrderActionPermissionsFromRequestContext, type OrderActionPolicyError } from '@pos/application/business-flows';
+import { assertCanPerformOrderAction, resolveBusinessProfileFromBusinessType, type OrderActionPolicyError } from '@pos/application/business-flows';
+import { getOrderActionPermissionContext } from '../auth/orderActionPermissionContext';
 
 type OrderActionPolicyBase = { businessProfile: ReturnType<typeof resolveBusinessProfileFromBusinessType> | 'core_standard'; entitlements: string[] };
 
@@ -709,10 +710,7 @@ export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
       orderOperationalStatus: order.status,
       paymentStatus: order.paymentStatus ?? order.payment_status,
       fulfillmentStatus: order.status,
-      actorPermissions: resolveOrderActionPermissionsFromRequestContext({
-        posRole: req.posRole,
-        authTenantUser: req.authTenantUser,
-      }),
+      actorPermissions: getOrderActionPermissionContext(req).effectivePermissions,
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'OrderActionPolicyError') throwPolicyHttpError(error as OrderActionPolicyError);

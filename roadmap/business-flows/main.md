@@ -739,3 +739,12 @@ Status: Implemented and validated.
 - Refactored backend active-cancel policy input mapping to use the registry instead of controller-local role mapping.
 - Added registry unit tests and expanded API direct-bypass tests for owner, platform-admin, and missing-role active cancellation.
 - Report: `roadmap/business-flows/P8_2_permission_claim_registry_report.md`.
+
+## P8.3 Trusted Permission Claim Source + Middleware Adapter — Completed 2026-06-21
+
+- Added an API-layer trusted order-action permission context adapter populated from server-side RBAC/auth request context.
+- Wired RBAC role guards to attach effective order-action permissions from the P8.2 registry without accepting client-sent permission arrays.
+- Refactored active order cancellation to consume request-level effective permissions instead of resolving role strings directly in `OrdersController`.
+- Added adapter tests for role matrix, reserved refund/void/delete permissions, and least-privilege explicit-claim intersection.
+- Documented that persisted first-class permission claims do not exist yet and should remain intersection-only until a trusted source is implemented.
+- Report: `roadmap/business-flows/P8_3_trusted_permission_claim_source_report.md`.
