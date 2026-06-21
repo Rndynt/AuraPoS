@@ -63,9 +63,9 @@ export function useRetailStandardPOSFlow() {
   const { sendToCFD } = usePOSCustomerDisplayController({ cart, tenantName, inPaymentFlowRef, enabled: can("customer_display") });
   const { payActiveOrder } = usePOSActiveOrderPayment({ setPendingOrderForPayment, openPaymentDialog: () => setPaymentMethodDialogOpen(true) });
 
-  const hasPartialPayment = false;
+  const hasPartialPayment = can("payments_partial_payment");
   const hasMultiPayment = can("payments_multi_payment");
-  const hasSplitBill = false;
+  const hasSplitBill = can("payments_split_bill") || can("payments_split_payment");
 
   useEffect(() => {
     if (!orderTypesLoading && activeOrderTypes.length > 0 && !cart.selectedOrderTypeId) {
@@ -187,11 +187,11 @@ export function useRetailStandardPOSFlow() {
     sendToCFD(buildPaymentCFDPayload({ tenantName, orderNumber: pendingOrderForPayment?.orderNumber || cart.orderNumber || "", total: pendingOrderForPayment?.totalAmount || cart.total, items: cart.items.map(toCFDItem), subtotal: cart.subtotal, tax: cart.tax, serviceCharge: cart.serviceCharge, customerName: cart.customerName || undefined }, method));
   };
 
-  const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod) => {
+  const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod, cashReceived?: number, partialAmount?: number, paymentDetails?: any) => {
     if (pendingOrderForPayment) {
       setIsProcessingQuickCharge(true);
       try {
-        await recordPaymentMutation.mutateAsync({ orderId: pendingOrderForPayment.orderId, amount: pendingOrderForPayment.totalAmount, payment_method: paymentMethod, payment_flow: "full_payment" });
+        await recordPaymentMutation.mutateAsync({ orderId: pendingOrderForPayment.orderId, amount: pendingOrderForPayment.totalAmount, payment_method: paymentMethod, payment_flow: "full", payment_kind: "full_payment", received_amount: cashReceived, change_amount: paymentMethod === "cash" && cashReceived ? Math.max(0, cashReceived - pendingOrderForPayment.totalAmount) : undefined });
         toast({ title: "Pembayaran berhasil", description: `Order #${pendingOrderForPayment.orderNumber} dilunasi.` });
         setPendingOrderForPayment(null);
         setPaymentMethodDialogOpen(false);
@@ -210,16 +210,51 @@ export function useRetailStandardPOSFlow() {
     const snapshot = { subtotal: cart.subtotal, tax: cart.tax, serviceCharge: cart.serviceCharge, total: cart.total, customerName: cart.customerName || undefined, orderNumber: cart.orderNumber };
     try {
       let orderNumber: string | undefined;
+      const details = paymentDetails ?? { flow: partialAmount ? "dp" : "full", paymentKind: partialAmount ? "down_payment" : "full_payment", lines: [{ method: paymentMethod, amount: partialAmount ?? snapshot.total, receivedAmount: cashReceived }] };
       if (continueOrderId) {
         const updateResult = await updateOrderMutation.mutateAsync({ orderId: continueOrderId, ...buildOrderPayload() });
         const totalAmount = Number((updateResult.order as any)?.total ?? (updateResult.pricing as any)?.total_amount ?? cart.total);
-        await recordPaymentMutation.mutateAsync({ orderId: continueOrderId, amount: totalAmount, payment_method: paymentMethod, payment_flow: "full_payment" });
+        const lines = details.flow === "multi" ? details.lines : [{ method: paymentMethod, amount: partialAmount ?? totalAmount, receivedAmount: cashReceived, splitId: details.lines?.[0]?.splitId }];
+        for (let index = 0; index < lines.length; index += 1) {
+          const line = lines[index];
+          await recordPaymentMutation.mutateAsync({
+            orderId: continueOrderId,
+            amount: line.amount,
+            payment_method: line.method,
+            payment_flow: details.flow,
+            payment_kind: details.flow === "dp" ? (line.amount >= totalAmount - 0.001 ? "remaining_payment" : "down_payment") : details.paymentKind,
+            received_amount: line.receivedAmount,
+            change_amount: line.method === "cash" && line.receivedAmount ? Math.max(0, line.receivedAmount - line.amount) : undefined,
+            split_id: line.splitId && /^[0-9a-f-]{36}$/i.test(line.splitId) ? line.splitId : undefined,
+            sequence: index + 1,
+            metadata: details.flow === "split" ? { p9_session_split_id: line.splitId, splits: details.splits } : undefined,
+          });
+        }
         orderNumber = (updateResult.order as any)?.order_number ?? continueOrderId;
+        if (details.flow !== "full" && (partialAmount ?? totalAmount) < totalAmount) {
+          toast({ title: "Pembayaran sebagian tersimpan", description: `Order #${orderNumber} tersisa untuk pelunasan.` });
+          cart.clearCart();
+          setPaymentMethodDialogOpen(false);
+          setLocation("/pos");
+          return;
+        }
       } else {
         inPaymentFlowRef.current = true;
         sendToCFD(buildPaymentCFDPayload({ tenantName, orderNumber: snapshot.orderNumber || "", total: snapshot.total, items: cfdItems, subtotal: snapshot.subtotal, tax: snapshot.tax, serviceCharge: snapshot.serviceCharge, customerName: snapshot.customerName }, paymentMethod));
-        const orderResult = await submitOrder({ items: cart.toBackendOrderItems(), tax_rate: cart.taxRate, service_charge_rate: cart.serviceChargeRate, order_type_id: cart.selectedOrderTypeId, customer_name: snapshot.customerName, amount: snapshot.total, payment_method: paymentMethod });
+        if (details.flow === "multi" || details.flow === "split") {
+          throw new Error("Multi payment dan split bill P9 harus digunakan dari order yang sudah tersimpan agar setiap baris pembayaran persisten aman. Simpan draft/order dahulu lalu bayar dari order aktif.");
+        }
+        const paidAmount = partialAmount ?? snapshot.total;
+        const orderResult = await submitOrder({ items: cart.toBackendOrderItems(), tax_rate: cart.taxRate, service_charge_rate: cart.serviceChargeRate, order_type_id: cart.selectedOrderTypeId, customer_name: snapshot.customerName, amount: paidAmount, payment_method: paymentMethod, payment_flow: details.flow, payment_kind: details.paymentKind, received_amount: cashReceived, change_amount: paymentMethod === "cash" && cashReceived ? Math.max(0, cashReceived - paidAmount) : undefined });
         orderNumber = (orderResult.order as any)?.order_number || orderResult.order?.id;
+        if (details.flow === "dp") {
+          toast({ title: "DP berhasil dicatat", description: `Order #${orderNumber} tersisa Rp ${(snapshot.total - paidAmount).toLocaleString("id-ID")}` });
+          cart.clearCart();
+          setPaymentMethodDialogOpen(false);
+          setMobileCartOpen(false);
+          setLocation("/pos");
+          return;
+        }
       }
       sendToCFD(buildCompletedCFDPayload({ tenantName, orderNumber: String(orderNumber ?? snapshot.orderNumber), total: snapshot.total, items: cfdItems, subtotal: snapshot.subtotal, tax: snapshot.tax, serviceCharge: snapshot.serviceCharge, customerName: snapshot.customerName }, snapshot.total, 0));
       toast({ title: "Pesanan berhasil dibuat & dibayar", description: `Order #${orderNumber} - Total: Rp ${snapshot.total.toLocaleString("id-ID")}` });

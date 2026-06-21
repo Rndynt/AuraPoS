@@ -321,7 +321,14 @@ export type RecordPaymentInput = {
   payment_method: "cash" | "card" | "ewallet" | "other";
   transaction_ref?: string;
   notes?: string;
-  payment_flow?: "full_payment" | "partial_payment_dp";
+  payment_flow?: "full_payment" | "partial_payment_dp" | "full" | "dp" | "multi" | "split";
+  payment_kind?: "full_payment" | "down_payment" | "remaining_payment" | "multi_line" | "split_line";
+  received_amount?: number;
+  change_amount?: number;
+  split_id?: string;
+  sequence?: number;
+  reference_note?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type RecordPaymentResponse = {
@@ -422,7 +429,14 @@ export type CreateAndPayInput = CreateOrderInput & {
   transaction_ref?: string;
   payment_notes?: string;
   fulfillment_mode?: "standard" | "instant";
-  payment_flow?: "full_payment" | "partial_payment_dp";
+  payment_flow?: "full_payment" | "partial_payment_dp" | "full" | "dp" | "multi" | "split";
+  payment_kind?: "full_payment" | "down_payment" | "remaining_payment" | "multi_line" | "split_line";
+  received_amount?: number;
+  change_amount?: number;
+  split_id?: string;
+  sequence?: number;
+  reference_note?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type CreateAndPayResponse = CreateOrderResponse & {

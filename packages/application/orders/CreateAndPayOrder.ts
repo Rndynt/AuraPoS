@@ -34,6 +34,12 @@ export interface CreateAndPayOrderInput {
   service_charge_rate?: number;
   amount: number;
   payment_method: 'cash' | 'card' | 'ewallet' | 'other';
+  payment_flow?: 'full' | 'dp' | 'multi' | 'split';
+  payment_kind?: 'full_payment' | 'down_payment' | 'remaining_payment' | 'multi_line' | 'split_line';
+  received_amount?: number;
+  change_amount?: number;
+  reference_note?: string;
+  metadata?: Record<string, unknown>;
   transaction_ref?: string;
   payment_notes?: string;
   idempotency_key?: string;

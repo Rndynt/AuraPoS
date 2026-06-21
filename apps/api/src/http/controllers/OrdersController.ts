@@ -233,7 +233,14 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     transaction_ref: z.string().optional(),
     notes: z.string().optional(),
     idempotency_key: z.string().min(8).max(128).optional(),
-    payment_flow: z.enum(['full_payment', 'partial_payment_dp']).optional(),
+    payment_flow: z.enum(['full_payment', 'partial_payment_dp', 'full', 'dp', 'multi', 'split']).optional(),
+    payment_kind: z.enum(['full_payment', 'down_payment', 'remaining_payment', 'multi_line', 'split_line']).optional(),
+    received_amount: z.number().nonnegative().optional(),
+    change_amount: z.number().nonnegative().optional(),
+    split_id: z.string().uuid().optional(),
+    sequence: z.number().int().positive().max(4).optional(),
+    reference_note: z.string().optional(),
+    metadata: z.record(z.unknown()).optional(),
   });
 
   const parsed = bodySchema.safeParse(req.body);
@@ -246,8 +253,9 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
 
   const order = await assertOrderBelongsToOutlet(id, tenantId, req.outletId);
 
-  const paymentAction = parsed.data.payment_flow === 'partial_payment_dp' ? 'PARTIAL_PAYMENT' : 'PAY_ACTIVE_ORDER';
-  const policyBase = await getOrderActionPolicyBase(tenantId, { requireEntitlements: paymentAction === 'PARTIAL_PAYMENT' });
+  const normalizedPaymentFlow = parsed.data.payment_flow === 'partial_payment_dp' ? 'dp' : parsed.data.payment_flow === 'full_payment' ? 'full' : parsed.data.payment_flow ?? 'full';
+  const paymentAction = normalizedPaymentFlow === 'dp' ? 'PARTIAL_PAYMENT' : normalizedPaymentFlow === 'split' ? 'SPLIT_BILL' : 'PAY_ACTIVE_ORDER';
+  const policyBase = await getOrderActionPolicyBase(tenantId, { requireEntitlements: paymentAction === 'PARTIAL_PAYMENT' || paymentAction === 'SPLIT_BILL' });
   try {
     assertCanPerformOrderAction({
       ...policyBase,
@@ -261,8 +269,14 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     throw error;
   }
 
-  if (parsed.data.payment_flow === 'partial_payment_dp') {
+  if (normalizedPaymentFlow === 'dp') {
     await requirePaymentEntitlement(tenantId, 'payments_partial_payment');
+  }
+  if (normalizedPaymentFlow === 'multi') {
+    await requirePaymentEntitlement(tenantId, 'payments_multi_payment');
+  }
+  if (normalizedPaymentFlow === 'split') {
+    await requirePaymentEntitlement(tenantId, 'payments_split_bill');
   }
 
   // Execute use case (P1.2: transaction-safe with row lock inside use case)
@@ -271,6 +285,14 @@ export const recordPayment = asyncHandler(async (req: Request, res: Response) =>
     tenant_id: tenantId,
     amount: parsed.data.amount,
     payment_method: parsed.data.payment_method,
+    payment_flow: normalizedPaymentFlow as any,
+    payment_kind: parsed.data.payment_kind as any,
+    received_amount: parsed.data.received_amount,
+    change_amount: parsed.data.change_amount,
+    split_id: parsed.data.split_id,
+    sequence: parsed.data.sequence,
+    reference_note: parsed.data.reference_note?.trim(),
+    metadata: parsed.data.metadata,
     notes: parsed.data.notes,
     transaction_ref: transactionRef,
     idempotency_key: idempotencyKey,
@@ -881,7 +903,12 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
     payment_notes: z.string().optional(),
     idempotency_key: z.string().min(8).max(128).optional(),
     fulfillment_mode: z.enum(['standard', 'instant']).optional(),
-    payment_flow: z.enum(['full_payment', 'partial_payment_dp']).optional(),
+    payment_flow: z.enum(['full_payment', 'partial_payment_dp', 'full', 'dp', 'multi', 'split']).optional(),
+    payment_kind: z.enum(['full_payment', 'down_payment', 'remaining_payment', 'multi_line', 'split_line']).optional(),
+    received_amount: z.number().nonnegative().optional(),
+    change_amount: z.number().nonnegative().optional(),
+    reference_note: z.string().optional(),
+    metadata: z.record(z.unknown()).optional(),
   });
 
   const parsed = bodySchema.safeParse(req.body);
@@ -891,7 +918,8 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
 
   const idempotencyKey = getIdempotencyKey(req, parsed.data.idempotency_key);
   const estimatedTotal = estimateCreateAndPayTotal(parsed.data);
-  const isDpPayment = parsed.data.payment_flow === 'partial_payment_dp' || parsed.data.amount < estimatedTotal - 0.01;
+  const normalizedCreatePaymentFlow = parsed.data.payment_flow === 'partial_payment_dp' ? 'dp' : parsed.data.payment_flow === 'full_payment' ? 'full' : parsed.data.payment_flow ?? (parsed.data.amount < estimatedTotal - 0.01 ? 'dp' : 'full');
+  const isDpPayment = normalizedCreatePaymentFlow === 'dp' || parsed.data.amount < estimatedTotal - 0.01;
   if (isDpPayment) {
     await requirePaymentEntitlement(tenantId, 'payments_partial_payment');
   }
@@ -913,6 +941,12 @@ export const createAndPay = asyncHandler(async (req: Request, res: Response) => 
       service_charge_rate: parsed.data.service_charge_rate,
       amount: parsed.data.amount,
       payment_method: parsed.data.payment_method,
+      payment_flow: normalizedCreatePaymentFlow as any,
+      payment_kind: parsed.data.payment_kind as any,
+      received_amount: parsed.data.received_amount,
+      change_amount: parsed.data.change_amount,
+      reference_note: parsed.data.reference_note?.trim(),
+      metadata: parsed.data.metadata,
       transaction_ref: parsed.data.transaction_ref,
       payment_notes: parsed.data.payment_notes,
       idempotency_key: idempotencyKey,

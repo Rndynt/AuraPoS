@@ -748,3 +748,22 @@ Status: Implemented and validated.
 - Added adapter tests for role matrix, reserved refund/void/delete permissions, and least-privilege explicit-claim intersection.
 - Documented that persisted first-class permission claims do not exist yet and should remain intersection-only until a trusted source is implemented.
 - Report: `roadmap/business-flows/P8_3_trusted_permission_claim_source_report.md`.
+
+## P9 — POS Payment Usability Completion (2026-06-21)
+
+Status: **Partially implemented with guarded limitations**.
+
+Completed:
+
+- Separated payment method labels from payment flow modes in cashier UI.
+- Enabled independent entitlement gates for DP, multi payment, and split bill in POS adapters.
+- Added P9 payment metadata columns to `order_payments` and a minimal `order_bill_splits` table.
+- Extended `recordPayment` and `createAndPay` payloads to persist flow/kind/cash/split metadata.
+- Added payment calculation helper tests for paid/remaining/status/change, multi line limits, and split completion.
+
+Limitations:
+
+- Fresh-cart multi payment is blocked until an atomic create-order-with-multiple-payments use case exists.
+- Split bill still needs a dedicated split-context API to persist `order_bill_splits` before split payments.
+
+Report: `roadmap/business-flows/P9_pos_payment_usability_completion_report.md`.
