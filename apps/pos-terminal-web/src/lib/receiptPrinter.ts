@@ -1,4 +1,4 @@
-type PaymentMethod = "cash" | "card" | "ewallet" | "other";
+import type { POSPaymentMethod } from "@pos/domain/payments";
 
 export interface ReceiptPrintItem {
   name: string;
@@ -12,7 +12,7 @@ export interface ReceiptPrintPayload {
   tenantName: string;
   customerName?: string;
   tableNumber?: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: POSPaymentMethod;
   createdAt: Date;
   subtotal: number;
   tax: number;
@@ -197,6 +197,14 @@ const rupiah = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 const truncate = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
 const padRight = (value: string, width: number) => (value.length >= width ? value.slice(0, width) : `${value}${" ".repeat(width - value.length)}`);
 const padLeft = (value: string, width: number) => (value.length >= width ? value.slice(0, width) : `${" ".repeat(width - value.length)}${value}`);
+const formatPaymentMethod = (method: POSPaymentMethod) => {
+  const labels: Record<POSPaymentMethod, string> = {
+    CASH: "Tunai",
+    MANUAL_TRANSFER: "Transfer Manual",
+    MANUAL_QRIS: "QRIS Manual",
+  };
+  return labels[method];
+};
 
 const twoCol = (left: string, right: string) => {
   const rightText = truncate(right, PRINTER_LINE_WIDTH - 2);
@@ -217,7 +225,7 @@ function buildReceiptText(payload: ReceiptPrintPayload): string {
   lines.push("=".repeat(PRINTER_LINE_WIDTH));
   lines.push(twoCol("No. Order", payload.orderNumber));
   lines.push(twoCol("Waktu", payload.createdAt.toLocaleString("id-ID")));
-  lines.push(twoCol("Metode", payload.paymentMethod.toUpperCase()));
+  lines.push(twoCol("Metode", formatPaymentMethod(payload.paymentMethod)));
   if (payload.customerName) lines.push(twoCol("Customer", payload.customerName));
   if (payload.tableNumber) lines.push(twoCol("Meja", payload.tableNumber));
   lines.push("-".repeat(PRINTER_LINE_WIDTH));
