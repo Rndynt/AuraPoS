@@ -1,4 +1,4 @@
-type PaymentMethod = "cash" | "card" | "ewallet" | "other";
+import type { POSPaymentMethod } from "@pos/domain/payments";
 
 export interface ReceiptCFDItem {
   name: string;
@@ -12,7 +12,7 @@ export interface BuildReceiptPayloadInput {
   tenantName: string;
   customerName?: string;
   tableNumber?: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: POSPaymentMethod;
   subtotal: number;
   tax: number;
   serviceCharge: number;
