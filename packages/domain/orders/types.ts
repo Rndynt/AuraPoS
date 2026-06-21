@@ -59,13 +59,13 @@ export type OrderItem = {
 };
 
 /**
- * Payment information for an order
+ * Payment information for an order.
  */
 export type OrderPayment = {
   id: string;
   order_id: string;
   amount: number;
-  payment_method: "cash" | "card" | "ewallet" | "other";
+  payment_method: "CASH" | "MANUAL_TRANSFER" | "MANUAL_QRIS";
   payment_status: "pending" | "completed" | "failed" | "refunded";
   transaction_ref?: string;
   paid_at?: Date;
