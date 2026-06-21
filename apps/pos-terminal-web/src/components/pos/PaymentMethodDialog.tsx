@@ -32,8 +32,8 @@ type PaymentFlow = "full" | "dp" | "multi" | "split";
 
 const METHODS = [
   { id: "cash" as PaymentMethod, label: "Tunai", Icon: Banknote },
-  { id: "ewallet" as PaymentMethod, label: "QRIS", Icon: QrCode },
-  { id: "card" as PaymentMethod, label: "Kartu", Icon: CreditCard },
+  { id: "ewallet" as PaymentMethod, label: "Manual QRIS", Icon: QrCode },
+  { id: "card" as PaymentMethod, label: "Transfer", Icon: CreditCard },
 ];
 
 // Bill A=blue, B=violet, C=amber, D=rose
@@ -202,26 +202,26 @@ export function PaymentMethodDialog({
     if (flow === "dp") {
       if (!isValidPartial) return;
       setIsProcessing(true);
-      setTimeout(() => { setIsProcessing(false); onConfirm(method, undefined, partialAmount); }, 400);
+      setTimeout(() => { setIsProcessing(false); onConfirm(method, undefined, partialAmount, { flow: "dp", paymentKind: "down_payment", lines: [{ method, amount: partialAmount }] }); }, 400);
       return;
     }
     if (flow === "multi") {
       if (!multiComplete) return;
       setIsProcessing(true);
-      setTimeout(() => { setIsProcessing(false); onConfirm(method); }, 400);
+      setTimeout(() => { setIsProcessing(false); onConfirm(multiEntries[0]?.method || method, undefined, undefined, { flow: "multi", paymentKind: "multi_line", lines: multiEntries }); }, 400);
       return;
     }
     if (flow === "split") {
       if (!canPayActiveBill) return;
       setIsProcessing(true);
-      const isLastBill = activeBillTotal >= cartTotal - 1; // within 1 IDR rounding
       setTimeout(() => {
         setIsProcessing(false);
-        if (isLastBill) {
-          onConfirm(method);
-        } else {
-          onConfirm(method, undefined, activeBillTotal);
-        }
+        onConfirm(method, undefined, activeBillTotal, {
+          flow: "split",
+          paymentKind: "split_line",
+          lines: [{ method, amount: activeBillTotal, splitId: activeBill }],
+          splits: splitBills.map((bill, index) => ({ id: bill, label: `Bill ${bill}`, splitNo: index + 1, amountDue: getBillTotal(bill), amountPaid: bill === activeBill ? activeBillTotal : 0 })),
+        });
       }, 400);
       return;
     }
@@ -230,7 +230,7 @@ export function PaymentMethodDialog({
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
-      onConfirm(method, method === "cash" ? cashAmount || cartTotal : undefined);
+      onConfirm(method, method === "cash" ? cashAmount || cartTotal : undefined, undefined, { flow: "full", paymentKind: "full_payment", lines: [{ method, amount: cartTotal, receivedAmount: method === "cash" ? cashAmount || cartTotal : undefined }] });
     }, 400);
   };
 
@@ -418,8 +418,8 @@ export function PaymentMethodDialog({
             <CreditCard size={isLandscape ? 36 : 44} className="text-blue-600" />
           </div>
           <div className="text-center">
-            <p className="font-bold text-slate-800">Kartu Debit / Kredit</p>
-            <p className="text-sm text-slate-400 mt-0.5 max-w-[200px]">Silakan gesek / tap kartu pada mesin EDC.</p>
+            <p className="font-bold text-slate-800">Manual Bank Transfer</p>
+            <p className="text-sm text-slate-400 mt-0.5 max-w-[200px]">Catat transfer manual sesuai bukti pembayaran pelanggan.</p>
           </div>
           <button onClick={handleProcess} disabled={loading}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"

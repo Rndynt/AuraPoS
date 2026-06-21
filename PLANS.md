@@ -9877,3 +9877,126 @@ Introduce a trusted API permission context adapter for order-action policy input
 
 ### Continuation Notes
 Next safest phase is P8.4: design a real persisted permission-claim source for tenant users/sensitive order actions, then load server-side claims into this adapter without switching from intersection to additive behavior until tenant/account validation and direct-bypass tests prove it safe.
+
+## Plan: P9 POS Payment Usability Completion
+
+### Source
+- Tasklist: `roadmap/business-flows/replit_codex_P9_pos_payment_usability_completion_prompt.md`
+- User request: Analisa mendalam dan eksekusi roadmap P9 POS payment usability.
+- Date started: 2026-06-21
+- Current status: Partially implemented with guarded limitations; core metadata, gating, calculations, and safe UX paths are in place.
+
+### Goal
+Separate payment methods from payment flow modes, prevent DP/multi/split from being treated as accidental full payment, persist payment-flow metadata in payment rows, and document remaining split/multi persistence gaps honestly.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active P9 tasklist/checklist
+- [x] Relevant business-flow reports under `roadmap/business-flows/`
+- [x] Relevant POS, API, application, infrastructure, and schema source files
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: `OrdersController`, `RecordPayment`, `CreateAndPayOrder` payloads.
+- Files inspected: `apps/api/src/http/controllers/OrdersController.ts`, `packages/application/orders/RecordPayment.ts`, `packages/application/orders/CreateAndPayOrder.ts`, infrastructure repositories.
+- Findings: Backend was transaction-safe but lacked P9 flow/kind/cash/split metadata fields.
+- Tasks: Extended schemas and payloads for P9 metadata; preserved derived paid/partial/unpaid status calculation.
+- Risks: Multi-row create-and-pay is still not atomic for fresh carts.
+- Validation: API type-check and tests pass.
+
+#### Database/Schema Workstream
+- Scope: `order_payments`, split bill persistence.
+- Files inspected: `packages/infrastructure/db/schema/orders.schema.ts`, migrations.
+- Findings: No persistent split table existed; order payment rows had only legacy method/amount/reference fields.
+- Tasks: Added metadata columns and `order_bill_splits`; added migration `0016_p9_payment_flows.sql`.
+- Risks: Deployed DBs must run migration before metadata persistence.
+- Validation: Type-check pass.
+
+#### Frontend/UI Workstream
+- Scope: POS payment dialog and POS flow adapters.
+- Files inspected: `PaymentMethodDialog`, retail/restaurant POS flow hooks.
+- Findings: Multi/split UI state was collapsed into a single parent method confirmation; retail DP/split gates were disabled.
+- Tasks: Updated method labels, independent gates, structured payment detail submission, and guarded unsupported fresh-cart multi/split.
+- Risks: Split context API still needed for fully persisted split UUIDs.
+- Validation: Terminal-web type-check and tests pass.
+
+#### Tests/Validation Workstream
+- Scope: payment calculations and existing regression suites.
+- Findings: No centralized tests for P9 amount helpers existed.
+- Tasks: Added terminal-web and application helper tests.
+- Validation: `pnpm --filter @pos/terminal-web test`, `pnpm --filter @pos/application test`, `pnpm --filter @pos/api test`, and root `pnpm type-check` pass.
+
+#### Documentation Workstream
+- Scope: P9 report, roadmap, PLANS.
+- Tasks: Created P9 report and updated roadmap/plan.
+
+#### Security/Tenant Isolation Workstream
+- Scope: tenant-owned payment data.
+- Findings: Existing order lookup remains tenant/outlet-scoped; new payment rows receive tenant/outlet metadata from locked tenant order context.
+- Risks: None newly introduced for tenant isolation; split context API must remain tenant-scoped in P9.1.
+
+### Progress
+
+#### Completed
+- [x] Payment methods vs payment flows separated in UI copy and payload mapping.
+  - Files changed: `apps/pos-terminal-web/src/components/pos/PaymentMethodDialog.tsx`, POS flow hooks.
+  - Validation: terminal-web type-check/test.
+  - Docs updated: P9 report.
+- [x] P9 payment row metadata added.
+  - Files changed: schema, migration, repositories, API controller.
+  - Validation: API/application type-check/test.
+  - Docs updated: P9 report.
+- [x] Calculation helper tests added.
+  - Files changed: terminal-web/application payment flow helper tests.
+  - Validation: terminal-web/application tests.
+
+#### Partially Completed
+- [ ] Multi payment fresh-cart atomic persistence.
+  - Completed: active-order line persistence and helper guardrails.
+  - Remaining: atomic create-order-with-many-payments use case.
+  - Reason: existing create-and-pay use case is single-payment-row by design.
+- [ ] Split bill persistent setup API.
+  - Completed: schema table and session metadata guardrails.
+  - Remaining: create/list/pay split endpoint using real UUID `split_id`.
+  - Reason: no split context API existed before P9.
+
+#### Blocked
+- [ ] None in this batch.
+
+#### Not Attempted
+- [ ] Browser/manual screenshot.
+  - Reason: changes are dialog/payment logic and validation was programmatic; no running browser session was requested.
+
+### Validation Log
+- Command: `pnpm --filter @pos/terminal-web type-check`
+- Result: pass
+- Command: `pnpm --filter @pos/terminal-web test`
+- Result: pass
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Command: `pnpm --filter @pos/application test`
+- Result: pass
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Command: `pnpm --filter @pos/api test`
+- Result: pass
+- Command: `pnpm type-check`
+- Result: pass
+
+### Documentation Updates
+- File: `roadmap/business-flows/P9_pos_payment_usability_completion_report.md`
+- Change: Created P9 implementation/audit report.
+- File: `roadmap/business-flows/main.md`
+- Change: Added P9 status summary.
+- File: `PLANS.md`
+- Change: Added active P9 execution plan and continuation notes.
+
+### Checklist Updates
+- File: `roadmap/business-flows/replit_codex_P9_pos_payment_usability_completion_prompt.md`
+- Change: No checkbox list existed; report documents completed/partial/remaining work.
+
+### Continuation Notes
+Continue with P9.1: atomic create-order-with-multiple-payments, split context API backed by `order_bill_splits`, API-level row-count tests for full/DP/multi/split, and frontend integration for persisted split UUIDs.

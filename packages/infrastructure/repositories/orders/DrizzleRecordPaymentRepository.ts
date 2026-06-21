@@ -44,7 +44,7 @@ export class DrizzleRecordPaymentRepository {
       const tx = DrizzleUnitOfWork.fromContext(context)!;
       // Lock the order row for this tenant to prevent concurrent payment race
       const lockedOrders = await tx.execute(sql`
-        SELECT id, tenant_id, status, payment_status, total, paid_amount
+        SELECT id, tenant_id, outlet_id, status, payment_status, total, paid_amount
         FROM orders
         WHERE id = ${input.order_id}
           AND tenant_id = ${input.tenant_id}
@@ -94,14 +94,51 @@ export class DrizzleRecordPaymentRepository {
         );
       }
 
+      const existingSucceededPayments = await tx
+        .select()
+        .from(orderPayments)
+        .where(and(eq(orderPayments.orderId, input.order_id), eq(orderPayments.status, 'succeeded')))
+        .for('update');
+
+      const flow = input.payment_flow ?? 'full';
+      const kind = input.payment_kind ?? (flow === 'dp' ? (existingSucceededPayments.length > 0 ? 'remaining_payment' : 'down_payment') : flow === 'multi' ? 'multi_line' : flow === 'split' ? 'split_line' : 'full_payment');
+
+      if (flow === 'dp') {
+        const dpRows = existingSucceededPayments.filter((payment: any) => payment.paymentFlow === 'dp');
+        if (dpRows.length >= 2) {
+          throw new Error('P9 DP flow allows a maximum of two succeeded payment rows');
+        }
+        if (kind === 'down_payment' && input.amount >= remaining - 0.001) {
+          throw new Error('Down payment amount must be less than remaining balance');
+        }
+      }
+
+      if (flow === 'multi') {
+        const multiRows = existingSucceededPayments.filter((payment: any) => payment.paymentFlow === 'multi');
+        if (multiRows.length >= 2) {
+          throw new Error('P9 multi payment allows a maximum of two payment rows');
+        }
+      }
+
       // Insert payment record
       const paymentData: InsertOrderPayment = {
+        tenantId: input.tenant_id,
+        outletId: orderRow.outlet_id ?? null,
         orderId: input.order_id,
+        paymentFlow: flow as any,
+        paymentKind: kind as any,
         amount: input.amount.toString(),
+        receivedAmount: input.received_amount != null ? input.received_amount.toString() : undefined,
+        changeAmount: input.change_amount != null ? input.change_amount.toString() : undefined,
+        status: 'succeeded' as any,
+        splitId: input.split_id,
+        sequence: input.sequence ?? existingSucceededPayments.length + 1,
         paymentMethod: input.payment_method as any,
         paymentDate: new Date(),
         referenceNumber: input.transaction_ref,
+        referenceNote: input.reference_note,
         notes: input.notes,
+        metadata: input.metadata as any,
         idempotencyKey: input.idempotency_key,
       };
 

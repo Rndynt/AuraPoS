@@ -196,16 +196,29 @@ export type OrderItemModifier = typeof orderItemModifiers.$inferSelect;
 
 export const orderPayments = pgTable("order_payments", {
   id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
   orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  paymentFlow: varchar("payment_flow", { length: 50 }).notNull().default("full"),
+  paymentKind: varchar("payment_kind", { length: 50 }).notNull().default("full_payment"),
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  receivedAmount: decimal("received_amount", { precision: 10, scale: 2 }),
+  changeAmount: decimal("change_amount", { precision: 10, scale: 2 }),
+  status: varchar("status", { length: 50 }).notNull().default("succeeded"),
+  splitId: uuid("split_id"),
+  sequence: integer("sequence").notNull().default(1),
   paymentDate: timestamp("payment_date").notNull().default(sql`CURRENT_TIMESTAMP`),
   referenceNumber: text("reference_number"),
+  referenceNote: text("reference_note"),
   notes: text("notes"),
+  metadata: jsonb("metadata"),
   idempotencyKey: varchar("idempotency_key", { length: 128 }),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => ({
+  tenantIdx: index("order_payments_tenant_idx").on(table.tenantId),
   orderIdx: index("order_payments_order_idx").on(table.orderId),
+  splitIdx: index("order_payments_split_idx").on(table.splitId),
   paymentDateIdx: index("order_payments_payment_date_idx").on(table.paymentDate),
   orderIdempotencyUnique: uniqueIndex("order_payments_order_id_idempotency_unique")
     .on(table.orderId, table.idempotencyKey)
@@ -217,8 +230,31 @@ export const insertOrderPaymentSchema = createInsertSchema(orderPayments).omit({
   createdAt: true,
 }).extend({
   paymentMethod: z.enum(["cash", "card", "ewallet", "other"]),
+  paymentFlow: z.enum(["full", "dp", "multi", "split"]).default("full"),
+  paymentKind: z.enum(["full_payment", "down_payment", "remaining_payment", "multi_line", "split_line"]).default("full_payment"),
+  status: z.enum(["succeeded", "voided", "refunded", "cancelled"]).default("succeeded"),
 });
 
 export const selectOrderPaymentSchema = createSelectSchema(orderPayments);
 export type InsertOrderPayment = z.infer<typeof insertOrderPaymentSchema>;
 export type OrderPayment = typeof orderPayments.$inferSelect;
+
+export const orderBillSplits = pgTable("order_bill_splits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  splitNo: integer("split_no").notNull(),
+  splitLabel: text("split_label"),
+  amountDue: decimal("amount_due", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).notNull().default("0"),
+  status: varchar("status", { length: 50 }).notNull().default("unpaid"),
+  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  tenantIdx: index("order_bill_splits_tenant_idx").on(table.tenantId),
+  orderIdx: index("order_bill_splits_order_idx").on(table.orderId),
+  orderSplitUnique: uniqueIndex("order_bill_splits_order_split_no_unique").on(table.orderId, table.splitNo),
+}));
+
+export type InsertOrderBillSplit = typeof orderBillSplits.$inferInsert;
+export type OrderBillSplit = typeof orderBillSplits.$inferSelect;
