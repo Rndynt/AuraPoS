@@ -4,7 +4,7 @@ Repository: `Rndynt/AuraPoS`
 
 ## 1. Goal
 
-Fix the POS payment dialog layout so it is readable, predictable, compact, and easy for a cashier to use.
+Fix the POS payment dialog layout so it is readable, predictable, compact, responsive, and easy for a cashier to use.
 
 The current P9.4 implementation fixed some state wiring, but the visual result is still not acceptable in mobile landscape:
 
@@ -26,6 +26,7 @@ Left panel shows total, flow tabs, selected payment method, and flow summary.
 Right panel shows only the active flow work area.
 Multi: right panel shows payment lines and amount input; method is selected from the left control rail.
 Split: right panel prioritizes bill tabs and item assignment list. Bill labels/totals are not duplicated.
+All viewport sizes remain usable: mobile portrait, mobile landscape, tablet, and desktop.
 ```
 
 ## 2. Important principle
@@ -40,6 +41,8 @@ The project needs simple readable UI, not more complexity.
 - No random nested scrolls.
 - No oversized payment method buttons taking over the work area.
 - No hidden item list.
+- No labels that do not help cashier decisions.
+- No dense action clutter.
 - No legacy compatibility.
 - No provider/card/e-wallet/gateway/NorthFlow logic.
 - No businessProfile logic inside payment domain/application.
@@ -306,7 +309,96 @@ confirm button
 - The item list must remain scrollable.
 ```
 
-## 10. Sizing and spacing rules
+## 10. Responsive viewport requirements
+
+The redesign must be explicitly responsive across all common POS viewports.
+
+### 10.1 Mobile portrait
+
+Expected:
+
+```txt
+- Dialog behaves like a compact sheet/modal.
+- Layout stacks vertically: total, flow tabs, method selector, work area, action.
+- No two-column layout if it makes the content too narrow.
+- Text remains readable without horizontal scrolling.
+- Primary action remains reachable.
+- Close button remains reachable.
+- Item list and numpad can scroll, but labels/actions must not disappear.
+```
+
+### 10.2 Mobile landscape
+
+Expected:
+
+```txt
+- Use left control rail + right work panel.
+- Left panel must not be too wide; target 220-250px.
+- Right panel must prioritize the work area.
+- Split item list must be visible immediately.
+- At least several item rows should be visible before scrolling.
+- Do not waste vertical space with duplicate labels, repeated totals, or large empty sections.
+```
+
+### 10.3 Tablet
+
+Expected:
+
+```txt
+- Use two-zone layout.
+- Right panel has enough breathing room but remains compact.
+- Method selector stays in left control rail.
+- Work area uses available space without giant card blocks.
+- Split can use item list + compact summary side by side.
+```
+
+### 10.4 Desktop
+
+Expected:
+
+```txt
+- Dialog should not become unnecessarily huge.
+- Use max width around 900px unless project style requires otherwise.
+- Content remains centered and readable.
+- Left control rail and right work panel remain visually balanced.
+- No excessive whitespace after flow tabs.
+```
+
+### 10.5 Responsive implementation rules
+
+```txt
+- Prefer CSS/Tailwind responsive classes over manual JS viewport branching unless already necessary.
+- Use `dvh` for height-sensitive modal constraints.
+- Use `min-h-0` for flex/grid children that contain scroll areas.
+- Use `min-w-0` for panels containing truncating text.
+- Avoid nested scrollbars unless unavoidable.
+- Do not let browser chrome / Android navigation / mobile address bar hide the confirm button.
+- Do not rely only on `window.innerWidth > window.innerHeight`; still verify portrait, landscape, tablet, desktop behavior.
+```
+
+## 11. Styling and visual language requirements
+
+Use the existing AuraPoS visual style. Do not invent a new design language.
+
+```txt
+- Keep the existing blue primary action style.
+- Keep neutral slate backgrounds/borders for inactive controls.
+- Use teal/green only for paid/remaining/success indicators where already used.
+- Use amber only for DP/warning context where useful.
+- Use compact rounded cards/buttons consistent with current project styling.
+- Avoid unnecessary uppercase labels except small section labels that help scanning.
+- Remove labels that repeat obvious information.
+- Keep typography readable: clear amount hierarchy, compact helper text, no clutter.
+- Icons are allowed only when they help recognition; do not add decorative icons everywhere.
+```
+
+Design goal:
+
+```txt
+The cashier should understand the flow in 3 seconds without reading duplicated labels.
+```
+
+## 12. Sizing and spacing rules
 
 Use compact, practical spacing.
 
@@ -329,7 +421,7 @@ Scroll:
 - never hide close button
 ```
 
-## 11. Submit payload must stay canonical
+## 13. Submit payload must stay canonical
 
 Do not break the data contract already established.
 
@@ -365,7 +457,7 @@ payment: {
 
 Do not change canonical flow/method/kind names.
 
-## 12. User-readable behavior
+## 14. User-readable behavior
 
 Cashier should understand:
 
@@ -390,7 +482,7 @@ Split:
 - pay selected bill from one confirm button
 ```
 
-## 13. Tests / verification
+## 15. Tests / verification
 
 Full UI test can be deferred if the project test stack is not ready, but add or update what is practical.
 
@@ -411,18 +503,21 @@ If component tests are available, add assertions:
 Manual verification required:
 
 ```txt
-1. Mobile landscape Multi: method selector appears in left panel only.
-2. Mobile landscape Multi: adding line shows correct method and amount.
-3. Mobile landscape Split: Bill A/B appears only once at the top tabs.
-4. Mobile landscape Split: no bottom Bill A/B duplicate total cards.
-5. Mobile landscape Split: item rows are visible immediately.
-6. Mobile landscape Split: at least several cart item rows are visible and scrollable.
-7. Mobile landscape Split: payment method selector is not blocking item assignment.
-8. Mobile portrait Split: item list still visible and scrollable.
-9. Full and DP remain usable and do not regress.
+1. Mobile portrait Full/DP: content readable, no horizontal overflow, confirm reachable.
+2. Mobile portrait Multi: method selector visible before amount input, lines readable, confirm reachable.
+3. Mobile portrait Split: Bill A/B appears only once, item list visible and scrollable.
+4. Mobile landscape Multi: method selector appears in left panel only.
+5. Mobile landscape Multi: adding line shows correct method and amount.
+6. Mobile landscape Split: Bill A/B appears only once at the top tabs.
+7. Mobile landscape Split: no bottom Bill A/B duplicate total cards.
+8. Mobile landscape Split: item rows are visible immediately.
+9. Mobile landscape Split: at least several cart item rows are visible and scrollable.
+10. Tablet: two-zone layout is balanced and compact.
+11. Desktop: dialog does not become oversized and keeps project styling.
+12. Full and DP remain usable and do not regress.
 ```
 
-## 14. Report update
+## 16. Report update
 
 Update:
 
@@ -444,14 +539,14 @@ Include:
 3. Multi method selector relocation
 4. Split item assignment visibility fix
 5. Split duplicate Bill A/B label removal
-6. Mobile landscape behavior
-7. Mobile portrait behavior
+6. Responsive behavior: mobile portrait, mobile landscape, tablet, desktop
+7. Project styling/color consistency
 8. Files changed
 9. Tests/manual checks performed
 10. Remaining limitations
 ```
 
-## 15. Acceptance checklist
+## 17. Acceptance checklist
 
 ```txt
 - [ ] Left panel is no longer empty after flow tabs.
@@ -469,8 +564,12 @@ Include:
 - [ ] SPLIT item rows are readable: bill badge, name, quantity, amount.
 - [ ] SPLIT item list remains scrollable.
 - [ ] SPLIT footer/summary does not push item list to zero height.
-- [ ] Mobile landscape layout is readable.
-- [ ] Mobile portrait layout is readable.
+- [ ] Mobile portrait layout is readable and compact.
+- [ ] Mobile landscape layout is readable and compact.
+- [ ] Tablet layout is readable and compact.
+- [ ] Desktop layout is readable and not oversized.
+- [ ] Colors and styling stay consistent with the existing project style.
+- [ ] Unimportant/repeated labels are removed.
 - [ ] Close button remains reachable.
 - [ ] Submit payload contract for FULL/DP/MULTI/SPLIT is unchanged.
 - [ ] No provider/card/e-wallet/gateway/NorthFlow code added.
@@ -478,7 +577,7 @@ Include:
 - [ ] Report updated.
 ```
 
-## 16. Commit message
+## 18. Commit message
 
 ```txt
 fix(pos): make payment dialog layout readable
