@@ -31,7 +31,6 @@ import {
   usePOSStockGuard,
   submitPOSPayment,
   toUserSafePaymentError,
-  toCanonicalPaymentMethod,
   createClientPaymentSessionId,
 } from "@/features/pos-core";
 import { getSendToKitchenEligibility } from "./restaurantTableServiceFlowPolicy";
@@ -255,7 +254,7 @@ export function useRestaurantTableServicePOSFlow() {
         orderId: pendingOrderForPayment.orderId,
         orderNumber: pendingOrderForPayment.orderNumber,
         totalAmount: pendingOrderForPayment.totalAmount,
-        paymentMethod: toCanonicalPaymentMethod(paymentMethod),
+        paymentMethod,
         cashReceived,
         partialAmount,
         paymentDetails,
