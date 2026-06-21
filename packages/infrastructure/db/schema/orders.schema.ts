@@ -199,8 +199,8 @@ export const orderPayments = pgTable("order_payments", {
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
   outletId: uuid("outlet_id").references(() => outlets.id, { onDelete: "set null" }),
   orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  paymentFlow: varchar("payment_flow", { length: 50 }).notNull().default("full"),
-  paymentKind: varchar("payment_kind", { length: 50 }).notNull().default("full_payment"),
+  paymentFlow: varchar("payment_flow", { length: 50 }).notNull().default("FULL"),
+  paymentKind: varchar("payment_kind", { length: 50 }).notNull().default("FULL_PAYMENT"),
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   receivedAmount: decimal("received_amount", { precision: 10, scale: 2 }),
@@ -229,9 +229,9 @@ export const insertOrderPaymentSchema = createInsertSchema(orderPayments).omit({
   id: true,
   createdAt: true,
 }).extend({
-  paymentMethod: z.enum(["cash", "card", "ewallet", "other"]),
-  paymentFlow: z.enum(["full", "dp", "multi", "split"]).default("full"),
-  paymentKind: z.enum(["full_payment", "down_payment", "remaining_payment", "multi_line", "split_line"]).default("full_payment"),
+  paymentMethod: z.enum(["CASH", "MANUAL_TRANSFER", "MANUAL_QRIS"]),
+  paymentFlow: z.enum(["FULL", "DOWN_PAYMENT", "MULTI_PAYMENT", "SPLIT_BILL"]).default("FULL"),
+  paymentKind: z.enum(["FULL_PAYMENT", "DOWN_PAYMENT", "REMAINING_PAYMENT", "MULTI_PAYMENT_LINE", "SPLIT_BILL_LINE"]).default("FULL_PAYMENT"),
   status: z.enum(["succeeded", "voided", "refunded", "cancelled"]).default("succeeded"),
 });
 
