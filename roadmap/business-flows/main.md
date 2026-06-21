@@ -732,3 +732,10 @@ Status: Implemented and validated.
 - Tightened active cancellation policy input so `orders:cancel_active` is derived from authenticated role context (`owner`, `manager`, `platform-admin`) instead of cancellation-reason presence.
 - Audited refund/void/delete/trash order routes; they are not exposed in the current orders router and were not invented in this phase.
 - Report: `roadmap/business-flows/P8_1_api_direct_bypass_tests_rbac_report.md`.
+
+## P8.2 Permission Claim Registry — Completed 2026-06-21
+
+- Added a shared application-layer order-action permission registry.
+- Refactored backend active-cancel policy input mapping to use the registry instead of controller-local role mapping.
+- Added registry unit tests and expanded API direct-bypass tests for owner, platform-admin, and missing-role active cancellation.
+- Report: `roadmap/business-flows/P8_2_permission_claim_registry_report.md`.

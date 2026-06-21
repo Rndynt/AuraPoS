@@ -9628,3 +9628,114 @@ Prove P8 backend order-action guards at API/controller level and tighten active 
 
 ### Continuation Notes
 Next safest batch: P8.2 permission-claim registry/RBAC integration for explicit permissions, then future refund/void/delete policy tests if those routes are introduced.
+
+
+## Plan: P8.2 Permission Claim Registry for Order Action Policy
+
+### Source
+- Tasklist: `roadmap/business-flows/replit_codex_P8_2_permission_claim_registry_prompt.md`
+- User request: Analisa mendalam, pahami, pelajari, tambahkan report jika ada yang tidak sesuai, lalu eksekusi P8.2 roadmap.
+- Date started: 2026-06-21
+- Current status: Implemented and validated
+
+### Goal
+Centralize order-action permission constants and role-derived permission mapping so controller policy input does not carry ad-hoc permission logic.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs/reports: P8 report, P8.1 report, roadmap main
+- [x] Relevant source files: OrdersController, policy helpers, direct-bypass tests, auth/RBAC request role context
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: OrdersController policy permission input mapping.
+- Files inspected: `apps/api/src/http/controllers/OrdersController.ts`, `apps/api/src/http/middleware/rbac.ts`, `apps/api/src/http/middleware/tenant.ts`.
+- Findings: Active cancel used a controller-local role mapping.
+- Tasks: Replace local helper with shared registry resolver.
+- Risks: Persisted permission claims do not exist yet.
+- Validation: `pnpm --filter @pos/api type-check`, `pnpm --filter @pos/api test`.
+
+#### Tests/Validation Workstream
+- Scope: Registry unit tests and controller direct-bypass tests.
+- Files inspected: `apps/api/src/__tests__/order-action-direct-bypass.test.ts`, `packages/application/package.json`.
+- Findings: Existing direct-bypass suite covered cashier and manager, but not owner/platform-admin/missing role.
+- Tasks: Add pure registry tests and expanded controller role tests.
+- Risks: None found after validation.
+- Validation: `pnpm --filter @pos/application test`, `pnpm --filter @pos/api test`, `pnpm type-check`.
+
+#### Documentation Workstream
+- Scope: P8.2 report, roadmap tracking, active prompt checklist, PLANS.
+- Files inspected: P8/P8.1 reports, roadmap main, P8.2 prompt.
+- Findings: P8.2 needed explicit limitation docs for no persisted claims.
+- Tasks: Create report and update tracking docs.
+- Risks: Future RBAC model still not persisted.
+- Validation: Documentation updated with actual validation results.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Role-derived permission hardening and future dangerous actions.
+- Findings: Least-privilege behavior requires no dangerous future permissions for current roles and no controller-local duplicate mapping.
+- Tasks: Reserve future refund/void/delete permissions without granting them or creating routes.
+- Risks: Explicit permission claims must come from trusted source before union/additive behavior is considered.
+- Validation: Registry tests assert no role receives reserved dangerous permissions.
+
+### Progress
+
+#### Completed
+- [x] Shared permission constants and role-to-permission registry.
+  - Files changed: `packages/application/business-flows/permissions/orderActionPermissions.ts`, `packages/application/business-flows/index.ts`
+  - Validation: application/api type-check and tests passed.
+  - Docs updated: P8.2 report, roadmap main, active prompt checklist, PLANS.
+- [x] OrdersController refactor to use shared registry.
+  - Files changed: `apps/api/src/http/controllers/OrdersController.ts`
+  - Validation: API type-check/tests passed.
+  - Docs updated: P8.2 report.
+- [x] Registry and direct-bypass tests.
+  - Files changed: `packages/application/business-flows/__tests__/orderActionPermissions.test.ts`, `packages/application/package.json`, `apps/api/src/__tests__/order-action-direct-bypass.test.ts`
+  - Validation: application/api tests passed.
+  - Docs updated: P8.2 report.
+
+#### Partially Completed
+- [ ] Persisted first-class permission claims.
+  - Completed: Shared registry can accept explicit claims and safely intersects them with role baseline.
+  - Remaining: Persisted RBAC/permission-claim source and trusted middleware adapter.
+  - Reason: Forbidden/out of scope for P8.2.
+
+#### Blocked
+- [ ] None.
+
+#### Not Attempted
+- [ ] Refund/void/delete routes.
+  - Reason: Explicitly forbidden in P8.2; documented readiness only.
+
+### Validation Log
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Command: `pnpm --filter @pos/application test`
+- Result: pass
+- Command: `pnpm --filter @pos/api test`
+- Result: pass
+- Command: `pnpm type-check`
+- Result: pass
+- Command: cleanup grep from P8.2 prompt
+- Result: pass/no matches
+
+### Documentation Updates
+- File: `roadmap/business-flows/P8_2_permission_claim_registry_report.md`
+- Change: Created implementation report with matrix, validation output, cleanup findings, and risks.
+- File: `roadmap/business-flows/main.md`
+- Change: Added P8.2 completion entry.
+- File: `roadmap/business-flows/replit_codex_P8_2_permission_claim_registry_prompt.md`
+- Change: Marked completion checklist as implemented/validated.
+
+### Checklist Updates
+- File: `roadmap/business-flows/replit_codex_P8_2_permission_claim_registry_prompt.md`
+- Change: All P8.2 completion checklist items checked after implementation and validation.
+
+### Continuation Notes
+Continue with P8.3: introduce a trusted persisted permission-claim source or middleware adapter, then wire RBAC middleware and any future refund/void/delete policy guards to that source without granting dangerous permissions by default.

@@ -11,7 +11,7 @@ import { emitOrderQueueChanged, subscribeOrderQueue } from '../services/orderQue
 import { getEffectiveEntitlementMap, loadTenantEntitlementContext } from '../../services/tenantEntitlements';
 import { DEFAULT_SERVICE_CHARGE_RATE, DEFAULT_TAX_RATE } from '@pos/core/pricing';
 import { withOrderLifecycleDtoFields } from '@pos/application/orders/mappers/orderLifecycleDtoMapper';
-import { assertCanPerformOrderAction, resolveBusinessProfileFromBusinessType, type OrderActionPolicyError } from '@pos/application/business-flows';
+import { assertCanPerformOrderAction, resolveBusinessProfileFromBusinessType, resolveOrderActionPermissionsFromRequestContext, type OrderActionPolicyError } from '@pos/application/business-flows';
 
 type OrderActionPolicyBase = { businessProfile: ReturnType<typeof resolveBusinessProfileFromBusinessType> | 'core_standard'; entitlements: string[] };
 
@@ -21,14 +21,6 @@ export function __setOrderActionPolicyBaseOverrideForTests(
   override: ((tenantId: string, options?: { requireEntitlements?: boolean }) => Promise<OrderActionPolicyBase> | OrderActionPolicyBase) | null,
 ): void {
   orderActionPolicyBaseOverride = override;
-}
-
-function resolveOrderActionPermissions(req: Request): string[] {
-  const role = req.posRole ?? req.authTenantUser?.role;
-  if (role === 'owner' || role === 'manager' || role === 'platform-admin') {
-    return ['orders:cancel_active'];
-  }
-  return [];
 }
 
 async function getOrderActionPolicyBase(tenantId: string, options: { requireEntitlements?: boolean } = {}) {
@@ -717,7 +709,10 @@ export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
       orderOperationalStatus: order.status,
       paymentStatus: order.paymentStatus ?? order.payment_status,
       fulfillmentStatus: order.status,
-      actorPermissions: resolveOrderActionPermissions(req),
+      actorPermissions: resolveOrderActionPermissionsFromRequestContext({
+        posRole: req.posRole,
+        authTenantUser: req.authTenantUser,
+      }),
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'OrderActionPolicyError') throwPolicyHttpError(error as OrderActionPolicyError);

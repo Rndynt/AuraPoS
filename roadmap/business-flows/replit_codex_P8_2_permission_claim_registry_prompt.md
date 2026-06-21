@@ -290,17 +290,17 @@ if those files are used for phase tracking.
 
 ## Completion checklist
 
-- [ ] Shared permission constants added.
-- [ ] Role-to-permission registry/helper added.
-- [ ] OrdersController uses registry/helper for policy input.
-- [ ] No duplicate local active-cancel permission mapping remains in controller.
-- [ ] Registry unit tests added.
-- [ ] Direct-bypass tests updated for role-derived permissions.
-- [ ] Full payment without orders_queue still tested/passing.
-- [ ] Refund/void/delete route readiness documented without inventing routes.
-- [ ] Validation commands run and documented.
-- [ ] Cleanup grep documented.
-- [ ] P8.2 report created.
+- [x] Shared permission constants added.
+- [x] Role-to-permission registry/helper added.
+- [x] OrdersController uses registry/helper for policy input.
+- [x] No duplicate local active-cancel permission mapping remains in controller.
+- [x] Registry unit tests added.
+- [x] Direct-bypass tests updated for role-derived permissions.
+- [x] Full payment without orders_queue still tested/passing.
+- [x] Refund/void/delete route readiness documented without inventing routes.
+- [x] Validation commands run and documented.
+- [x] Cleanup grep documented.
+- [x] P8.2 report created.
 
 ## Commit
 

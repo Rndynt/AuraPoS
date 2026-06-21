@@ -193,6 +193,31 @@ describe('order action API/controller direct-bypass guards', async () => {
     assert.equal(response.body?.code, 'ORDER_ACTION_NOT_ALLOWED');
   });
 
+
+  it('allows active order cancel with reason for owner and platform-admin roles from the registry', async () => {
+    for (const role of ['owner', 'platform-admin'] as const) {
+      setOrder({ id: 'order-1', tenant_id: 'tenant-1', status: 'confirmed', payment_status: 'unpaid' });
+      controllers.__setOrderActionPolicyBaseOverrideForTests(() => ({ businessProfile: 'food_beverage', entitlements: [] }));
+      (container as any).cancelOrderWorkflow = { execute: async () => ({ order: { id: 'order-1', status: 'cancelled' } }) };
+      const app = buildApp(controllers.cancelOrder, 'post', '/api/orders/:id/cancel', role);
+
+      const response = await request(app, 'POST', '/api/orders/order-1/cancel', { cancellation_reason: 'Manager approved cancel' });
+
+      assert.equal(response.status, 200, `${role} should be allowed`);
+      assert.equal(response.body?.success, true);
+    }
+  });
+
+  it('rejects active order cancel with reason when role is missing', async () => {
+    setOrder({ id: 'order-1', tenant_id: 'tenant-1', status: 'confirmed', payment_status: 'unpaid' });
+    const app = buildApp(controllers.cancelOrder, 'post', '/api/orders/:id/cancel');
+
+    const response = await request(app, 'POST', '/api/orders/order-1/cancel', { cancellation_reason: 'Customer requested cancel' });
+
+    assert.equal(response.status, 409);
+    assert.equal(response.body?.code, 'ORDER_ACTION_NOT_ALLOWED');
+  });
+
   it('allows active order cancel with reason when role maps to orders:cancel_active', async () => {
     setOrder({ id: 'order-1', tenant_id: 'tenant-1', status: 'confirmed', payment_status: 'unpaid' });
     controllers.__setOrderActionPolicyBaseOverrideForTests(() => ({ businessProfile: 'food_beverage', entitlements: [] }));
