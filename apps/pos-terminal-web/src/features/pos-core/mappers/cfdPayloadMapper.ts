@@ -1,4 +1,4 @@
-type PaymentMethod = "cash" | "card" | "ewallet" | "other";
+import type { POSPaymentMethod } from "@pos/domain/payments";
 
 export interface POSCFDSnapshot<TItem = unknown> {
   tenantName: string;
@@ -27,7 +27,7 @@ export function buildOrderingCFDPayload<TItem>(snapshot: POSCFDSnapshot<TItem>) 
   };
 }
 
-export function buildPaymentCFDPayload<TItem>(snapshot: POSCFDSnapshot<TItem>, method: PaymentMethod) {
+export function buildPaymentCFDPayload<TItem>(snapshot: POSCFDSnapshot<TItem>, method: POSPaymentMethod) {
   return {
     ...buildOrderingCFDPayload(snapshot),
     type: "payment" as const,
