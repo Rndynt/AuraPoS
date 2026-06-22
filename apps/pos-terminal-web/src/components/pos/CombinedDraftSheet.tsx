@@ -546,6 +546,12 @@ function ActiveOrderDetailDialog({
                 item.itemSubtotal ?? item.item_subtotal ?? 0,
               );
               const unitPrice = qty > 0 ? Math.round(subtotal / qty) : subtotal;
+              const variantLabel = item.variantName ?? item.variant_name ?? null;
+              const selectedOpts: any[] = item.selectedOptions ?? item.selected_options ?? [];
+              const optionsLabel = selectedOpts.length > 0
+                ? selectedOpts.map((o: any) => o.value ?? o.label ?? o.name ?? String(o)).join(", ")
+                : null;
+              const variantDisplay = variantLabel ?? optionsLabel;
               return (
                 <div
                   key={item.id ?? index}
@@ -558,6 +564,12 @@ function ActiveOrderDetailDialog({
                         item.name ??
                         "Item"}
                     </p>
+                    {variantDisplay && (
+                      <p className="text-[11px] text-blue-500 font-medium mt-0.5">{variantDisplay}</p>
+                    )}
+                    {item.notes && (
+                      <p className="text-[11px] text-amber-600 italic mt-0.5">"{item.notes}"</p>
+                    )}
                     <p className="text-[11px] text-slate-400 mt-0.5">
                       {formatRp(unitPrice)} × {qty}
                     </p>
@@ -642,6 +654,7 @@ function ActiveOrderDetailDialog({
   return (
     <Dialog open={!!order} onOpenChange={onOpenChange}>
       <DialogContent
+        hideCloseButton
         className={`p-0 gap-0 overflow-hidden ${isLandscape ? "max-w-[560px]" : "max-w-sm"}`}
         style={{ maxHeight: isLandscape ? "85dvh" : "88dvh" }}
       >

@@ -40,6 +40,7 @@ type NormalizedOrderItem = {
   base_price?: number;
   variant_name?: string | null;
   notes?: string | null;
+  selected_options?: Array<{ value?: string; label?: string; name?: string }>;
 };
 
 type NormalizedOrder = {
@@ -145,8 +146,13 @@ function normalizeOrderItem(item: any): NormalizedOrderItem {
     quantity: money(item?.quantity),
     item_subtotal: money(item?.item_subtotal ?? item?.itemSubtotal),
     base_price: money(item?.base_price ?? item?.basePrice),
-    variant_name: item?.variant_name ?? item?.variantName,
-    notes: item?.notes,
+    variant_name: item?.variant_name ?? item?.variantName ?? null,
+    notes: item?.notes ?? null,
+    selected_options: Array.isArray(item?.selected_options)
+      ? item.selected_options
+      : Array.isArray(item?.selectedOptions)
+        ? item.selectedOptions
+        : [],
   };
 }
 
@@ -299,12 +305,16 @@ function DetailPanel({ order, orderTypeName, onClose, onPrint, onSettle, isPrint
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               {order.items.map((item, idx) => {
                 const unitPrice = item.quantity > 0 ? Math.round(item.item_subtotal / item.quantity) : money(item.base_price);
+                const optionsLabel = (item.selected_options ?? []).length > 0
+                  ? (item.selected_options ?? []).map((o) => o.value ?? o.label ?? o.name ?? "").filter(Boolean).join(", ")
+                  : null;
+                const variantDisplay = item.variant_name ?? optionsLabel;
                 return (
                   <div key={item.id || idx} className={`px-4 py-3 ${idx < order.items.length - 1 ? "border-b border-slate-50" : ""}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-slate-800 leading-snug">{item.product_name}</p>
-                        {item.variant_name && <p className="text-[11px] text-blue-500 mt-0.5 font-medium">{item.variant_name}</p>}
+                        {variantDisplay && <p className="text-[11px] text-blue-500 mt-0.5 font-medium">{variantDisplay}</p>}
                         {item.notes && <p className="text-[11px] text-amber-600 mt-0.5 italic">"{item.notes}"</p>}
                         <p className="text-[11px] text-slate-400 mt-0.5">{formatPrice(unitPrice)} × {item.quantity}</p>
                       </div>
