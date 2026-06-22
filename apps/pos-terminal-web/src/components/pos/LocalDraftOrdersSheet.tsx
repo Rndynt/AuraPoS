@@ -51,7 +51,7 @@ export function LocalDraftOrdersSheet({ open, onOpenChange, onResumeLocalDraft }
         </div>
       </div>
 
-      <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+      <div className="overflow-y-auto flex-1 min-h-0 px-4 py-3 space-y-2">
         {isLoading ? <div className="text-xs text-slate-500">Memuat draft lokal...</div> : draftCount === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3"><PackageOpen className="w-6 h-6 text-slate-400" /></div>

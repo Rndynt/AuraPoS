@@ -785,3 +785,132 @@ Additionally, `"Order sudah lunas"` had no mapping and also fell through to the 
 - `npx tsx --tsconfig tsconfig.json --test src/features/pos-core/services/__tests__/posPaymentSubmissionService.test.ts` → **1 pass, 0 fail**
 - `npx tsc --noEmit` in both `apps/api` and `apps/pos-terminal-web` → **0 errors**
 - The content-type guard truncates the response body to 200 characters in the error message; full body is not exposed to the client toast (appropriate for security).
+
+---
+
+## P9.9 — Orders and Draft Readability
+
+**Date:** 2026-06-22
+
+**Source prompt:** `roadmap/orders/P9_9_orders_draft_readability_prompt.md`
+
+### 1. Problems Diagnosed and Fixed
+
+#### Bug 1 — Draft Dialog Scroll Broken (`CombinedDraftSheet`, `DraftOrdersSheet`, `LocalDraftOrdersSheet`)
+
+**Root cause:** All three sheet components use `flex flex-col overflow-hidden` on the outer content wrapper with `style={{ maxHeight: ... }}`. Inside, the scroll area uses `overflow-y-auto flex-1`. The critical missing piece was `min-h-0` on the scroll container.
+
+Without `min-h-0`, Flexbox children inherit `min-height: auto` — which means the scroll area never shrinks below its content size. With `maxHeight` capping the parent, `overflow-hidden` clips the content visually without enabling the inner scrollbar. Result: on mobile with many orders, the list is clipped with no scroll handle.
+
+**Fix:** Added `min-h-0` to the `overflow-y-auto flex-1` div in all three files.
+
+```
+CombinedDraftSheet.tsx  line 173: overflow-y-auto flex-1 min-h-0 ...
+DraftOrdersSheet.tsx    line 61:  overflow-y-auto flex-1 min-h-0 ...
+LocalDraftOrdersSheet.tsx line 57: overflow-y-auto flex-1 min-h-0 ...
+```
+
+#### Bug 2 — `ActiveOrderDetailDialog` never appears on Mobile
+
+**Root cause:** In `CombinedDraftSheet`, `detailDialog` (the `<ActiveOrderDetailDialog>`) was rendered ONLY inside the Desktop `<Dialog>` branch. The mobile `<Drawer.Root>` branch did not include `{detailDialog}`. Clicking the "Detail" button on an active order on mobile silently did nothing.
+
+**Fix:** Wrapped the mobile Drawer in a `<>...</>` fragment and rendered `{detailDialog}` alongside it (outside Drawer.Root, so it layers correctly above all other z-indexes):
+
+```tsx
+if (isMobile) {
+  return (
+    <>
+      <Drawer.Root>...</Drawer.Root>
+      {detailDialog}   {/* now correctly rendered on mobile too */}
+    </>
+  );
+}
+```
+
+#### Bug 3 — Orders Page "Semua" Filter Count vs. Actual List Mismatch
+
+**Root cause:** `filterCounts.all` counted `activeOrders.length` which includes `"served"` orders (5 statuses). But `filteredOrders` for `filterStatus === "all"` only showed `["draft", "confirmed", "preparing", "ready"]` (4 statuses). Result: badge said e.g. "Semua (7)" but list showed 5 rows.
+
+Additionally, the old logic used an overly complex branch: `const activeStatus = [...].includes(filterStatus)` where `"served"` was NOT in the list, so served orders fell into the correct branch, but the redundant `if (!showAll && activeStatus) result = result.filter(...)` was executed even though `activeStatus` already filtered by status — the double-filter was harmless but confusing.
+
+**Fix:** Simplified `filteredOrders` to:
+```tsx
+const showAll = filterStatus === "all";
+const isActiveStatus = ["draft", "confirmed", "preparing", "ready", "served"].includes(filterStatus);
+let result = showAll
+  ? activeOrders                                          // all 5 active statuses
+  : isActiveStatus
+    ? activeOrders.filter((o) => o.status === filterStatus)  // single active status
+    : normalizedOrders.filter((o) => o.status === filterStatus); // completed/cancelled
+```
+
+Also fixed `filterCounts.served` to come from `activeOrders` (not `normalizedOrders`) to be consistent with the "all" count definition.
+
+#### Bug 4 — Orders Page Detail Panel Hidden on Desktop When No Order Selected
+
+**Root cause:** The panel container class when no order is selected included `md:hidden`. This completely removed the panel from DOM on desktop, making the right-side placeholder (`"Pilih pesanan untuk melihat detail"`) inside `DetailPanel` unreachable. Users had no visual cue that a detail pane exists.
+
+Also: `md:h-auto` in the conditional class list was overriding `md:h-full` from the base class list (both generate `.md:h-*` — the later-registered one in Tailwind's stylesheet wins, which is unpredictable).
+
+**Fix:** Changed panel container:
+- Removed `md:hidden` from the no-order-selected state → panel always visible on desktop
+- Moved `md:h-full` from base class to the explicit class string, removed `md:h-auto` entirely
+- Changed `h-[90vh] md:h-auto` → `h-[90vh] md:h-full`
+
+```tsx
+// Before:
+${selectedOrder ? "translate-y-0 shadow-..." : "translate-y-full md:translate-y-0 md:hidden"} h-[90vh] md:h-auto
+
+// After:
+h-[90vh] md:h-full ${selectedOrder ? "translate-y-0 shadow-..." : "translate-y-full md:translate-y-0"}
+```
+
+#### Bug 5 — `DetailPanel` Scroll Body Missing `min-h-0`
+
+**Root cause:** Same Flexbox issue as Bug 1. Inside `DetailPanel`, the scroll body (`flex-1 overflow-y-auto`) is a child of the outer `flex flex-col` container. Without `min-h-0`, when order has many items + full payment history, the scroll area doesn't constrain and the action footer can be pushed off screen.
+
+**Fix:** Added `min-h-0` to the scroll body div in `DetailPanel`.
+
+#### Bug 6 — Payment Detail Readability: `payment_kind` Not Displayed
+
+**Root cause:** The `orders.tsx` API returns `payment_kind` per payment row (`FULL_PAYMENT`, `DOWN_PAYMENT`, `REMAINING_PAYMENT`, `MULTI_PAYMENT_LINE`, `SPLIT_BILL_LINE`), and `payment_flow` per payment. These fields were read from the API response but not rendered in `DetailPanel`. All payment lines looked identical regardless of whether they were a down payment, a multi-payment installment, or a split bill line.
+
+**Fix:**
+1. Added `paymentKindLabel()` helper:
+   - `DOWN_PAYMENT` → `"DP"`
+   - `REMAINING_PAYMENT` → `"Pelunasan"`
+   - `MULTI_PAYMENT_LINE` → `"Multi"`
+   - `SPLIT_BILL_LINE` → `"Split"`
+   - `FULL_PAYMENT` → `null` (no badge — default full payment is self-evident)
+
+2. Rendered a small inline badge for each payment row that has a non-null kind:
+
+```tsx
+{kindBadge && (
+  <span className="bg-blue-50 text-blue-600 border border-blue-100 px-1.5 rounded text-[10px] font-bold">
+    {kindBadge}
+  </span>
+)}
+```
+
+3. Added empty-state text: `"Belum ada pembayaran tercatat"` when `payments.length === 0 && paid_amount === 0`.
+
+### 2. Files Changed
+
+| File | Change |
+|------|--------|
+| `apps/pos-terminal-web/src/components/pos/CombinedDraftSheet.tsx` | Added `min-h-0` to scroll container; wrapped mobile branch in fragment and added `{detailDialog}` alongside Drawer.Root |
+| `apps/pos-terminal-web/src/components/pos/DraftOrdersSheet.tsx` | Added `min-h-0` to scroll container |
+| `apps/pos-terminal-web/src/components/pos/LocalDraftOrdersSheet.tsx` | Added `min-h-0` to scroll container |
+| `apps/pos-terminal-web/src/pages/orders.tsx` | Simplified `filteredOrders` logic to correctly include "served" in all-filter; fixed `filterCounts.served` source; removed `md:hidden` from no-selection panel state; replaced `md:h-auto` with `md:h-full`; added `min-h-0` to `DetailPanel` scroll body; added `paymentKindLabel()` helper; rendered kind badge in each payment row; added "no payment" empty state message |
+
+### 3. Additional Issues Found During Diagnosis (Not in Prompt)
+
+- **`ActiveOrderDetailDialog` on mobile** — not mentioned in the original prompt but discovered during scroll investigation. Completely silently broken: clicking "Detail" on an active order on mobile fired `setDetailOrder(order)` but the resulting Dialog was rendered in a branch that mobile never reached. Fixed as part of this phase.
+
+- **`filterCounts.served` double-counting** — the old code used `normalizedOrders` (all orders) for the served count, while `filterCounts.all` used `activeOrders` (which already filters for active statuses). This meant the served badge count could include completed or cancelled orders that happened to have status "served" if any such edge-case existed. Harmonized to use `activeOrders` consistently.
+
+### 4. Verification
+
+- `npx tsc --noEmit` in `apps/pos-terminal-web` → **0 errors**
+- Server `npm run dev` → running clean on port 5000, 0 migration errors

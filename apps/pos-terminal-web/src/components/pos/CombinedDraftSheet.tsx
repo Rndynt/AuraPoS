@@ -167,7 +167,7 @@ export function CombinedDraftSheet({
       </div>
 
       {/* Tab Content */}
-      <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+      <div className="overflow-y-auto flex-1 min-h-0 px-4 py-3 space-y-2">
         {/* Server Drafts Tab */}
         {activeTab === "server" &&
           (serverLoading ? (
@@ -407,20 +407,23 @@ export function CombinedDraftSheet({
 
   if (isMobile) {
     return (
-      <Drawer.Root open={open} onOpenChange={onOpenChange}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
-          <Drawer.Content
-            className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-2xl flex flex-col"
-            data-testid="sheet-combined-drafts"
-          >
-            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-              <Drawer.Handle className="w-10 h-1 rounded-full bg-slate-300" />
-            </div>
-            {content}
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+      <>
+        <Drawer.Root open={open} onOpenChange={onOpenChange}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[55]" />
+            <Drawer.Content
+              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-2xl flex flex-col"
+              data-testid="sheet-combined-drafts"
+            >
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <Drawer.Handle className="w-10 h-1 rounded-full bg-slate-300" />
+              </div>
+              {content}
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+        {detailDialog}
+      </>
     );
   }
 

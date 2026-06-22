@@ -129,6 +129,15 @@ const formatTime = (date: Date | string | undefined | null) => {
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 };
 
+function paymentKindLabel(kind: unknown): string | null {
+  const k = String(kind ?? "").toUpperCase();
+  if (k === "DOWN_PAYMENT") return "DP";
+  if (k === "REMAINING_PAYMENT") return "Pelunasan";
+  if (k === "MULTI_PAYMENT_LINE") return "Multi";
+  if (k === "SPLIT_BILL_LINE") return "Split";
+  return null;
+}
+
 function toPOSPaymentMethod(value: unknown): POSPaymentMethod {
   if (value === "CASH") return "CASH";
   if (value === "MANUAL_TRANSFER") return "MANUAL_TRANSFER";
@@ -305,7 +314,7 @@ function DetailPanel({ order, orderTypeName, onClose, onPrint, onSettle, isPrint
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-slate-50/60">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50/60">
         <div className="px-5 pt-4 pb-2">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
             <ShoppingBag size={11} />
@@ -369,19 +378,27 @@ function DetailPanel({ order, orderTypeName, onClose, onPrint, onSettle, isPrint
               <div className="border-t border-slate-50 pt-2 space-y-1.5 mt-1">
                 {order.payments.map((p: any, idx: number) => {
                   const method = p.payment_method ?? p.paymentMethod;
+                  const kind = p.payment_kind ?? p.paymentKind;
+                  const kindBadge = paymentKindLabel(kind);
                   return (
                     <div key={p.id ?? idx} className="flex justify-between items-center text-xs">
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <div className="flex items-center gap-1.5 text-slate-500 flex-wrap">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
                         <span>{paymentMethodLabel(method)}</span>
+                        {kindBadge && (
+                          <span className="bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0 rounded text-[10px] font-bold leading-5">{kindBadge}</span>
+                        )}
                         <span className="text-slate-300">·</span>
                         <span className="text-slate-400">{formatTime(p.payment_date ?? p.paymentDate)}</span>
                       </div>
-                      <span className="font-bold text-emerald-600">+{formatPrice(Number(p.amount ?? 0))}</span>
+                      <span className="font-bold text-emerald-600 flex-shrink-0">+{formatPrice(Number(p.amount ?? 0))}</span>
                     </div>
                   );
                 })}
               </div>
+            )}
+            {Array.isArray(order.payments) && order.payments.length === 0 && order.paid_amount === 0 && (
+              <p className="text-[11px] text-slate-400 text-center py-1.5">Belum ada pembayaran tercatat</p>
             )}
           </div>
         </div>
@@ -441,23 +458,24 @@ export default function OrdersPage() {
     confirmed: activeOrders.filter((o) => o.status === "confirmed").length,
     preparing: activeOrders.filter((o) => o.status === "preparing").length,
     ready: activeOrders.filter((o) => o.status === "ready").length,
-    served: normalizedOrders.filter((o) => o.status === "served").length,
+    served: activeOrders.filter((o) => o.status === "served").length,
     completed: normalizedOrders.filter((o) => o.status === "completed").length,
   }), [normalizedOrders, activeOrders]);
 
   const filteredOrders = useMemo(() => {
     const showAll = filterStatus === "all";
-    const activeStatus = ["draft", "confirmed", "preparing", "ready"].includes(filterStatus);
-    let result = showAll || activeStatus
-      ? normalizedOrders.filter((o) => ["draft", "confirmed", "preparing", "ready"].includes(o.status))
-      : normalizedOrders.filter((o) => o.status === filterStatus);
-    if (!showAll && activeStatus) result = result.filter((o) => o.status === filterStatus);
+    const isActiveStatus = ["draft", "confirmed", "preparing", "ready", "served"].includes(filterStatus);
+    let result = showAll
+      ? activeOrders
+      : isActiveStatus
+        ? activeOrders.filter((o) => o.status === filterStatus)
+        : normalizedOrders.filter((o) => o.status === filterStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter((o) => o.customer_name?.toLowerCase().includes(q) || o.order_number?.toLowerCase().includes(q) || o.table_number?.toString().includes(q));
     }
     return result;
-  }, [normalizedOrders, filterStatus, searchQuery]);
+  }, [normalizedOrders, activeOrders, filterStatus, searchQuery]);
 
   const selectedOrder = useMemo(() => {
     if (selectedOrderResponse) return normalizeOrder(selectedOrderResponse);
@@ -587,7 +605,7 @@ export default function OrdersPage() {
             </ScrollArea>
           </div>
 
-          <div className={`fixed md:relative inset-x-0 bottom-0 md:inset-auto md:w-[400px] md:h-full z-[60] bg-white md:border-l border-slate-200 md:shadow-none flex flex-col transition-transform duration-300 ease-out rounded-t-3xl md:rounded-none ${selectedOrder ? "translate-y-0 shadow-[0_-8px_40px_rgba(0,0,0,0.18)]" : "translate-y-full md:translate-y-0 md:hidden"} h-[90vh] md:h-auto`}>
+          <div className={`fixed md:relative inset-x-0 bottom-0 md:inset-auto md:w-[400px] md:h-full z-[60] bg-white md:border-l border-slate-200 md:shadow-none flex flex-col transition-transform duration-300 ease-out rounded-t-3xl md:rounded-none h-[90vh] md:h-full ${selectedOrder ? "translate-y-0 shadow-[0_-8px_40px_rgba(0,0,0,0.18)]" : "translate-y-full md:translate-y-0"}`}>
             <DetailPanel order={selectedOrder} orderTypeName={selectedOrder?.order_type_id ? orderTypeMap[selectedOrder.order_type_id] : undefined} onClose={() => setSelectedOrderId(null)} onPrint={handleReprintReceipt} onSettle={handleOpenSettleDialog} isPrinting={isPrinting} isSettling={recordPaymentMutation.isPending} />
           </div>
         </div>

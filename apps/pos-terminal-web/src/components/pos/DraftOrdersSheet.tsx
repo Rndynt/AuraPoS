@@ -55,7 +55,7 @@ export function DraftOrdersSheet({ open, onOpenChange, onContinueOrder }: DraftO
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+      <div className="overflow-y-auto flex-1 min-h-0 px-4 py-3 space-y-2">
         {isLoading ? (
           <div className="flex flex-col gap-2 py-4">
             {[1, 2, 3].map((i) => (
