@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTenant } from "@/context/TenantContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useOpenOrders } from "@/lib/api/tableHooks";
+import { buildApiHeaders } from "@/lib/outlet";
 import { useCancelOrder } from "@/lib/api/hooks";
 import {
   deleteLocalDraftOrder,
@@ -450,6 +451,13 @@ function useIsLandscapeMobile() {
   return isLandscape;
 }
 
+function paymentMethodLabelShort(method: unknown): string {
+  const m = String(method ?? "").toUpperCase();
+  if (m === "CASH") return "Tunai";
+  if (m === "MANUAL_TRANSFER") return "Transfer";
+  return "QRIS";
+}
+
 function ActiveOrderDetailDialog({
   order,
   onOpenChange,
@@ -460,6 +468,21 @@ function ActiveOrderDetailDialog({
   onPay: (order: POSLifecycleOrder) => void;
 }) {
   const isLandscape = useIsLandscapeMobile();
+
+  const { data: fullOrderData } = useQuery({
+    queryKey: ["/api/orders", order?.id],
+    queryFn: async () => {
+      const headers = buildApiHeaders();
+      const res = await fetch(`/api/orders/${order!.id}`, { headers, credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch order");
+      const json = await res.json();
+      return json.data ?? json.order ?? json;
+    },
+    enabled: !!order?.id,
+    staleTime: 10_000,
+  });
+
+  const payments: any[] = Array.isArray(fullOrderData?.payments) ? fullOrderData.payments : [];
 
   if (!order) return null;
 
@@ -631,6 +654,46 @@ function ActiveOrderDetailDialog({
               Sisa tidak dapat dihitung.
             </p>
           )}
+          {payments.length > 0 && (() => {
+            const firstFlow = String(payments[0]?.paymentFlow ?? payments[0]?.payment_flow ?? "FULL").toUpperCase();
+            const isMulti = firstFlow === "MULTI_PAYMENT" && payments.length > 1;
+            const isSplit = firstFlow === "SPLIT_BILL";
+            const alphabet = "ABCDEFGHIJ";
+            const splitLabels = new Map<string, string>();
+            let splitIdx = 0;
+            if (isSplit) {
+              payments.forEach((p: any) => {
+                const sid = p.splitId ?? p.split_id;
+                if (sid && !splitLabels.has(sid)) splitLabels.set(sid, `Bill ${alphabet[splitIdx++] ?? splitIdx}`);
+              });
+            }
+            return (
+              <div className="border-t border-slate-100 pt-2 mt-1.5 space-y-1">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  {isMulti ? "Multi Payment" : isSplit ? "Split Bill" : "Detail Pembayaran"}
+                </div>
+                {payments.map((p: any, idx: number) => {
+                  const method = p.paymentMethod ?? p.payment_method;
+                  const methodLabel = paymentMethodLabelShort(method);
+                  const sid = p.splitId ?? p.split_id;
+                  const billLabel = isSplit ? (sid ? (splitLabels.get(sid) ?? "Bill ?") : `Pembayaran ${idx + 1}`) : null;
+                  const kindLabel = isMulti ? `#${idx + 1}` : null;
+                  return (
+                    <div key={p.id ?? idx} className="flex justify-between text-[11px]">
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                        {billLabel ?? methodLabel}
+                        {kindLabel && <span className="text-slate-400"> · {kindLabel}</span>}
+                        {!billLabel && !kindLabel && null}
+                        {billLabel && <span className="text-slate-400"> · {methodLabel}</span>}
+                      </span>
+                      <span className="font-semibold text-emerald-600">+{formatRp(Number(p.amount ?? 0))}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
