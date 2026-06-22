@@ -45,8 +45,8 @@ type PaymentFlow = "FULL" | "DOWN_PAYMENT" | "MULTI_PAYMENT" | "SPLIT_BILL";
 
 const METHODS: Array<{ id: PaymentMethod; label: string; Icon: typeof Banknote }> = [
   { id: "CASH", label: "Tunai", Icon: Banknote },
-  { id: "MANUAL_TRANSFER", label: "Transfer Manual", Icon: Landmark },
-  { id: "MANUAL_QRIS", label: "QRIS Manual", Icon: QrCode },
+  { id: "MANUAL_TRANSFER", label: "Transfer", Icon: Landmark },
+  { id: "MANUAL_QRIS", label: "QRIS", Icon: QrCode },
 ];
 
 const BILL_COLORS = [
