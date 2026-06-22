@@ -68,10 +68,36 @@ export class OrderTypeRepository
   }
 
   /**
+   * Core POS master order types. These are system-owned baseline data, not a
+   * cashier setup task. They are inserted by bootstrap if a dev/existing DB
+   * was created without seed data.
+   */
+  private static readonly DEFAULT_ORDER_TYPES: InsertOrderType[] = [
+    { code: 'TAKE_AWAY', name: 'Take Away', description: 'Bawa pulang', isOnPremise: true, needTableNumber: false, needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
+    { code: 'DINE_IN', name: 'Dine In', description: 'Makan di tempat', isOnPremise: true, needTableNumber: true, needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: true, isActive: true },
+    { code: 'DELIVERY', name: 'Delivery', description: 'Antar ke alamat', isOnPremise: false, needTableNumber: false, needAddress: true, allowScheduled: true, isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
+    { code: 'WALK_IN', name: 'Walk In', description: 'Transaksi langsung di toko', isOnPremise: true, needTableNumber: false, needAddress: false, allowScheduled: false, isDigitalProduct: false, affectsServiceCharge: false, isActive: true },
+  ];
+
+  /**
    * Default order type codes bootstrapped for tenants with no configuration.
    * Priority order: TAKE_AWAY first (always safe for any business type).
    */
   private static readonly BOOTSTRAP_CODES = ['TAKE_AWAY', 'DINE_IN', 'DELIVERY'];
+
+  private async ensureMasterDefaults(): Promise<void> {
+    const defaultCodes = OrderTypeRepository.DEFAULT_ORDER_TYPES.map((type) => type.code);
+
+    await this.db
+      .insert(orderTypes)
+      .values(OrderTypeRepository.DEFAULT_ORDER_TYPES)
+      .onConflictDoNothing();
+
+    await this.db
+      .update(orderTypes)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(inArray(orderTypes.code, defaultCodes));
+  }
 
   /**
    * Find enabled order types for a tenant — auto-bootstraps defaults if none configured.
@@ -82,7 +108,8 @@ export class OrderTypeRepository
       const existing = await this.findByTenant(tenantId);
       if (existing.length > 0) return existing;
 
-      // No order types enabled for this tenant — auto-enable the global defaults
+      await this.ensureMasterDefaults();
+
       const defaults = await this.db
         .select({ id: orderTypes.id, code: orderTypes.code })
         .from(orderTypes)
@@ -95,7 +122,6 @@ export class OrderTypeRepository
 
       if (defaults.length === 0) return [];
 
-      // Enable each default order type for this tenant (upsert semantics)
       await Promise.all(
         defaults.map((ot) => this.enableForTenant(tenantId, ot.id))
       );
