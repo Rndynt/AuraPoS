@@ -112,7 +112,6 @@ BEGIN
   tbl     := to_regclass(p_table);
   ref_tbl := to_regclass(p_ref_table);
 
-  -- Skip silently if either table does not exist
   IF tbl IS NULL OR ref_tbl IS NULL THEN
     RETURN;
   END IF;
@@ -183,9 +182,6 @@ DO $$
 DECLARE
   table_name text;
 BEGIN
-  -- Repair legacy tenants.id values such as 'thamada' before UUID casting.
-  -- FKs have already been dropped above, so tenant-owned references can be
-  -- updated consistently in the same migration transaction.
   IF to_regclass('tenants') IS NOT NULL
      AND aurapos_column_exists('tenants'::regclass, 'id')
      AND aurapos_column_exists('tenants'::regclass, 'slug') THEN
@@ -202,8 +198,6 @@ BEGIN
     ON CONFLICT (old_id) DO NOTHING;
 
     IF EXISTS (SELECT 1 FROM aurapos_tenant_id_repair) THEN
-      -- Preserve the legacy slug value before changing tenants.id. This is
-      -- idempotent for rows where slug already matches the old id.
       UPDATE tenants t
       SET slug = COALESCE(NULLIF(t.slug, ''), r.old_id)
       FROM aurapos_tenant_id_repair r
@@ -249,8 +243,6 @@ BEGIN
 END;
 $$;
 
--- Repair non-UUID id values in standalone tables (not referenced as FK target
--- by other tables) before the UUID cast step. FKs are already dropped above.
 DO $$
 DECLARE
   tbl text;
@@ -330,6 +322,83 @@ BEGIN
 END;
 $$;
 
+-- POS baseline order types are system-owned data, not cashier setup.
+-- Keep this inside the existing UUID alignment migration so dev databases do
+-- not need an extra repair migration just to make POS usable.
+DO $$
+BEGIN
+  IF to_regclass('order_types') IS NULL OR to_regclass('tenant_order_types') IS NULL OR to_regclass('tenants') IS NULL THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO order_types (id, code, name, description, is_on_premise, need_table_number, need_address, allow_scheduled, is_digital_product, affects_service_charge, is_active, created_at, updated_at)
+  VALUES
+    (gen_random_uuid(), 'DINE_IN', 'Dine In', 'Makan di tempat', true, true, false, false, false, true, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (gen_random_uuid(), 'TAKE_AWAY', 'Take Away', 'Bawa pulang', true, false, false, false, false, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (gen_random_uuid(), 'DELIVERY', 'Delivery', 'Antar ke alamat', false, false, true, true, false, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (gen_random_uuid(), 'WALK_IN', 'Walk In', 'Transaksi langsung di toko', true, false, false, false, false, false, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  ON CONFLICT (code) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    is_on_premise = EXCLUDED.is_on_premise,
+    need_table_number = EXCLUDED.need_table_number,
+    need_address = EXCLUDED.need_address,
+    allow_scheduled = EXCLUDED.allow_scheduled,
+    is_digital_product = EXCLUDED.is_digital_product,
+    affects_service_charge = EXCLUDED.affects_service_charge,
+    is_active = true,
+    updated_at = CURRENT_TIMESTAMP;
+
+  WITH expected_defaults AS (
+    SELECT t.id AS tenant_id, ot.id AS order_type_id
+    FROM tenants t
+    JOIN order_types ot ON ot.code = ANY (
+      CASE t.business_type
+        WHEN 'CAFE_RESTAURANT' THEN ARRAY['DINE_IN', 'TAKE_AWAY', 'DELIVERY']::text[]
+        WHEN 'RETAIL_MINIMARKET' THEN ARRAY['WALK_IN']::text[]
+        WHEN 'LAUNDRY' THEN ARRAY['WALK_IN', 'DELIVERY']::text[]
+        WHEN 'SERVICE_APPOINTMENT' THEN ARRAY['WALK_IN']::text[]
+        WHEN 'DIGITAL_PPOB' THEN ARRAY['WALK_IN']::text[]
+        ELSE ARRAY['TAKE_AWAY']::text[]
+      END
+    )
+    WHERE t.is_active = true AND ot.is_active = true
+  )
+  UPDATE tenant_order_types tot
+  SET is_enabled = true,
+      updated_at = CURRENT_TIMESTAMP
+  FROM expected_defaults ed
+  WHERE tot.tenant_id = ed.tenant_id
+    AND tot.order_type_id = ed.order_type_id;
+
+  WITH expected_defaults AS (
+    SELECT t.id AS tenant_id, ot.id AS order_type_id
+    FROM tenants t
+    JOIN order_types ot ON ot.code = ANY (
+      CASE t.business_type
+        WHEN 'CAFE_RESTAURANT' THEN ARRAY['DINE_IN', 'TAKE_AWAY', 'DELIVERY']::text[]
+        WHEN 'RETAIL_MINIMARKET' THEN ARRAY['WALK_IN']::text[]
+        WHEN 'LAUNDRY' THEN ARRAY['WALK_IN', 'DELIVERY']::text[]
+        WHEN 'SERVICE_APPOINTMENT' THEN ARRAY['WALK_IN']::text[]
+        WHEN 'DIGITAL_PPOB' THEN ARRAY['WALK_IN']::text[]
+        ELSE ARRAY['TAKE_AWAY']::text[]
+      END
+    )
+    WHERE t.is_active = true AND ot.is_active = true
+  )
+  INSERT INTO tenant_order_types (id, tenant_id, outlet_id, order_type_id, is_enabled, config, created_at, updated_at)
+  SELECT gen_random_uuid(), ed.tenant_id, NULL, ed.order_type_id, true, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+  FROM expected_defaults ed
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM tenant_order_types existing
+    WHERE existing.tenant_id = ed.tenant_id
+      AND existing.order_type_id = ed.order_type_id
+      AND existing.outlet_id IS NULL
+  );
+END;
+$$;
+
 SELECT aurapos_add_fk('outlets', 'outlets_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
 SELECT aurapos_add_fk('user_outlet_assignments', 'user_outlet_assignments_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'CASCADE');
 SELECT aurapos_add_fk('tables', 'tables_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
@@ -363,8 +432,9 @@ SELECT aurapos_add_fk('terminals', 'terminals_tenant_id_tenants_id_fk', 'tenant_
 SELECT aurapos_add_fk('terminals', 'terminals_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
 SELECT aurapos_add_fk('sync_batches', 'sync_batches_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
 SELECT aurapos_add_fk('sync_batches', 'sync_batches_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
-SELECT aurapos_add_fk('sync_events', 'sync_events_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'SET NULL');
-SELECT aurapos_add_fk('sync_events', 'sync_events_outlet_id_sync_batches_id_fk', 'batch_id', 'sync_batches', 'id', 'CASCADE');
+SELECT aurapos_add_fk('sync_events', 'sync_events_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
+SELECT aurapos_add_fk('sync_events', 'sync_events_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
+SELECT aurapos_add_fk('sync_events', 'sync_events_batch_id_sync_batches_id_fk', 'batch_id', 'sync_batches', 'id', 'CASCADE');
 SELECT aurapos_add_fk('server_sync_conflicts', 'server_sync_conflicts_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
 SELECT aurapos_add_fk('server_sync_conflicts', 'server_sync_conflicts_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
 SELECT aurapos_add_fk('inventory_movements', 'inventory_movements_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
