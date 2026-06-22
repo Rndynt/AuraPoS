@@ -363,9 +363,8 @@ SELECT aurapos_add_fk('terminals', 'terminals_tenant_id_tenants_id_fk', 'tenant_
 SELECT aurapos_add_fk('terminals', 'terminals_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
 SELECT aurapos_add_fk('sync_batches', 'sync_batches_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
 SELECT aurapos_add_fk('sync_batches', 'sync_batches_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
-SELECT aurapos_add_fk('sync_events', 'sync_events_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
-SELECT aurapos_add_fk('sync_events', 'sync_events_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
-SELECT aurapos_add_fk('sync_events', 'sync_events_batch_id_sync_batches_id_fk', 'batch_id', 'sync_batches', 'id', 'CASCADE');
+SELECT aurapos_add_fk('sync_events', 'sync_events_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'SET NULL');
+SELECT aurapos_add_fk('sync_events', 'sync_events_outlet_id_sync_batches_id_fk', 'batch_id', 'sync_batches', 'id', 'CASCADE');
 SELECT aurapos_add_fk('server_sync_conflicts', 'server_sync_conflicts_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
 SELECT aurapos_add_fk('server_sync_conflicts', 'server_sync_conflicts_outlet_id_outlets_id_fk', 'outlet_id', 'outlets', 'id', 'SET NULL');
 SELECT aurapos_add_fk('inventory_movements', 'inventory_movements_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
@@ -378,8 +377,9 @@ SELECT aurapos_add_fk('inventory_sync_errors', 'inventory_sync_errors_order_id_o
 SELECT aurapos_add_fk('inventory_sync_errors', 'inventory_sync_errors_product_id_products_id_fk', 'product_id', 'products', 'id', 'SET NULL');
 SELECT aurapos_add_fk('cfd_devices', 'cfd_devices_tenant_id_tenants_id_fk', 'tenant_id', 'tenants', 'id', 'CASCADE');
 
-DROP FUNCTION aurapos_add_fk(regclass, text, text, regclass, text, text);
-DROP FUNCTION aurapos_drop_table_fks(regclass);
-DROP FUNCTION aurapos_alter_column_to_uuid(regclass, text, boolean);
-DROP FUNCTION aurapos_column_exists(regclass, text);
-DROP FUNCTION aurapos_assert_uuid_castable(regclass, text);
+DROP FUNCTION IF EXISTS aurapos_add_fk(text, text, text, text, text, text);
+DROP FUNCTION IF EXISTS aurapos_add_fk(regclass, text, text, regclass, text, text);
+DROP FUNCTION IF EXISTS aurapos_drop_table_fks(regclass);
+DROP FUNCTION IF EXISTS aurapos_alter_column_to_uuid(regclass, text, boolean);
+DROP FUNCTION IF EXISTS aurapos_column_exists(regclass, text);
+DROP FUNCTION IF EXISTS aurapos_assert_uuid_castable(regclass, text);
