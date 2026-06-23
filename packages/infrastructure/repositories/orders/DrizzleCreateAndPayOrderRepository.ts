@@ -30,6 +30,7 @@ import { calculateSelectedOptionsDelta, flattenSelectedOptions } from '@pos/appl
 import type { SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import { DrizzleInventoryPolicyRepository, DrizzleInventorySyncErrorRepository, DrizzleStockMovementRepository } from '../inventory';
 import { nextOrderNumberForTenant } from './orderNumberSequence';
+import { toDbOrderPaymentStatus, toDbOrderStatus, toDbPaymentFlow, toDbPaymentKind, toDbPaymentMethod, toDbPaymentStatus, toOrderItemModifiers, toPaymentOrderItem } from './paymentPersistenceMappers';
 
 // ---------------------------------------------------------------------------
 // Input / Output types
@@ -123,7 +124,7 @@ export class DrizzleCreateAndPayOrderRepository {
       variant_price_delta: number;
       selected_options: SelectedOption[];
       notes?: string;
-      status: string;
+      status: 'pending';
       item_subtotal: number;
     }> = [];
 
@@ -232,14 +233,14 @@ export class DrizzleCreateAndPayOrderRepository {
         outletId: outlet_id ?? null,
         orderTypeId: order_type_id,
         orderNumber,
-        status: 'confirmed' as any, // Quick-pay orders start as confirmed
+        status: toDbOrderStatus('confirmed'), // Quick-pay orders start as confirmed
         subtotal: subtotal.toString(),
         taxAmount: taxAmount.toString(),
         serviceCharge: serviceChargeAmount.toString(),
         discountAmount: '0',
         total: totalAmount.toString(),
         paidAmount: '0',
-        paymentStatus: 'unpaid' as any,
+        paymentStatus: toDbOrderPaymentStatus('unpaid'),
         customerName: customer_name,
         tableNumber: table_number,
         notes,
@@ -252,21 +253,14 @@ export class DrizzleCreateAndPayOrderRepository {
       // 2. Insert order items
       if (computedItems.length > 0) {
         const itemsToInsert = computedItems.map(item =>
-          toInsertOrderItemDb(item as any, newOrder.id)
+          toInsertOrderItemDb(toPaymentOrderItem(item), newOrder.id)
         );
         const insertedItems = await tx.insert(orderItems).values(itemsToInsert).returning();
 
         // 3. Insert modifiers
-        const modifiersToInsert: any[] = [];
-        for (let i = 0; i < computedItems.length; i++) {
-          const item = computedItems[i];
-          const insertedItem = insertedItems[i];
-          if (item.selected_options && item.selected_options.length > 0) {
-            for (const option of item.selected_options) {
-              modifiersToInsert.push(toInsertOrderItemModifierDb(option, insertedItem.id));
-            }
-          }
-        }
+        const modifiersToInsert = computedItems.flatMap((item, index) =>
+          toOrderItemModifiers(item.selected_options ?? [], insertedItems[index].id, toInsertOrderItemModifierDb)
+        );
         if (modifiersToInsert.length > 0) {
           await tx.insert(orderItemModifiers).values(modifiersToInsert);
         }
@@ -279,18 +273,18 @@ export class DrizzleCreateAndPayOrderRepository {
         tenantId: tenant_id,
         outletId: outlet_id ?? null,
         orderId: newOrder.id,
-        paymentFlow: paymentFlow as any,
-        paymentKind: paymentKind as any,
+        paymentFlow: toDbPaymentFlow(paymentFlow),
+        paymentKind: toDbPaymentKind(paymentKind),
         amount: amount.toString(),
         receivedAmount: input.received_amount != null ? input.received_amount.toString() : undefined,
         changeAmount: input.change_amount != null ? input.change_amount.toString() : undefined,
-        status: 'succeeded' as any,
-        paymentMethod: payment_method as any,
+        status: toDbPaymentStatus('succeeded'),
+        paymentMethod: toDbPaymentMethod(payment_method),
         paymentDate: new Date(),
         referenceNumber: transaction_ref,
         referenceNote: input.reference_note,
         notes: payment_notes,
-        metadata: input.metadata as any,
+        metadata: input.metadata,
         idempotencyKey: idempotency_key,
       }).returning();
 
@@ -300,9 +294,9 @@ export class DrizzleCreateAndPayOrderRepository {
       const newPaymentStatus: 'paid' | 'partial' | 'unpaid' =
         remaining <= 0.001 ? 'paid' : newPaidAmount > 0 ? 'partial' : 'unpaid';
 
-      const finalUpdates: Record<string, any> = {
+      const finalUpdates: Partial<typeof orders.$inferInsert> = {
         paidAmount: newPaidAmount.toString(),
-        paymentStatus: newPaymentStatus,
+        paymentStatus: toDbOrderPaymentStatus(newPaymentStatus),
         updatedAt: new Date(),
       };
 
@@ -312,7 +306,7 @@ export class DrizzleCreateAndPayOrderRepository {
       // completion. Only an explicit, validated instant-fulfillment request may
       // close a non-kitchen quick-sale order immediately.
       if (newPaymentStatus === 'paid' && fulfillment_mode === 'instant') {
-        finalUpdates.status = 'completed';
+        finalUpdates.status = toDbOrderStatus('completed');
         finalUpdates.closedAt = new Date();
       }
 
@@ -354,7 +348,7 @@ export class DrizzleCreateAndPayOrderRepository {
       return { order: updatedOrder, payment: newPayment };
     });
 
-    let inventorySyncError: any = null;
+    let inventorySyncError: Awaited<ReturnType<DrizzleInventorySyncErrorRepository["recordInventorySyncError"]>> | null = null;
 
     if (inventoryPolicy.policy === 'allow_negative' && !result.idempotent_replay) {
       const movementItems = computedItems.map((item) => ({

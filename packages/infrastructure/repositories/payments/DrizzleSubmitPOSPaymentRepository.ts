@@ -26,15 +26,20 @@ import {
   orderBillSplits,
   type InsertOrder,
   type InsertOrderPayment,
+  type InsertOrderItemModifier,
+  type OrderBillSplit,
+  type OrderPayment,
 } from "@pos/infrastructure/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from "@pos/application/orders/mappers";
 import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
 import { calculateSelectedOptionsDelta, flattenSelectedOptions } from "@pos/application/catalog";
 import { nextOrderNumberForTenant } from "../orders/orderNumberSequence";
+import { firstRawRow, mapRawLockedOrderRow, toDbOrderPaymentStatus, toDbOrderStatus, toDbPaymentFlow, toDbPaymentKind, toDbPaymentMethod, toDbPaymentStatus, toOrderItemModifiers, toPaymentOrderItem } from "../orders/paymentPersistenceMappers";
 import type { SubmitPOSPaymentRepositoryPort } from "@pos/application/payments";
 import type { SubmitPOSPaymentCommand, SubmitPOSPaymentCommandItem } from "@pos/application/payments";
 import type { SubmitPOSPaymentResult, SubmitPOSPaymentResultSplit } from "@pos/application/payments";
+import type { SelectedOptionGroup } from "@pos/domain/orders/types";
 
 type TxClient = NonNullable<ReturnType<typeof DrizzleUnitOfWork.fromContext>>;
 const EPSILON = 0.001;
@@ -105,7 +110,7 @@ async function resolveSelectedSplitState({
   lineBillId?: string;
   lineSplitDbId?: string;
   splits: SubmitPOSPaymentCommand["payment"]["splits"];
-}): Promise<{ selectedSplit: SelectedSplitState; existingSplits: any[] }> {
+}): Promise<{ selectedSplit: SelectedSplitState; existingSplits: OrderBillSplit[] }> {
   const selectedBillId = targetBillId ?? lineBillId ?? lineSplitDbId;
   if (!selectedBillId) {
     throw new Error("Bill yang dipilih tidak valid atau sudah lunas.");
@@ -186,10 +191,10 @@ function computeOrderTotals(
     variant_id?: string;
     variant_name?: string;
     variant_price_delta: number;
-    selected_options: any[];
+    selected_options: SubmitPOSPaymentCommandItem["selected_options"];
     notes?: string;
     item_subtotal: number;
-    status: string;
+    status: "pending";
   }>;
 } {
   let subtotal = 0;
@@ -202,8 +207,9 @@ function computeOrderTotals(
       option_name: o.option_name,
       price_delta: o.price_delta,
     }));
-    const optionsDelta = calculateSelectedOptionsDelta(rawOptions, item.selected_option_groups as any);
-    const flatOptions = flattenSelectedOptions(rawOptions, item.selected_option_groups as any);
+    const optionGroups = item.selected_option_groups as SelectedOptionGroup[] | undefined;
+    const optionsDelta = calculateSelectedOptionsDelta(rawOptions, optionGroups);
+    const flatOptions = flattenSelectedOptions(rawOptions, optionGroups);
     const itemPrice = item.base_price + variantDelta + optionsDelta;
     const itemSubtotal = itemPrice * item.quantity;
     subtotal += itemSubtotal;
@@ -218,7 +224,7 @@ function computeOrderTotals(
       selected_options: flatOptions,
       notes: item.notes,
       item_subtotal: itemSubtotal,
-      status: "pending",
+      status: "pending" as const,
     };
   });
   const taxAmount = subtotal * taxRate;
@@ -282,14 +288,14 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
             outletId: outletId ?? null,
             orderTypeId: orderData.order_type_id ?? null,
             orderNumber: newOrderNumber,
-            status: "confirmed" as any,
+            status: toDbOrderStatus("confirmed"),
             subtotal: subtotal.toString(),
             taxAmount: taxAmount.toString(),
             serviceCharge: serviceChargeAmount.toString(),
             discountAmount: "0",
             total: totalAmount.toString(),
             paidAmount: "0",
-            paymentStatus: "unpaid" as any,
+            paymentStatus: toDbOrderPaymentStatus("unpaid"),
             customerName: orderData.customer_name,
             tableNumber: orderData.table_number,
             notes: orderData.notes,
@@ -305,18 +311,11 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
 
           // Insert items
           if (computedItems.length > 0) {
-            const itemsToInsert = computedItems.map((item) => toInsertOrderItemDb(item as any, newOrder.id));
+            const itemsToInsert = computedItems.map((item) => toInsertOrderItemDb(toPaymentOrderItem(item), newOrder.id));
             const insertedItems = await tx.insert(orderItems).values(itemsToInsert).returning();
-            const modifiersToInsert: any[] = [];
-            for (let i = 0; i < computedItems.length; i++) {
-              const item = computedItems[i];
-              const insertedItem = insertedItems[i];
-              if (item.selected_options && item.selected_options.length > 0) {
-                for (const option of item.selected_options) {
-                  modifiersToInsert.push(toInsertOrderItemModifierDb(option, insertedItem.id));
-                }
-              }
-            }
+            const modifiersToInsert: InsertOrderItemModifier[] = computedItems.flatMap((item, index) =>
+              toOrderItemModifiers(item.selected_options ?? [], insertedItems[index].id, toInsertOrderItemModifierDb)
+            );
             if (modifiersToInsert.length > 0) {
               await tx.insert(orderItemModifiers).values(modifiersToInsert);
             }
@@ -330,13 +329,14 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
           WHERE id = ${orderId} AND tenant_id = ${tenantId}
           FOR UPDATE
         `);
-        const row = (lockedOrder as any).rows?.[0] ?? (lockedOrder as any)[0];
+        const lockedOrderRow = firstRawRow(lockedOrder);
+        const row = lockedOrderRow ? mapRawLockedOrderRow(lockedOrderRow) : undefined;
         if (!row) throw new Error("Order tidak ditemukan atau akses ditolak.");
         if (row.status === "cancelled") throw new Error("Tidak dapat mencatat pembayaran untuk order yang dibatalkan.");
         orderId = row.id;
-        orderNumber = row.order_number;
+        orderNumber = row.orderNumber ?? "";
         orderTotal = parseFloat(row.total ?? "0");
-        orderPaidBefore = parseFloat(row.paid_amount ?? "0");
+        orderPaidBefore = parseFloat(row.paidAmount ?? "0");
       }
 
       const remaining = roundCurrency(orderTotal - orderPaidBefore);
@@ -353,7 +353,7 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
           line.method,
           line.amount,
         ),
-        existingPayment: undefined as any | undefined,
+        existingPayment: undefined as OrderPayment | undefined,
       }));
 
       if (lineStates.length > 0) {
@@ -400,7 +400,7 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
 
       // ── 4. Persist bill splits for SPLIT_BILL ─────────────────────────
       const splitIdMap = new Map<string, string>(); // clientBillId → db split id
-      let existingSplitRows: any[] = [];
+      let existingSplitRows: OrderBillSplit[] = [];
       let selectedSplitState: SelectedSplitState | undefined;
 
       if (flow === "SPLIT_BILL") {
@@ -478,7 +478,7 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
         const dpRows = await tx
           .select({ id: orderPayments.id })
           .from(orderPayments)
-          .where(and(eq(orderPayments.orderId, orderId), eq(orderPayments.status, "succeeded"), eq(orderPayments.paymentFlow, "DOWN_PAYMENT" as any)))
+          .where(and(eq(orderPayments.orderId, orderId), eq(orderPayments.status, "succeeded"), eq(orderPayments.paymentFlow, toDbPaymentFlow("DOWN_PAYMENT"))))
           .for("update");
         if (dpRows.length >= 2) {
           throw new Error("DP payment sudah mencapai batas maksimum 2 baris.");
@@ -489,7 +489,7 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
         const multiRows = await tx
           .select({ id: orderPayments.id })
           .from(orderPayments)
-          .where(and(eq(orderPayments.orderId, orderId), eq(orderPayments.status, "succeeded"), eq(orderPayments.paymentFlow, "MULTI_PAYMENT" as any)))
+          .where(and(eq(orderPayments.orderId, orderId), eq(orderPayments.status, "succeeded"), eq(orderPayments.paymentFlow, toDbPaymentFlow("MULTI_PAYMENT"))))
           .for("update");
         if (multiRows.length >= 2) {
           throw new Error("Multi payment sudah mencapai batas maksimum 2 baris.");
@@ -508,7 +508,7 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
       }
 
       // ── 7. Insert only new payment rows ───────────────────────────────
-      const insertedPayments: any[] = [];
+      const insertedPayments: OrderPayment[] = [];
 
       for (const state of lineStates) {
         const line = state.line;
@@ -528,16 +528,16 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
           tenantId,
           outletId: outletId ?? null,
           orderId,
-          paymentFlow: flow as any,
-          paymentKind: resolveKind(line.amount) as any,
+          paymentFlow: toDbPaymentFlow(flow),
+          paymentKind: toDbPaymentKind(resolveKind(line.amount)),
           amount: line.amount.toString(),
           receivedAmount: line.receivedAmount != null ? line.receivedAmount.toString() : undefined,
           changeAmount:
             line.method === "CASH" && line.receivedAmount != null
               ? Math.max(0, line.receivedAmount - line.amount).toString()
               : undefined,
-          status: "succeeded" as any,
-          paymentMethod: line.method as any,
+          status: toDbPaymentStatus("succeeded"),
+          paymentMethod: toDbPaymentMethod(line.method),
           paymentDate: new Date(),
           referenceNote: line.referenceNote,
           splitId,
@@ -558,16 +558,16 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
       const shouldConfirmOrder = source === "FRESH_CART";
       const fulfillmentMode = command.order?.fulfillment_mode ?? "standard";
 
-      const statusUpdates: Record<string, any> = {
+      const statusUpdates: Partial<typeof orders.$inferInsert> = {
         paidAmount: newPaidAmount.toString(),
-        paymentStatus: newPaymentStatus,
+        paymentStatus: toDbOrderPaymentStatus(newPaymentStatus),
         updatedAt: new Date(),
       };
       if (shouldConfirmOrder) {
-        statusUpdates.status = "confirmed";
+        statusUpdates.status = toDbOrderStatus("confirmed");
       }
       if (newPaymentStatus === "paid" && fulfillmentMode === "instant") {
-        statusUpdates.status = "completed";
+        statusUpdates.status = toDbOrderStatus("completed");
         statusUpdates.closedAt = new Date();
       }
 
@@ -597,7 +597,7 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
           splitNo: s.splitNo,
           amountDue: parseFloat(s.amountDue),
           amountPaid: parseFloat(s.amountPaid),
-          status: s.status as "unpaid" | "partial" | "paid",
+          status: toDbOrderPaymentStatus(s.status),
         }));
       }
 

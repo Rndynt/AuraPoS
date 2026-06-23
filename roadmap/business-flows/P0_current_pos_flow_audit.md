@@ -20,6 +20,25 @@ Current standard retail payment for a fresh cart is safer than older two-step fl
 
 This P0 phase produced this report only. No runtime behavior changed.
 
+
+## P0.3 inventory type escape register
+
+Date: 2026-06-23
+Mode: **type-safety hardening audit + targeted remediation** for inventory-sensitive order/payment paths. Runtime endpoint behavior, schema, migrations, and inventory policy semantics are not changed by this note.
+
+The following paths are the inventory-sensitive boundary where order/payment success can trigger stock deduction or durable inventory retry records. The P0.3 goal is to keep these paths free from unvalidated `any` row parsing and unvalidated DB enum casts so tenant/payment/order state cannot silently drift during inventory side effects.
+
+| Flow | Canonical code path | Inventory coupling | P0.3 type escape status | Required guardrail |
+|---|---|---|---|---|
+| Create order | `POST /api/orders` -> create order use case/repository | May become the parent order for later confirm/kitchen/payment inventory movement. | **Audit tracked; not changed in this batch.** Create-order-specific mapper cleanup remains separate from payment repository cleanup. | Keep tenant/outlet/order-type ownership validated before any later stock mutation. |
+| Create-and-pay | `POST /api/orders/create-and-pay` -> `DrizzleCreateAndPayOrderRepository` | Strict policy deducts stock inside the order+payment transaction; allow-negative records durable `inventory_sync_errors` after financial commit. | **Remediated in this batch for requested repository.** Order/payment enum writes now go through adapter mappers and item/modifier inserts use typed DTO mapping instead of `any`. | Preserve idempotency, tenant product validation, transaction boundaries, and durable retry payload typing. |
+| Record payment | `POST /api/orders/:id/payments` -> `DrizzleRecordPaymentRepository` | Payment can promote draft/open orders into financially active lifecycle before later stock/fulfillment actions. | **Remediated in this batch for requested repository.** Raw `SELECT ... FOR UPDATE` parsing now goes through a typed raw-row mapper and payment flow/status/kind/method writes are validated by adapter mappers. | Keep tenant-scoped row lock and overpayment/idempotency checks before payment rows are inserted. |
+| Submit POS payment | SubmitPOSPayment use case -> `DrizzleSubmitPOSPaymentRepository` | Fresh-cart payment creates the parent order and payment lines used by inventory/order lifecycle. | **Remediated in this batch for requested repository.** Existing order raw-row parsing, split/payment row DTOs, payment DB enums, and computed item/modifier mapping no longer use repository-local `any`. | Keep deterministic line idempotency and split-bill invariants before updating order paid state. |
+| Sync offline order | Offline sync endpoint -> sync use case -> create-and-pay path | Current canonical sync should rely on create-and-pay stock movement ownership to avoid duplicate inventory ledger writes. | **Audit tracked; not changed in this batch.** Any sync adapter escape must not bypass create-and-pay inventory ownership. | Preserve terminal/local-order idempotency, tenant/outlet scoping, and single canonical inventory movement per synced order. |
+| Inventory sync retry | Inventory retry job -> inventory sync error repository -> stock movement retry | Replays allow-negative inventory movement failures from durable `inventory_sync_errors`. | **Audit tracked; not changed in this batch.** Retry repository still owns DB-specific SQL mapping and remains a follow-up type-cleanup candidate. | Keep retry rows tenant-scoped, bounded by retry count, and never create duplicate movements for the same order/product/movement identity. |
+
+P0.3 validation rule: after each small repository cleanup batch, run `pnpm type-check`; only mark a repository row remediated when the full workspace type-check passes.
+
 ## 2. Required search log
 
 The required searches were run exactly against `apps packages shared` and saved during the audit session:
