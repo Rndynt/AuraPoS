@@ -11493,3 +11493,104 @@ Move sync read/write/conflict operations out of the HTTP controller into `packag
 
 ### Continuation Notes
 No blockers for the completed refactor. Recommended next batch: decide whether `/api/sync/offline-orders` should support terminal-token-only auth, then implement a dedicated terminal sync guard and DB-backed terminal token verification if required.
+
+## Plan: P0.3 Inventory Type Escape and Payment Repository Typed DTO Cleanup
+
+### Source
+- Tasklist: User request with six numbered tasks for P0.3 audit documentation and order/payment repository type cleanup.
+- User request: Document inventory type escapes for create order/create-and-pay/record payment/submit POS payment/sync offline order/inventory sync retry; start at API container and remove `as any` wiring; then typed DTOs/helpers in payment/order repositories; run type-check after small batches.
+- Date started: 2026-06-23
+- Current status: In progress
+
+### Goal
+Reduce high-risk `any`/enum escape hatches in payment/order persistence paths without changing runtime behavior, while documenting remaining inventory sync type escape risks in the P0 audit record.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist (`roadmap/business-flows/P0_current_pos_flow_audit.md`)
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: `apps/api/src/container.ts` and composition wiring.
+- Files inspected: `apps/api/src/container.ts`, composition modules.
+- Findings: Current `container.ts` is a compatibility export and has no `as any`; no constructor wiring change needed there.
+- Tasks: Confirm with type-check.
+- Risks: None.
+- Validation: Pending.
+
+#### Database/Schema Workstream
+- Scope: Order/payment Drizzle repositories.
+- Files inspected: `DrizzleCreateAndPayOrderRepository`, `DrizzleRecordPaymentRepository`, `DrizzleSubmitPOSPaymentRepository`, order/payment schema.
+- Findings: Payment flows/statuses are varchar columns with zod insert enums; repositories still cast enum literals and raw rows through `any`.
+- Tasks: Add adapter-level typed mappers and raw row helpers; replace row parsing and enum casts in requested files.
+- Risks: Must preserve transaction/idempotency/payment behavior.
+- Validation: Pending.
+
+#### Documentation Workstream
+- Scope: P0 audit and PLANS.
+- Files inspected: `roadmap/business-flows/P0_current_pos_flow_audit.md`, `PLANS.md`.
+- Findings: P0 audit did not explicitly list inventory type escape points across requested flows.
+- Tasks: Add P0.3 inventory type escape matrix and track execution honestly.
+- Risks: Documentation must not overclaim full remediation.
+- Validation: N/A.
+
+### Execution Order
+1. Document P0.3 inventory type escape matrix.
+2. Add shared/adapter payment DB enum mapper and row helpers.
+3. Refactor requested repositories in small batches with `pnpm type-check`.
+4. Update plan, commit, and create PR metadata.
+
+### Progress
+#### Completed
+- [x] Task: Document P0.3 inventory type escape register for requested flows.
+  - Files changed: `roadmap/business-flows/P0_current_pos_flow_audit.md`
+  - Validation: `pnpm type-check` passed after code batches.
+  - Docs updated: `roadmap/business-flows/P0_current_pos_flow_audit.md`, `PLANS.md`
+- [x] Task: Verify API container constructor wiring does not need `as any`.
+  - Files changed: none in `apps/api/src/container.ts`; it remains a typed compatibility export over `createAppContainer`.
+  - Validation: `pnpm type-check` passed.
+  - Docs updated: `PLANS.md`
+- [x] Task: Replace repository-local payment/order `any` parsing and DB enum casts in requested repositories.
+  - Files changed: `packages/infrastructure/repositories/orders/paymentPersistenceMappers.ts`, `packages/infrastructure/repositories/orders/DrizzleCreateAndPayOrderRepository.ts`, `packages/infrastructure/repositories/orders/DrizzleRecordPaymentRepository.ts`, `packages/infrastructure/repositories/payments/DrizzleSubmitPOSPaymentRepository.ts`
+  - Validation: `pnpm type-check` passed after each small cleanup batch.
+  - Docs updated: `PLANS.md`
+
+#### Partially Completed
+- [ ] Task: Broader create-order/sync retry type escape cleanup.
+  - Completed: P0.3 audit register identifies these as inventory-sensitive follow-up areas.
+  - Remaining: Refactor create-order-specific repository and inventory sync retry repository SQL/JSON casts if requested.
+  - Reason: User requested targeted repository cleanup for create-and-pay, record payment, and submit POS payment in this batch.
+
+### Validation Log
+- Command: `pnpm type-check`
+- Result: pass
+- Notes: Baseline after documenting plan/container check.
+- Command: `pnpm type-check`
+- Result: fail then pass
+- Notes: First create-and-pay mapper batch exposed typed DTO/update-shape errors; fixed and reran successfully.
+- Command: `pnpm type-check`
+- Result: fail then pass
+- Notes: Record-payment raw row mapper needed unknown-row normalization; fixed and reran successfully.
+- Command: `pnpm type-check`
+- Result: fail then pass
+- Notes: Submit POS payment mapper batch needed option-group and order-number typing fixes; fixed and reran successfully.
+- Command: `pnpm type-check`
+- Result: pass
+- Notes: Final full workspace type-check passed.
+
+### Documentation Updates
+- File: `roadmap/business-flows/P0_current_pos_flow_audit.md`
+- Change: Added P0.3 inventory type escape register for create order, create-and-pay, record payment, submit POS payment, offline sync, and inventory sync retry.
+- File: `PLANS.md`
+- Change: Updated this plan with completed/partial status and validation results.
+
+### Checklist Updates
+- File: `roadmap/business-flows/P0_current_pos_flow_audit.md`
+- Change: Marked requested repository rows as remediated in the P0.3 register and left broader create-order/sync-retry items as audit-tracked follow-up.
+
+### Continuation Notes
+This requested batch is complete. Next safest follow-up is type-cleaning create-order-specific repository mapping and inventory sync retry SQL/JSON casts without changing runtime behavior.

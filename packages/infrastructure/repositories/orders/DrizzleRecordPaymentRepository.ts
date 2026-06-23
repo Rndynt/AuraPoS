@@ -24,6 +24,7 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 
 import type { RecordPaymentInput, RecordPaymentOutput } from '@pos/application/orders/RecordPayment';
+import { firstRawRow, mapRawLockedOrderRow, toDbOrderPaymentStatus, toDbPaymentFlow, toDbPaymentKind, toDbPaymentMethod, toDbPaymentStatus, type ExistingPaymentRow, type RawLockedOrderRow } from './paymentPersistenceMappers';
 
 export class DrizzleRecordPaymentRepository {
   private readonly unitOfWork: DrizzleUnitOfWork;
@@ -51,7 +52,8 @@ export class DrizzleRecordPaymentRepository {
         FOR UPDATE
       `);
 
-      const orderRow = (lockedOrders as any).rows?.[0] ?? (lockedOrders as any)[0];
+      const lockedOrderRow = firstRawRow<RawLockedOrderRow>(lockedOrders);
+      const orderRow = lockedOrderRow ? mapRawLockedOrderRow(lockedOrderRow) : undefined;
 
       if (!orderRow) {
         throw new Error('Order not found or access denied');
@@ -62,7 +64,7 @@ export class DrizzleRecordPaymentRepository {
       }
 
       const orderTotal = parseFloat(orderRow.total ?? '0');
-      const orderPaid = parseFloat(orderRow.paid_amount ?? '0');
+      const orderPaid = parseFloat(orderRow.paidAmount ?? '0');
       const remaining = orderTotal - orderPaid;
 
       if (input.idempotency_key) {
@@ -104,7 +106,7 @@ export class DrizzleRecordPaymentRepository {
       const kind = input.payment_kind ?? (flow === 'DOWN_PAYMENT' ? (existingSucceededPayments.length > 0 ? 'REMAINING_PAYMENT' : 'DOWN_PAYMENT') : flow === 'MULTI_PAYMENT' ? 'MULTI_PAYMENT_LINE' : flow === 'SPLIT_BILL' ? 'SPLIT_BILL_LINE' : 'FULL_PAYMENT');
 
       if (flow === 'DOWN_PAYMENT') {
-        const dpRows = existingSucceededPayments.filter((payment: any) => payment.paymentFlow === 'DOWN_PAYMENT');
+        const dpRows = existingSucceededPayments.filter((payment: ExistingPaymentRow) => payment.paymentFlow === 'DOWN_PAYMENT');
         if (dpRows.length >= 2) {
           throw new Error('DP flow allows a maximum of two succeeded payment rows');
         }
@@ -114,7 +116,7 @@ export class DrizzleRecordPaymentRepository {
       }
 
       if (flow === 'MULTI_PAYMENT') {
-        const multiRows = existingSucceededPayments.filter((payment: any) => payment.paymentFlow === 'MULTI_PAYMENT');
+        const multiRows = existingSucceededPayments.filter((payment: ExistingPaymentRow) => payment.paymentFlow === 'MULTI_PAYMENT');
         if (multiRows.length >= 2) {
           throw new Error('Multi payment allows a maximum of two payment rows');
         }
@@ -123,22 +125,22 @@ export class DrizzleRecordPaymentRepository {
       // Insert payment record
       const paymentData: InsertOrderPayment = {
         tenantId: input.tenant_id,
-        outletId: orderRow.outlet_id ?? null,
+        outletId: orderRow.outletId ?? null,
         orderId: input.order_id,
-        paymentFlow: flow as any,
-        paymentKind: kind as any,
+        paymentFlow: toDbPaymentFlow(flow),
+        paymentKind: toDbPaymentKind(kind),
         amount: input.amount.toString(),
         receivedAmount: input.received_amount != null ? input.received_amount.toString() : undefined,
         changeAmount: input.change_amount != null ? input.change_amount.toString() : undefined,
-        status: 'succeeded' as any,
+        status: toDbPaymentStatus('succeeded'),
         splitId: input.split_id,
         sequence: input.sequence ?? existingSucceededPayments.length + 1,
-        paymentMethod: input.payment_method as any,
+        paymentMethod: toDbPaymentMethod(input.payment_method),
         paymentDate: new Date(),
         referenceNumber: input.transaction_ref,
         referenceNote: input.reference_note,
         notes: input.notes,
-        metadata: input.metadata as any,
+        metadata: input.metadata,
         idempotencyKey: input.idempotency_key,
       };
 
@@ -168,7 +170,7 @@ export class DrizzleRecordPaymentRepository {
         UPDATE orders
         SET
           paid_amount    = ${newPaidAmount.toString()},
-          payment_status = ${newPaymentStatus},
+          payment_status = ${toDbOrderPaymentStatus(newPaymentStatus)},
           status         = CASE WHEN ${shouldConfirmOrder} THEN 'confirmed' ELSE status END,
           updated_at     = NOW()
         WHERE id = ${input.order_id}
@@ -176,7 +178,7 @@ export class DrizzleRecordPaymentRepository {
         RETURNING *
       `);
 
-      const updatedOrder = (updatedOrders as any).rows?.[0] ?? (updatedOrders as any)[0];
+      const updatedOrder = firstRawRow<RawLockedOrderRow>(updatedOrders);
 
       return {
         payment: createdPayment,
