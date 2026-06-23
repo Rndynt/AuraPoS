@@ -11704,3 +11704,107 @@ Use one pure typed pricing function for API/application/infrastructure/seed/fron
 
 ### Continuation Notes
 No blockers. Recommended next batch: add integration tests around persisted order totals in create-order/create-and-pay/POS payment repositories if a database test harness is available.
+
+## Plan: Port Canonicalization and POS Vite Config Audit
+
+### Source
+- Tasklist: User-provided audit checklist for package scripts, ports, Vite configs, README, and deployment guide
+- User request: Audit scripts/config, canonicalize API/POS/Admin ports, remove or document duplicate POS config, validate POS build/dev commands
+- Date started: 2026-06-23
+- Current status: Implemented and validated
+
+### Goal
+Make local development ports unambiguous: API on 5000, POS terminal on 5173, admin/web on 3000; keep one canonical POS Vite config; document legacy root Vite config behavior honestly.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs (`DEPLOYMENT_GUIDE.md`)
+- [x] Relevant source/config files (`package.json`, app package scripts, Vite configs, API env bootstrap)
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: Verify API default port and package scripts.
+- Files inspected: `package.json`, `apps/api/package.json`, `apps/api/src/bootstrap/env.ts`, `apps/api/src/runtime/server.ts`
+- Findings: API default is already `PORT || 5000`; root `pnpm dev` runs API only.
+- Tasks: Document API as canonical port 5000.
+- Risks: Production platforms may override `PORT`; docs mention override.
+- Validation: Documentation review; POS-focused build/dev validation.
+
+#### Frontend/UI Workstream
+- Scope: Admin Next.js and POS Vite dev/build scripts.
+- Files inspected: `apps/web/package.json`, `apps/pos-terminal-web/package.json`, `apps/pos-terminal-web/vite.config.ts`, `apps/pos-terminal-web/vite.config.js`
+- Findings: Admin app conflicted with API on port 5000; POS had duplicate TS/JS Vite configs with different build outputs.
+- Tasks: Moved admin app to port 3000; made POS port explicit on 5173; kept TS POS Vite config as canonical and removed stale JS duplicate.
+- Risks: Any tooling referencing deleted JS config would need updating; Vite package default resolves TS config.
+- Validation: POS build passed; POS dev server reached `http://localhost:5173/` in bounded startup check.
+
+#### Documentation Workstream
+- Scope: README and deployment guide command/port accuracy.
+- Files inspected: `README.md`, `DEPLOYMENT_GUIDE.md`
+- Findings: Deployment guide still used npm and implied one app on port 5000; README lacked canonical port table and root Vite legacy note.
+- Tasks: Updated docs to pnpm, port table, POS canonical config, legacy root Vite config note.
+- Risks: None outstanding for this scope.
+- Validation: Read updated docs and compared against scripts/config.
+
+### Execution Order
+1. Remove port conflicts and duplicate config.
+2. Update docs to match scripts/config.
+3. Validate POS build and dev startup command.
+4. Commit and open PR.
+
+### Progress
+#### Completed
+- [x] Audit package scripts and canonicalize ports.
+  - Files changed: `apps/web/package.json`, `apps/pos-terminal-web/package.json`
+  - Validation: POS build passed; dev startup check reached port 5173.
+  - Docs updated: `README.md`, `DEPLOYMENT_GUIDE.md`
+- [x] Audit Vite configs and keep one POS canonical config.
+  - Files changed: `apps/pos-terminal-web/vite.config.ts`; deleted `apps/pos-terminal-web/vite.config.js`
+  - Validation: POS build passed using TS config.
+  - Docs updated: `README.md`, `DEPLOYMENT_GUIDE.md`
+- [x] Document root Vite config as legacy/Replit-only.
+  - Files changed: `README.md`, `DEPLOYMENT_GUIDE.md`
+  - Validation: Documentation compared against `vite.config.ts` and POS config.
+  - Docs updated: `README.md`, `DEPLOYMENT_GUIDE.md`
+
+#### Partially Completed
+- [ ] User-requested exact command `pnpm --filter apps/pos-terminal-web build`.
+  - Completed: Ran the exact command; pnpm reported no projects matched that filter. Ran the equivalent path filter `pnpm --filter ./apps/pos-terminal-web build`, which passed.
+  - Remaining: None for code; docs use package-name filters (`@pos/terminal-web`) and the validated path filter works.
+  - Reason: `apps/pos-terminal-web` is not a pnpm package selector in this workspace.
+
+#### Blocked
+- [ ] None.
+  - Blocker: N/A
+  - Required next step: N/A
+
+#### Not Attempted
+- [ ] Full monorepo build.
+  - Reason: User requested POS build/dev validation; scope did not require all apps.
+
+### Validation Log
+- Command: `pnpm --filter apps/pos-terminal-web build`
+- Result: pass exit code with warning/no-op (`No projects matched the filters in "/workspace/AuraPoS"`)
+- Notes: This selector does not match the workspace package name.
+- Command: `pnpm --filter ./apps/pos-terminal-web build`
+- Result: pass
+- Notes: Build emitted existing Vite/PostCSS/chunk-size warnings but completed successfully.
+- Command: `pnpm --filter ./apps/pos-terminal-web dev` bounded startup check
+- Result: pass
+- Notes: Vite reported ready at `http://localhost:5173/`; command was intentionally terminated after readiness.
+
+### Documentation Updates
+- File: `README.md`
+- Change: Added canonical local port table and POS/root Vite config note.
+- File: `DEPLOYMENT_GUIDE.md`
+- Change: Switched local/deployment examples to pnpm, documented canonical ports, and documented POS canonical/legacy root Vite config.
+
+### Checklist Updates
+- File: User-provided checklist in chat
+- Change: Final response will report completed/partial/blocked items because there is no source checklist file to edit.
+
+### Continuation Notes
+No blockers. Recommended next batch: update any historical roadmap references to the deleted JS Vite config only if those archived tasklists are meant to remain live execution sources.
