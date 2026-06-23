@@ -1,7 +1,7 @@
 # AuraPoS Deployment Guide
 
 **Status**: Production Ready ✅  
-**Last Updated**: Nov 28, 2025  
+**Last Updated**: Jun 23, 2026
 **Version**: 1.0.0
 
 ---
@@ -16,12 +16,16 @@
 ### Local Development
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
-# Start backend + frontend dev server
-npm run dev
+# Start the API dev server (canonical API port: 5000)
+pnpm dev
 
-# Access POS Terminal
+# In separate terminals, start frontend apps as needed
+pnpm --filter @pos/terminal-web dev  # POS terminal: http://localhost:5173
+pnpm --filter @pos/web dev           # Admin/Web app: http://localhost:3000
+
+# API base URL
 # Visit: http://localhost:5000
 # Tenant: demo-tenant (Demo Restaurant)
 ```
@@ -29,10 +33,10 @@ npm run dev
 ### Production Deployment
 ```bash
 # Build for production
-npm run build
+pnpm build
 
 # Start production server
-npm run start
+pnpm start
 
 # Environment variables (set in production):
 # DATABASE_URL=postgresql://user:password@host:5432/aurapos
@@ -48,7 +52,7 @@ npm run start
 - **Backend**: Express, TypeScript, Drizzle ORM
 - **Database**: PostgreSQL
 - **Monorepo**: Turborepo
-- **Package Manager**: npm
+- **Package Manager**: pnpm
 
 ### Project Structure
 ```
@@ -159,6 +163,16 @@ NODE_ENV=development
 VITE_API_URL=http://localhost:5000
 ```
 
+Canonical local ports:
+
+| Service | Port | Command |
+| --- | ---: | --- |
+| API | `5000` | `pnpm dev` or `pnpm --filter @pos/api dev` |
+| POS Terminal Web | `5173` | `pnpm --filter @pos/terminal-web dev` |
+| Admin/Web app | `3000` | `pnpm --filter @pos/web dev` |
+
+The POS terminal Vite config is `apps/pos-terminal-web/vite.config.ts`. The repository root `vite.config.ts` is retained only for the legacy/Replit root-client build path and should not be used as the POS terminal config.
+
 #### Production (.env.production)
 ```
 DATABASE_URL=postgresql://user:password@host:5432/aurapos
@@ -169,13 +183,13 @@ VITE_API_URL=https://api.yourdomain.com
 ### Database Setup
 ```bash
 # Push schema to database
-npm run db:push
+pnpm db:push
 
 # Generate database types
-npm run db:generate
+pnpm db:generate
 
 # Seed demo data
-npm run db:seed
+pnpm db:seed
 ```
 
 ---
@@ -184,32 +198,33 @@ npm run db:seed
 
 ### Replit
 1. Import repository to Replit
-2. Run `npm install`
-3. Run `npm run dev`
+2. Run `pnpm install`
+3. Run `pnpm dev`
 4. Application accessible via Replit domain
 
 ### Vercel (Frontend)
 ```bash
 # Build
-npm run build
+pnpm build
 
-# Deploy dist/ folder
+# Deploy apps/pos-terminal-web/dist/ or the platform-specific frontend output
 ```
 
 ### Railway/Heroku (Backend)
 ```bash
 # Set DATABASE_URL environment variable
-# Deploy apps/api/ with npm start
+# Deploy apps/api/ with `pnpm --filter @pos/api start` or the platform start command
 ```
 
 ### Docker
 ```dockerfile
 FROM node:20-alpine
 WORKDIR /app
+RUN corepack enable
 COPY . .
-RUN npm install && npm run build
+RUN pnpm install --frozen-lockfile && pnpm build
 EXPOSE 5000
-CMD npm start
+CMD ["pnpm", "start"]
 ```
 
 ---
@@ -245,11 +260,13 @@ SELECT * FROM kitchen_tickets ORDER BY created_at DESC LIMIT 10;
 
 ### Port Already in Use
 ```bash
-# Kill process on port 5000
-lsof -ti:5000 | xargs kill -9
+# Kill process on the relevant canonical port
+lsof -ti:5000 | xargs kill -9  # API
+lsof -ti:5173 | xargs kill -9  # POS Terminal Web
+lsof -ti:3000 | xargs kill -9  # Admin/Web app
 
-# Or use different port
-PORT=3000 npm run dev
+# Or override the API port when running the API only
+PORT=5002 pnpm dev
 ```
 
 ### Database Connection Issues
@@ -267,7 +284,7 @@ echo $DATABASE_URL
 - Verify API_URL in environment
 
 ### Hot Reload Not Working
-- Restart Vite server (Ctrl+C, npm run dev)
+- Restart Vite server (Ctrl+C, `pnpm --filter @pos/terminal-web dev`)
 - Check for syntax errors in changed file
 - Verify file is in correct directory
 

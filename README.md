@@ -20,9 +20,19 @@ AuraPoS adalah monorepo aplikasi Point of Sale (POS) untuk UMKM yang mencakup fr
    pnpm dev:turbo
    ```
    Atau jalankan servis terpisah:
-   - Backend API: `pnpm dev`
-   - POS terminal (Vite): `pnpm --filter apps/pos-terminal-web dev`
-   - Next.js web: `pnpm --filter apps/web dev`
+   - Backend API: `pnpm dev` atau `pnpm --filter @pos/api dev` → `http://localhost:5000` (default dari `PORT`, bisa dioverride oleh environment).
+   - POS terminal (Vite): `pnpm --filter @pos/terminal-web dev` → `http://localhost:5173`.
+   - Admin/Web app (Next.js): `pnpm --filter @pos/web dev` → `http://localhost:3000`.
+
+   Port canonical lokal:
+
+   | Aplikasi | Port | Script | Catatan |
+   | --- | ---: | --- | --- |
+   | API | `5000` | `pnpm dev` / `pnpm --filter @pos/api dev` | API tetap memakai `PORT` bila diset oleh environment deployment. |
+   | POS Terminal Web | `5173` | `pnpm --filter @pos/terminal-web dev` | Config canonical ada di `apps/pos-terminal-web/vite.config.ts`. |
+   | Admin/Web app | `3000` | `pnpm --filter @pos/web dev` | Tidak memakai port `5000` agar tidak bentrok dengan API. |
+
+   Catatan config Vite: POS terminal hanya memakai `apps/pos-terminal-web/vite.config.ts` sebagai config canonical. Root `vite.config.ts` dipertahankan untuk build legacy/Replit yang memakai root `client/` dan output `dist/public`; jangan pakai root config tersebut untuk build POS terminal baru.
 
 3. **Perintah lain yang sering digunakan**
    - Cek tipe: `pnpm type-check`
@@ -51,7 +61,7 @@ AuraPoS adalah monorepo aplikasi Point of Sale (POS) untuk UMKM yang mencakup fr
 
 ## Environment Variables Tambahan (Auth)
 - `BETTER_AUTH_SECRET`: secret minimal 32 karakter untuk better-auth.
-- `BETTER_AUTH_URL`: base URL aplikasi (contoh `http://localhost:5000`).
+- `BETTER_AUTH_URL`: base URL aplikasi auth/API (contoh lokal `http://localhost:5000`).
 
 ## Environment Variables Tambahan (Tenant Resolution)
 - `BASE_DOMAIN`: domain utama untuk resolusi subdomain tenant (default `aurapos.my.id`).
