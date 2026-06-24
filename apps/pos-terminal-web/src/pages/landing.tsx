@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { DeviceMockup } from "@/components/landing/DeviceMockup";
 
 const FEATURES = [
@@ -10,6 +10,7 @@ const FEATURES = [
     bullets: ["Pencarian produk instan", "Filter kategori dinamis", "Draft order tanpa batas", "Quick charge 1 klik"],
     device: "laptop" as const,
     src: "/mockup-assets/pos-desktop",
+    dw: 500,
   },
   {
     key: "payment",
@@ -19,6 +20,7 @@ const FEATURES = [
     bullets: ["Tunai, QRIS Manual, Transfer", "Down Payment & Angsuran", "Multi Payment & Split Bill", "Riwayat pembayaran lengkap"],
     device: "laptop" as const,
     src: "/mockup-assets/payment-dialog",
+    dw: 500,
   },
   {
     key: "orders",
@@ -28,6 +30,7 @@ const FEATURES = [
     bullets: ["Board pesanan aktif", "Filter per jenis layanan", "Update status real-time", "Histori pesanan lengkap"],
     device: "laptop" as const,
     src: "/mockup-assets/active-orders",
+    dw: 500,
   },
   {
     key: "tables",
@@ -37,6 +40,7 @@ const FEATURES = [
     bullets: ["Floor plan visual", "Status real-time per meja", "Reservasi meja", "Multi-lantai support"],
     device: "laptop" as const,
     src: "/mockup-assets/restaurant-tables",
+    dw: 500,
   },
   {
     key: "reports",
@@ -46,6 +50,7 @@ const FEATURES = [
     bullets: ["Dashboard penjualan harian", "Laporan per produk", "Breakdown metode bayar", "Ekspor PDF & Excel"],
     device: "phone" as const,
     src: "/mockup-assets/reports-mobile",
+    dw: 200,
   },
 ];
 
@@ -71,10 +76,22 @@ const PLANS = [
   },
 ];
 
+/* Inline CSS for the cross-fade animation */
+const ANIM_STYLE = `
+  @keyframes landingFadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .feat-text-enter { animation: landingFadeUp 0.25s ease forwards; }
+  .device-slot { transition: opacity 0.3s ease; }
+  .device-slot[data-active="false"] { opacity: 0; pointer-events: none; }
+  .device-slot[data-active="true"]  { opacity: 1; pointer-events: auto; }
+`;
+
 export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const feat = FEATURES[activeFeature];
+  const [textKey, setTextKey] = useState(0);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 16);
@@ -82,10 +99,19 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  function switchFeature(i: number) {
+    if (i === activeFeature) return;
+    setActiveFeature(i);
+    setTextKey(k => k + 1); // triggers re-mount → triggers animation
+  }
+
+  const feat = FEATURES[activeFeature];
+
   return (
     <div className="min-h-screen bg-white font-sans overflow-x-hidden text-slate-900">
+      <style>{ANIM_STYLE}</style>
 
-      {/* ── Navbar ─────────────────────────────────── */}
+      {/* ── Navbar ──────────────────────────────────── */}
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${scrolled ? "bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm" : "bg-transparent"}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -105,9 +131,8 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Hero ────────────────────────────────────── */}
+      {/* ── Hero ─────────────────────────────────────── */}
       <section className="relative bg-slate-950 overflow-hidden pt-14">
-        {/* subtle grid */}
         <div className="absolute inset-0 opacity-[0.06]"
           style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "64px 64px" }} />
 
@@ -127,29 +152,27 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 mb-12 max-w-xs sm:max-w-none mx-auto">
-            <a href="/register"
-              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm text-center transition-colors shadow-lg shadow-blue-900/40">
+            <a href="/register" className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm text-center transition-colors shadow-lg shadow-blue-900/40">
               Mulai Gratis Sekarang →
             </a>
-            <a href="#fitur"
-              className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-semibold text-sm text-center transition-colors">
+            <a href="#fitur" className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-semibold text-sm text-center transition-colors">
               Lihat Fitur
             </a>
           </div>
 
-          {/* Hero mockup — laptop frame, hide on tiny screens */}
+          {/* Hero mockup - desktop */}
           <div className="relative justify-center hidden sm:flex">
             <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent z-10" />
             <DeviceMockup type="laptop" src="/mockup-assets/pos-desktop" displayWidth={760} />
           </div>
-          {/* Mobile: smaller phone mockup instead of laptop */}
+          {/* Hero mockup - mobile: phone frame */}
           <div className="flex sm:hidden justify-center pb-4">
             <DeviceMockup type="phone" src="/mockup-assets/pos-desktop" displayWidth={180} />
           </div>
         </div>
       </section>
 
-      {/* ── Stats ───────────────────────────────────── */}
+      {/* ── Stats ──────────────────────────────────────  */}
       <section className="border-y border-slate-100 py-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center">
@@ -163,7 +186,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ────────────────────────────────── */}
+      {/* ── Features ───────────────────────────────────  */}
       <section id="fitur" className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
@@ -172,12 +195,12 @@ export default function LandingPage() {
             <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto">Dari transaksi sederhana hingga manajemen restoran kompleks — dalam satu platform.</p>
           </div>
 
-          {/* Tabs */}
+          {/* Tab buttons */}
           <div className="flex flex-wrap justify-center gap-2 mb-10">
             {FEATURES.map((f, i) => (
-              <button key={f.key} onClick={() => setActiveFeature(i)}
+              <button key={f.key} onClick={() => switchFeature(i)}
                 className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all border ${i === activeFeature
-                  ? "bg-blue-600 border-blue-600 text-white"
+                  ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
                   : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700"
                 }`}>
                 {f.label}
@@ -185,10 +208,11 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Content */}
+          {/* Content: text left, device right */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            {/* Text */}
-            <div className="order-2 lg:order-1">
+
+            {/* Text — re-mounts on tab change, triggers CSS enter animation */}
+            <div key={textKey} className="order-2 lg:order-1 feat-text-enter">
               <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-3">{feat.title}</h3>
               <p className="text-slate-500 mb-6 leading-relaxed">{feat.desc}</p>
               <ul className="space-y-2.5 mb-8">
@@ -208,18 +232,28 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* Device */}
+            {/* Device mockups — ALL pre-rendered in DOM, toggled via opacity only */}
             <div className="order-1 lg:order-2 flex justify-center">
-              {feat.device === "phone"
-                ? <DeviceMockup type="phone" src={feat.src} displayWidth={200} />
-                : <DeviceMockup type="laptop" src={feat.src} displayWidth={500} />
-              }
+              {/* Fixed container tall enough for phone (tallest frame) */}
+              <div className="relative flex items-center justify-center" style={{ width: 540, height: 480 }}>
+                {FEATURES.map((f, i) => (
+                  <div
+                    key={f.key}
+                    className="device-slot absolute inset-0 flex items-center justify-center"
+                    data-active={String(i === activeFeature)}
+                    aria-hidden={i !== activeFeature}
+                  >
+                    <DeviceMockup type={f.device} src={f.src} displayWidth={f.dw} />
+                  </div>
+                ))}
+              </div>
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* ── For whom ────────────────────────────────── */}
+      {/* ── For whom ────────────────────────────────────  */}
       <section className="py-16 bg-slate-50 border-y border-slate-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
@@ -247,7 +281,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pricing ─────────────────────────────────── */}
+      {/* ── Pricing ─────────────────────────────────────  */}
       <section id="harga" className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
@@ -262,8 +296,8 @@ export default function LandingPage() {
                 : "bg-white border-slate-200"
               }`}>
                 {plan.popular && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-400 text-amber-900 text-[10px] font-black tracking-wide">
-                    POPULER
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-400 text-amber-900 text-[10px] font-black tracking-wide whitespace-nowrap">
+                    PALING POPULER
                   </div>
                 )}
                 <div className={`text-xs font-bold mb-1 ${plan.popular ? "text-blue-200" : "text-slate-500"}`}>{plan.name}</div>
@@ -289,23 +323,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ─────────────────────────────────────── */}
+      {/* ── CTA ─────────────────────────────────────────  */}
       <section className="bg-slate-950 py-16 sm:py-20">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-3">Siap mulai sekarang?</h2>
           <p className="text-slate-400 mb-8 text-sm sm:text-base">Bergabung dengan ratusan outlet yang sudah menggunakan AuraPoS.</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="/register" className="w-full sm:w-auto px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-xs sm:max-w-none mx-auto">
+            <a href="/register" className="px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm text-center transition-colors">
               Daftar Gratis →
             </a>
-            <a href="/login" className="w-full sm:w-auto px-7 py-3 rounded-xl border border-white/10 text-white/80 hover:text-white font-semibold text-sm transition-colors">
+            <a href="/login" className="px-7 py-3 rounded-xl border border-white/10 text-white/80 hover:text-white font-semibold text-sm text-center transition-colors">
               Sudah punya akun
             </a>
           </div>
         </div>
       </section>
 
-      {/* ── Footer ──────────────────────────────────── */}
+      {/* ── Footer ──────────────────────────────────────  */}
       <footer className="border-t border-slate-100 py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
