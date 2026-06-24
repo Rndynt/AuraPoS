@@ -12710,3 +12710,80 @@ Continue with `packages/application/orders/UpdateOrder.ts` and `packages/infrast
 
 ### Continuation Notes
 No remaining work for this request. Future UpdateOrder discount input support should add non-zero discount tests once the use case accepts discounts.
+
+## Plan: Audit root Vite legacy build configuration
+
+### Source
+- Tasklist: User-provided checklist for auditing root `vite.config.ts`, `build:legacy`, deploy/build docs, and CI scripts.
+- User request: Audit root Vite usage, remove unused legacy config/scripts or document if still used, keep POS Vite config canonical, and validate POS/root builds.
+- Date started: 2026-06-24
+- Current status: Implemented and validated
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active checklist from user request
+- [x] Relevant docs (`DEPLOYMENT_GUIDE.md`, deploy/build references)
+- [x] Relevant source/config files (`package.json`, root `vite.config.ts`, `apps/pos-terminal-web/vite.config.ts`, CI workflows)
+
+### Workstreams
+#### Frontend/UI Workstream
+- Scope: POS Vite configuration and build output path.
+- Files inspected: `apps/pos-terminal-web/vite.config.ts`, `apps/pos-terminal-web/package.json`
+- Findings: POS terminal has its own canonical Vite config and builds from the app workspace.
+- Tasks: Preserve canonical POS config unchanged.
+- Risks: None; no frontend source behavior changed.
+- Validation: `pnpm --filter @pos/terminal-web build`
+
+#### Tests/Validation Workstream
+- Scope: Root and POS build commands.
+- Files inspected: `package.json`, `turbo.json`, `.github/workflows/ci.yml`
+- Findings: CI uses recursive workspace build/type-check/test and does not invoke `build:legacy`; root `pnpm build` uses Turbo plus static copy.
+- Tasks: Remove stale legacy script/config and validate build outputs do not conflict.
+- Risks: Root build can fail if app/package pre-existing TypeScript errors appear.
+- Validation: POS build and root build passed.
+
+#### Documentation Workstream
+- Scope: README and deployment guide build/config notes.
+- Files inspected: `README.md`, `DEPLOYMENT_GUIDE.md`
+- Findings: Both docs still described root `vite.config.ts` as retained for legacy/Replit root-client builds even though `client/` no longer exists.
+- Tasks: Update docs to describe `apps/pos-terminal-web/vite.config.ts` as canonical and root legacy config removal.
+- Risks: Historical docs under `docs/` still contain migration-era examples and are not current deploy instructions.
+- Validation: Documentation updated in current README/deployment guide.
+
+### Progress
+#### Completed
+- [x] Task: Audit root `vite.config.ts` usage across root scripts, deploy/build docs, and CI scripts.
+  - Files changed: PLANS.md
+  - Validation: `rg` audit showed only root `build:legacy` invoked root Vite; CI does not invoke it.
+  - Docs updated: README.md, DEPLOYMENT_GUIDE.md
+- [x] Task: Remove unused legacy root Vite config and related script/fallback.
+  - Files changed: `package.json`, deleted `vite.config.ts`
+  - Validation: `pnpm --filter @pos/terminal-web build`; `pnpm build`
+  - Docs updated: README.md, DEPLOYMENT_GUIDE.md
+- [x] Task: Keep POS terminal app config canonical.
+  - Files changed: none in `apps/pos-terminal-web/vite.config.ts`
+  - Validation: POS build used app workspace config successfully.
+  - Docs updated: README.md, DEPLOYMENT_GUIDE.md
+
+### Validation Log
+- Command: `pnpm --filter @pos/terminal-web build`
+- Result: Pass
+- Notes: POS terminal output generated under `apps/pos-terminal-web/dist`.
+- Command: `pnpm build`
+- Result: Pass
+- Notes: Root build completed Turbo builds and copied POS output into `apps/api/dist/public`; no root `dist/public` legacy fallback was used.
+
+### Documentation Updates
+- File: README.md
+- Change: Replaced legacy root Vite retention note with canonical POS config and output copy behavior.
+- File: DEPLOYMENT_GUIDE.md
+- Change: Replaced legacy root Vite retention note with canonical POS config and root config removal guidance.
+
+### Checklist Updates
+- File: User request checklist
+- Change: All requested items completed in this batch.
+
+### Continuation Notes
+No remaining work for this request. If any deployment platform still references root `dist/public`, update that platform command to consume `apps/api/dist/public` after `pnpm build`.
