@@ -9,3 +9,4 @@ export * from './orders';
 export * from './tenants';
 export type { ClockPort, IdGeneratorPort, TransactionContext, UnitOfWorkPort } from './shared/ports';
 export * from './business-flows';
+export * from './http';

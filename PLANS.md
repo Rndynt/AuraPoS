@@ -13747,3 +13747,107 @@ After this batch, continue with `packages/infrastructure/repositories/orders/Ord
 
 ### Continuation Notes
 Next safest batch: type `packages/application/orders/CreateOrder.ts` idempotency replay and the smaller lifecycle use cases (`CancelOrder`, `ConfirmOrder`, `CompleteOrder`, transitions), then lower Rule 8 baselines.
+
+## Plan: Remove HTTP Application Boundary Module Consumers
+
+### Source
+- Tasklist: User-provided 8-item checklist to remove `httpApplicationBoundaryModule` consumers and enforce HTTP boundaries.
+- User request: Audit all `../../composition/modules/httpApplicationBoundaryModule` imports, extract application use cases/query handlers with repository ports and Drizzle adapters, inject via composition, delete the boundary module, and add boundary checks.
+- Date started: 2026-06-24
+- Current status: Implemented and validated with API type-check and boundary check.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: HTTP routes/controllers importing the legacy boundary module.
+- Files inspected: `apps/api/src/http/routes/outlets.ts`, `inventory.ts`, `inventory-advanced.ts`, `registration.ts`, `tenants.ts`, `tables.ts`, `apps/api/src/http/controllers/*`, `apps/api/src/http/helpers/inventoryEntitlement.ts`.
+- Findings: HTTP code depended on the boundary module for Drizzle DB/schema access.
+- Tasks: Replaced these imports with composition-injected `HttpRouteQueries` and existing typed container use cases.
+- Risks: Existing inventory route behavior was preserved while moving route repository dependencies behind composition wiring.
+- Validation: `pnpm --filter @pos/api type-check`, `pnpm check:boundaries`.
+
+#### Database/Schema Workstream
+- Scope: Move queried Drizzle table access behind infrastructure adapter.
+- Files inspected: `packages/infrastructure/db/schema`, affected HTTP routes.
+- Findings: Outlet, tenant, registration, catalog category lookup, and inventory report/list queries needed DB access.
+- Tasks: Added `DrizzleHttpRouteRepository` implementing application port methods.
+- Risks: No schema changes or migrations required.
+- Validation: API type-check pass.
+
+#### Tests/Validation Workstream
+- Scope: Boundary/type validation.
+- Files inspected: `scripts/validate-boundaries.ts`.
+- Findings: Existing boundary check blocked direct DB/schema imports but not `httpApplicationBoundaryModule`.
+- Tasks: Added HTTP boundary violation for `httpApplicationBoundaryModule` imports.
+- Validation: Boundary check pass.
+
+### Progress
+#### Completed
+- [x] Audited all `../../composition/modules/httpApplicationBoundaryModule` consumers.
+  - Files changed: affected HTTP routes/controllers/helpers.
+  - Validation: `rg "httpApplicationBoundaryModule" apps/api/src packages scripts` only reports the boundary rule itself.
+  - Docs updated: This PLANS.md section.
+- [x] Added application-layer repository port and query handler.
+  - Files changed: `packages/application/http/ports/HttpRouteRepositoryPort.ts`, `packages/application/http/HttpRouteQueries.ts`, `packages/application/http/index.ts`, `packages/application/index.ts`.
+  - Validation: API type-check pass.
+  - Docs updated: This PLANS.md section.
+- [x] Added Drizzle infrastructure adapter.
+  - Files changed: `packages/infrastructure/repositories/http/DrizzleHttpRouteRepository.ts`, `packages/infrastructure/repositories/http/index.ts`.
+  - Validation: API type-check pass.
+  - Docs updated: This PLANS.md section.
+- [x] Injected query handler through composition container.
+  - Files changed: `apps/api/src/composition/modules/httpRouteModule.ts`, `apps/api/src/composition/createAppContainer.ts`.
+  - Validation: API type-check pass.
+  - Docs updated: This PLANS.md section.
+- [x] Deleted `apps/api/src/composition/modules/httpApplicationBoundaryModule.ts`.
+  - Files changed: deleted boundary module.
+  - Validation: API type-check pass; no HTTP imports remain.
+  - Docs updated: This PLANS.md section.
+- [x] Added boundary check for HTTP imports of `httpApplicationBoundaryModule`, `@pos/infrastructure/database`, and `@pos/infrastructure/db/schema`.
+  - Files changed: `scripts/validate-boundaries.ts`.
+  - Validation: `pnpm check:boundaries` pass.
+  - Docs updated: This PLANS.md section.
+
+#### Partially Completed
+- [ ] None.
+  - Completed: N/A
+  - Remaining: N/A
+  - Reason: No partial task remains in this batch.
+
+#### Blocked
+- [ ] None.
+  - Blocker: None.
+  - Required next step: None.
+
+#### Not Attempted
+- [ ] No schema migrations.
+  - Reason: No database schema change was required.
+
+### Validation Log
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Notes: Confirms API and application/infrastructure wiring compiles.
+- Command: `pnpm check:boundaries`
+- Result: pass
+- Notes: Confirms the new and existing import boundary rules pass.
+- Command: `rg "httpApplicationBoundaryModule|from ['\"]@pos/infrastructure/database|from ['\"]@pos/infrastructure/db/schema" apps/api/src/http -n || true`
+- Result: pass, no matches
+- Notes: Confirms HTTP layer no longer imports the deleted boundary module or direct DB/schema modules.
+
+### Documentation Updates
+- File: `PLANS.md`
+- Change: Added this execution plan and validation log.
+
+### Checklist Updates
+- File: User-provided checklist in prompt
+- Change: All requested checklist items completed; no separate source checklist file was provided.
+
+### Continuation Notes
+Next safest hardening batch: split the broad `HttpRouteQueries` port into smaller bounded-context ports after behavior is stable, so outlet, tenant, catalog, and inventory query interfaces can evolve independently.

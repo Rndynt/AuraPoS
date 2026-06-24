@@ -27,22 +27,12 @@
  */
 
 import { Router } from 'express';
-import { db, products, inventoryBalances } from '../../composition/modules/httpApplicationBoundaryModule';
-import { eq, and } from 'drizzle-orm';
+import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import { requireManager } from '../middleware/rbac';
 import { requireTenantEntitlement } from '../helpers/inventoryEntitlement';
 import { getEffectiveEntitlementMap } from '../../services/tenantEntitlements';
-import {
-  DrizzleInventoryBalanceRepository,
-  DrizzleStockOpnameRepository,
-  DrizzleStockTransferRepository,
-  DrizzleInventoryMovementWriter,
-  DrizzleInventoryProductStockReader,
-  DrizzleOutletContextRepository,
-} from '@pos/infrastructure/repositories/inventory';
-import { DrizzleUnitOfWork } from '@pos/infrastructure/unit-of-work';
 import {
   createOpname,
   updateOpnameItem,
@@ -59,13 +49,7 @@ import {
 
 const router = Router();
 
-const balanceRepo = new DrizzleInventoryBalanceRepository();
-const opnameRepo = new DrizzleStockOpnameRepository();
-const transferRepo = new DrizzleStockTransferRepository();
-const movementWriter = new DrizzleInventoryMovementWriter();
-const unitOfWork = new DrizzleUnitOfWork();
-const productReader = new DrizzleInventoryProductStockReader();
-const outletContext = new DrizzleOutletContextRepository();
+const { balanceRepo, opnameRepo, transferRepo, movementWriter, unitOfWork, productReader, outletContext } = container.inventoryRouteDeps;
 const balanceDeps = { balanceRepo, productReader, outletContext };
 
 const DEFAULT_THRESHOLD = 10;
@@ -94,7 +78,7 @@ async function requireMultiLocation(tenantId: string) {
  */
 router.get('/low-stock', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const outletId = req.outletId;
   if (!outletId) throw createError('Outlet context diperlukan', 400);
@@ -110,16 +94,7 @@ router.get('/low-stock', asyncHandler(async (req, res) => {
     return res.json({ success: true, data: { items: [], total: 0 } });
   }
 
-  const productRows = await db
-    .select({
-      id: products.id,
-      name: products.name,
-      category: products.category,
-      sku: products.sku,
-      imageUrl: products.imageUrl,
-    })
-    .from(products)
-    .where(and(eq(products.tenantId, tenantId)));
+  const productRows = await container.httpRouteQueries.listProductSummaries(tenantId);
 
   const productMap = new Map(productRows.map((p) => [p.id, p]));
 
@@ -149,7 +124,7 @@ router.get('/low-stock', asyncHandler(async (req, res) => {
  */
 router.put('/products/:id/threshold', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const productId = req.params.id;
   const outletId = req.outletId;
@@ -159,11 +134,7 @@ router.put('/products/:id/threshold', requireManager, asyncHandler(async (req, r
     threshold: z.number().int().min(0).nullable(),
   }).parse(req.body);
 
-  const [product] = await db
-    .select({ id: products.id })
-    .from(products)
-    .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
-    .limit(1);
+  const product = await container.httpRouteQueries.getTrackedProduct(tenantId, productId);
 
   if (!product) throw createError('Produk tidak ditemukan', 404);
 
@@ -188,7 +159,7 @@ router.put('/products/:id/threshold', requireManager, asyncHandler(async (req, r
  */
 router.post('/opnames', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const outletId = req.outletId;
   if (!outletId) throw createError('Outlet context diperlukan', 400);
@@ -209,10 +180,7 @@ router.post('/opnames', requireManager, asyncHandler(async (req, res) => {
     },
   );
 
-  const trackedProducts = await db
-    .select({ id: products.id })
-    .from(products)
-    .where(and(eq(products.tenantId, tenantId), eq(products.stockTrackingEnabled, true)));
+  const trackedProducts = (await container.httpRouteQueries.listTrackedProductIds(tenantId)).map((id) => ({ id }));
 
   for (const p of trackedProducts) {
     const balance = await ensureProductBalanceForOutlet(balanceDeps, { tenantId, outletId, productId: p.id });
@@ -234,7 +202,7 @@ router.post('/opnames', requireManager, asyncHandler(async (req, res) => {
  */
 router.get('/opnames', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const outletId = req.outletId;
   if (!outletId) throw createError('Outlet context diperlukan', 400);
@@ -259,7 +227,7 @@ router.get('/opnames', asyncHandler(async (req, res) => {
  */
 router.get('/opnames/:id', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const opname = await opnameRepo.findById(req.params.id, tenantId);
   if (!opname) throw createError('Opname tidak ditemukan', 404);
@@ -272,7 +240,7 @@ router.get('/opnames/:id', asyncHandler(async (req, res) => {
  */
 router.put('/opnames/:id/items/:productId', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const body = z.object({
     countedQuantity: z.number().int().min(0),
@@ -298,7 +266,7 @@ router.put('/opnames/:id/items/:productId', requireManager, asyncHandler(async (
  */
 router.post('/opnames/:id/submit', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const body = z.object({ submittedBy: z.string().optional() }).parse(req.body);
 
@@ -316,7 +284,7 @@ router.post('/opnames/:id/submit', requireManager, asyncHandler(async (req, res)
  */
 router.post('/opnames/:id/approve', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const body = z.object({ approvedBy: z.string().optional() }).parse(req.body);
 
@@ -333,7 +301,7 @@ router.post('/opnames/:id/approve', requireManager, asyncHandler(async (req, res
  */
 router.post('/opnames/:id/cancel', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const result = await cancelOpname(
     { opnameRepo },
@@ -350,7 +318,7 @@ router.post('/opnames/:id/cancel', requireManager, asyncHandler(async (req, res)
  */
 router.post('/transfers', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   await requireMultiLocation(tenantId);
 
   const body = z.object({
@@ -386,7 +354,7 @@ router.post('/transfers', requireManager, asyncHandler(async (req, res) => {
  */
 router.get('/transfers', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   await requireMultiLocation(tenantId);
 
   const query = z.object({
@@ -412,7 +380,7 @@ router.get('/transfers', asyncHandler(async (req, res) => {
  */
 router.get('/transfers/:id', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   await requireMultiLocation(tenantId);
 
   const transfer = await transferRepo.findById(req.params.id, tenantId);
@@ -427,7 +395,7 @@ router.get('/transfers/:id', asyncHandler(async (req, res) => {
  */
 router.post('/transfers/:id/submit', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   await requireMultiLocation(tenantId);
 
   const body = z.object({ submittedBy: z.string().optional() }).parse(req.body);
@@ -452,7 +420,7 @@ router.post('/transfers/:id/submit', requireManager, asyncHandler(async (req, re
  */
 router.post('/transfers/:id/receive', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   await requireMultiLocation(tenantId);
 
   const body = z.object({ receivedBy: z.string().optional() }).parse(req.body);
@@ -477,7 +445,7 @@ router.post('/transfers/:id/receive', requireManager, asyncHandler(async (req, r
  */
 router.post('/transfers/:id/cancel', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   await requireMultiLocation(tenantId);
 
   const body = z.object({ cancelledBy: z.string().optional() }).parse(req.body);

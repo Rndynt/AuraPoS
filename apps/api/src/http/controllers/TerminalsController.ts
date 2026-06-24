@@ -6,11 +6,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { ManageTerminals, TerminalNotFoundError } from '@pos/application/terminals';
-import { db } from '../../composition/modules/httpApplicationBoundaryModule';
-import { DrizzleTerminalRepository } from '@pos/infrastructure/repositories/terminals/DrizzleTerminalRepository';
+import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 
-const defaultManageTerminals = new ManageTerminals(new DrizzleTerminalRepository(db));
+const defaultManageTerminals = container.manageTerminals;
 
 const mapTerminalError = (error: unknown): never => {
   if (error instanceof TerminalNotFoundError) {

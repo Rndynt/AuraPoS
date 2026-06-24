@@ -8,6 +8,7 @@ import { createSyncModule, type SyncModule } from './modules/syncModule';
 import { createKitchenModule, type KitchenModule } from './modules/kitchenModule';
 import { createSeatingModule, type SeatingModule } from './modules/seatingModule';
 import { createTerminalsModule, type TerminalsModule } from './modules/terminalsModule';
+import { createHttpRouteModule, type HttpRouteModule } from './modules/httpRouteModule';
 
 /**
  * Public API dependency container exposed to HTTP controllers/handlers.
@@ -24,7 +25,8 @@ export type ApiUseCaseContainer = CatalogModule
   & SyncModule
   & KitchenModule
   & SeatingModule
-  & TerminalsModule;
+  & TerminalsModule
+  & HttpRouteModule;
 
 export type AppContainer = ApiUseCaseContainer;
 
@@ -46,6 +48,7 @@ export function createAppContainer(): ApiUseCaseContainer {
   });
   const seating = createSeatingModule(shared);
   const terminals = createTerminalsModule(shared);
+  const httpRoute = createHttpRouteModule(shared);
 
   return {
     ...inventory,
@@ -56,5 +59,6 @@ export function createAppContainer(): ApiUseCaseContainer {
     ...kitchen,
     ...seating,
     ...terminals,
+    ...httpRoute,
   };
 }

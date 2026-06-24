@@ -1,6 +1,5 @@
 import { requireEntitlement as requireCatalogEntitlement, type EntitlementCode } from '@pos/application/entitlements';
 import { loadTenantEntitlementContext } from '../../services/tenantEntitlements';
-import { db } from '../../composition/modules/httpApplicationBoundaryModule';
 import { createError } from '../middleware/errorHandler';
 
 type EntitlementDatabase = { select: (...args: any[]) => any };
@@ -11,11 +10,13 @@ type EntitlementDatabase = { select: (...args: any[]) => any };
  * (cumulative plan + business-type defaults + active grants).
  */
 export async function requireTenantEntitlement(
-  database: EntitlementDatabase,
+  database: EntitlementDatabase | undefined,
   tenantId: string,
   entitlementCode: EntitlementCode,
 ): Promise<void> {
-  const context = await loadTenantEntitlementContext(tenantId, database ?? db);
+  const context = database
+    ? await loadTenantEntitlementContext(tenantId, database)
+    : await loadTenantEntitlementContext(tenantId);
   if (!context) {
     throw createError(
       `Fitur ini memerlukan entitlement '${entitlementCode}'. Aktifkan dari Marketplace atau upgrade paket.`,
