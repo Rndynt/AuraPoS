@@ -67,6 +67,57 @@ const VALID_BODY = {
   ownerPassword: 'Secret123!',
 };
 
+
+// ─── GET /api/register/check-slug/:slug ───────────────────────────────────────
+
+describe('GET /api/register/check-slug/:slug', () => {
+  it('returns available when slug has valid format and is unused', async () => {
+    const { app } = makeRouter({ checkSlugExists: async () => false });
+    const response = await request(app, '/api/register/check-slug/kopi-maju');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.available, true);
+    assert.equal(response.body.url, 'https://kopi-maju.aurapos.test');
+  });
+
+  it('returns unavailable for reserved slugs without querying storage', async () => {
+    let checkCalled = false;
+    const { app } = makeRouter({ checkSlugExists: async () => {
+      checkCalled = true;
+      return false;
+    } });
+    const response = await request(app, '/api/register/check-slug/admin');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.available, false);
+    assert.equal(response.body.reason, 'Slug ini tidak tersedia.');
+    assert.equal(checkCalled, false);
+  });
+
+  it('returns unavailable when slug already exists', async () => {
+    const { app } = makeRouter({ checkSlugExists: async (slug) => slug === 'kopi-maju' });
+    const response = await request(app, '/api/register/check-slug/kopi-maju');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.available, false);
+    assert.equal(response.body.reason, 'Slug sudah digunakan tenant lain.');
+  });
+
+  it('returns unavailable for invalid slug format without querying storage', async () => {
+    let checkCalled = false;
+    const { app } = makeRouter({ checkSlugExists: async () => {
+      checkCalled = true;
+      return false;
+    } });
+    const response = await request(app, '/api/register/check-slug/-invalid');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.available, false);
+    assert.equal(response.body.reason, 'Format tidak valid. Gunakan huruf kecil, angka, dan tanda hubung.');
+    assert.equal(checkCalled, false);
+  });
+});
+
 // ─── POST /api/register ───────────────────────────────────────────────────────
 
 describe('POST /api/register E2E', () => {

@@ -4,3 +4,4 @@
 
 export * from './TenantRepository';
 export { TenantRepository as DrizzleTenantRepository } from './TenantRepository';
+export * from './DrizzleTenantSlugAvailabilityRepository';

@@ -1,7 +1,7 @@
 import { createDatabaseModule } from './shared/databaseModule';
 import { createCatalogModule, type CatalogModule } from './modules/catalogModule';
 import { createInventoryModule, type InventoryModule } from './modules/inventoryModule';
-import { createTenantModule } from './modules/tenantModule';
+import { createTenantModule, type TenantModule } from './modules/tenantModule';
 import { createOrdersModule, type OrdersModule } from './modules/ordersModule';
 import { createPaymentsModule, type PaymentsModule } from './modules/paymentsModule';
 import { createSyncModule, type SyncModule } from './modules/syncModule';
@@ -18,7 +18,8 @@ import { createHttpRouteModule, type HttpRouteModule } from './modules/httpRoute
  * use cases/handlers from this public surface instead of reaching into the
  * database or infrastructure repositories through the singleton container.
  */
-export type ApiUseCaseContainer = CatalogModule
+export type ApiUseCaseContainer = TenantModule
+  & CatalogModule
   & InventoryModule
   & OrdersModule
   & PaymentsModule
@@ -51,6 +52,7 @@ export function createAppContainer(): ApiUseCaseContainer {
   const httpRoute = createHttpRouteModule(shared);
 
   return {
+    ...tenant,
     ...inventory,
     ...catalog,
     ...orders,
