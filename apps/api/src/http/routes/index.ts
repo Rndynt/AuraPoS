@@ -8,7 +8,7 @@ import catalogRoutes from './catalog';
 import ordersRoutes from './orders';
 import { createTenantsRouter, getTenantBySlug } from './tenants';
 import { createTablesRouter } from './tables';
-import registrationRoutes from './registration';
+import { createRegistrationRouter } from './registration';
 import { createSyncRouter } from './sync';
 import { createTerminalsRouter } from './terminals';
 import { createKdsRouter } from './kds';
@@ -30,6 +30,7 @@ export async function createApiRouter({ container: {
   tableCommands,
   seatingOrderQueries,
   manageTerminals,
+  tenantSlugAvailabilityChecker,
 }, config: _config }: ApiRouterDependencies): Promise<Router> {
 const router = Router();
 
@@ -39,7 +40,9 @@ const router = Router();
 const asExpress4Handler = (handler: unknown): RequestHandler => handler as RequestHandler;
 
 // ── Public (rate-limited) ──────────────────────────────────────────────────────
-router.use('/register', asExpress4Handler(registerLimiter), registrationRoutes);
+router.use('/register', asExpress4Handler(registerLimiter), createRegistrationRouter({
+  slugAvailabilityChecker: tenantSlugAvailabilityChecker,
+}));
 
 // ── General API rate limit ─────────────────────────────────────────────────────
 router.use(asExpress4Handler(apiLimiter));

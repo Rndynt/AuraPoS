@@ -5,13 +5,13 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { container } from '../../container';
 import {
   registerTenantOwner,
   RegistrationError,
   generateSlugFromBusinessName,
 } from '../../services/registrationService';
 import type { BusinessType } from '@pos/core';
+import type { TenantSlugAvailabilityChecker } from '@pos/application/tenants';
 
 const BASE_DOMAIN = process.env.BASE_DOMAIN || 'aurapos.my.id';
 
@@ -26,6 +26,7 @@ const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/;
 type RegistrationRouteDeps = {
   baseDomain?: string;
   checkSlugExists?: (slug: string) => Promise<boolean>;
+  slugAvailabilityChecker?: Pick<TenantSlugAvailabilityChecker, 'slugExists'>;
   registerTenantOwner?: typeof registerTenantOwner;
 };
 
@@ -77,7 +78,11 @@ export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
   const router = Router();
   const baseDomain = deps.baseDomain ?? BASE_DOMAIN;
   const checkSlugExists = deps.checkSlugExists ?? (async (slug: string) => {
-    return container.httpRouteQueries.slugExists(slug);
+    if (!deps.slugAvailabilityChecker) {
+      throw new Error('createRegistrationRouter requires slugAvailabilityChecker when checkSlugExists is not injected');
+    }
+
+    return deps.slugAvailabilityChecker.slugExists(slug);
   });
   const register = deps.registerTenantOwner ?? registerTenantOwner;
 
@@ -176,4 +181,3 @@ export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
   return router;
 }
 
-export default createRegistrationRouter();

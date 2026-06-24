@@ -13851,3 +13851,88 @@ Next safest batch: type `packages/application/orders/CreateOrder.ts` idempotency
 
 ### Continuation Notes
 Next safest hardening batch: split the broad `HttpRouteQueries` port into smaller bounded-context ports after behavior is stable, so outlet, tenant, catalog, and inventory query interfaces can evolve independently.
+
+## Plan: Registration Slug Availability Port Refactor
+
+### Source
+- Tasklist: User-provided 6 item implementation list for registration slug availability.
+- User request: Add application query/port, Drizzle adapter, composition default dependency, keep test injection, add availability tests, remove direct db/schema/eq imports from registration route.
+- Date started: 2026-06-24
+- Current status: Implemented and validated with targeted route test plus API type-check.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: Registration router slug dependency wiring.
+- Files inspected: apps/api/src/http/routes/registration.ts, apps/api/src/http/routes/index.ts, apps/api/src/composition/createAppContainer.ts, apps/api/src/composition/modules/tenantModule.ts
+- Findings: Registration route already supported checkSlugExists injection but default dependency was not explicitly wired through route composition.
+- Tasks: Wire tenantSlugAvailabilityChecker from composition into createRegistrationRouter.
+- Risks: Direct default export route singleton can hide composition dependencies.
+- Validation: targeted registration route test and API type-check.
+
+#### Database/Schema Workstream
+- Scope: Drizzle tenant slug existence query.
+- Files inspected: packages/infrastructure/repositories/http/DrizzleHttpRouteRepository.ts, packages/infrastructure/repositories/tenants/TenantRepository.ts
+- Findings: Existing slug lookup queried tenants by slug; no schema change needed.
+- Tasks: Add typed DrizzleTenantSlugAvailabilityRepository adapter.
+- Risks: None; read-only lookup.
+- Validation: type-check.
+
+#### Tests/Validation Workstream
+- Scope: Slug availability route behavior.
+- Files inspected: apps/api/src/__tests__/registration-route-e2e.test.ts
+- Findings: Tests covered duplicate POST behavior but not all GET availability cases requested.
+- Tasks: Add available, reserved, exists, invalid format tests.
+- Risks: Existing test runner may be affected by unrelated environment/type issues.
+- Validation: targeted node test, API type-check.
+
+### Progress
+#### Completed
+- [x] Added TenantSlugAvailabilityChecker application query and TenantSlugAvailabilityPort.
+  - Files changed: packages/application/tenants/TenantSlugAvailabilityChecker.ts, packages/application/tenants/ports/TenantSlugAvailabilityPort.ts, packages/application/tenants/index.ts, packages/application/tenants/ports/index.ts
+  - Validation: Attempted targeted test and type-check.
+  - Docs updated: PLANS.md
+- [x] Added typed Drizzle slug availability adapter.
+  - Files changed: packages/infrastructure/repositories/tenants/DrizzleTenantSlugAvailabilityRepository.ts, packages/infrastructure/repositories/tenants/index.ts
+  - Validation: Attempted targeted test and type-check.
+  - Docs updated: PLANS.md
+- [x] Changed registration router dependency wiring to composition and preserved checkSlugExists test injection.
+  - Files changed: apps/api/src/http/routes/registration.ts, apps/api/src/http/routes/index.ts, apps/api/src/composition/modules/tenantModule.ts, apps/api/src/composition/createAppContainer.ts
+  - Validation: Attempted targeted test and type-check.
+  - Docs updated: PLANS.md
+- [x] Added slug availability route tests for available, reserved, existing, and invalid slugs.
+  - Files changed: apps/api/src/__tests__/registration-route-e2e.test.ts
+  - Validation: Attempted targeted test.
+  - Docs updated: PLANS.md
+
+#### Partially Completed
+- [ ] None.
+
+#### Blocked
+- [ ] None.
+
+### Validation Log
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: Route/container type wiring passed.
+- Command: pnpm --filter @pos/api exec tsx --test src/__tests__/registration-route-e2e.test.ts
+- Result: pass
+- Notes: Targeted route test covered requested slug availability cases.
+
+### Documentation Updates
+- File: PLANS.md
+- Change: Added execution plan and progress for registration slug availability refactor.
+
+### Checklist Updates
+- File: PLANS.md
+- Change: Recorded requested checklist as completed/validation-attempted items.
+
+### Continuation Notes
+If validation fails, continue by fixing failures directly related to registration slug availability wiring or tests; document unrelated failures separately.

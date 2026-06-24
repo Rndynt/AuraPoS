@@ -10,3 +10,5 @@ export type {
   TenantDraft,
   TenantRepositoryPort,
 } from './ports';
+export { TenantSlugAvailabilityChecker } from './TenantSlugAvailabilityChecker';
+export type { TenantSlugAvailabilityPort } from './ports';
