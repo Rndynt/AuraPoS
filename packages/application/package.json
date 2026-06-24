@@ -40,7 +40,10 @@
     "./terminals": "./terminals/index.ts",
     "./terminals/*": "./terminals/*.ts",
     "./terminals/ports": "./terminals/ports/TerminalRepositoryPort.ts",
-    "./terminals/ports/*": "./terminals/ports/*.ts"
+    "./terminals/ports/*": "./terminals/ports/*.ts",
+    "./tenant-context": "./tenant-context/index.ts",
+    "./tenant-context/*": "./tenant-context/*.ts",
+    "./tenant-context/ports/*": "./tenant-context/ports/*.ts"
   },
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit",

@@ -6,7 +6,6 @@ import type { NextFunction, Request, Response } from 'express';
 process.env.DATABASE_URL ||= 'postgres://user:pass@127.0.0.1:5432/aurapos_test';
 process.env.BETTER_AUTH_SECRET ||= 'test-secret-with-at-least-32-characters';
 
-const { outlets, userOutletAssignments } = await import('@pos/infrastructure/db/schema');
 const { createOutletMiddleware } = await import('../http/middleware/outlet');
 const { ListOrderHistory } = await import('@pos/application/orders/ListOrderHistory');
 
@@ -15,31 +14,15 @@ type FakeDbOptions = {
   assignedOutletIds?: string[];
 };
 
-function createFakeOutletDb(options: FakeDbOptions) {
+function createFakeOutletRepository(options: FakeDbOptions) {
   return {
-    select: () => {
-      const query: any = {
-        table: null,
-        from(table: unknown) {
-          this.table = table;
-          return this;
-        },
-        where() {
-          return this;
-        },
-        limit() {
-          if (this.table === outlets) {
-            return Promise.resolve([{ id: options.activeOutletId }]);
-          }
-          if (this.table === userOutletAssignments) {
-            const assigned = options.assignedOutletIds?.includes(options.activeOutletId);
-            return Promise.resolve(assigned ? [{ id: 'assignment-1' }] : []);
-          }
-          return Promise.resolve([]);
-        },
-      };
-      return query;
-    },
+    findTenantBySlug: async () => null,
+    findTenantById: async () => null,
+    findTenantByIdOrSlug: async () => null,
+    findAuthUserById: async () => null,
+    findActiveOutletById: async () => ({ id: options.activeOutletId }),
+    findDefaultOutlet: async () => ({ id: options.activeOutletId }),
+    userHasActiveOutletAssignment: async (_userId: string, outletId: string) => Boolean(options.assignedOutletIds?.includes(outletId)),
   };
 }
 
@@ -65,7 +48,7 @@ async function runOutletMiddleware(input: {
   assignedOutletIds?: string[];
 }) {
   const middleware = createOutletMiddleware({
-    db: createFakeOutletDb({
+    repository: createFakeOutletRepository({
       activeOutletId: input.outletId,
       assignedOutletIds: input.assignedOutletIds,
     }) as any,

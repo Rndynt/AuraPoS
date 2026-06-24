@@ -26,3 +26,6 @@ export * from './inventory';
 
 // Sync repositories/adapters
 export * from './sync';
+
+// Tenant HTTP context repositories/adapters
+export * from './tenant-context';

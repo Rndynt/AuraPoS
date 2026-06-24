@@ -12787,3 +12787,140 @@ No remaining work for this request. Future UpdateOrder discount input support sh
 
 ### Continuation Notes
 No remaining work for this request. If any deployment platform still references root `dist/public`, update that platform command to consume `apps/api/dist/public` after `pnpm build`.
+
+## Plan: Migrasi Direct DB HTTP Context Middleware
+
+### Source
+- Tasklist: Request user langsung untuk audit `rg` direct DB di `apps/api/src/http` dan migrasi area prioritas.
+- User request: Audit direct DB, prioritaskan middleware tenant/outlet/rbac, routes inventory/outlets/kds, controllers Category/Catalog/Terminals, buat use case/port/adapter, dan tambah regression test tenant isolation.
+- Date started: 2026-06-24
+- Current status: Partially implemented; P0 middleware tenant/outlet/rbac migrated, remaining route/controller areas not attempted in this batch.
+
+### Goal
+Memindahkan direct DB/Drizzle access dari HTTP middleware berisiko tinggi ke application use cases dengan typed repository port dan Drizzle adapter infrastructure, tanpa menambah direct DB/schema/Drizzle import baru di `apps/api/src/http`.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active user tasklist
+- [x] Relevant docs (README architecture/env notes)
+- [x] Relevant source files (`apps/api/src/http/middleware/tenant.ts`, `outlet.ts`, `rbac.ts`, direct DB `rg` output)
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: HTTP context middleware migration.
+- Files inspected: `apps/api/src/http/middleware/tenant.ts`, `apps/api/src/http/middleware/outlet.ts`, `apps/api/src/http/middleware/rbac.ts`.
+- Findings: Tenant/outlet/rbac middleware contained direct DB/schema/Drizzle access; outlet and rbac tests already existed for tenant isolation.
+- Tasks: Replace direct DB queries with application handlers and infrastructure adapter.
+- Risks: Global tenant/outlet resolution is request-critical; cache behavior must remain unchanged.
+- Validation: Targeted API middleware tests and API type-check passed.
+
+#### Database/Schema Workstream
+- Scope: No schema change.
+- Files inspected: `packages/infrastructure/db/schema/*` references for tenant/outlet/user assignment tables.
+- Findings: Existing schema supports the repository adapter; no migration required.
+- Tasks: None.
+- Risks: Better Auth user table remains raw SQL because it is external to the shared Drizzle schema.
+- Validation: Infrastructure type-check passed.
+
+#### Frontend/UI Workstream
+- Scope: Not affected.
+- Files inspected: None.
+- Findings: No UI changes needed.
+- Tasks: None.
+- Risks: None.
+- Validation: Not run.
+
+#### Tests/Validation Workstream
+- Scope: Regression tenant isolation for migrated middleware.
+- Files inspected: `apps/api/src/__tests__/outlet-isolation.test.ts`, `tenant-auth-guard.test.ts`, `rbac.test.ts`.
+- Findings: Tests cover cross-tenant guard, outlet assignment isolation, and RBAC tenant mismatch. Outlet test fake needed to match repository port.
+- Tasks: Updated outlet regression test to inject the new typed repository port.
+- Risks: Broader route/controller migrations still need their own tests when implemented.
+- Validation: Targeted tests passed.
+
+#### Documentation Workstream
+- Scope: Execution tracking.
+- Files inspected: `PLANS.md`.
+- Findings: Broad migration requires honest partial status.
+- Tasks: Added this active plan entry.
+- Risks: Source checklist is the user prompt, no separate checklist file exists to update.
+- Validation: N/A.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Tenant and outlet context resolution plus authenticated role lookup.
+- Files inspected: middleware and existing tests.
+- Findings: P0 direct DB moved behind typed port; existing tenant mismatch behavior preserved.
+- Tasks: Preserve production tenant header restrictions, UUID-attempt guard, outlet assignment guard, RBAC tenant comparison.
+- Risks: Remaining `routes/inventory.ts`, `routes/outlets.ts`, `routes/kds.ts`, and catalog/terminal controllers still contain direct DB/adapter construction and need follow-up.
+- Validation: Targeted tenant isolation tests passed.
+
+### Execution Order
+1. Safety/security/data-integrity/tenant-isolation blockers
+2. Build/type/test blockers
+3. Dependency prerequisites
+4. Highest priority actionable tasks
+5. Lower priority actionable tasks
+6. Documentation sync
+7. Validation
+8. Final checklist update
+
+### Progress
+
+#### Completed
+- [x] Audit direct DB in `apps/api/src/http` with `rg` and identify prioritized direct DB areas.
+  - Files changed: `PLANS.md`
+  - Validation: `rg` command completed and informed scope.
+  - Docs updated: `PLANS.md`
+- [x] Migrate `middleware/tenant.ts`, `middleware/outlet.ts`, and `middleware/rbac.ts` to application handlers plus infrastructure repository adapter.
+  - Files changed: `packages/application/tenant-context/*`, `packages/infrastructure/repositories/tenant-context/*`, `apps/api/src/http/middleware/tenant.ts`, `apps/api/src/http/middleware/outlet.ts`, `apps/api/src/http/middleware/rbac.ts`
+  - Validation: application/infrastructure/API type-check and targeted middleware tests passed.
+  - Docs updated: `PLANS.md`
+- [x] Update regression tests for tenant/outlet/RBAC isolation on migrated middleware.
+  - Files changed: `apps/api/src/__tests__/outlet-isolation.test.ts`
+  - Validation: targeted test file plus tenant/rbac tests passed.
+  - Docs updated: `PLANS.md`
+
+#### Partially Completed
+- [ ] Full migration of all prioritized direct DB HTTP areas.
+  - Completed: Highest-risk context middleware migrated.
+  - Remaining: `routes/inventory.ts`, `routes/outlets.ts`, `routes/kds.ts`, `controllers/CategoryController.ts`, `CatalogController.ts`, and `TerminalsController.ts` still need route/controller-specific use cases/adapters and regression tests.
+  - Reason: Safe batch boundary after global middleware migration and validation.
+
+#### Blocked
+- [ ] None.
+  - Blocker: N/A
+  - Required next step: N/A
+
+#### Not Attempted
+- [ ] Migrate `routes/inventory.ts`, `routes/outlets.ts`, `routes/kds.ts`.
+  - Reason: Larger route-specific business/data migration remains for next batch.
+- [ ] Migrate `controllers/CategoryController.ts`, `CatalogController.ts`, `TerminalsController.ts`.
+  - Reason: Larger controller-specific migration remains for next batch.
+
+### Validation Log
+- Command: `pnpm --filter @pos/application type-check`
+- Result: pass
+- Notes: New application tenant-context use cases and typed port compile.
+- Command: `pnpm --filter @pos/infrastructure type-check`
+- Result: pass
+- Notes: New Drizzle tenant-context adapter compiles.
+- Command: `pnpm --filter @pos/api test:file src/__tests__/outlet-isolation.test.ts src/__tests__/tenant-auth-guard.test.ts src/__tests__/rbac.test.ts`
+- Result: pass
+- Notes: 19 middleware tenant isolation/RBAC tests passed.
+- Command: `pnpm --filter @pos/api type-check`
+- Result: pass
+- Notes: API compiles after middleware migration.
+
+### Documentation Updates
+- File: `PLANS.md`
+- Change: Added active plan for direct DB HTTP context middleware migration with honest partial status.
+
+### Checklist Updates
+- File: User prompt only; no separate source checklist file exists.
+- Change: N/A.
+
+### Continuation Notes
+Continue with `routes/outlets.ts` next because it is tenant-owned management data with direct CRUD and staff assignment writes, then `routes/inventory.ts` due inventory integrity, then `routes/kds.ts`, followed by Category/Catalog/Terminals controllers.
