@@ -21,7 +21,8 @@
     "./unit-of-work": "./unit-of-work/index.ts",
     "./unit-of-work/*": "./unit-of-work/*.ts",
     "./db/schema": "./db/schema/index.ts",
-    "./db/schema/*": "./db/schema/*.ts"
+    "./db/schema/*": "./db/schema/*.ts",
+    "./repositories/terminals/*": "./repositories/terminals/*.ts"
   },
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit"
