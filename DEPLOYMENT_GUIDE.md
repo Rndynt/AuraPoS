@@ -180,7 +180,7 @@ Canonical local ports:
 | POS Terminal Web | `5173` | `pnpm --filter @pos/terminal-web dev` |
 | Admin/Web app | `3000` | `pnpm --filter @pos/web dev` |
 
-The POS terminal Vite config is `apps/pos-terminal-web/vite.config.ts`. The repository root `vite.config.ts` is retained only for the legacy/Replit root-client build path and should not be used as the POS terminal config.
+The POS terminal Vite config is `apps/pos-terminal-web/vite.config.ts`. The repository root `vite.config.ts` has been removed because the legacy root `client/` app no longer exists; do not reintroduce it for POS terminal builds. `pnpm build` builds `apps/pos-terminal-web/dist` through the workspace and copies that output to `apps/api/dist/public`.
 
 #### Production
 Do not commit `.env.production`. Configure production values in the deployment platform secret manager and follow `docs/ENVIRONMENT.md`. Minimum production categories are:
