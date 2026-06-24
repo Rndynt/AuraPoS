@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from '@pos/infrastructure/database';
-import { outlets, userOutletAssignments } from '@pos/infrastructure/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { AssertOutletAccess, ResolveOutletContext } from '@pos/application/tenant-context';
+import type { TenantContextRepositoryPort } from '@pos/application/tenant-context';
+import { DrizzleTenantContextRepository } from '@pos/infrastructure/repositories/tenant-context';
 
 declare global {
   namespace Express {
@@ -47,55 +47,14 @@ export function invalidateOutletCache(key: string): void {
  * Priority: x-outlet-id header → ?outlet_id query param → tenant's default outlet
  * Uses in-memory cache (60s TTL) to avoid DB query on every request.
  */
-type OutletDb = typeof db;
-
 type OutletMiddlewareDeps = {
-  db?: OutletDb;
+  repository?: TenantContextRepositoryPort;
 };
 
-function isOutletRestrictedRole(role: string | null | undefined): boolean {
-  return role !== 'owner' && role !== 'platform-admin';
-}
-
-async function assertUserCanAccessOutlet(
-  req: Request,
-  res: Response,
-  database: OutletDb,
-  outletId: string,
-): Promise<boolean> {
-  const user = req.authTenantUser;
-
-  // Public/device/service-token requests either have their own auth mechanism or
-  // are guarded at the route level. Only authenticated POS users are assignment
-  // checked here.
-  if (!user?.id || !isOutletRestrictedRole(user.role)) {
-    return true;
-  }
-
-  const rows = await database
-    .select({ id: userOutletAssignments.id })
-    .from(userOutletAssignments)
-    .where(and(
-      eq(userOutletAssignments.userId, user.id),
-      eq(userOutletAssignments.outletId, outletId),
-      eq(userOutletAssignments.isActive, true),
-    ))
-    .limit(1);
-
-  if (rows.length > 0) {
-    return true;
-  }
-
-  res.status(403).json({
-    error: 'Forbidden',
-    message: 'Authenticated non-owner user is not assigned to the requested outlet',
-    code: 'OUTLET_ACCESS_DENIED',
-  });
-  return false;
-}
-
 export function createOutletMiddleware(deps: OutletMiddlewareDeps = {}) {
-  const database = deps.db ?? db;
+  const repository = deps.repository ?? new DrizzleTenantContextRepository();
+  const resolveOutlet = new ResolveOutletContext(repository);
+  const assertOutletAccess = new AssertOutletAccess(repository);
 
   return async function outletMiddleware(
     req: Request, res: Response, next: NextFunction,
@@ -118,15 +77,11 @@ export function createOutletMiddleware(deps: OutletMiddlewareDeps = {}) {
         if (cached) {
           resolvedOutletId = cached.id;
         } else {
-          const rows = await database
-            .select({ id: outlets.id })
-            .from(outlets)
-            .where(and(eq(outlets.tenantId, tenantId), eq(outlets.id, outletIdParam), eq(outlets.isActive, true)))
-            .limit(1);
+          const outlet = await resolveOutlet.execute({ tenantId, outletId: outletIdParam });
 
-          if (rows.length) {
-            setCachedOutlet(cacheKey, { id: rows[0].id, ts: Date.now() });
-            resolvedOutletId = rows[0].id;
+          if (outlet) {
+            setCachedOutlet(cacheKey, { id: outlet.id, ts: Date.now() });
+            resolvedOutletId = outlet.id;
           }
         }
       }
@@ -138,22 +93,25 @@ export function createOutletMiddleware(deps: OutletMiddlewareDeps = {}) {
         if (cachedDefault) {
           resolvedOutletId = cachedDefault.id;
         } else {
-          const defaultRows = await database
-            .select({ id: outlets.id })
-            .from(outlets)
-            .where(and(eq(outlets.tenantId, tenantId), eq(outlets.isDefault, true), eq(outlets.isActive, true)))
-            .limit(1);
+          const defaultOutlet = await resolveOutlet.execute({ tenantId });
 
-          if (defaultRows.length) {
-            setCachedOutlet(defaultCacheKey, { id: defaultRows[0].id, ts: Date.now() });
-            resolvedOutletId = defaultRows[0].id;
+          if (defaultOutlet) {
+            setCachedOutlet(defaultCacheKey, { id: defaultOutlet.id, ts: Date.now() });
+            resolvedOutletId = defaultOutlet.id;
           }
         }
       }
 
       if (resolvedOutletId) {
-        const allowed = await assertUserCanAccessOutlet(req, res, database, resolvedOutletId);
-        if (!allowed) return;
+        const allowed = await assertOutletAccess.execute({ userId: req.authTenantUser?.id, role: req.authTenantUser?.role, outletId: resolvedOutletId });
+        if (!allowed) {
+          res.status(403).json({
+            error: 'Forbidden',
+            message: 'Authenticated non-owner user is not assigned to the requested outlet',
+            code: 'OUTLET_ACCESS_DENIED',
+          });
+          return;
+        }
         req.outletId = resolvedOutletId;
       }
 

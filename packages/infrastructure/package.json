@@ -22,7 +22,9 @@
     "./unit-of-work/*": "./unit-of-work/*.ts",
     "./db/schema": "./db/schema/index.ts",
     "./db/schema/*": "./db/schema/*.ts",
-    "./repositories/terminals/*": "./repositories/terminals/*.ts"
+    "./repositories/terminals/*": "./repositories/terminals/*.ts",
+    "./repositories/tenant-context": "./repositories/tenant-context/index.ts",
+    "./repositories/tenant-context/*": "./repositories/tenant-context/*.ts"
   },
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit"

@@ -17,9 +17,10 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { auth, authDb } from '../../lib/auth';
+import { auth } from '../../lib/auth';
 import { fromNodeHeaders } from 'better-auth/node';
-import { sql } from 'drizzle-orm';
+import { GetTenantAuthUser } from '@pos/application/tenant-context';
+import { DrizzleTenantContextRepository } from '@pos/infrastructure/repositories/tenant-context';
 import { attachOrderActionPermissionContext } from '../auth/orderActionPermissionContext';
 
 // ── Role type ─────────────────────────────────────────────────────────────────
@@ -88,18 +89,10 @@ async function defaultGetSession(req: Request): Promise<AuthSessionLike | null> 
   }) as Promise<AuthSessionLike | null>;
 }
 
-async function defaultGetUserById(userId: string): Promise<RbacUser | null> {
-  const rows = await authDb.execute(
-    sql`SELECT id, tenant_id, role FROM "user" WHERE id = ${userId} LIMIT 1`
-  );
-  const row = (rows as any[])[0];
-  if (!row) return null;
+const getTenantAuthUser = new GetTenantAuthUser(new DrizzleTenantContextRepository());
 
-  return {
-    id: String(row.id),
-    tenantId: row.tenant_id ?? null,
-    role: row.role ?? null,
-  };
+async function defaultGetUserById(userId: string): Promise<RbacUser | null> {
+  return getTenantAuthUser.execute(userId);
 }
 
 function getDevOverrideRole(req: Request): PosRole | null {

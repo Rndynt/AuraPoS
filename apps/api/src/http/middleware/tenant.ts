@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from '@pos/infrastructure/database';
-import { tenants } from '@pos/infrastructure/db/schema';
-import { eq, or } from 'drizzle-orm';
+import { GetTenantAuthUser, ResolveTenantContext } from '@pos/application/tenant-context';
+import { DrizzleTenantContextRepository } from '@pos/infrastructure/repositories/tenant-context';
 import { cacheKeys, getCacheJson, setCacheJson } from '../../services/distributedCache';
 import { invalidateTenantResolutionCache } from '../../services/cacheInvalidation';
 
@@ -125,20 +124,12 @@ async function defaultGetSession(req: Request): Promise<AuthSessionLike | null> 
   return auth.api.getSession({ headers: fromNodeHeaders(req.headers) }) as Promise<AuthSessionLike | null>;
 }
 
-async function defaultGetUserById(userId: string): Promise<TenantAuthUser | null> {
-  const { sql } = await import('drizzle-orm');
-  const { authDb } = await import('../../lib/auth');
+const tenantContextRepository = new DrizzleTenantContextRepository();
+const resolveTenantContext = new ResolveTenantContext(tenantContextRepository);
+const getTenantAuthUser = new GetTenantAuthUser(tenantContextRepository);
 
-  const rows = await authDb.execute(
-    sql`SELECT id, tenant_id, role FROM "user" WHERE id = ${userId} LIMIT 1`,
-  );
-  const row = (rows as any[])[0];
-  if (!row) return null;
-  return {
-    id: String(row.id),
-    tenantId: row.tenant_id ?? null,
-    role: row.role ?? null,
-  };
+async function defaultGetUserById(userId: string): Promise<TenantAuthUser | null> {
+  return getTenantAuthUser.execute(userId);
 }
 
 function isPlatformAdmin(role: string | null | undefined): boolean {
@@ -242,14 +233,14 @@ export async function tenantMiddleware(
         return next();
       }
 
-      const rows = await db.select({ id: tenants.id, slug: tenants.slug, isActive: tenants.isActive }).from(tenants).where(eq(tenants.slug, slug)).limit(1);
-      if (!rows.length) { res.status(404).json({ error: 'Tenant not found', slug }); return; }
-      if (!rows[0].isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
+      const tenant = await resolveTenantContext.execute({ kind: 'slug', value: slug });
+      if (!tenant) { res.status(404).json({ error: 'Tenant not found', slug }); return; }
+      if (!tenant.isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
 
-      await setCachedTenant(slug, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
-      await setCachedTenant(rows[0].id, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
+      await setCachedTenant(slug, tenant);
+      await setCachedTenant(tenant.id, tenant);
 
-      req.tenantId = rows[0].id;
+      req.tenantId = tenant.id;
       req.tenantSlug = slug;
       return next();
     }
@@ -267,17 +258,16 @@ export async function tenantMiddleware(
         return next();
       }
 
-      const rows = await db.select({ id: tenants.id, slug: tenants.slug, isActive: tenants.isActive }).from(tenants)
-        .where(eq(tenants.id, sessionUser.tenantId)).limit(1);
+      const tenant = await resolveTenantContext.execute({ kind: 'id', value: sessionUser.tenantId });
 
-      if (!rows.length) { res.status(404).json({ error: 'Tenant not found' }); return; }
-      if (!rows[0].isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
+      if (!tenant) { res.status(404).json({ error: 'Tenant not found' }); return; }
+      if (!tenant.isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
 
-      await setCachedTenant(rows[0].id, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
-      await setCachedTenant(rows[0].slug, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
+      await setCachedTenant(tenant.id, tenant);
+      await setCachedTenant(tenant.slug, tenant);
 
-      req.tenantId = rows[0].id;
-      req.tenantSlug = rows[0].slug;
+      req.tenantId = tenant.id;
+      req.tenantSlug = tenant.slug;
       return next();
     }
 
@@ -325,24 +315,19 @@ export async function tenantMiddleware(
       return next();
     }
 
-    // Use UUID-aware query to avoid PostgreSQL type-cast errors:
-    // only include the id equality when the value is a valid UUID.
-    const whereCondition = isValidUuid(tenantId)
-      ? or(eq(tenants.id, tenantId), eq(tenants.slug, tenantId))
-      : eq(tenants.slug, tenantId);
+    // Use UUID-aware lookup to avoid PostgreSQL type-cast errors: only ask
+    // the repository to include ID equality when the value is a valid UUID.
+    const tenant = await resolveTenantContext.execute({ kind: isValidUuid(tenantId) ? 'id-or-slug' : 'slug', value: tenantId });
 
-    const rows = await db.select({ id: tenants.id, slug: tenants.slug, isActive: tenants.isActive }).from(tenants)
-      .where(whereCondition).limit(1);
+    if (!tenant) { res.status(404).json({ error: 'Tenant not found' }); return; }
+    if (!tenant.isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
 
-    if (!rows.length) { res.status(404).json({ error: 'Tenant not found' }); return; }
-    if (!rows[0].isActive) { res.status(403).json({ error: 'Tenant inactive' }); return; }
+    await setCachedTenant(tenantId, tenant);
+    await setCachedTenant(tenant.id, tenant);
+    await setCachedTenant(tenant.slug, tenant);
 
-    await setCachedTenant(tenantId, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
-    await setCachedTenant(rows[0].id, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
-    await setCachedTenant(rows[0].slug, { id: rows[0].id, slug: rows[0].slug, isActive: rows[0].isActive });
-
-    req.tenantId = rows[0].id;
-    req.tenantSlug = rows[0].slug;
+    req.tenantId = tenant.id;
+    req.tenantSlug = tenant.slug;
     next();
   } catch (err) {
     console.error('Tenant middleware error:', err);
