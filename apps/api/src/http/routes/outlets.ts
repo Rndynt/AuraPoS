@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { db, outlets, userOutletAssignments, insertOutletSchema, outletProductConfigs } from '../../composition/modules/httpApplicationBoundaryModule';
-import { eq, and, count, inArray } from 'drizzle-orm';
+import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import { requireManager } from '../middleware/rbac';
@@ -16,7 +15,7 @@ export function createOutletsRouter(_deps: OutletsRouterDependencies = {}): Rout
 const MAX_FREE_OUTLETS = 1;
 const OUTLET_CACHE_TTL_SECONDS = 60;
 
-type OutletRow = typeof outlets.$inferSelect;
+type OutletRow = any;
 
 /**
  * Multi-outlet capacity is governed by the `multi_location` commercial
@@ -40,11 +39,7 @@ router.get('/', asyncHandler(async (req, res) => {
     return;
   }
 
-  const rows = await db
-    .select()
-    .from(outlets)
-    .where(and(eq(outlets.tenantId, tenantId), eq(outlets.isActive, true)))
-    .orderBy(outlets.createdAt);
+  const rows = await container.httpRouteQueries.listActiveOutlets(tenantId);
   await setCacheJson(cacheKey, rows, OUTLET_CACHE_TTL_SECONDS);
   res.json({ outlets: rows });
 }));
@@ -64,14 +59,10 @@ router.get('/current', asyncHandler(async (req, res) => {
     return;
   }
 
-  const rows = await db
-    .select()
-    .from(outlets)
-    .where(and(eq(outlets.id, outletId), eq(outlets.tenantId, tenantId)))
-    .limit(1);
-  if (!rows.length) throw createError('Outlet not found', 404);
-  await setCacheJson(cacheKey, rows[0], OUTLET_CACHE_TTL_SECONDS);
-  res.json({ outlet: rows[0] });
+  const outlet = await container.httpRouteQueries.getOutlet(tenantId, outletId);
+  if (!outlet) throw createError('Outlet not found', 404);
+  await setCacheJson(cacheKey, outlet, OUTLET_CACHE_TTL_SECONDS);
+  res.json({ outlet });
 }));
 
 // POST /api/outlets — create new outlet (checks slot limit)
@@ -79,10 +70,7 @@ router.post('/', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
   const allowedSlots = await getAllowedOutletSlots(tenantId);
-  const [{ value: existingCount }] = await db
-    .select({ value: count() })
-    .from(outlets)
-    .where(and(eq(outlets.tenantId, tenantId), eq(outlets.isActive, true)));
+  const existingCount = await container.httpRouteQueries.countActiveOutlets(tenantId);
 
   if (Number(existingCount) >= allowedSlots) {
     throw createError(
@@ -91,11 +79,8 @@ router.post('/', requireManager, asyncHandler(async (req, res) => {
     );
   }
 
-  const body = insertOutletSchema.omit({ tenantId: true }).parse(req.body);
-  const [created] = await db
-    .insert(outlets)
-    .values({ ...body, tenantId, isDefault: false })
-    .returning();
+  const body = z.object({ name: z.string().min(1), slug: z.string().optional(), address: z.string().optional(), phone: z.string().optional() }).passthrough().parse(req.body);
+  const created = await container.httpRouteQueries.createOutlet(tenantId, body);
 
   await invalidateOutletCache(tenantId, created.id, 'outlet_create');
 
@@ -116,11 +101,7 @@ router.patch('/:id', requireManager, asyncHandler(async (req, res) => {
   });
   const body = updateSchema.parse(req.body);
 
-  const [updated] = await db
-    .update(outlets)
-    .set({ ...body, updatedAt: new Date() })
-    .where(and(eq(outlets.id, id), eq(outlets.tenantId, tenantId)))
-    .returning();
+  const updated = await container.httpRouteQueries.updateOutlet(tenantId, id, body);
 
   if (!updated) throw createError('Outlet tidak ditemukan', 404);
   await invalidateOutletCache(tenantId, id, 'outlet_update');
@@ -132,19 +113,12 @@ router.delete('/:id', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
   const { id } = req.params;
 
-  const rows = await db
-    .select()
-    .from(outlets)
-    .where(and(eq(outlets.id, id), eq(outlets.tenantId, tenantId)))
-    .limit(1);
+  const outlet = await container.httpRouteQueries.getOutletForDelete(tenantId, id);
 
-  if (!rows.length) throw createError('Outlet tidak ditemukan', 404);
-  if (rows[0].isDefault) throw createError('Outlet default tidak bisa dihapus', 400);
+  if (!outlet) throw createError('Outlet tidak ditemukan', 404);
+  if (outlet.isDefault) throw createError('Outlet default tidak bisa dihapus', 400);
 
-  await db
-    .update(outlets)
-    .set({ isActive: false, updatedAt: new Date() })
-    .where(and(eq(outlets.id, id), eq(outlets.tenantId, tenantId)));
+  await container.httpRouteQueries.softDeleteOutlet(tenantId, id);
 
   await invalidateOutletCache(tenantId, id, 'outlet_delete');
 
@@ -154,10 +128,7 @@ router.delete('/:id', requireManager, asyncHandler(async (req, res) => {
 // GET /api/outlets/:id/staff — list staff assigned to outlet
 router.get('/:id/staff', asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const rows = await db
-    .select()
-    .from(userOutletAssignments)
-    .where(and(eq(userOutletAssignments.outletId, id), eq(userOutletAssignments.isActive, true)));
+  const rows = await container.httpRouteQueries.listOutletStaff(id);
   res.json({ assignments: rows });
 }));
 
@@ -169,14 +140,7 @@ router.post('/:id/staff', requireManager, asyncHandler(async (req, res) => {
     role: z.enum(['owner', 'manager', 'cashier', 'staff']).default('staff'),
   }).parse(req.body);
 
-  const [assignment] = await db
-    .insert(userOutletAssignments)
-    .values({ outletId: id, userId: body.userId, role: body.role })
-    .onConflictDoUpdate({
-      target: [userOutletAssignments.userId, userOutletAssignments.outletId],
-      set: { role: body.role, isActive: true, updatedAt: new Date() },
-    })
-    .returning();
+  const assignment = await container.httpRouteQueries.upsertOutletStaff({ outletId: id, userId: body.userId, role: body.role });
 
   res.status(201).json({ assignment });
 }));
@@ -184,15 +148,7 @@ router.post('/:id/staff', requireManager, asyncHandler(async (req, res) => {
 // DELETE /api/outlets/:id/staff/:userId — remove staff from outlet
 router.delete('/:id/staff/:userId', requireManager, asyncHandler(async (req, res) => {
   const { id, userId } = req.params;
-  await db
-    .update(userOutletAssignments)
-    .set({ isActive: false, updatedAt: new Date() })
-    .where(
-      and(
-        eq(userOutletAssignments.outletId, id),
-        eq(userOutletAssignments.userId, userId),
-      ),
-    );
+  await container.httpRouteQueries.deactivateOutletStaff({ outletId: id, userId });
   res.json({ success: true });
 }));
 
@@ -200,22 +156,7 @@ router.delete('/:id/staff/:userId', requireManager, asyncHandler(async (req, res
 router.get('/product-configs', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
-  // Get all outlet IDs for this tenant
-  const tenantOutlets = await db
-    .select({ id: outlets.id })
-    .from(outlets)
-    .where(and(eq(outlets.tenantId, tenantId), eq(outlets.isActive, true)));
-
-  if (!tenantOutlets.length) {
-    return res.json({ configs: [] });
-  }
-
-  const outletIds = tenantOutlets.map((o) => o.id);
-
-  const configs = await db
-    .select()
-    .from(outletProductConfigs)
-    .where(inArray(outletProductConfigs.outletId, outletIds));
+  const configs = await container.httpRouteQueries.listOutletProductConfigs(tenantId);
 
   res.json({ configs });
 }));
@@ -227,23 +168,8 @@ router.put('/:outletId/product-configs/:productId', requireManager, asyncHandler
 
   const body = z.object({ isAvailable: z.boolean() }).parse(req.body);
 
-  // Verify the outlet belongs to this tenant
-  const outletRows = await db
-    .select({ id: outlets.id })
-    .from(outlets)
-    .where(and(eq(outlets.id, outletId), eq(outlets.tenantId, tenantId), eq(outlets.isActive, true)))
-    .limit(1);
-
-  if (!outletRows.length) throw createError('Outlet tidak ditemukan', 404);
-
-  const [config] = await db
-    .insert(outletProductConfigs)
-    .values({ outletId, productId, isAvailable: body.isAvailable })
-    .onConflictDoUpdate({
-      target: [outletProductConfigs.outletId, outletProductConfigs.productId],
-      set: { isAvailable: body.isAvailable, updatedAt: new Date() },
-    })
-    .returning();
+  const config = await container.httpRouteQueries.setOutletProductAvailability({ tenantId, outletId, productId, isAvailable: body.isAvailable });
+  if (!config) throw createError('Outlet tidak ditemukan', 404);
 
   await invalidateOutletCache(tenantId, outletId, 'outlet_product_config_update');
 

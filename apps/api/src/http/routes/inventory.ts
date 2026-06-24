@@ -13,15 +13,12 @@
  */
 
 import { Router } from 'express';
-import { db, products, inventoryMovements } from '../../composition/modules/httpApplicationBoundaryModule';
-import { eq, and, desc, asc, gte, lte, sql } from 'drizzle-orm';
+import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import { requireManager } from '../middleware/rbac';
 import { toStockListResponse } from '../helpers/inventoryStockListing';
 import { requireTenantEntitlement } from '../helpers/inventoryEntitlement';
-import { DrizzleInventoryBalanceRepository, DrizzleInventoryProductStockReader, DrizzleOutletContextRepository, DrizzleInventoryMovementWriter } from '@pos/infrastructure/repositories/inventory';
-import { DrizzleUnitOfWork } from '@pos/infrastructure/unit-of-work';
 import { ensureProductBalanceForOutlet, ensureTrackedProductBalancesForOutlet } from '@pos/application/inventory';
 
 export interface InventoryRouterDependencies {}
@@ -29,11 +26,7 @@ export interface InventoryRouterDependencies {}
 export function createInventoryRouter(_deps: InventoryRouterDependencies = {}): Router {
   const router = Router();
 
-const balanceRepo = new DrizzleInventoryBalanceRepository();
-const productReader = new DrizzleInventoryProductStockReader();
-const outletContext = new DrizzleOutletContextRepository();
-const movementWriter = new DrizzleInventoryMovementWriter();
-const unitOfWork = new DrizzleUnitOfWork();
+const { balanceRepo, productReader, outletContext, movementWriter, unitOfWork } = container.inventoryRouteDeps;
 const balanceDeps = { balanceRepo, productReader, outletContext };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -77,7 +70,7 @@ function periodStart(days: number): Date {
  */
 router.get('/products', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_basic_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_basic_stock');
   const LOW_STOCK_THRESHOLD = 10;
 
   const outletId = req.outletId;
@@ -85,25 +78,7 @@ router.get('/products', asyncHandler(async (req, res) => {
 
   const balances = await ensureTrackedProductBalancesForOutlet(balanceDeps, { tenantId, outletId });
 
-  const rows = await db
-    .select({
-      id: products.id,
-      name: products.name,
-      category: products.category,
-      basePrice: products.basePrice,
-      imageUrl: products.imageUrl,
-      sku: products.sku,
-      isActive: products.isActive,
-      stockTrackingEnabled: products.stockTrackingEnabled,
-    })
-    .from(products)
-    .where(
-      and(
-        eq(products.tenantId, tenantId),
-        eq(products.stockTrackingEnabled, true),
-      ),
-    )
-    .orderBy(asc(products.category), asc(products.name));
+  const rows = await container.httpRouteQueries.listTrackedProductsForStock(tenantId);
 
   const data = toStockListResponse(rows.map((row) => {
     const balance = balances.get(row.id);
@@ -124,7 +99,7 @@ router.get('/products', asyncHandler(async (req, res) => {
  */
 router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_basic_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_basic_stock');
   const productId = req.params.id;
 
   const body = z.object({
@@ -135,11 +110,7 @@ router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res)
     referenceId: z.string().optional(),
   }).parse(req.body);
 
-  const [product] = await db
-    .select({ id: products.id, stockTrackingEnabled: products.stockTrackingEnabled })
-    .from(products)
-    .where(and(eq(products.id, productId), eq(products.tenantId, tenantId)))
-    .limit(1);
+  const product = await container.httpRouteQueries.getTrackedProduct(tenantId, productId);
 
   if (!product) throw createError('Produk tidak ditemukan', 404);
   if (!product.stockTrackingEnabled) throw createError('Produk ini tidak menggunakan tracking stok', 400);
@@ -156,7 +127,7 @@ router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res)
   // Catat ke ledger jika modul advanced aktif
   let advanced = true;
   try {
-    await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+    await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   } catch {
     advanced = false;
   }
@@ -193,7 +164,7 @@ router.put('/products/:id/adjust', requireManager, asyncHandler(async (req, res)
  */
 router.post('/opening-stock', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
-  await requireTenantEntitlement(db, tenantId, 'inventory_basic_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_basic_stock');
 
   const outletId = req.outletId;
   if (!outletId) throw createError('Outlet context diperlukan', 400);
@@ -205,11 +176,7 @@ router.post('/opening-stock', requireManager, asyncHandler(async (req, res) => {
     actorId: z.string().optional(),
   }).parse(req.body);
 
-  const [product] = await db
-    .select({ id: products.id, stockTrackingEnabled: products.stockTrackingEnabled })
-    .from(products)
-    .where(and(eq(products.id, body.productId), eq(products.tenantId, tenantId)))
-    .limit(1);
+  const product = await container.httpRouteQueries.getTrackedProduct(tenantId, body.productId);
 
   if (!product) throw createError('Produk tidak ditemukan', 404);
   if (!product.stockTrackingEnabled) throw createError('Produk ini tidak menggunakan tracking stok', 400);
@@ -221,7 +188,7 @@ router.post('/opening-stock', requireManager, asyncHandler(async (req, res) => {
 
   let advanced = true;
   try {
-    await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+    await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
   } catch {
     advanced = false;
   }
@@ -257,7 +224,7 @@ router.post('/opening-stock', requireManager, asyncHandler(async (req, res) => {
 router.post('/movements', requireManager, asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const body = z.object({
     productId: z.string(),
@@ -269,11 +236,7 @@ router.post('/movements', requireManager, asyncHandler(async (req, res) => {
     referenceId: z.string().optional(),
   }).parse(req.body);
 
-  const [product] = await db
-    .select({ id: products.id })
-    .from(products)
-    .where(and(eq(products.id, body.productId), eq(products.tenantId, tenantId)))
-    .limit(1);
+  const product = await container.httpRouteQueries.getTrackedProduct(tenantId, body.productId);
 
   if (!product) throw createError('Produk tidak ditemukan', 404);
 
@@ -326,7 +289,7 @@ router.post('/movements', requireManager, asyncHandler(async (req, res) => {
 router.get('/movements', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const query = z.object({
     type: z.string().optional(),
@@ -337,60 +300,19 @@ router.get('/movements', asyncHandler(async (req, res) => {
     offset: z.coerce.number().int().min(0).default(0),
   }).parse(req.query);
 
-  const conditions = [eq(inventoryMovements.tenantId, tenantId)];
-  if (req.outletId) {
-    conditions.push(eq(inventoryMovements.outletId, req.outletId));
-  }
-
-  if (query.type && MOVEMENT_TYPES.includes(query.type as MovementType)) {
-    conditions.push(eq(inventoryMovements.movementType, query.type));
-  }
-
-  if (query.productId) {
-    conditions.push(eq(inventoryMovements.productId, query.productId));
-  }
-
-  if (query.dateFrom) {
-    const from = new Date(query.dateFrom);
-    if (!isNaN(from.getTime())) {
-      conditions.push(gte(inventoryMovements.createdAt, from));
-    }
-  }
-
-  if (query.dateTo) {
-    const to = new Date(query.dateTo);
-    if (!isNaN(to.getTime())) {
-      to.setHours(23, 59, 59, 999);
-      conditions.push(lte(inventoryMovements.createdAt, to));
-    }
-  }
-
-  const rows = await db
-    .select({
-      id: inventoryMovements.id,
-      productId: inventoryMovements.productId,
-      productName: products.name,
-      productCategory: products.category,
-      movementType: inventoryMovements.movementType,
-      quantityDelta: inventoryMovements.quantityDelta,
-      quantityBefore: inventoryMovements.quantityBefore,
-      quantityAfter: inventoryMovements.quantityAfter,
-      unitCost: inventoryMovements.unitCost,
-      notes: inventoryMovements.notes,
-      actorId: inventoryMovements.actorId,
-      orderId: inventoryMovements.orderId,
-      paymentId: inventoryMovements.paymentId,
-      referenceType: inventoryMovements.referenceType,
-      referenceId: inventoryMovements.referenceId,
-      metadata: inventoryMovements.metadata,
-      createdAt: inventoryMovements.createdAt,
-    })
-    .from(inventoryMovements)
-    .innerJoin(products, eq(products.id, inventoryMovements.productId))
-    .where(and(...conditions))
-    .orderBy(desc(inventoryMovements.createdAt))
-    .limit(query.limit)
-    .offset(query.offset);
+  const dateFrom = query.dateFrom ? new Date(query.dateFrom) : undefined;
+  const dateTo = query.dateTo ? new Date(query.dateTo) : undefined;
+  if (dateTo && !isNaN(dateTo.getTime())) dateTo.setHours(23, 59, 59, 999);
+  const rows = await container.httpRouteQueries.listInventoryMovements({
+    tenantId,
+    outletId: req.outletId,
+    type: query.type && MOVEMENT_TYPES.includes(query.type as MovementType) ? query.type : undefined,
+    productId: query.productId,
+    startDate: dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined,
+    endDate: dateTo && !isNaN(dateTo.getTime()) ? dateTo : undefined,
+    limit: query.limit,
+    offset: query.offset,
+  });
 
   res.json({ success: true, data: { movements: rows, limit: query.limit, offset: query.offset } });
 }));
@@ -403,20 +325,9 @@ router.get('/movements/:productId', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
   const { productId } = req.params;
 
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
-  const rows = await db
-    .select()
-    .from(inventoryMovements)
-    .where(
-      and(
-        eq(inventoryMovements.tenantId, tenantId),
-        eq(inventoryMovements.productId, productId),
-        ...(req.outletId ? [eq(inventoryMovements.outletId, req.outletId)] : []),
-      ),
-    )
-    .orderBy(desc(inventoryMovements.createdAt))
-    .limit(100);
+  const rows = await container.httpRouteQueries.listInventoryMovementsByProduct({ tenantId, productId, outletId: req.outletId, limit: 100, offset: 0 });
 
   res.json({ success: true, data: { movements: rows } });
 }));
@@ -432,7 +343,7 @@ router.get('/movements/:productId', asyncHandler(async (req, res) => {
 router.get('/report', asyncHandler(async (req, res) => {
   const tenantId = req.tenantId!;
 
-  await requireTenantEntitlement(db, tenantId, 'inventory_advanced_stock');
+  await requireTenantEntitlement(undefined, tenantId, 'inventory_advanced_stock');
 
   const query = z.object({
     period: z.coerce.number().int().min(1).max(365).default(30),
@@ -458,110 +369,26 @@ router.get('/report', asyncHandler(async (req, res) => {
     }
   }
 
-  // postgres-js sql template tag does not serialize Date objects automatically —
-  // pass ISO strings so the driver receives plain strings.
-  const fromIso = from.toISOString();
-  const toIso = to.toISOString();
   const outletId = req.outletId ?? null;
-
-  // 1. Top 10 produk terlaku (SALE/OFFLINE_SALE dalam periode)
-  const topSoldResult = await db.execute(sql`
-    SELECT
-      im.product_id   AS "productId",
-      p.name          AS "productName",
-      p.category      AS "category",
-      SUM(ABS(im.quantity_delta))::int AS "totalSold"
-    FROM inventory_movements im
-    JOIN products p ON p.id = im.product_id
-    WHERE im.tenant_id = ${tenantId}
-      AND UPPER(im.movement_type) IN ('SALE', 'OFFLINE_SALE')
-      AND (${outletId}::uuid IS NULL OR im.outlet_id = ${outletId}::uuid)
-      AND im.created_at >= ${fromIso}::timestamptz
-      AND im.created_at <= ${toIso}::timestamptz
-    GROUP BY im.product_id, p.name, p.category
-    ORDER BY "totalSold" DESC
-    LIMIT 10
-  `);
-
-  // 2. Breakdown pergerakan per tipe dalam periode
-  const breakdownResult = await db.execute(sql`
-    SELECT
-      movement_type AS "movementType",
-      COUNT(*)::int AS "count",
-      COALESCE(SUM(CASE WHEN quantity_delta > 0 THEN quantity_delta ELSE 0 END), 0)::int AS "totalIn",
-      COALESCE(SUM(CASE WHEN quantity_delta < 0 THEN ABS(quantity_delta) ELSE 0 END), 0)::int AS "totalOut"
-    FROM inventory_movements
-    WHERE tenant_id = ${tenantId}
-      AND (${outletId}::uuid IS NULL OR outlet_id = ${outletId}::uuid)
-      AND created_at >= ${fromIso}::timestamptz
-      AND created_at <= ${toIso}::timestamptz
-    GROUP BY movement_type
-    ORDER BY "count" DESC
-  `);
-
-  // 3. Nilai stok saat ini (produk aktif + tracking aktif) from active outlet balances
   if (outletId) {
     await ensureTrackedProductBalancesForOutlet(balanceDeps, { tenantId, outletId });
   }
-
-  const stockValueResult = await db.execute(sql`
-    SELECT
-      COALESCE(SUM(GREATEST(ib.quantity, 0) * p.base_price::numeric), 0)::numeric AS "totalValue",
-      COUNT(p.id)::int AS "totalTracked",
-      COALESCE(SUM(GREATEST(ib.quantity, 0)), 0)::int AS "totalUnits"
-    FROM products p
-    LEFT JOIN inventory_balances ib
-      ON ib.tenant_id = p.tenant_id
-      AND ib.product_id = p.id
-      AND (${outletId}::uuid IS NOT NULL AND ib.outlet_id = ${outletId}::uuid)
-    WHERE p.tenant_id = ${tenantId}
-      AND p.stock_tracking_enabled = true
-      AND p.is_active = true
-  `);
-
-  // 4. Total terjual (unit + transaksi) dalam periode
-  const salesSummaryResult = await db.execute(sql`
-    SELECT
-      COUNT(DISTINCT order_id)::int AS "totalOrders",
-      COALESCE(SUM(ABS(quantity_delta)), 0)::int AS "totalUnitsSold"
-    FROM inventory_movements
-    WHERE tenant_id = ${tenantId}
-      AND UPPER(movement_type) IN ('SALE', 'OFFLINE_SALE')
-      AND (${outletId}::uuid IS NULL OR outlet_id = ${outletId}::uuid)
-      AND created_at >= ${fromIso}::timestamptz
-      AND created_at <= ${toIso}::timestamptz
-  `);
-
-  // postgres-js RowList is array-like but may not serialize cleanly —
-  // map to plain objects to guarantee JSON-safe output.
-  const toPlainRows = (result: unknown): Record<string, unknown>[] => {
-    const arr = Array.isArray(result) ? result : ((result as any)?.rows ?? []);
-    return arr.map((r: unknown) => ({ ...(r as object) }));
-  };
-
-  const topSoldPlain = toPlainRows(topSoldResult);
-  const breakdownPlain = toPlainRows(breakdownResult);
-  const stockValueRows = toPlainRows(stockValueResult);
-  const salesRows = toPlainRows(salesSummaryResult);
-
-  const stockValueRow = stockValueRows[0] ?? {};
-  const salesRow = salesRows[0] ?? {};
-
-  console.log('[InventoryReport] topSold:', topSoldPlain.length, 'breakdown:', breakdownPlain.length,
-    'stockValue:', stockValueRow, 'sales:', salesRow);
+  const report = await container.httpRouteQueries.getInventoryMovementReport({ tenantId, outletId, from, to });
+  const stockValueRow = report.stockValue ?? {};
+  const salesRow = report.salesSummary ?? {};
 
   res.json({
     success: true,
     data: {
       period: { from: from.toISOString(), to: to.toISOString(), days: query.period },
       outletId,
-      topSold: topSoldPlain.map((r) => ({
+      topSold: report.topSold.map((r: Record<string, unknown>) => ({
         productId: String(r.productId ?? ''),
         productName: String(r.productName ?? ''),
         category: String(r.category ?? ''),
         totalSold: Number(r.totalSold ?? 0),
       })),
-      movementBreakdown: breakdownPlain.map((r) => ({
+      movementBreakdown: report.movementBreakdown.map((r: Record<string, unknown>) => ({
         movementType: String(r.movementType ?? ''),
         count: Number(r.count ?? 0),
         totalIn: Number(r.totalIn ?? 0),

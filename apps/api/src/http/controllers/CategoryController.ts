@@ -8,16 +8,10 @@ import {
   RenameCategory,
   ReorderCategories,
 } from '@pos/application/catalog';
-import { CategoryRepository } from '@pos/infrastructure/repositories/catalog/CategoryRepository';
-import { db } from '../../composition/modules/httpApplicationBoundaryModule';
+import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 
-const categoryRepository = new CategoryRepository(db);
-const listCategoriesUseCase = new ListCategories(categoryRepository);
-const createCategoryUseCase = new CreateCategory(categoryRepository);
-const renameCategoryUseCase = new RenameCategory(categoryRepository);
-const deleteCategoryUseCase = new DeleteCategory(categoryRepository);
-const reorderCategoriesUseCase = new ReorderCategories(categoryRepository);
+const { listCategoriesUseCase, createCategoryUseCase, renameCategoryUseCase, deleteCategoryUseCase, reorderCategoriesUseCase } = container.categoryUseCases;
 
 function toApiError(error: unknown): never {
   if (error instanceof CategoryRepositoryError) {

@@ -259,6 +259,23 @@ function checkInfrastructure(relPath: string, specifiers: string[]): Violation[]
 
 function checkApi(relPath: string, specifiers: string[]): Violation[] {
   return specifiers.flatMap((spec) => {
+    const isHttpApplicationBoundaryImport =
+      relPath.startsWith('apps/api/src/http/') &&
+      spec.includes('composition/modules/httpApplicationBoundaryModule');
+    if (isHttpApplicationBoundaryImport) {
+      return [{
+        rule: 'Rule 4 — API HTTP application boundary',
+        file: relPath,
+        importSpecifier: spec,
+        reason:
+          `apps/api/src/http must not import httpApplicationBoundaryModule. ` +
+          `HTTP handlers must call typed application use cases/handlers from the composition container.`,
+        suggestedFix:
+          `Extract the database access behind an application port and infrastructure adapter, ` +
+          `then inject a typed use case/query handler through apps/api/src/composition.`,
+      }];
+    }
+
     if (isRelative(spec)) return [];
     if (isAllowed(relPath, spec)) return [];
 

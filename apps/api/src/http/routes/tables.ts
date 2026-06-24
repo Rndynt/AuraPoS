@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import type { AppContainer } from "../../composition/createAppContainer";
-import type { InsertTable } from '../../composition/modules/httpApplicationBoundaryModule';
 import { requireEntitlement } from "../middleware/entitlementGuard";
 
 const VALID_TABLE_STATUSES = ["available", "occupied", "reserved", "maintenance", "cleaning"] as const;
@@ -95,7 +94,7 @@ export function createTablesRouter(dependencies: TablesRouterDependencies): Rout
         capacity,
         status: "available",
         outletId: req.outletId,
-      } as InsertTable);
+      } as any);
 
       res.status(201).json({ success: true, data: newTable });
     } catch (error) {

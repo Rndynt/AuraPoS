@@ -5,8 +5,7 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { db, tenants } from '../../composition/modules/httpApplicationBoundaryModule';
-import { eq } from 'drizzle-orm';
+import { container } from '../../container';
 import {
   registerTenantOwner,
   RegistrationError,
@@ -78,8 +77,7 @@ export function createRegistrationRouter(deps: RegistrationRouteDeps = {}) {
   const router = Router();
   const baseDomain = deps.baseDomain ?? BASE_DOMAIN;
   const checkSlugExists = deps.checkSlugExists ?? (async (slug: string) => {
-    const existing = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
-    return existing.length > 0;
+    return container.httpRouteQueries.slugExists(slug);
   });
   const register = deps.registerTenantOwner ?? registerTenantOwner;
 

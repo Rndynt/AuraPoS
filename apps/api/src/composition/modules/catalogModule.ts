@@ -2,6 +2,8 @@ import { GetProducts } from '@pos/application/catalog/GetProducts';
 import { GetProductById } from '@pos/application/catalog/GetProductById';
 import { CheckProductAvailability } from '@pos/application/catalog/CheckProductAvailability';
 import { CreateOrUpdateProduct } from '@pos/application/catalog/CreateOrUpdateProduct';
+import { CreateCategory, DeleteCategory, ListCategories, RenameCategory, ReorderCategories } from '@pos/application/catalog';
+import { CategoryRepository } from '@pos/infrastructure/repositories/catalog/CategoryRepository';
 import { ProductRepository } from '@pos/infrastructure/repositories/catalog/ProductRepository';
 import { ProductOptionGroupRepository } from '@pos/infrastructure/repositories/catalog/ProductOptionGroupRepository';
 import { ProductOptionRepository } from '@pos/infrastructure/repositories/catalog/ProductOptionRepository';
@@ -16,6 +18,13 @@ export interface CatalogModule {
   getProductById: GetProductById;
   checkProductAvailability: CheckProductAvailability;
   createOrUpdateProduct: CreateOrUpdateProduct;
+  categoryUseCases: {
+    listCategoriesUseCase: ListCategories;
+    createCategoryUseCase: CreateCategory;
+    renameCategoryUseCase: RenameCategory;
+    deleteCategoryUseCase: DeleteCategory;
+    reorderCategoriesUseCase: ReorderCategories;
+  };
   catalogHandlers: {
     listUnavailableOutletProductIds: (outletId: string, productIds: string[]) => Promise<Set<string>>;
   };
@@ -28,12 +37,20 @@ export const createCatalogModule: ModuleFactory<CatalogModule & { tenantReposito
   const tenantRepository = new TenantRepository(db);
   const inventoryBalanceRepository = new DrizzleInventoryBalanceRepository();
   const checkProductAvailability = new CheckProductAvailability(productRepository, inventoryBalanceRepository);
+  const categoryRepository = new CategoryRepository(db);
 
   return {
     tenantRepository,
     getProducts: new GetProducts(productRepository),
     getProductById: new GetProductById(productRepository),
     checkProductAvailability,
+    categoryUseCases: {
+      listCategoriesUseCase: new ListCategories(categoryRepository),
+      createCategoryUseCase: new CreateCategory(categoryRepository),
+      renameCategoryUseCase: new RenameCategory(categoryRepository),
+      deleteCategoryUseCase: new DeleteCategory(categoryRepository),
+      reorderCategoriesUseCase: new ReorderCategories(categoryRepository),
+    },
     createOrUpdateProduct: new CreateOrUpdateProduct(
       unitOfWork,
       productRepository,

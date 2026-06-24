@@ -5,8 +5,7 @@
 
 import { Router, type RequestHandler } from 'express';
 import * as TenantsController from '../controllers/TenantsController';
-import { db, tenants } from '../../composition/modules/httpApplicationBoundaryModule';
-import { eq } from 'drizzle-orm';
+import { container } from '../../container';
 
 export interface TenantsRouterDependencies {
   getTenantBySlug: RequestHandler;
@@ -36,14 +35,10 @@ export function createTenantsRouter(deps: TenantsRouterDependencies): Router {
 
 export const getTenantBySlug: RequestHandler = async (req, res) => {
   try {
-    const rows = await db.select({
-      id: tenants.id, name: tenants.name, slug: tenants.slug,
-      businessName: tenants.businessName, businessType: tenants.businessType,
-      currency: tenants.currency, timezone: tenants.timezone, locale: tenants.locale,
-    }).from(tenants).where(eq(tenants.slug, req.params.slug)).limit(1);
+    const tenant = await container.httpRouteQueries.getTenantBySlug(req.params.slug);
 
-    if (!rows.length) return res.status(404).json({ error: 'Tenant not found' });
-    return res.json({ success: true, data: rows[0] });
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+    return res.json({ success: true, data: tenant });
   } catch (err) {
     console.error('[by-slug]', err);
     return res.status(500).json({ error: 'Internal server error' });

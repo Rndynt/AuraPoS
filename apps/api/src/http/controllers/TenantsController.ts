@@ -7,9 +7,8 @@
  */
 
 import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
 import { asyncHandler, createError } from '../middleware/errorHandler';
-import { db, tenants } from '../../composition/modules/httpApplicationBoundaryModule';
+import { container } from '../../container';
 import { ENTITLEMENT_CATALOG } from '@pos/application/entitlements';
 import { resolveBusinessProfileFromBusinessType, resolveBusinessProfileSource } from '@pos/application/business-flows';
 import {
@@ -22,26 +21,7 @@ import {
  * GET /api/me/entitlements and GET /api/tenants/profile.
  */
 async function buildEntitlementProfile(tenantId: string) {
-  const [tenantRow] = await db
-    .select({
-      id: tenants.id,
-      name: tenants.name,
-      slug: tenants.slug,
-      businessName: tenants.businessName,
-      businessAddress: tenants.businessAddress,
-      businessPhone: tenants.businessPhone,
-      businessEmail: tenants.businessEmail,
-      businessType: tenants.businessType,
-      planTier: tenants.planTier,
-      subscriptionStatus: tenants.subscriptionStatus,
-      currency: tenants.currency,
-      timezone: tenants.timezone,
-      locale: tenants.locale,
-      settings: tenants.settings,
-    })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1);
+  const tenantRow = await container.httpRouteQueries.getTenantEntitlementProfile(tenantId);
 
   if (!tenantRow) {
     throw createError('Tenant not found', 404, 'TENANT_NOT_FOUND');

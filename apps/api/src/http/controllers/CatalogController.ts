@@ -7,8 +7,6 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { container } from '../../container';
 import { asyncHandler, createError } from '../middleware/errorHandler';
-import { db, productCategories } from '../../composition/modules/httpApplicationBoundaryModule';
-import { and, eq } from 'drizzle-orm';
 import { enrichCatalogProductsWithStock } from '../helpers/catalogStockEnrichment';
 
 /**
@@ -156,13 +154,9 @@ export const createOrUpdateProduct = asyncHandler(async (req: Request, res: Resp
   // Execute use case
   let category = parsed.data.category;
   if (parsed.data.category_id && !category) {
-    const found = await db
-      .select({ name: productCategories.name })
-      .from(productCategories)
-      .where(and(eq(productCategories.tenantId, tenantId), eq(productCategories.id, parsed.data.category_id)))
-      .limit(1);
-    if (!found[0]) throw createError('Category not found', 404, 'CATEGORY_NOT_FOUND');
-    category = found[0].name;
+    const categoryName = await container.httpRouteQueries.getCategoryNameById(tenantId, parsed.data.category_id);
+    if (!categoryName) throw createError('Category not found', 404, 'CATEGORY_NOT_FOUND');
+    category = categoryName;
   }
 
   const result = await container.createOrUpdateProduct.execute({
