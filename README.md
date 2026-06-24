@@ -32,7 +32,7 @@ AuraPoS adalah monorepo aplikasi Point of Sale (POS) untuk UMKM yang mencakup fr
    | POS Terminal Web | `5173` | `pnpm --filter @pos/terminal-web dev` | Config canonical ada di `apps/pos-terminal-web/vite.config.ts`. |
    | Admin/Web app | `3000` | `pnpm --filter @pos/web dev` | Tidak memakai port `5000` agar tidak bentrok dengan API. |
 
-   Catatan config Vite: POS terminal hanya memakai `apps/pos-terminal-web/vite.config.ts` sebagai config canonical. Root `vite.config.ts` dipertahankan untuk build legacy/Replit yang memakai root `client/` dan output `dist/public`; jangan pakai root config tersebut untuk build POS terminal baru.
+   Catatan config Vite: POS terminal hanya memakai `apps/pos-terminal-web/vite.config.ts` sebagai config canonical. Root `vite.config.ts` legacy sudah dihapus karena tidak ada lagi root `client/`; build produksi memakai workspace POS terminal dan output canonical `apps/pos-terminal-web/dist`, lalu `pnpm build` menyalinnya ke `apps/api/dist/public`.
 
 3. **Perintah lain yang sering digunakan**
    - Cek tipe: `pnpm type-check`
