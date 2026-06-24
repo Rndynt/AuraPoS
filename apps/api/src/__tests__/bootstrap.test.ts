@@ -5,7 +5,7 @@ import http from 'node:http';
 import express from 'express';
 import { createCorsMiddleware, isOriginAllowed } from '../bootstrap/cors';
 import { loadApiConfig, parseTrustedOrigins, parseTrustProxy } from '../bootstrap/env';
-import { evaluateBootMigrationPolicy } from '../bootstrap/migrations';
+import { evaluateBootMigrationPolicy, handleBootMigrationPolicy } from '../bootstrap/migrations';
 import { registerAuthRoutes } from '../bootstrap/auth';
 
 process.env.DATABASE_URL ||= 'postgres://user:pass@127.0.0.1:5432/aurapos_test';
@@ -130,6 +130,89 @@ describe('API bootstrap CORS parsing', () => {
 
     assert.equal(config.autoMigrateOnBoot, true);
     assert.equal(policy.shouldRun, true);
+  });
+
+  it('throws from boot migration handler when production opt-in is enabled', async () => {
+    const config = loadApiConfig({
+      DATABASE_URL: 'postgres://user:pass@127.0.0.1:5432/db',
+      NODE_ENV: 'production',
+      API_AUTO_MIGRATE_ON_BOOT: 'true',
+    });
+
+    await assert.rejects(
+      () => handleBootMigrationPolicy(config),
+      /API_AUTO_MIGRATE_ON_BOOT=true is not allowed when NODE_ENV=production/,
+    );
+  });
+
+  it('skips boot migration handler without side effects in production when disabled', async () => {
+    const config = loadApiConfig({
+      DATABASE_URL: 'postgres://user:pass@127.0.0.1:5432/db',
+      NODE_ENV: 'production',
+      API_AUTO_MIGRATE_ON_BOOT: 'false',
+    });
+    const messages: string[] = [];
+    let loaded = false;
+
+    await handleBootMigrationPolicy(config, {
+      log: (message) => messages.push(message),
+      loadMigrationRunner: async () => {
+        loaded = true;
+        return { runDbMigrations: async () => undefined };
+      },
+    });
+
+    assert.deepEqual(messages, []);
+    assert.equal(loaded, false);
+  });
+
+  it('skips boot migration handler without side effects in development when disabled', async () => {
+    const config = loadApiConfig({
+      DATABASE_URL: 'postgres://user:pass@127.0.0.1:5432/db',
+      NODE_ENV: 'development',
+      API_AUTO_MIGRATE_ON_BOOT: 'false',
+    });
+    const messages: string[] = [];
+    let loaded = false;
+
+    await handleBootMigrationPolicy(config, {
+      log: (message) => messages.push(message),
+      loadMigrationRunner: async () => {
+        loaded = true;
+        return { runDbMigrations: async () => undefined };
+      },
+    });
+
+    assert.deepEqual(messages, []);
+    assert.equal(loaded, false);
+  });
+
+  it('waits for development boot migrations and propagates failures', async () => {
+    const config = loadApiConfig({
+      DATABASE_URL: 'postgres://user:pass@127.0.0.1:5432/db',
+      NODE_ENV: 'development',
+      API_AUTO_MIGRATE_ON_BOOT: 'true',
+    });
+    const events: string[] = [];
+    const failure = new Error('migration failed in test');
+
+    await assert.rejects(
+      () => handleBootMigrationPolicy(config, {
+        log: (message) => events.push(`log:${message}`),
+        loadMigrationRunner: async () => ({
+          runDbMigrations: async () => {
+            await new Promise<void>((resolve) => setTimeout(resolve, 10));
+            events.push('runner:done');
+            throw failure;
+          },
+        }),
+      }),
+      failure,
+    );
+
+    assert.equal(events.length, 2);
+    assert.match(events[0] ?? '', /boot-time DB migrations are enabled/);
+    assert.equal(events[1], 'runner:done');
   });
 
   it('allows production base-domain and env allowlist origins but rejects LAN origins', async () => {

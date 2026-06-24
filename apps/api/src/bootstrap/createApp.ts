@@ -8,9 +8,11 @@ import { log } from './logging';
 import { registerReadinessRoutes } from './readiness';
 import { mountApiRoutes, mountWebRoutes } from './routes';
 import { runStartupChecks } from './startupChecks';
+import { handleBootMigrationPolicy } from './migrations';
 
 export async function createApiApp(config: ApiConfig) {
   runStartupChecks(config);
+  await handleBootMigrationPolicy(config);
 
   const app = express();
 

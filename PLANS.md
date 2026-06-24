@@ -12255,3 +12255,44 @@ No remaining tasks from this CORS batch. Deployments should set `CORS_ALLOWED_OR
 
 ### Continuation Notes
 No known follow-up required for this focused change. Deployment should set `TRUST_PROXY` explicitly when the API is behind a trusted reverse proxy.
+
+## Plan: Await Boot Migration Policy
+
+### Source
+- Tasklist: User request with 6 concrete migration startup/test items
+- User request: Make boot migration handler async, skip without side effects, await runner, propagate failures, await before route serving, add tests
+- Date started: 2026-06-24
+- Current status: Implemented and validated
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist (user prompt)
+- [x] Relevant source files
+
+### Progress
+#### Completed
+- [x] Made boot migration handling async and side-effect-free when disabled.
+  - Files changed: apps/api/src/bootstrap/migrations.ts
+  - Validation: pnpm --filter @pos/api test:file src/__tests__/bootstrap.test.ts; pnpm --filter @pos/api type-check
+  - Docs updated: PLANS.md
+- [x] Await boot migrations before API app route registration and remove post-listen migration trigger.
+  - Files changed: apps/api/src/bootstrap/createApp.ts, apps/api/src/runtime/server.ts
+  - Validation: pnpm --filter @pos/api test:file src/__tests__/bootstrap.test.ts; pnpm --filter @pos/api type-check
+  - Docs updated: PLANS.md
+- [x] Added boot migration policy tests for production/dev skip, production rejection, and dev failure propagation.
+  - Files changed: apps/api/src/__tests__/bootstrap.test.ts
+  - Validation: pnpm --filter @pos/api test:file src/__tests__/bootstrap.test.ts
+  - Docs updated: PLANS.md
+
+### Validation Log
+- Command: pnpm --filter @pos/api test:file src/__tests__/bootstrap.test.ts
+- Result: pass
+- Notes: 17 bootstrap tests passed.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: TypeScript completed with no errors.
+
+### Continuation Notes
+Boot migration startup policy is implemented and validated. No remaining tasks in this batch.

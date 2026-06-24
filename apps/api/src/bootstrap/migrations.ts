@@ -1,5 +1,6 @@
 import type { ApiConfig } from './env';
-import { log } from './logging';
+import { log as defaultLog } from './logging';
+import type { MigrationLogger } from '../migrations/migrationRunner';
 
 export type BootMigrationPolicy = {
   shouldRun: boolean;
@@ -24,16 +25,27 @@ export function evaluateBootMigrationPolicy(config: Pick<ApiConfig, 'isProductio
   };
 }
 
-export function handleBootMigrationPolicy(config: Pick<ApiConfig, 'isProduction' | 'autoMigrateOnBoot'>) {
+export type BootMigrationRunner = (log: MigrationLogger) => Promise<unknown>;
+
+export type BootMigrationHandlerOptions = {
+  log?: MigrationLogger;
+  loadMigrationRunner?: () => Promise<{ runDbMigrations: BootMigrationRunner }>;
+};
+
+export async function handleBootMigrationPolicy(
+  config: Pick<ApiConfig, 'isProduction' | 'autoMigrateOnBoot'>,
+  options: BootMigrationHandlerOptions = {},
+) {
   const policy = evaluateBootMigrationPolicy(config);
-  log(policy.reason, 'migrate');
 
   if (!policy.shouldRun) return;
 
-  void import('../migrations/migrationRunner')
-    .then(({ runDbMigrations }) => runDbMigrations(log))
-    .catch((error) => {
-      process.exitCode = 1;
-      log(error instanceof Error ? error.message : String(error), 'migrate');
-    });
+  const logger = options.log ?? defaultLog;
+  logger(policy.reason, 'migrate');
+
+  const { runDbMigrations } = options.loadMigrationRunner
+    ? await options.loadMigrationRunner()
+    : await import('../migrations/migrationRunner');
+
+  await runDbMigrations(logger);
 }
