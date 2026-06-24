@@ -3616,9 +3616,18 @@ Move order queue and CFD cross-instance signaling away from process-local only b
 
 ### Validation Log
 
-- Command: Pending
-- Result: Pending
-- Notes: Pending
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: Application layer compiles after terminal use case and port exports.
+- Command: pnpm --filter @pos/infrastructure type-check
+- Result: pass
+- Notes: Drizzle terminal adapter compiles.
+- Command: pnpm --filter @pos/application exec tsx --tsconfig tsconfig.json terminals/__tests__/ManageTerminals.test.ts
+- Result: pass
+- Notes: 4 regression tests cover tenant/outlet scoped registration, heartbeat, list, and deactivate flows.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API controller wiring compiles. Pending
 
 ### Documentation Updates
 
@@ -3822,9 +3831,18 @@ Determine whether Northflow Payment Orchestration standalone service is ready fo
 
 ### Validation Log
 
-- Command: Pending
-- Result: Pending
-- Notes: Pending
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: Application layer compiles after terminal use case and port exports.
+- Command: pnpm --filter @pos/infrastructure type-check
+- Result: pass
+- Notes: Drizzle terminal adapter compiles.
+- Command: pnpm --filter @pos/application exec tsx --tsconfig tsconfig.json terminals/__tests__/ManageTerminals.test.ts
+- Result: pass
+- Notes: 4 regression tests cover tenant/outlet scoped registration, heartbeat, list, and deactivate flows.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API controller wiring compiles. Pending
 
 ### Documentation Updates
 
@@ -4824,9 +4842,18 @@ Real subagents were not used because the platform instructions for this run only
 
 ### Validation Log
 
-- Command: Pending
-- Result: Pending
-- Notes: Pending
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: Application layer compiles after terminal use case and port exports.
+- Command: pnpm --filter @pos/infrastructure type-check
+- Result: pass
+- Notes: Drizzle terminal adapter compiles.
+- Command: pnpm --filter @pos/application exec tsx --tsconfig tsconfig.json terminals/__tests__/ManageTerminals.test.ts
+- Result: pass
+- Notes: 4 regression tests cover tenant/outlet scoped registration, heartbeat, list, and deactivate flows.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API controller wiring compiles. Pending
 
 ### Documentation Updates
 
@@ -6219,9 +6246,18 @@ Reduce `apps/pos-terminal-web/src/pages/pos.tsx` into a compatibility/page entry
 
 ### Validation Log
 
-- Command: Pending
-- Result: Pending
-- Notes: Pending
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: Application layer compiles after terminal use case and port exports.
+- Command: pnpm --filter @pos/infrastructure type-check
+- Result: pass
+- Notes: Drizzle terminal adapter compiles.
+- Command: pnpm --filter @pos/application exec tsx --tsconfig tsconfig.json terminals/__tests__/ManageTerminals.test.ts
+- Result: pass
+- Notes: 4 regression tests cover tenant/outlet scoped registration, heartbeat, list, and deactivate flows.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API controller wiring compiles. Pending
 
 ### Documentation Updates
 
@@ -12296,3 +12332,126 @@ No known follow-up required for this focused change. Deployment should set `TRUS
 
 ### Continuation Notes
 Boot migration startup policy is implemented and validated. No remaining tasks in this batch.
+
+## Plan: Risk-Based Route Migration Batch 2026-06-24
+
+### Source
+- Tasklist: User-provided migration priorities for tenant/outlet/RBAC, inventory/report routes, KDS auth/device routes, category/catalog controllers, terminals/outlets/tenants routes.
+- User request: Migrate prioritized risky routes to application handlers/use cases, typed repository ports, Drizzle adapters, thin controllers, no new `container.db`, regression tests.
+- Date started: 2026-06-24
+- Current status: First batch implemented and validated (terminals route/controller migrated); remaining areas staged for follow-up
+
+### Goal
+Reduce tenant-isolation and mutation risks by moving route database access behind application use cases and typed ports, starting with a high-signal route that currently mutates tenant-owned terminal records directly from the controller.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active user tasklist
+- [x] Relevant docs
+- [x] Relevant source files
+
+### Workstreams
+#### Backend/API Workstream
+- Scope: Terminals controller thin-controller migration.
+- Files inspected: apps/api/src/http/controllers/TerminalsController.ts, apps/api/src/http/routes/catalog.ts, apps/api/src/composition/createAppContainer.ts
+- Findings: Terminals controller uses `container.db` directly for register, heartbeat, list, deactivate; all operations must scope by tenant and optional outlet.
+- Tasks: Add application handler and call from controller.
+- Risks: Must preserve response envelope and status codes.
+- Validation: Application tests and API type-check.
+
+#### Database/Schema Workstream
+- Scope: Reuse existing terminals schema; no migration planned.
+- Files inspected: packages/infrastructure/db/schema (via imports), apps/api controller queries.
+- Findings: Existing `(tenantId, terminalCode)` upsert behavior should remain.
+- Tasks: Implement Drizzle adapter only.
+- Risks: Drizzle onConflict target typing.
+- Validation: Type-check.
+
+#### Frontend/UI Workstream
+- Scope: Not touched in this batch.
+- Files inspected: None.
+- Findings: No UI change required.
+- Tasks: None.
+- Risks: None.
+- Validation: Not required.
+
+#### Tests/Validation Workstream
+- Scope: Regression tests for tenant/outlet isolation and mutation-sensitive terminal flows.
+- Files inspected: packages/application package test conventions.
+- Findings: Application tests can mock ports without DATABASE_URL.
+- Tasks: Add tests for cross-tenant heartbeat/deactivate and outlet filter propagation.
+- Risks: Package test script may not include new tests unless updated.
+- Validation: pnpm filtered tests/type-checks.
+
+#### Documentation Workstream
+- Scope: PLANS.md execution tracking.
+- Files inspected: PLANS.md.
+- Findings: This broad migration requires honest active plan updates.
+- Tasks: Update PLANS.md.
+- Risks: None.
+- Validation: Review diff.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Terminal registry tenant/outlet scoping.
+- Files inspected: TerminalsController.
+- Findings: Current queries include tenant and optional outlet filters but live in controller; move guarantees into app handler/repo port.
+- Tasks: Require tenantId in handler inputs; pass outletId from context; tests assert scoping arguments.
+- Risks: Future routes still need migration.
+- Validation: Regression tests.
+
+### Execution Order
+1. Prioritize migration by risk.
+2. Implement terminals application use case and typed port.
+3. Implement Drizzle repository adapter.
+4. Refactor controller to parse/context/call/map only.
+5. Add regression tests for tenant/outlet isolation.
+6. Validate and document remaining prioritized areas.
+
+### Progress
+#### Completed
+- [x] Task: Terminal route/controller migration
+  - Files changed: packages/application/terminals/*, packages/infrastructure/repositories/terminals/DrizzleTerminalRepository.ts, apps/api/src/http/controllers/TerminalsController.ts
+  - Validation: pnpm --filter @pos/application type-check; pnpm --filter @pos/infrastructure type-check; pnpm --filter @pos/application exec tsx --tsconfig tsconfig.json terminals/__tests__/ManageTerminals.test.ts; pnpm --filter @pos/api type-check
+  - Docs updated: PLANS.md
+
+#### Partially Completed
+- [ ] Task: Overall risk-prioritized migration program
+  - Completed: Prioritized first batch selected.
+  - Remaining: tenant/outlet/RBAC middleware, inventory/report routes, KDS auth/device routes, category/catalog controllers, outlets/tenants routes.
+  - Reason: Broad migration requires staged safe batches.
+
+#### Blocked
+- [ ] Task: None currently.
+  - Blocker:
+  - Required next step:
+
+#### Not Attempted
+- [ ] Task: Inventory/report, KDS, category/catalog, outlets/tenants route migrations.
+  - Reason: First batch targets terminals to establish pattern and regression coverage.
+
+### Validation Log
+- Command: pnpm --filter @pos/application type-check
+- Result: pass
+- Notes: Application layer compiles after terminal use case and port exports.
+- Command: pnpm --filter @pos/infrastructure type-check
+- Result: pass
+- Notes: Drizzle terminal adapter compiles.
+- Command: pnpm --filter @pos/application exec tsx --tsconfig tsconfig.json terminals/__tests__/ManageTerminals.test.ts
+- Result: pass
+- Notes: 4 regression tests cover tenant/outlet scoped registration, heartbeat, list, and deactivate flows.
+- Command: pnpm --filter @pos/api type-check
+- Result: pass
+- Notes: API controller wiring compiles.
+
+### Documentation Updates
+- File: PLANS.md
+- Change: Added active plan for route migration batch.
+
+### Checklist Updates
+- File: PLANS.md
+- Change: Tracked completed/partial/not-attempted status for user tasklist.
+
+### Continuation Notes
+Continue by applying the same app-port-adapter pattern to KDS device routes, then inventory mutation/report routes, then category/catalog controllers, then tenant/outlet/RBAC middleware and outlets/tenants routes. Do not reintroduce direct `container.db` usage in migrated controllers.

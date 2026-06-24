@@ -5,10 +5,22 @@
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { container } from '../../container';
+import { ManageTerminals, TerminalNotFoundError } from '@pos/application/terminals';
+import { db } from '@pos/infrastructure/database';
+import { DrizzleTerminalRepository } from '@pos/infrastructure/repositories/terminals/DrizzleTerminalRepository';
 import { asyncHandler, createError } from '../middleware/errorHandler';
-import { terminals } from '@pos/infrastructure/db/schema';
-import { eq, and } from 'drizzle-orm';
+
+const manageTerminals = new ManageTerminals(new DrizzleTerminalRepository(db));
+
+const mapTerminalError = (error: unknown): never => {
+  if (error instanceof TerminalNotFoundError) {
+    throw createError(error.message, 404, error.code);
+  }
+  if (error instanceof Error && (error.message.includes('required') || error.message.includes('Invalid'))) {
+    throw createError(error.message, 400, 'VALIDATION_ERROR');
+  }
+  throw error;
+};
 
 /**
  * POST /api/terminals/register
@@ -16,8 +28,6 @@ import { eq, and } from 'drizzle-orm';
  * Called on app startup so the terminal is always registered before syncing.
  */
 export const registerTerminal = asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.tenantId!;
-
   const bodySchema = z.object({
     terminal_code: z.string().min(1).max(128),
     name: z.string().max(255).optional().default('Cashier'),
@@ -29,34 +39,19 @@ export const registerTerminal = asyncHandler(async (req: Request, res: Response)
     throw createError('Invalid request body: ' + parsed.error.message, 400, 'VALIDATION_ERROR');
   }
 
-  const now = new Date();
-  const [terminal] = await container.db
-    .insert(terminals)
-    .values({
-      tenantId,
+  try {
+    const terminal = await manageTerminals.register({
+      tenantId: req.tenantId!,
+      outletId: req.outletId ?? null,
       terminalCode: parsed.data.terminal_code,
       name: parsed.data.name,
-      deviceFingerprint: parsed.data.device_fingerprint,
-      outletId: req.outletId ?? null,
-      lastSeenAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [terminals.tenantId, terminals.terminalCode],
-      set: {
-        name: parsed.data.name,
-        deviceFingerprint: parsed.data.device_fingerprint ?? undefined,
-        outletId: req.outletId ?? null,
-        lastSeenAt: now,
-        updatedAt: now,
-      },
-    })
-    .returning();
+      deviceFingerprint: parsed.data.device_fingerprint ?? null,
+    });
 
-  if (!terminal) {
-    throw createError('Failed to register terminal', 500, 'TERMINAL_REGISTER_ERROR');
+    res.status(200).json({ success: true, data: { terminal } });
+  } catch (error) {
+    mapTerminalError(error);
   }
-
-  res.status(200).json({ success: true, data: { terminal } });
 });
 
 /**
@@ -64,23 +59,17 @@ export const registerTerminal = asyncHandler(async (req: Request, res: Response)
  * Update last_seen_at for the terminal. Called periodically by the frontend.
  */
 export const heartbeatTerminal = asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.tenantId!;
-  const { id } = req.params;
+  try {
+    const terminal = await manageTerminals.heartbeat({
+      tenantId: req.tenantId!,
+      outletId: req.outletId ?? null,
+      id: req.params.id,
+    });
 
-  if (!id) throw createError('Terminal ID is required', 400, 'MISSING_PARAMETER');
-
-  const now = new Date();
-  const [terminal] = await container.db
-    .update(terminals)
-    .set({ lastSeenAt: now, updatedAt: now })
-    .where(and(eq(terminals.id, id), eq(terminals.tenantId, tenantId), eq(terminals.isActive, true), ...(req.outletId ? [eq(terminals.outletId, req.outletId)] : [])))
-    .returning({ id: terminals.id, terminalCode: terminals.terminalCode, name: terminals.name, lastSeenAt: terminals.lastSeenAt });
-
-  if (!terminal) {
-    throw createError('Terminal not found or inactive', 404, 'TERMINAL_NOT_FOUND');
+    res.json({ success: true, data: { terminal } });
+  } catch (error) {
+    mapTerminalError(error);
   }
-
-  res.json({ success: true, data: { terminal } });
 });
 
 /**
@@ -88,14 +77,12 @@ export const heartbeatTerminal = asyncHandler(async (req: Request, res: Response
  * List all terminals for tenant.
  */
 export const listTerminals = asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.tenantId!;
-
-  const rows = await container.db
-    .select()
-    .from(terminals)
-    .where(and(eq(terminals.tenantId, tenantId), ...(req.outletId ? [eq(terminals.outletId, req.outletId)] : [])));
-
-  res.json({ success: true, data: { terminals: rows } });
+  try {
+    const terminals = await manageTerminals.list({ tenantId: req.tenantId!, outletId: req.outletId ?? null });
+    res.json({ success: true, data: { terminals } });
+  } catch (error) {
+    mapTerminalError(error);
+  }
 });
 
 /**
@@ -103,21 +90,15 @@ export const listTerminals = asyncHandler(async (req: Request, res: Response) =>
  * Soft-deactivate a terminal — it will be blocked from future syncs.
  */
 export const deactivateTerminal = asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.tenantId!;
-  const { id } = req.params;
+  try {
+    const terminal = await manageTerminals.deactivate({
+      tenantId: req.tenantId!,
+      outletId: req.outletId ?? null,
+      id: req.params.id,
+    });
 
-  if (!id) throw createError('Terminal ID is required', 400, 'MISSING_PARAMETER');
-
-  const now = new Date();
-  const [terminal] = await container.db
-    .update(terminals)
-    .set({ isActive: false, updatedAt: now })
-    .where(and(eq(terminals.id, id), eq(terminals.tenantId, tenantId), ...(req.outletId ? [eq(terminals.outletId, req.outletId)] : [])))
-    .returning({ id: terminals.id, terminalCode: terminals.terminalCode, name: terminals.name, isActive: terminals.isActive });
-
-  if (!terminal) {
-    throw createError('Terminal not found', 404, 'TERMINAL_NOT_FOUND');
+    res.json({ success: true, data: { terminal } });
+  } catch (error) {
+    mapTerminalError(error);
   }
-
-  res.json({ success: true, data: { terminal } });
 });
