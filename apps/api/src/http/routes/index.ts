@@ -16,6 +16,7 @@ import { createOutletsRouter } from './outlets';
 import { createInventoryRouter } from './inventory';
 import inventoryAdvancedRoutes from './inventory-advanced';
 import posRoutes from './pos';
+import employeesRoutes from './employees';
 import { outletMiddleware } from '../middleware/outlet';
 import { apiLimiter, registerLimiter, kdsLimiter, orderLimiter } from '../middleware/rateLimiter';
 
@@ -74,6 +75,7 @@ router.use('/outlets', createOutletsRouter());
 router.use('/inventory', createInventoryRouter());
 router.use('/inventory', inventoryAdvancedRoutes);
 router.use('/pos', asExpress4Handler(orderLimiter), posRoutes);
+router.use('/employees', employeesRoutes);
 
 router.get('/health', (_req, res) => {
   res.json({ success: true, timestamp: new Date().toISOString() });
