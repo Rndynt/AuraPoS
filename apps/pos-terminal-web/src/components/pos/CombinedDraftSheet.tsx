@@ -47,7 +47,8 @@ interface CombinedDraftSheetProps {
   onOpenChange: (open: boolean) => void;
   onContinueOrder: (orderId: string) => void;
   onResumeLocalDraft: (draft: LocalDraftOrder) => void;
-  onPayActiveOrder?: (order: POSLifecycleOrder) => void;
+  onPayActiveOrder?: (order: POSLifecycleOrder) => void | Promise<void>;
+  payingActiveOrderId?: string | null;
 }
 
 type Tab = "server" | "local";
@@ -58,6 +59,7 @@ export function CombinedDraftSheet({
   onContinueOrder,
   onResumeLocalDraft,
   onPayActiveOrder,
+  payingActiveOrderId = null,
 }: CombinedDraftSheetProps) {
   const isMobile = useIsMobile();
   const { tenantId } = useTenant();
@@ -256,6 +258,7 @@ export function CombinedDraftSheet({
                 const itemCount = (order as any).orderItems?.length ?? (order as any).items?.length ?? 0;
                 const rawDate = (order as any).orderDate ?? (order as any).createdAt;
                 const timeStr = rawDate ? new Date(rawDate).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : null;
+                const isPayingThisOrder = payingActiveOrderId === order.id;
                 return (
                 <div
                   key={order.id}
@@ -286,15 +289,16 @@ export function CombinedDraftSheet({
                     <Eye className="w-3 h-3" />
                   </button>
                   <button
-                    onClick={() => {
-                      onPayActiveOrder?.(order);
+                    onClick={async () => {
+                      await onPayActiveOrder?.(order);
                       onOpenChange(false);
                     }}
-                    disabled={!canPayActiveOrder(order) || (getOrderRemainingAmount(order) ?? 0) <= 0}
+                    disabled={isPayingThisOrder || !canPayActiveOrder(order) || (getOrderRemainingAmount(order) ?? 0) <= 0}
                     className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     data-testid={`btn-pay-active-order-${order.id}`}
                   >
-                    Bayar<CreditCard className="w-3 h-3" />
+                    {isPayingThisOrder ? "Memuat" : "Bayar"}
+                    {isPayingThisOrder ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
                   </button>
                 </div>
                 );

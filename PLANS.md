@@ -14234,3 +14234,131 @@ Fix split/cart pricing double-counting and make paid split bill state hydrate fr
 
 ### Continuation Notes
 Recommended next batch: add React component tests for `PaymentMethodDialog` split hydration once a component test runner is available, then run the browser manual verification checklist on a seeded order.
+
+## Plan: P9.13 Split Bill Active Order Full Hydration Final Fix
+
+### Source
+- Tasklist: `roadmap/business-flows/replit_codex_P9_13_split_bill_active_order_full_hydration_prompt.md`
+- User request: Analisa mendalam dan eksekusi roadmap P9.13 split bill active order full hydration; lakukan pengecekan berulang sebelum commit.
+- Date started: 2026-06-25
+- Current status: Implemented and validated with targeted POS tests; POS type-check still has unrelated pre-existing syntax/type failures outside the changed P9.13 files.
+
+### Goal
+Ensure active-order payment entry fetches full order detail before opening `PaymentMethodDialog` so partially paid split orders hydrate persisted bill splits, paid bill locks, and paid item assignments instead of falling back to default Rp 0 Bill A/B state.
+
+### Context Read
+- [x] AGENTS.md
+- [x] PLANS.md
+- [x] README.md
+- [x] Active tasklist/checklist
+- [x] Relevant docs/report: `roadmap/business-flows/P9_4_payment_ux_finalization_report.md`
+- [x] Relevant source files: CombinedDraftSheet, active order payment hook, POS order API service, retail/restaurant flows, PaymentMethodDialog references, order list/detail backend read model.
+
+### Workstreams
+
+#### Backend/API Workstream
+- Scope: Verify order detail read model.
+- Files inspected: `packages/application/orders/ListOpenOrders.ts`, `packages/infrastructure/repositories/orders/OrderRepository.ts`, `apps/api/src/http/handlers/orders/listOrders.ts`.
+- Findings: `/api/orders/open` list path uses `findByTenant` and only attaches items; `/api/orders/:id` uses `findById` and returns payments plus `billSplits` with item assignments.
+- Tasks: No backend code change required; frontend must use detail endpoint as source of truth for split resume.
+- Risks: Manual browser flow still requires live backend/database session for complete E2E confirmation.
+- Validation: Targeted frontend unit test verifies full-order fetch and persisted split preservation.
+
+#### Frontend/UI Workstream
+- Scope: Active-order payment entry, loading guard, retail/restaurant dialog data.
+- Files inspected: `CombinedDraftSheet.tsx`, `usePOSActiveOrderPayment.ts`, retail and restaurant POS flow files.
+- Findings: Active-order payment used incomplete open-orders row as pending order.
+- Tasks: Make payment preparation async, fetch full detail, store hydrated order, add clicked-row loading state and disable duplicate clicks.
+- Risks: If detail endpoint fails, payment dialog is intentionally blocked to avoid corrupt split resume state.
+- Validation: POS tests and type-check attempted.
+
+#### Tests/Validation Workstream
+- Scope: Deterministic test for P9.13 hydration path.
+- Files changed: `apps/pos-terminal-web/src/features/pos-core/hooks/__tests__/usePOSActiveOrderPayment.test.ts`, `apps/pos-terminal-web/package.json`.
+- Findings: Test covers open-orders list row without `billSplits`, detail fetch, hydrated pending payment, Bill A paid amount/status/items, and Bill B availability.
+- Tasks: Added test to POS terminal test script.
+- Risks: Existing project type-check failures remain unrelated.
+- Validation: `pnpm --filter @pos/terminal-web test` passed.
+
+#### Documentation Workstream
+- Scope: P9.13 source prompt and P9.4 payment UX finalization report.
+- Files changed: roadmap prompt checklist, P9.4 report, PLANS.md.
+- Findings: Report now documents root cause, old/new flow, fetch behavior, prop behavior, invalidation behavior, files changed, tests/manual verification.
+- Validation: Markdown-only changes reviewed by inspection.
+
+#### Security/Tenant Isolation Workstream
+- Scope: Tenant/outlet-safe order detail fetch.
+- Files inspected: `fetchOrderForPOS`, order detail handler, `OrderRepository.findById`.
+- Findings: Detail endpoint uses existing tenant-scoped API headers/session and backend `findById(id, tenantId)` plus outlet guard; no tenant ID is hardcoded.
+- Tasks: No migration/provider/payment gateway hardening added.
+- Risks: None introduced.
+- Validation: Source inspection.
+
+### Execution Order
+1. Prove open-orders list row lacks full split state while order detail includes it.
+2. Add hydrated active-order payment preparation.
+3. Wire loading state to draft/active order sheet and restaurant active-order panel.
+4. Invalidate/refetch relevant queries after active-order payment.
+5. Add targeted test.
+6. Update roadmap checklist, report, and plan.
+7. Run repeated validation.
+
+### Progress
+
+#### Completed
+- [x] Task: Paying active order fetches full order detail before opening PaymentMethodDialog.
+  - Files changed: `usePOSActiveOrderPayment.ts`
+  - Validation: `pnpm --filter @pos/terminal-web test`
+  - Docs updated: P9.4 report, P9.13 prompt checklist.
+- [x] Task: pendingOrderForPayment.order contains persisted `billSplits` for split orders.
+  - Files changed: `usePOSActiveOrderPayment.ts`, test file.
+  - Validation: targeted test assertion.
+  - Docs updated: P9.4 report.
+- [x] Task: Payment UI prevents duplicate active-order hydration clicks.
+  - Files changed: `CombinedDraftSheet.tsx`, `RestaurantOrderLifecyclePanel.tsx`, flow wiring.
+  - Validation: type-check attempted.
+  - Docs updated: P9.4 report.
+- [x] Task: Open-order/order queries invalidated after active-order payment.
+  - Files changed: retail and restaurant POS flow hooks.
+  - Validation: source inspection and tests.
+  - Docs updated: P9.4 report.
+- [x] Task: Acceptance checklist and report updated honestly.
+  - Files changed: roadmap prompt, P9.4 report, PLANS.md.
+  - Validation: source inspection.
+  - Docs updated: this plan.
+
+#### Partially Completed
+- [ ] Task: Full manual browser cashier flow.
+  - Completed: Deterministic unit coverage of hydration path.
+  - Remaining: Run live POS browser/device session with real split order and payment.
+  - Reason: Non-interactive environment has no live browser/device/manual payment session.
+
+#### Blocked
+- [ ] Task: Global POS terminal type-check clean pass.
+  - Blocker: Existing unrelated TypeScript/syntax failures outside P9.13 changed files remain in repository.
+  - Required next step: Separate cleanup batch for pre-existing files if required.
+
+#### Not Attempted
+- [ ] Task: Backend migration/schema changes.
+  - Reason: Not required; `GET /api/orders/:id` already returns the required split read model.
+
+### Validation Log
+- Command: `pnpm --filter @pos/terminal-web test`
+- Result: pass
+- Notes: Includes new P9.13 hydration test.
+- Command: `pnpm --filter @pos/terminal-web type-check`
+- Result: fail
+- Notes: Fails on unrelated pre-existing issues outside the P9.13 changed files; documented in final report.
+
+### Documentation Updates
+- File: `roadmap/business-flows/P9_4_payment_ux_finalization_report.md`
+- Change: Added P9.13 final fix section.
+- File: `roadmap/business-flows/replit_codex_P9_13_split_bill_active_order_full_hydration_prompt.md`
+- Change: Marked acceptance checklist implemented/validated.
+
+### Checklist Updates
+- File: `roadmap/business-flows/replit_codex_P9_13_split_bill_active_order_full_hydration_prompt.md`
+- Change: All P9.13 acceptance items marked `[x]` based on implementation and targeted validation; manual E2E remains recommended in report.
+
+### Continuation Notes
+Next safest task is a separate cleanup of pre-existing POS terminal type-check failures, then live manual split-bill E2E verification in a running deployment/session.

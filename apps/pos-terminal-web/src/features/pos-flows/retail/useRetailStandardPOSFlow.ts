@@ -31,6 +31,7 @@ import {
   toUserSafePaymentError,
   createClientPaymentSessionId,
 } from "@/features/pos-core";
+import { useQueryClient } from "@tanstack/react-query";
 import { RETAIL_STANDARD_FLOW_POLICY } from "./retailStandardFlowPolicy";
 import { ORDER_TYPE_UNAVAILABLE_MESSAGE, resolveValidOrderTypeSelection } from "../shared/orderTypeGuard";
 
@@ -64,9 +65,10 @@ export function useRetailStandardPOSFlow() {
   const createOrderMutation = useCreateOrder();
   const updateOrderMutation = useUpdateOrder();
   const submitPOSPaymentMutation = useSubmitPOSPayment();
+  const queryClient = useQueryClient();
   const { buildReceiptPayload, enqueueReceiptPrintJob, markReceiptPrintFailed, printReceiptNow, shouldAutoPrintReceipt } = usePOSReceiptController();
   const { sendToCFD } = usePOSCustomerDisplayController({ cart, tenantName, inPaymentFlowRef, enabled: can("customer_display") });
-  const { payActiveOrder } = usePOSActiveOrderPayment({ setPendingOrderForPayment, openPaymentDialog: () => setPaymentMethodDialogOpen(true) });
+  const { payActiveOrder, payingActiveOrderId } = usePOSActiveOrderPayment({ setPendingOrderForPayment, openPaymentDialog: () => setPaymentMethodDialogOpen(true) });
 
   const hasPartialPayment = can("payments_partial_payment");
   const hasMultiPayment = can("payments_multi_payment");
@@ -222,6 +224,9 @@ export function useRetailStandardPOSFlow() {
           partialAmount,
           paymentDetails,
         }, dependencies);
+        queryClient.invalidateQueries({ queryKey: ["/api/orders/open"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/orders", pendingOrderForPayment.orderId] });
         toast({ title: result.messageTitle, description: result.messageDescription });
         if (result.status === "PAID" || result.status === "PARTIAL") {
           paymentSessionIdRef.current = null;
@@ -361,5 +366,5 @@ export function useRetailStandardPOSFlow() {
     orderDiscountAmount: cart.orderDiscountAmount,
   };
 
-  return { policy: RETAIL_STANDARD_FLOW_POLICY, isOnline, products, productsLoading, productsError, handleAddToCart, selectedProduct, setSelectedProduct, handleVariantAdd, cartPanelProps, isMobile, mobileCartOpen, setMobileCartOpen, combinedDraftOpen, setCombinedDraftOpen, handleResumeLocalDraft, payActiveOrder, paymentMethodDialogOpen, setPaymentMethodDialogOpen, handleCFDMethodChange, handlePaymentMethodConfirm, pendingOrderForPayment, setPendingOrderForPayment, hasPartialPayment, hasMultiPayment, hasSplitBill, isProcessingQuickCharge, cart };
+  return { payingActiveOrderId, policy: RETAIL_STANDARD_FLOW_POLICY, isOnline, products, productsLoading, productsError, handleAddToCart, selectedProduct, setSelectedProduct, handleVariantAdd, cartPanelProps, isMobile, mobileCartOpen, setMobileCartOpen, combinedDraftOpen, setCombinedDraftOpen, handleResumeLocalDraft, payActiveOrder, paymentMethodDialogOpen, setPaymentMethodDialogOpen, handleCFDMethodChange, handlePaymentMethodConfirm, pendingOrderForPayment, setPendingOrderForPayment, hasPartialPayment, hasMultiPayment, hasSplitBill, isProcessingQuickCharge, cart };
 }

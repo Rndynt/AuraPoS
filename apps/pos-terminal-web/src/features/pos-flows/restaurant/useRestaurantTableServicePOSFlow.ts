@@ -74,7 +74,7 @@ export function useRestaurantTableServicePOSFlow() {
   const { data: tablesData, isLoading: tablesLoading, error: tablesError } = useTables();
   const { data: openOrdersData, isLoading: openOrdersLoading, refetch: refetchOpenOrders } = useOpenOrders();
   const { sendToCFD } = usePOSCustomerDisplayController({ cart, tenantName, inPaymentFlowRef, enabled: can("customer_display") });
-  const { payActiveOrder } = usePOSActiveOrderPayment({ setPendingOrderForPayment, openPaymentDialog: () => setPaymentMethodDialogOpen(true) });
+  const { payActiveOrder, payingActiveOrderId } = usePOSActiveOrderPayment({ setPendingOrderForPayment, openPaymentDialog: () => setPaymentMethodDialogOpen(true) });
 
   const hasPartialPayment = can("payments_partial_payment");
   const hasMultiPayment = can("payments_multi_payment");
@@ -273,6 +273,9 @@ export function useRestaurantTableServicePOSFlow() {
         submitPayment: (payload) => submitPOSPaymentMutation.mutateAsync(payload),
       });
       await refetchOpenOrders();
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/open"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", pendingOrderForPayment.orderId] });
       toast({ title: result.messageTitle, description: result.messageDescription });
       if (result.status === "PAID" || result.status === "PARTIAL") {
         paymentSessionIdRef.current = null;
@@ -334,5 +337,5 @@ export function useRestaurantTableServicePOSFlow() {
 
   const restaurantActiveOrders = openOrdersData?.orders ?? [];
 
-  return { policy: RESTAURANT_TABLE_SERVICE_FLOW_POLICY, isOnline, tables: tablesData?.tables || [], tablesLoading, tablesError, activeOrders: restaurantActiveOrders, openOrdersLoading, products, productsLoading, productsError, handleAddToCart, selectedProduct, setSelectedProduct, handleVariantAdd, cartPanelProps, isMobile, mobileCartOpen, setMobileCartOpen, combinedDraftOpen, setCombinedDraftOpen, handleResumeLocalDraft, payActiveOrder, paymentMethodDialogOpen, setPaymentMethodDialogOpen, handleCFDMethodChange, handlePaymentMethodConfirm, pendingOrderForPayment, setPendingOrderForPayment, hasPartialPayment, hasMultiPayment, hasSplitBill, isProcessingQuickCharge, cart };
+  return { payingActiveOrderId, policy: RESTAURANT_TABLE_SERVICE_FLOW_POLICY, isOnline, tables: tablesData?.tables || [], tablesLoading, tablesError, activeOrders: restaurantActiveOrders, openOrdersLoading, products, productsLoading, productsError, handleAddToCart, selectedProduct, setSelectedProduct, handleVariantAdd, cartPanelProps, isMobile, mobileCartOpen, setMobileCartOpen, combinedDraftOpen, setCombinedDraftOpen, handleResumeLocalDraft, payActiveOrder, paymentMethodDialogOpen, setPaymentMethodDialogOpen, handleCFDMethodChange, handlePaymentMethodConfirm, pendingOrderForPayment, setPendingOrderForPayment, hasPartialPayment, hasMultiPayment, hasSplitBill, isProcessingQuickCharge, cart };
 }
