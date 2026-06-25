@@ -9,9 +9,13 @@ import {
 } from '@pos/application/entitlements';
 import { db } from '@pos/infrastructure/database';
 import { tenantEntitlements, tenants } from '@pos/infrastructure/db/schema';
+import { cacheKeys, getCacheJson, setCacheJson, deleteCacheKey } from './distributedCache';
 
 const DEFAULT_PLAN: PlanCode = 'starter';
 const DEFAULT_BUSINESS_TYPE: BusinessTypeCode = 'CAFE_RESTAURANT';
+
+/** Cache TTL for entitlement maps (seconds). Same as tenant resolution cache. */
+const ENTITLEMENT_CACHE_TTL_SECONDS = 60;
 
 export function toPlanCode(planTier: string | null | undefined): PlanCode {
   if (planTier === 'growth' || planTier === 'pro' || planTier === 'starter') return planTier;
@@ -83,15 +87,34 @@ export async function loadTenantEntitlementContext(
   };
 }
 
+/**
+ * Returns the effective entitlement map for a tenant.
+ *
+ * Results are cached for ENTITLEMENT_CACHE_TTL_SECONDS (60s) via the
+ * distributed cache (Redis when available, process-local fallback otherwise).
+ * Call `invalidateTenantEntitlementCache(tenantId)` after plan upgrades or
+ * marketplace purchases to force a fresh DB read on the next request.
+ *
+ * Accepts an optional `database` override for testing (bypasses cache).
+ */
 export async function getEffectiveEntitlementMap(
   tenantId: string,
   database: EntitlementDatabase = db,
 ): Promise<Record<string, boolean>> {
-  const context = await loadTenantEntitlementContext(tenantId, database);
   const allCodes = Object.keys(ENTITLEMENT_CATALOG.entitlements) as EntitlementCode[];
+  const emptyMap = Object.fromEntries(allCodes.map((code) => [code, false])) as Record<string, boolean>;
 
-  const map = Object.fromEntries(allCodes.map((code) => [code, false])) as Record<string, boolean>;
-  if (!context) return map;
+  // Skip cache when a custom database override is provided (typically in tests)
+  const useCache = database === db;
+  const cacheKey = cacheKeys.entitlements(tenantId);
+
+  if (useCache) {
+    const cached = await getCacheJson<Record<string, boolean>>(cacheKey);
+    if (cached) return cached;
+  }
+
+  const context = await loadTenantEntitlementContext(tenantId, database);
+  if (!context) return emptyMap;
 
   const effective = await getEffectiveEntitlements({
     planCode: context.planCode,
@@ -99,9 +122,22 @@ export async function getEffectiveEntitlementMap(
     grants: context.grants,
   });
 
+  const map = { ...emptyMap };
   for (const code of effective) {
     map[code] = true;
   }
 
+  if (useCache) {
+    await setCacheJson(cacheKey, map, ENTITLEMENT_CACHE_TTL_SECONDS);
+  }
+
   return map;
+}
+
+/**
+ * Invalidate the cached entitlement map for a tenant.
+ * Call after: plan upgrade, marketplace purchase/revocation, or manual grant change.
+ */
+export async function invalidateTenantEntitlementCache(tenantId: string): Promise<void> {
+  await deleteCacheKey(cacheKeys.entitlements(tenantId));
 }

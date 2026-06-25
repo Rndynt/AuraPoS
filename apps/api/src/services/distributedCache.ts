@@ -112,6 +112,7 @@ export const cacheKeys = {
   module: (tenantId: string, moduleKey: string) => `cache:tenant:${tenantId}:module:${moduleKey}`,
   outlets: (tenantId: string) => `cache:tenant:${tenantId}:outlets:list`,
   outlet: (tenantId: string, outletId: string) => `cache:tenant:${tenantId}:outlet:${outletId}`,
+  entitlements: (tenantId: string) => `cache:tenant:${tenantId}:entitlements`,
   cfdLatest: (tenantId: string, outletId: string, deviceId: string) => `cfd:latest:tenant:${tenantId}:outlet:${outletId}:device:${deviceId}`,
   cfdTenantLatestPattern: (tenantId: string) => `cfd:latest:tenant:${tenantId}:outlet:*:device:*`,
 };

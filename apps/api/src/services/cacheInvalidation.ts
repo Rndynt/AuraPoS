@@ -108,5 +108,13 @@ export async function invalidateTenantFeatureModuleAndOutletCaches(
     invalidateFeatureAccessCache(tenantId, undefined, reason),
     invalidateModuleAccessCache(tenantId, undefined, reason),
     invalidateOutletCache(tenantId, undefined, reason),
+    // Also invalidate entitlement map — plan/grant changes must propagate immediately
+    invalidate({
+      type: 'cache_invalidation',
+      scope: 'features',
+      tenantId,
+      keys: [cacheKeys.entitlements(tenantId)],
+      reason,
+    }),
   ]);
 }
