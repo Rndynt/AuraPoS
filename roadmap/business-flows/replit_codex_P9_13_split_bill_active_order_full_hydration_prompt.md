@@ -242,20 +242,20 @@ Include:
 ## Acceptance checklist
 
 ```txt
-- [ ] Paying active order fetches full order detail before opening PaymentMethodDialog.
-- [ ] pendingOrderForPayment.order contains billSplits for split orders.
-- [ ] PaymentMethodDialog receives existingSplitBills for partially paid split order.
-- [ ] Bill A no longer resets to Rp 0 after reopen.
-- [ ] Bill A shows original paid amount.
-- [ ] Bill A shows Lunas/PAID.
-- [ ] Bill A is disabled/read-only.
-- [ ] Active bill defaults to Bill B / next unpaid bill.
-- [ ] Paid quantities are not assignable again.
-- [ ] Remaining unpaid quantities are visible for Bill B.
-- [ ] Open-orders query is invalidated/refetched after partial split payment.
-- [ ] No random migrations added.
-- [ ] No provider/card/e-wallet/NorthFlow logic added.
-- [ ] Report updated.
+- [x] Paying active order fetches full order detail before opening PaymentMethodDialog.
+- [x] pendingOrderForPayment.order contains billSplits for split orders.
+- [x] PaymentMethodDialog receives existingSplitBills for partially paid split order.
+- [x] Bill A no longer resets to Rp 0 after reopen.
+- [x] Bill A shows original paid amount.
+- [x] Bill A shows Lunas/PAID.
+- [x] Bill A is disabled/read-only.
+- [x] Active bill defaults to Bill B / next unpaid bill.
+- [x] Paid quantities are not assignable again.
+- [x] Remaining unpaid quantities are visible for Bill B.
+- [x] Open-orders query is invalidated/refetched after partial split payment.
+- [x] No random migrations added.
+- [x] No provider/card/e-wallet/NorthFlow logic added.
+- [x] Report updated.
 ```
 
 ## Commit message

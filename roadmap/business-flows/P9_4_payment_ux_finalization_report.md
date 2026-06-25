@@ -1166,3 +1166,103 @@ Manual browser verification was not executed in this non-interactive batch, so t
 - No new provider/card/e-wallet/gateway/NorthFlow logic was added.
 - No legacy compatibility branch or repair migration was added.
 - Component-level split resume tests are still recommended if the project adds a React test runner; this batch added deterministic pricing tests and kept backend split persistence/read-model behavior aligned with the existing implementation.
+
+## P9.13 Split Bill Active Order Full Hydration Final Fix
+
+Date: 2026-06-25
+
+### 1. Screenshot/manual-test problem after P9.12
+
+Manual resume after paying Bill A still opened Split Bill with default local bills: Bill A Rp 0, Bill B Rp 0, Bill A active, and all quantities assignable. The backend refused repeat payment for Bill A, which proved persistence existed but the active-order payment entry point was not passing the persisted split state into the dialog.
+
+### 2. Proven root cause
+
+The active-order payment button used rows from `GET /api/orders/open`. That endpoint intentionally uses `ListOpenOrders -> OrderRepository.findByTenant`, whose list read model returns order rows and items for queue/sheet display but does not include full `billSplits`, split item assignments, or payments. `CombinedDraftSheet` then passed that incomplete row to `usePOSActiveOrderPayment`, which stored it as `pendingOrderForPayment.order`; retail/restaurant flows forwarded `pendingOrderForPayment.order.billSplits` to `PaymentMethodDialog`, so the dialog received an empty split state and fell back to local default A/B bills.
+
+### 3. Old vs new active-order payment data flow
+
+Old flow:
+
+```txt
+CombinedDraftSheet -> open-orders list row -> payActiveOrder(row)
+-> pendingOrderForPayment.order = incomplete row
+-> PaymentMethodDialog existingSplitBills = []
+-> default Bill A/B local state
+```
+
+New flow:
+
+```txt
+CombinedDraftSheet -> open-orders list row -> async payActiveOrder(row)
+-> GET /api/orders/:id via fetchOrderForPOS
+-> resolve remaining amount from hydrated full order
+-> pendingOrderForPayment.order = full order with billSplits/items/payments
+-> PaymentMethodDialog existingSplitBills = persisted split bills
+```
+
+### 4. Full order fetch behavior
+
+`usePOSActiveOrderPayment` now prepares active-order payment by fetching full order detail before opening the payment dialog. The dialog opens only after hydration succeeds. If detail fetch fails, the cashier gets a destructive toast and the incomplete `/api/orders/open` row is not used as the split-resume source of truth.
+
+`GET /api/orders/:id` was verified to return the required read model from `OrderRepository.findById`: stable order item ids, payments, `billSplits[]`, and `billSplits[].items[]` with `orderItemId`, `clientBillId`, `quantity`, and `amount`.
+
+### 5. PaymentMethodDialog prop behavior
+
+Retail and restaurant flows already pass:
+
+```tsx
+existingSplitBills={
+  pendingOrderForPayment?.order?.billSplits
+  ?? pendingOrderForPayment?.order?.splits
+  ?? []
+}
+```
+
+P9.13 makes that prop effective by guaranteeing `pendingOrderForPayment.order` is hydrated from order detail for active-order payments. The dialog can therefore keep Bill A's original amount, mark it `Lunas/PAID`, lock it read-only, and default the active editable bill to Bill B / the next unpaid bill according to the existing P9.12 dialog hydration rules.
+
+### 6. Query invalidation/refetch behavior
+
+After active-order payment returns `PARTIAL` or `PAID`, retail and restaurant flows invalidate/refetch open-order and order-list/detail queries. This prevents the active order sheet from reopening with stale list data after a split payment.
+
+### 7. Files changed
+
+- `apps/pos-terminal-web/src/features/pos-core/hooks/usePOSActiveOrderPayment.ts`
+- `apps/pos-terminal-web/src/components/pos/CombinedDraftSheet.tsx`
+- `apps/pos-terminal-web/src/features/pos-flows/retail/useRetailStandardPOSFlow.ts`
+- `apps/pos-terminal-web/src/features/pos-flows/retail/RetailStandardPOSFlow.tsx`
+- `apps/pos-terminal-web/src/features/pos-flows/restaurant/useRestaurantTableServicePOSFlow.ts`
+- `apps/pos-terminal-web/src/features/pos-flows/restaurant/RestaurantTableServicePOSFlow.tsx`
+- `apps/pos-terminal-web/src/features/pos-flows/restaurant/RestaurantOrderLifecyclePanel.tsx`
+- `apps/pos-terminal-web/src/features/pos-core/hooks/__tests__/usePOSActiveOrderPayment.test.ts`
+- `apps/pos-terminal-web/package.json`
+- `roadmap/business-flows/replit_codex_P9_13_split_bill_active_order_full_hydration_prompt.md`
+- `PLANS.md`
+
+### 8. Tests/manual verification
+
+Automated validation added for the P9.13 active-order hydration path:
+
+- open-orders row with no `billSplits` is passed to `preparePOSActiveOrderPayment`.
+- detail fetch is called with the order id.
+- pending payment stores the full hydrated order.
+- Bill A's persisted `PAID` status, original amount, and paid item quantity assignment are preserved.
+- Bill B remains present as the next unpaid bill.
+
+Manual browser/device verification remains recommended for the full cashier flow: create split bill, pay Bill A, close dialog, reopen Draft/Pesanan Aktif, click Bayar, open Split, verify Bill A locked/lunas and Bill B active, then pay Bill B.
+
+### 9. Acceptance checklist
+
+- [x] Paying active order fetches full order detail before opening PaymentMethodDialog.
+- [x] pendingOrderForPayment.order contains billSplits for split orders.
+- [x] PaymentMethodDialog receives existingSplitBills for partially paid split order.
+- [x] Bill A no longer resets to Rp 0 after reopen through the active-order payment entry path.
+- [x] Bill A shows original paid amount via persisted `amountDue` hydration.
+- [x] Bill A shows Lunas/PAID via persisted status hydration.
+- [x] Bill A is disabled/read-only via existing P9.12 locked-bill rules.
+- [x] Active bill defaults to Bill B / next unpaid bill via existing P9.12 unpaid-bill selection.
+- [x] Paid quantities are not assignable again via persisted split item assignment hydration.
+- [x] Remaining unpaid quantities are visible for Bill B via hydrated full order items and split assignments.
+- [x] Open-orders query is invalidated/refetched after partial split payment.
+- [x] No random migrations added.
+- [x] No provider/card/e-wallet/NorthFlow logic added.
+- [x] Report updated.

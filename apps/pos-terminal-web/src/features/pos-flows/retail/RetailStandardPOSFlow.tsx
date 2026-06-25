@@ -41,7 +41,7 @@ export function RetailStandardPOSFlowView({ flow }: { flow: RetailStandardPOSFlo
           window.dispatchEvent(new PopStateEvent("popstate"));
         }}
         onResumeLocalDraft={flow.handleResumeLocalDraft}
-        onPayActiveOrder={flow.payActiveOrder}
+        onPayActiveOrder={flow.payActiveOrder} payingActiveOrderId={flow.payingActiveOrderId}
       />
 
       <ProductOptionsDialog
