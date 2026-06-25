@@ -107,7 +107,16 @@ export async function applyOrderInventoryMovement(
 }
 
 export type OrderRepositoryForWorkflow = {
-  findById(orderId: string, tenantId: string, context?: TransactionContext): Promise<any | null>;
+  findById(orderId: string, tenantId: string, context?: TransactionContext): Promise<OrderForWorkflow | null>;
+};
+
+/** Minimal order shape needed by cancel/confirm workflows. */
+export type OrderForWorkflow = OrderLikeForInventory & {
+  outletId?: string | null;
+  outlet_id?: string | null;
+  status: string;
+  payment_status?: string | null;
+  paymentStatus?: string | null;
 };
 
 export type ConfirmOrderUseCaseForWorkflow = {
@@ -115,7 +124,7 @@ export type ConfirmOrderUseCaseForWorkflow = {
     order_id: string;
     tenant_id: string;
     transaction?: TransactionContext;
-  }): Promise<{ order: any }>;
+  }): Promise<{ order: OrderForWorkflow }>;
 };
 
 export type CancelOrderUseCaseForWorkflow = {
@@ -124,5 +133,5 @@ export type CancelOrderUseCaseForWorkflow = {
     tenant_id: string;
     cancellation_reason?: string | null;
     transaction?: TransactionContext;
-  }): Promise<{ order: any }>;
+  }): Promise<{ order: OrderForWorkflow }>;
 };

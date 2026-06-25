@@ -8,6 +8,7 @@ import {
   orderStockContext,
   type CancelOrderUseCaseForWorkflow,
   type OrderRepositoryForWorkflow,
+  type OrderForWorkflow,
 } from './orderInventoryWorkflow';
 
 export type CancelOrderWorkflowInput = {
@@ -83,18 +84,20 @@ export class CancelOrderWorkflow {
   }
 }
 
-function assertOrderVisibleForOutlet(order: any | null, outletId?: string | null): asserts order is any {
+function assertOrderVisibleForOutlet(
+  order: OrderForWorkflow | null,
+  outletId?: string | null,
+): asserts order is OrderForWorkflow {
   if (!order) {
     throw new OrderInventoryWorkflowError('Order not found', 404, 'ORDER_NOT_FOUND');
   }
-  if (outletId && order.outletId !== outletId) {
+  const orderOutletId = order.outletId ?? order.outlet_id ?? null;
+  if (outletId && orderOutletId !== outletId) {
     throw new OrderInventoryWorkflowError('Order not found for this outlet', 404, 'ORDER_NOT_FOUND');
   }
 }
 
-
-export function shouldRestoreStockOnCancel(order: any): boolean {
-  const paymentStatus = order?.payment_status ?? order?.paymentStatus ?? 'unpaid';
-
-  return paymentStatus !== 'unpaid' && STOCK_DEDUCTED_STATES.has(order?.status);
+export function shouldRestoreStockOnCancel(order: OrderForWorkflow): boolean {
+  const paymentStatus = order.payment_status ?? order.paymentStatus ?? 'unpaid';
+  return paymentStatus !== 'unpaid' && STOCK_DEDUCTED_STATES.has(order.status);
 }
