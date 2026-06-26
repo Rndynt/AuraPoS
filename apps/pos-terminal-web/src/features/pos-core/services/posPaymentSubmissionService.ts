@@ -7,14 +7,8 @@ export type POSPaymentLineInput = {
   method: POSPaymentMethod;
   amount: number;
   receivedAmount?: number;
-  /** UI bill identifier (e.g. "A", "B"). Preserved as clientBillId in the backend request. */
   clientBillId?: string;
-  /**
-   * Legacy alias kept for backward compat — dialog may set either splitId or clientBillId.
-   * Prefer clientBillId. Do NOT map splitId to orderBillSplitId (that expects a DB UUID).
-   */
   splitId?: string;
-  /** Real DB UUID for an existing split row — only set when continuing a partially-paid split. */
   orderBillSplitId?: string;
   referenceNote?: string;
 };
@@ -37,7 +31,9 @@ export type POSPaymentSubmissionInput = {
     lines?: POSPaymentLineInput[];
     splits?: Array<{
       id?: string;
+      clientBillId?: string;
       label?: string;
+      splitNo?: number;
       amountDue: number;
       amountPaid?: number;
       orderBillSplitId?: string;
@@ -106,6 +102,18 @@ function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
 }
 
+function normalizeBillId(value: unknown): string | undefined {
+  const raw = String(value ?? "").trim();
+  if (!raw) return undefined;
+  if (/^[A-Z]$/i.test(raw)) return raw.toUpperCase();
+  return raw;
+}
+
+function splitNoFromBillId(clientBillId: string | undefined, fallback: number): number {
+  if (clientBillId && /^[A-Z]$/i.test(clientBillId)) return clientBillId.toUpperCase().charCodeAt(0) - 64;
+  return fallback;
+}
+
 export function toUserSafePaymentError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const technicalValidationPattern = new RegExp(["invalid_enum_value", "Invalid enum", "Expected.*FULL.*DOWN_PAYMENT", "\\[\\{.*code.*path"].join("|"), "i");
@@ -131,14 +139,15 @@ export function buildCanonicalPaymentCommand(input: POSPaymentSubmissionInput): 
   const sourceLines = flow === "MULTI_PAYMENT" || flow === "SPLIT_BILL" ? (input.paymentDetails?.lines ?? []) : [buildDefaultLine(input)];
   const max = flow === "MULTI_PAYMENT" ? 2 : flow === "SPLIT_BILL" ? 4 : 1;
   if (sourceLines.length > max) throw new Error(flow === "MULTI_PAYMENT" ? "Multi payment maksimal 2 baris." : "Split bill maksimal 4 bill.");
-  const lines = sourceLines.map((line) => ({ ...line, amount: roundCurrency(Number(line.amount || 0)) })).filter((line) => line.amount > 0);
+  const lines = sourceLines.map((line) => ({ ...line, amount: roundCurrency(Number(line.amount || 0)), clientBillId: normalizeBillId(line.clientBillId ?? line.splitId), splitId: normalizeBillId(line.splitId) })).filter((line) => line.amount > 0);
   if (lines.some((line) => !isPOSPaymentMethod(line.method))) throw new Error("Metode pembayaran tidak valid.");
   const lineTotal = roundCurrency(lines.reduce((sum, line) => sum + line.amount, 0));
   if (flow === "MULTI_PAYMENT" && Math.abs(lineTotal - input.totalAmount) > 0.001) throw new Error("Total multi payment harus sama dengan total tagihan.");
   if (flow === "SPLIT_BILL") {
-    const targetBillId = input.paymentDetails?.targetBillId ?? lines[0]?.clientBillId ?? lines[0]?.splitId;
+    const targetBillId = normalizeBillId(input.paymentDetails?.targetBillId ?? lines[0]?.clientBillId ?? lines[0]?.splitId);
     const bill = input.paymentSession?.bills.find((b) => b.clientBillId === targetBillId || b.orderBillSplitId === targetBillId);
     if (bill && !isSelectedBillPayable({ billAmountDue: bill.amountDue, billAmountPaid: bill.amountPaid, lineTotal })) throw new Error("Bill yang dipilih sudah lunas atau jumlah pembayaran tidak sesuai.");
+    return { flow, paymentKind: input.paymentDetails?.paymentKind ?? defaultKind(flow), targetBillId, lines, lineTotal };
   }
   return { flow, paymentKind: input.paymentDetails?.paymentKind ?? defaultKind(flow), targetBillId: input.paymentDetails?.targetBillId, lines, lineTotal };
 }
@@ -161,31 +170,52 @@ function sanitizeSplitItems(items?: Array<{ orderItemId?: string; clientItemId?:
   return items?.map((item) => {
     const rawOrderItemId = item.orderItemId;
     return {
-      // Backend schema only accepts UUID orderItemId. Fresh-cart split lines often
-      // carry local/nanoid ids, so send those as clientItemId only and let the
-      // backend map client_item_id after creating order items.
       orderItemId: isUuid(rawOrderItemId) ? rawOrderItemId : undefined,
       clientItemId: item.clientItemId ?? rawOrderItemId,
       quantity: item.quantity,
-      amount: item.amount,
+      amount: roundCurrency(Number(item.amount || 0)),
     };
   });
 }
 
-function buildSplitPayload(input: POSPaymentSubmissionInput): SubmitPOSPaymentRequest["payment"]["splits"] | undefined {
-  return input.paymentDetails?.splits?.map((split, index) => ({
-    clientBillId: split.id ?? `bill-${index + 1}`,
-    label: split.label ?? `Bill ${index + 1}`,
-    splitNo: index + 1,
-    amountDue: roundCurrency(split.amountDue),
-    amountPaid: roundCurrency(split.amountPaid ?? 0),
-    status: split.status ?? ((split.amountPaid ?? 0) >= split.amountDue - 0.001 ? "PAID" : (split.amountPaid ?? 0) > 0 ? "PARTIAL" : "UNPAID"),
-    items: sanitizeSplitItems(split.items),
-  }));
+function buildSplitPayload(input: POSPaymentSubmissionInput, canonical: { flow: POSPaymentFlow; targetBillId?: string; lineTotal: number }): SubmitPOSPaymentRequest["payment"]["splits"] | undefined {
+  if (canonical.flow !== "SPLIT_BILL") return undefined;
+  const targetBillId = normalizeBillId(canonical.targetBillId ?? input.paymentDetails?.targetBillId ?? input.paymentDetails?.lines?.[0]?.clientBillId ?? input.paymentDetails?.lines?.[0]?.splitId) ?? "A";
+  const sourceSplits = input.paymentDetails?.splits ?? [];
+  const mapped = sourceSplits
+    .map((split, index) => {
+      const clientBillId = normalizeBillId(split.clientBillId ?? split.id) ?? (index === 0 ? targetBillId : `bill-${index + 1}`);
+      return {
+        clientBillId,
+        label: split.label ?? `Bill ${clientBillId}`,
+        splitNo: split.splitNo ?? splitNoFromBillId(clientBillId, index + 1),
+        amountDue: roundCurrency(split.amountDue),
+        amountPaid: roundCurrency(split.amountPaid ?? 0),
+        status: split.status ?? ((split.amountPaid ?? 0) >= split.amountDue - 0.001 ? "PAID" : (split.amountPaid ?? 0) > 0 ? "PARTIAL" : "UNPAID"),
+        items: sanitizeSplitItems(split.items),
+      };
+    })
+    .filter((split) => split.amountDue > 0 || split.clientBillId === targetBillId);
+
+  const hasTarget = mapped.some((split) => split.clientBillId === targetBillId);
+  if (!hasTarget && canonical.lineTotal > 0) {
+    mapped.unshift({
+      clientBillId: targetBillId,
+      label: `Bill ${targetBillId}`,
+      splitNo: splitNoFromBillId(targetBillId, 1),
+      amountDue: roundCurrency(canonical.lineTotal),
+      amountPaid: 0,
+      status: "UNPAID",
+      items: sanitizeSplitItems(sourceSplits[0]?.items),
+    });
+  }
+  return mapped.length ? mapped : undefined;
 }
 
 export function buildSubmitPOSPaymentRequest(input: POSPaymentSubmissionInput): SubmitPOSPaymentRequest {
-  const { flow, paymentKind, lines } = buildCanonicalPaymentCommand(input);
+  const canonical = buildCanonicalPaymentCommand(input);
+  const { flow, paymentKind, lines } = canonical;
+  const targetBillId = normalizeBillId(canonical.targetBillId ?? lines[0]?.clientBillId ?? lines[0]?.splitId);
   return {
     source: input.mode,
     clientPaymentSessionId: input.clientPaymentSessionId,
@@ -195,16 +225,16 @@ export function buildSubmitPOSPaymentRequest(input: POSPaymentSubmissionInput): 
     payment: {
       flow,
       paymentKind,
-      targetBillId: input.paymentDetails?.targetBillId ?? lines[0]?.clientBillId ?? lines[0]?.splitId,
+      targetBillId,
       lines: lines.map((line) => ({
         method: line.method,
         amount: line.amount,
         receivedAmount: line.receivedAmount,
         referenceNote: line.referenceNote,
-        clientBillId: line.clientBillId ?? line.splitId,
+        clientBillId: normalizeBillId(line.clientBillId ?? line.splitId ?? targetBillId),
         orderBillSplitId: isUuid(line.orderBillSplitId) ? line.orderBillSplitId : undefined,
       })),
-      splits: buildSplitPayload(input),
+      splits: buildSplitPayload(input, { flow, targetBillId, lineTotal: canonical.lineTotal }),
     },
   };
 }
