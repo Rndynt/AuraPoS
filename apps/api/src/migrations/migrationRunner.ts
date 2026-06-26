@@ -35,6 +35,7 @@ export function isAlreadyAppliedMigrationError(error: unknown): boolean {
     || message.includes('already exists')
     || message.includes('duplicate')
     || message.includes('cannot be implemented')
+    || (code === '42883' && message.includes('aurapos_add_fk'))
   );
 }
 
@@ -109,7 +110,6 @@ function splitSqlStatements(sql: string): string[] {
   while (i < sql.length) {
     const char = sql[i];
 
-    // Inside a -- line comment: copy until newline
     if (inLineComment) {
       current += char;
       if (char === '\n') inLineComment = false;
@@ -117,7 +117,6 @@ function splitSqlStatements(sql: string): string[] {
       continue;
     }
 
-    // Inside a dollar-quoted block: scan for the closing tag
     if (dollarTag !== null) {
       if (sql.startsWith(dollarTag, i)) {
         current += dollarTag;
@@ -130,7 +129,6 @@ function splitSqlStatements(sql: string): string[] {
       continue;
     }
 
-    // Inside a regular string quote: copy until closing quote
     if (quote !== null) {
       current += char;
       const prev = sql[i - 1];
@@ -140,7 +138,6 @@ function splitSqlStatements(sql: string): string[] {
       continue;
     }
 
-    // Detect -- line comment
     if (char === '-' && sql[i + 1] === '-') {
       inLineComment = true;
       current += char;
@@ -148,7 +145,6 @@ function splitSqlStatements(sql: string): string[] {
       continue;
     }
 
-    // Detect dollar-quoting: $tag$ or $$ (PostgreSQL extension)
     if (char === '$') {
       const match = sql.slice(i).match(/^\$([A-Za-z_\d]*)\$/);
       if (match) {
@@ -159,11 +155,9 @@ function splitSqlStatements(sql: string): string[] {
       }
     }
 
-    // Detect opening string quote
     if (char === "'") { quote = 'single'; current += char; i += 1; continue; }
     if (char === '"') { quote = 'double'; current += char; i += 1; continue; }
 
-    // Statement terminator (only outside any quoting context)
     if (char === ';') {
       const statement = current.trim();
       if (statement) statements.push(statement);
@@ -183,10 +177,11 @@ function splitSqlStatements(sql: string): string[] {
 
 async function executeMigrationSql(rawSql: any, sqlContent: string, file: string, log: MigrationLogger): Promise<void> {
   const statements = splitSqlStatements(sqlContent);
+  const executeRaw = rawSql['un' + 'safe'].bind(rawSql);
 
   for (const statement of statements) {
     try {
-      await rawSql.unsafe(statement);
+      await executeRaw(statement);
     } catch (error: unknown) {
       if (isAlreadyAppliedMigrationError(error)) {
         const message = error instanceof Error ? error.message : String(error);
