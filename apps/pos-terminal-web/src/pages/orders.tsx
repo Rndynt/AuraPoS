@@ -679,6 +679,7 @@ export default function OrdersPage() {
           open={settleDialogOpen}
           onClose={() => setSettleDialogOpen(false)}
           cartTotal={Math.max(0, selectedOrder.total_amount - selectedOrder.paid_amount)}
+          fullOrderTotal={selectedOrder.total_amount}
           cartItems={[]}
           isSubmitting={recordPaymentMutation.isPending}
           defaultPaymentMethod="CASH"

@@ -66,6 +66,7 @@ export function RetailStandardPOSFlowView({ flow }: { flow: RetailStandardPOSFlo
         onMethodChange={flow.handleCFDMethodChange}
         onConfirm={flow.handlePaymentMethodConfirm}
         cartTotal={flow.paymentDialogContext.totalAmount}
+        fullOrderTotal={flow.paymentDialogContext.fullOrderTotal}
         cartItems={flow.paymentDialogContext.cartItems}
         isSubmitting={flow.isProcessingQuickCharge}
         defaultPaymentMethod={flow.cart.paymentMethod}

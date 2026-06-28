@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AlertCircle, Banknote, CheckCircle2, Delete, Landmark, Minus, Plus, QrCode, Trash2, X } from "lucide-react";
 import type { PaymentMethod, CartItem } from "@/hooks/useCart";
@@ -46,6 +46,8 @@ type Props = {
   onConfirm: (method: PaymentMethod, cashReceived?: number, partialAmount?: number, paymentDetails?: PaymentDetails) => void;
   onMethodChange?: (method: PaymentMethod) => void;
   cartTotal: number;
+  /** Full order grand total including tax/service — used for proportional split bill distribution */
+  fullOrderTotal?: number;
   cartItems?: CartItem[];
   isSubmitting?: boolean;
   defaultPaymentMethod?: PaymentMethod;
@@ -127,6 +129,7 @@ export function PaymentMethodDialog({
   onConfirm,
   onMethodChange,
   cartTotal,
+  fullOrderTotal,
   cartItems = [],
   isSubmitting = false,
   defaultPaymentMethod = "CASH",
@@ -217,7 +220,22 @@ export function PaymentMethodDialog({
   const getAssignedQty = (itemId: string, bill: string) => Number(splitItemQuantityMap[itemId]?.[bill] ?? 0);
   const getAssignedQtyForItem = (itemId: string) => Object.values(splitItemQuantityMap[itemId] ?? {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
   const getLockedQtyForItem = (itemId: string) => Object.entries(splitItemQuantityMap[itemId] ?? {}).reduce((sum, [bill, qty]) => sum + (isBillLocked(bill) ? Number(qty || 0) : 0), 0);
-  const getItemUnitAmount = (item: CartItem) => getDialogItemTotal(item) / getItemQuantity(item);
+
+  // Tax/service scaling: distribute tax+service proportionally across items.
+  // effectiveFullTotal = full order total (tax included); cartItemsSubtotal = pre-tax sum.
+  // Factor = 1 when there is no tax/service, so this is backwards-compatible.
+  const cartItemsSubtotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + getDialogItemTotal(item), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cartItems],
+  );
+  const effectiveFullTotal = fullOrderTotal ?? cartTotal;
+  const taxScalingFactor = cartItemsSubtotal > 0 ? effectiveFullTotal / cartItemsSubtotal : 1;
+
+  /** Unit price WITH proportional tax+service included */
+  const getItemUnitAmount = (item: CartItem) =>
+    Math.round((getDialogItemTotal(item) / Math.max(1, getItemQuantity(item))) * taxScalingFactor * 100) / 100;
+
   const getBillTotal = (bill: string) => {
     const total = cartItems.reduce((sum, item) => sum + getItemUnitAmount(item) * getAssignedQty(getOrderItemId(item), bill), 0);
     return total > 0 ? Math.round(total * 100) / 100 : (getPersistedBill(bill)?.amountDue ?? 0);

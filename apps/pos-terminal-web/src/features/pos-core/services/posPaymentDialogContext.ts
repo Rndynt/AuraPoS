@@ -7,6 +7,8 @@ export type POSPaymentDialogContext = {
   orderId?: string;
   orderNumber?: string;
   totalAmount: number;
+  /** Full order grand total (subtotal + tax + service). Used to distribute tax proportionally in split bill. */
+  fullOrderTotal?: number;
   cartItems: CartItem[];
   existingSplitBills: ExistingSplitBill[];
   source: "FRESH_CART" | "SAVED_ORDER" | "ACTIVE_ORDER";
@@ -181,6 +183,7 @@ export function resolvePOSPaymentDialogContext(input: ResolvePOSPaymentDialogCon
       orderId: input.pendingOrderForPayment.orderId,
       orderNumber: input.pendingOrderForPayment.orderNumber,
       totalAmount: input.pendingOrderForPayment.totalAmount,
+      fullOrderTotal: getOrderTotalAmount(order) ?? input.pendingOrderForPayment.totalAmount,
       cartItems: orderItems.length ? orderItems : input.cartItems,
       existingSplitBills: getOrderSplitBills(order),
       source: "ACTIVE_ORDER",
@@ -194,6 +197,7 @@ export function resolvePOSPaymentDialogContext(input: ResolvePOSPaymentDialogCon
       orderId: order?.id ?? input.continueOrderId ?? undefined,
       orderNumber: getOrderNumber(order),
       totalAmount: getPaymentTotal(order, input.cartTotal),
+      fullOrderTotal: getOrderTotalAmount(order) ?? getPaymentTotal(order, input.cartTotal),
       cartItems: orderItems.length ? orderItems : input.cartItems,
       existingSplitBills: getOrderSplitBills(order),
       source: "SAVED_ORDER",
@@ -202,6 +206,7 @@ export function resolvePOSPaymentDialogContext(input: ResolvePOSPaymentDialogCon
 
   return {
     totalAmount: input.cartTotal,
+    fullOrderTotal: input.cartTotal,
     cartItems: input.cartItems,
     existingSplitBills: [],
     source: "FRESH_CART",
