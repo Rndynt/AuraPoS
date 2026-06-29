@@ -162,7 +162,10 @@ function clearSession(tenantId: string) {
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
-export function useCart() {
+export function useCart(
+  taxRate: number = DEFAULT_TAX_RATE,
+  serviceChargeRate: number = DEFAULT_SERVICE_CHARGE_RATE,
+) {
   const tenantId = getActiveTenantId() || resolveInitialTenantId() || "default";
   const saved = useRef(loadSession(tenantId));
 
@@ -378,8 +381,6 @@ export function useCart() {
       };
     });
 
-  const taxRate = DEFAULT_TAX_RATE;
-  const serviceChargeRate = DEFAULT_SERVICE_CHARGE_RATE;
   const cartPricing = useMemo(() => calculateOrderPricing({
     items: items.map((item) => ({
       base_price: item.product.base_price,

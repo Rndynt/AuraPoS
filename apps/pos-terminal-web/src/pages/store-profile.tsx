@@ -21,6 +21,8 @@ export default function StoreProfilePage() {
     phone: "",
     address: "",
     email: "",
+    taxRate: "",
+    serviceChargeRate: "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -31,6 +33,8 @@ export default function StoreProfilePage() {
         phone: profile.tenant.business_phone || "",
         address: profile.tenant.business_address || "",
         email: profile.tenant.business_email || "",
+        taxRate: profile.tenant.tax_rate != null ? String(Math.round(Number(profile.tenant.tax_rate) * 100)) : "",
+        serviceChargeRate: profile.tenant.service_charge_rate != null ? String(Math.round(Number(profile.tenant.service_charge_rate) * 100)) : "",
       });
     }
   }, [profile]);
@@ -53,6 +57,8 @@ export default function StoreProfilePage() {
           businessPhone: formData.phone || null,
           businessAddress: formData.address || null,
           businessEmail: formData.email || null,
+          taxRate: formData.taxRate !== "" ? Number(formData.taxRate) / 100 : undefined,
+          serviceChargeRate: formData.serviceChargeRate !== "" ? Number(formData.serviceChargeRate) / 100 : undefined,
         }),
       });
 
@@ -157,6 +163,59 @@ export default function StoreProfilePage() {
                 placeholder="email@toko.com"
                 data-testid="input-email"
               />
+            </>
+          )}
+        </div>
+
+        {/* Pajak & Biaya Layanan */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pajak &amp; Biaya Layanan</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Diterapkan otomatis ke setiap transaksi. Isi 0 untuk menonaktifkan.</p>
+          </div>
+          {isLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">PPN / Pajak (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={formData.taxRate}
+                    onChange={(e) => setFormData((f) => ({ ...f, taxRate: e.target.value }))}
+                    placeholder="11"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    data-testid="input-tax-rate"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">%</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">Contoh: 11 untuk PPN 11%</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Biaya Layanan / Service Charge (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={formData.serviceChargeRate}
+                    onChange={(e) => setFormData((f) => ({ ...f, serviceChargeRate: e.target.value }))}
+                    placeholder="5"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    data-testid="input-service-charge-rate"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">%</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">Contoh: 5 untuk service charge 5%</p>
+              </div>
             </>
           )}
         </div>

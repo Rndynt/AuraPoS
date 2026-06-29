@@ -4,6 +4,7 @@ import { getSubdomainSlug, resolveTenantBySlug } from "@/lib/subdomain";
 import { clearActiveOutletId } from "@/lib/outlet";
 import { useEntitlements, type EntitlementMap } from "@/hooks/api/useEntitlements";
 import type { EntitlementCode } from "@pos/application/entitlements";
+import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE } from "@pos/core/pricing";
 
 async function syncTenantFromSession(): Promise<string | null> {
   try {
@@ -41,6 +42,10 @@ export type TenantContextValue = {
   entitlements: EntitlementMap;
   /** Returns true if the tenant has the given commercial entitlement active. */
   can: (entitlementCode: EntitlementCode | string) => boolean;
+  /** Tax rate (decimal fraction) from tenant settings, e.g. 0.11 = 11% */
+  taxRate: number;
+  /** Service charge rate (decimal fraction) from tenant settings, e.g. 0.05 = 5% */
+  serviceChargeRate: number;
   isLoading: boolean;
   error: Error | null;
 };
@@ -96,6 +101,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       planTier: tenant?.plan_tier ?? null,
       entitlements,
       can,
+      taxRate: typeof (tenant as any)?.tax_rate === 'number' ? (tenant as any).tax_rate : DEFAULT_TAX_RATE,
+      serviceChargeRate: typeof (tenant as any)?.service_charge_rate === 'number' ? (tenant as any).service_charge_rate : DEFAULT_SERVICE_CHARGE_RATE,
       isLoading,
       error,
     }),

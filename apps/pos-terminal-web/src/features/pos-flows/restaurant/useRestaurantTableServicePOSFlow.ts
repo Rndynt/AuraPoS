@@ -44,11 +44,11 @@ export function useRestaurantTableServicePOSFlow() {
   const urlParams = new URLSearchParams(searchParams);
   const continueOrderId = urlParams.get("continueOrderId");
   const [, setLocation] = useLocation();
-  const cart = useCart();
+  const { can, tenantId, taxRate, serviceChargeRate } = useTenant();
+  const cart = useCart(taxRate, serviceChargeRate);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { isOnline } = useNetworkStatus();
-  const { can, tenantId } = useTenant();
   const { data: tenantProfile } = useTenantProfile(tenantId);
   const tenantName = tenantProfile?.tenant?.name || "AuraPOS";
   const inPaymentFlowRef = useRef(false);

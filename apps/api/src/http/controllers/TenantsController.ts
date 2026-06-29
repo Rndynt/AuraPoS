@@ -61,6 +61,8 @@ async function buildEntitlementProfile(tenantId: string) {
       timezone: tenantRow.timezone,
       locale: tenantRow.locale,
       settings: tenantRow.settings,
+      tax_rate: (tenantRow.settings as Record<string, unknown> | null)?.tax_rate ?? null,
+      service_charge_rate: (tenantRow.settings as Record<string, unknown> | null)?.service_charge_rate ?? null,
     },
     entitlements,
     grants: (context?.grants ?? []).map((grant) => ({
@@ -135,6 +137,10 @@ const updateProfileSchema = z.object({
   timezone: z.string().max(100).optional(),
   currency: z.string().length(3).optional(),
   locale: z.string().max(10).optional(),
+  /** Tax rate as decimal, e.g. 0.11 = 11%. Send null to clear. */
+  taxRate: z.number().min(0).max(1).optional().nullable(),
+  /** Service charge rate as decimal, e.g. 0.05 = 5%. Send null to clear. */
+  serviceChargeRate: z.number().min(0).max(1).optional().nullable(),
 });
 
 /**
@@ -156,7 +162,7 @@ export const updateTenantProfile = asyncHandler(async (req: Request, res: Respon
     return;
   }
 
-  const { businessName, businessPhone, businessAddress, businessEmail, timezone, currency, locale } = parsed.data;
+  const { businessName, businessPhone, businessAddress, businessEmail, timezone, currency, locale, taxRate, serviceChargeRate } = parsed.data;
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (businessName !== undefined) updateData.businessName = businessName;
@@ -166,6 +172,17 @@ export const updateTenantProfile = asyncHandler(async (req: Request, res: Respon
   if (timezone !== undefined) updateData.timezone = timezone;
   if (currency !== undefined) updateData.currency = currency;
   if (locale !== undefined) updateData.locale = locale;
+
+  // Tax/service rates stored in settings JSON to avoid extra columns
+  if (taxRate !== undefined || serviceChargeRate !== undefined) {
+    const [cur] = await db.select({ settings: tenants.settings }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    const s = (cur?.settings as Record<string, unknown> | null) ?? {};
+    updateData.settings = {
+      ...s,
+      ...(taxRate !== undefined ? { tax_rate: taxRate === null ? null : Number(taxRate) } : {}),
+      ...(serviceChargeRate !== undefined ? { service_charge_rate: serviceChargeRate === null ? null : Number(serviceChargeRate) } : {}),
+    };
+  }
 
   const [updated] = await db
     .update(tenants)
