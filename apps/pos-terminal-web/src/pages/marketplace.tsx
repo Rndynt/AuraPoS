@@ -164,7 +164,8 @@ export default function MarketplacePage() {
     const list = category === "Semua" ? rows : rows.filter((r) => r.category === category);
     const rank = (r: EntitlementRow) => {
       const s = statusOf(r);
-      return s === "active" ? 0 : s === "purchasable" ? 1 : s === "coming_soon" ? 2 : 3;
+      // active → purchasable → locked → coming_soon (always last)
+      return s === "active" ? 0 : s === "purchasable" ? 1 : s === "locked" ? 2 : 3;
     };
     return [...list].sort((a, b) => rank(a) - rank(b));
     // eslint-disable-next-line react-hooks/exhaustive-deps
