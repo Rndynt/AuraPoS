@@ -1,14 +1,13 @@
 import { useState } from "react";
+import { ShoppingBag, LayoutGrid, UtensilsCrossed, ChefHat, Receipt, CheckCircle2 } from "lucide-react";
 import { mockupProducts, mockupCartItems, mockupSubtotal, mockupTax, mockupTotal, mockupCategories, formatRp } from "../fixtures";
 
 const NAV_ITEMS = [
-  { icon: "▣", label: "POS", active: true },
-  { icon: "≡", label: "Pesanan", active: false },
-  { icon: "⊡", label: "Meja", active: false },
-  { icon: "◈", label: "Dapur", active: false },
-  { icon: "▦", label: "Laporan", active: false },
-  { icon: "⊞", label: "Produk", active: false },
-  { icon: "◫", label: "Inventori", active: false },
+  { icon: ShoppingBag, label: "Kasir", active: true },
+  { icon: LayoutGrid, label: "Produk", active: false },
+  { icon: UtensilsCrossed, label: "Meja", active: false },
+  { icon: ChefHat, label: "Dapur", active: false },
+  { icon: Receipt, label: "Pesanan", active: false },
 ];
 
 export default function MockupPOSDesktopPage() {
@@ -16,36 +15,21 @@ export default function MockupPOSDesktopPage() {
   const filtered = activeCategory === "Semua" ? mockupProducts : mockupProducts.filter(p => p.category === activeCategory);
 
   return (
-    <div className="flex w-screen h-screen overflow-hidden bg-slate-50 font-sans select-none" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div className="flex w-screen h-screen overflow-hidden bg-slate-50 font-sans select-none" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
 
-      {/* ── Sidebar ── */}
-      <div className="w-[180px] flex-shrink-0 bg-[#0f172a] flex flex-col h-full">
-        <div className="px-4 py-4 border-b border-white/5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-black">A</div>
-            <div>
-              <div className="text-white text-xs font-bold leading-tight">AuraPoS</div>
-              <div className="text-slate-500 text-[9px]">Aura Coffee</div>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 px-2 py-3 space-y-0.5">
+      {/* ── Icon rail — matches the real AuraPoS terminal nav (narrow, icon-only, white) ── */}
+      <div className="w-[64px] flex-shrink-0 bg-white border-r border-slate-100 flex flex-col items-center h-full py-3">
+        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xs font-black mb-4 flex-shrink-0">A</div>
+        <nav className="flex-1 flex flex-col items-center gap-1.5">
           {NAV_ITEMS.map(item => (
             <div key={item.label}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer text-[11px] font-medium transition-colors ${item.active ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              <span className="text-sm leading-none opacity-70">{item.icon}</span>
-              <span>{item.label}</span>
+              className={`flex items-center justify-center w-11 h-11 rounded-xl cursor-pointer transition-colors ${item.active ? "bg-blue-600 text-white shadow-md shadow-blue-400/30" : "text-slate-400"}`}>
+              <item.icon size={20} strokeWidth={1.8} />
             </div>
           ))}
         </nav>
-        <div className="px-3 py-3 border-t border-white/5">
-          <div className="flex items-center gap-2 px-2">
-            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[9px] font-bold">A</div>
-            <div>
-              <div className="text-slate-300 text-[10px] font-medium">Ayu Lestari</div>
-              <div className="text-slate-600 text-[9px]">Kasir</div>
-            </div>
-          </div>
+        <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+          <CheckCircle2 size={18} strokeWidth={2} className="text-emerald-500" />
         </div>
       </div>
 

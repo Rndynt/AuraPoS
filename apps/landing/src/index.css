@@ -2,10 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Body face — matches the AuraPoS product brand (Inter, same as the terminal app) */
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@layer utilities {
+  /* Display face for headlines — distinct weight/character from the body
+     text so headings read with intent rather than blending into paragraphs. */
+  .font-display { font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; }
+  /* Data/figures face — receipts and POS displays read numbers in monospace;
+     used sparingly for prices, stats, and order numbers to nod to that. */
+  .font-data { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+}
+
+/* Hide Replit's own platform-injected dev/preview badges. These are added by
+   Replit's hosting infrastructure (not our application code) when the app is
+   viewed through a *.replit.dev preview/workspace domain — they do not appear
+   on the production deployment (Coolify, aurapos.my.id custom domain). This
+   is a defensive, broad selector list since the exact markup Replit injects
+   can vary between their banner/badge script versions. */
 replit-badge,
 #replit-dev-banner,
-[data-replit-badge] {
+#replit-badge,
+.replit-badge,
+[data-replit-badge],
+[id*="replit-badge" i],
+[id*="replit-dev-banner" i],
+[class*="replit-badge" i],
+iframe[src*="replit.com/badge" i] {
   display: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
+  visibility: hidden !important;
 }
