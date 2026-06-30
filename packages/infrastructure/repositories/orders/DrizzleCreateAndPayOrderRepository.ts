@@ -25,7 +25,7 @@ import {
 } from '@pos/infrastructure/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from '@pos/application/orders/mappers';
-import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE, calculateOrderPricing } from '@pos/core/pricing';
+import { calculateOrderPricing } from '@pos/core/pricing';
 import { flattenSelectedOptions } from '@pos/application/catalog';
 import type { SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import { DrizzleInventoryPolicyRepository, DrizzleInventorySyncErrorRepository, DrizzleStockMovementRepository } from '../inventory';
@@ -110,8 +110,9 @@ export class DrizzleCreateAndPayOrderRepository {
     // ------------------------------------------------------------------
     // Price calculation (outside transaction — pure computation)
     // ------------------------------------------------------------------
-    const taxRateVal = tax_rate ?? DEFAULT_TAX_RATE;
-    const serviceChargeRateVal = service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE;
+    // No tenant-level fallback here: 0 = no tax/service charge unless the caller explicitly passes a rate (tenant settings resolved upstream).
+    const taxRateVal = tax_rate ?? 0;
+    const serviceChargeRateVal = service_charge_rate ?? 0;
 
     const pricing = calculateOrderPricing({
       items,

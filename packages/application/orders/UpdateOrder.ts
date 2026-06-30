@@ -5,7 +5,7 @@
 
 import type { Order, OrderItem, SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import type { PriceCalculation } from '@pos/domain/pricing/types';
-import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE, calculateOrderPricing } from '@pos/core/pricing';
+import { calculateOrderPricing } from '@pos/core/pricing';
 import { flattenSelectedOptions } from '../catalog';
 import { assertCanPerformOrderAction } from '../business-flows';
 
@@ -136,8 +136,9 @@ export class UpdateOrder {
         throw new Error('Order must contain at least one item');
       }
 
-      const taxRate = input.tax_rate ?? DEFAULT_TAX_RATE;
-      const serviceChargeRate = input.service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE;
+      // No tenant-level fallback here: 0 = no tax/service charge unless the caller explicitly passes a rate (tenant settings resolved upstream).
+      const taxRate = input.tax_rate ?? 0;
+      const serviceChargeRate = input.service_charge_rate ?? 0;
       const pricingResult = calculateOrderPricing({
         items: input.items,
         tax_rate: taxRate,

@@ -5,7 +5,7 @@
 
 import type { SelectedOption, SelectedOptionGroup } from '@pos/domain/orders/types';
 import type { PriceCalculation, AppliedDiscount } from '@pos/domain/pricing/types';
-import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE, calculateItemPricing, calculateOrderPricing } from '@pos/core/pricing';
+import { calculateItemPricing, calculateOrderPricing } from '@pos/core/pricing';
 
 export interface OrderItemForPricing {
   base_price: number;
@@ -31,8 +31,8 @@ export class CalculateOrderPricing {
     try {
       const result = calculateOrderPricing({
         ...input,
-        tax_rate: input.tax_rate ?? DEFAULT_TAX_RATE,
-        service_charge_rate: input.service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE,
+        tax_rate: input.tax_rate ?? 0,
+        service_charge_rate: input.service_charge_rate ?? 0,
         discounts: input.discounts?.map((discount) => ({ amount: discount.amount_saved })),
       });
 

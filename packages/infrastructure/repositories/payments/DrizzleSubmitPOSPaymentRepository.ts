@@ -33,7 +33,7 @@ import {
 } from "@pos/infrastructure/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { toInsertOrderItemDb, toInsertOrderItemModifierDb } from "@pos/application/orders/mappers";
-import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE, calculateOrderPricing } from "@pos/core/pricing";
+import { calculateOrderPricing } from "@pos/core/pricing";
 import { flattenSelectedOptions } from "@pos/application/catalog";
 import { nextOrderNumberForTenant } from "../orders/orderNumberSequence";
 import { firstRawRow, mapRawLockedOrderRow, toDbOrderPaymentStatus, toDbOrderStatus, toDbPaymentFlow, toDbPaymentKind, toDbPaymentMethod, toDbPaymentStatus, toOrderItemModifiers, toPaymentOrderItem } from "../orders/paymentPersistenceMappers";
@@ -278,8 +278,9 @@ export class DrizzleSubmitPOSPaymentRepository implements SubmitPOSPaymentReposi
         } else {
           // Create new order
           const orderData = command.order!;
-          const taxRate = orderData.tax_rate ?? DEFAULT_TAX_RATE;
-          const serviceChargeRate = orderData.service_charge_rate ?? DEFAULT_SERVICE_CHARGE_RATE;
+          // No tenant-level fallback here: 0 = no tax/service charge unless the order row already has a rate set.
+          const taxRate = orderData.tax_rate ?? 0;
+          const serviceChargeRate = orderData.service_charge_rate ?? 0;
           const { subtotal, taxAmount, serviceChargeAmount, totalAmount, computedItems } =
             computeOrderTotals(orderData.items, taxRate, serviceChargeRate);
 

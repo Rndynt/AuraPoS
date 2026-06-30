@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import type { Product, ProductVariant } from "@pos/domain/catalog/types";
 import type { SelectedOption } from "@pos/domain/orders/types";
 import type { POSPaymentMethod } from "@pos/domain/payments";
-import { DEFAULT_TAX_RATE, DEFAULT_SERVICE_CHARGE_RATE, calculateItemPricing, calculateOrderPricing } from "@pos/core/pricing";
+import { calculateItemPricing, calculateOrderPricing } from "@pos/core/pricing";
 import { getActiveTenantId, resolveInitialTenantId } from "@/lib/tenant";
 import { clearCartSession, migrateLegacySession, saveCartSession } from "@pos/offline";
 
@@ -163,8 +163,8 @@ function clearSession(tenantId: string) {
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 export function useCart(
-  taxRate: number = DEFAULT_TAX_RATE,
-  serviceChargeRate: number = DEFAULT_SERVICE_CHARGE_RATE,
+  taxRate: number = 0,
+  serviceChargeRate: number = 0,
 ) {
   const tenantId = getActiveTenantId() || resolveInitialTenantId() || "default";
   const saved = useRef(loadSession(tenantId));
