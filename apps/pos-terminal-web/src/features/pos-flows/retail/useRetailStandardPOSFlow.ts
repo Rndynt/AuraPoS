@@ -35,6 +35,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { RETAIL_STANDARD_FLOW_POLICY } from "./retailStandardFlowPolicy";
 import { ORDER_TYPE_UNAVAILABLE_MESSAGE, resolveValidOrderTypeSelection } from "../shared/orderTypeGuard";
+import { confirmStockShortfalls } from "@/features/pos-core/services/stockShortfallConfirm";
 
 export function useRetailStandardPOSFlow() {
   const searchParams = useSearch();
@@ -61,7 +62,7 @@ export function useRetailStandardPOSFlow() {
 
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts();
   const products = productsData?.products || [];
-  const { evaluateStockForAdd, evaluateStockForUpdate } = usePOSStockGuard(products, cart.items);
+  const { evaluateStockForAdd, evaluateStockForUpdate, getCheckoutStockShortfalls } = usePOSStockGuard(products, cart.items);
   const { data: orderTypes, isLoading: orderTypesLoading } = useOrderTypes();
   const activeOrderTypes = useMemo(() => orderTypes?.filter((ot) => ot.isActive === true) || [], [orderTypes]);
   const createOrderMutation = useCreateOrder();
@@ -236,6 +237,8 @@ export function useRetailStandardPOSFlow() {
   };
 
   const handlePaymentMethodConfirm = async (paymentMethod: PaymentMethod, cashReceived?: number, partialAmount?: number, paymentDetails?: import("@pos/domain/orders").POSPaymentCommandDto) => {
+    // Soft warning only — cashier decides, payment is never hard-blocked by stock.
+    if (!confirmStockShortfalls(getCheckoutStockShortfalls())) return;
     setIsProcessingQuickCharge(true);
     const dependencies = {
       submitPayment: (payload: import("@/features/pos-core").SubmitPOSPaymentRequest) => submitPOSPaymentMutation.mutateAsync(payload),

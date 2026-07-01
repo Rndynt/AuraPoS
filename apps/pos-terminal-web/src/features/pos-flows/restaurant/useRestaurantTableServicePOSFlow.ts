@@ -38,6 +38,7 @@ import {
 import { getSendToKitchenEligibility } from "./restaurantTableServiceFlowPolicy";
 import { RESTAURANT_TABLE_SERVICE_FLOW_POLICY } from "./restaurantTableServiceFlowPolicy";
 import { ORDER_TYPE_UNAVAILABLE_MESSAGE, resolveValidOrderTypeSelection } from "../shared/orderTypeGuard";
+import { confirmStockShortfalls } from "@/features/pos-core/services/stockShortfallConfirm";
 
 export function useRestaurantTableServicePOSFlow() {
   const searchParams = useSearch();
@@ -64,7 +65,7 @@ export function useRestaurantTableServicePOSFlow() {
 
   const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts();
   const products = productsData?.products || [];
-  const { evaluateStockForAdd, evaluateStockForUpdate } = usePOSStockGuard(products, cart.items);
+  const { evaluateStockForAdd, evaluateStockForUpdate, getCheckoutStockShortfalls } = usePOSStockGuard(products, cart.items);
   const { data: orderTypes, isLoading: orderTypesLoading } = useOrderTypes();
   const activeOrderTypes = useMemo(() => orderTypes?.filter((ot) => ot.isActive === true) || [], [orderTypes]);
   const createOrderMutation = useCreateOrder();
@@ -286,6 +287,9 @@ export function useRestaurantTableServicePOSFlow() {
       toast({ title: "Gunakan Kirim ke Dapur", description: "Flow restoran tidak membuat pembayaran fresh retail. Bayar dari pesanan aktif setelah service.", variant: "destructive" });
       return;
     }
+
+    // Soft warning only — cashier decides, payment is never hard-blocked by stock.
+    if (!confirmStockShortfalls(getCheckoutStockShortfalls())) return;
 
     setIsProcessingQuickCharge(true);
     try {

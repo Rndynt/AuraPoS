@@ -59,5 +59,28 @@ export function usePOSStockGuard(products: Product[], cartItems: CartStockItem[]
     return { ok: true };
   };
 
-  return { evaluateStockForAdd, evaluateStockForUpdate };
+  /**
+   * Soft warning check, meant to run right before checkout (not at add-to-cart
+   * time). Cart items can go stale — e.g. tracking was switched on for a
+   * product after it was already added to the cart — so this re-checks
+   * against the freshest product list (productById) rather than the
+   * snapshot captured on the cart item itself. Returns one entry per
+   * product whose current cart quantity would take stock negative.
+   * This is intentionally advisory only: callers decide whether to confirm
+   * with the cashier and proceed, never a hard block.
+   */
+  const getCheckoutStockShortfalls = (): Array<{ productId: string; productName: string; available: number; requested: number }> => {
+    const shortfalls: Array<{ productId: string; productName: string; available: number; requested: number }> = [];
+    for (const [productId, requested] of cartQuantityByProductId.entries()) {
+      const latest = productById.get(productId);
+      if (!latest || !latest.stock_tracking_enabled) continue;
+      const available = typeof latest.availableQuantity === "number" ? latest.availableQuantity : (latest.stock_qty ?? 0);
+      if (requested > available) {
+        shortfalls.push({ productId, productName: latest.name, available, requested });
+      }
+    }
+    return shortfalls;
+  };
+
+  return { evaluateStockForAdd, evaluateStockForUpdate, getCheckoutStockShortfalls };
 }

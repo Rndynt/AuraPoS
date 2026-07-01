@@ -366,37 +366,52 @@ export function PaymentMethodDialog({
     : <MethodSelector selected={method} onChange={selectMethod} title={flow === "SPLIT_BILL" ? "Metode Bayar Bill Aktif" : undefined} testIdPrefix={flow === "SPLIT_BILL" ? "split" : "global"} />;
 
   const renderFull = () => (
-    <div className="p-4 flex flex-col gap-3">
-      {method === "CASH" ? (
-        <>
-          <div className="bg-slate-50 border-2 border-blue-500 rounded-2xl px-4 py-2.5 flex items-center gap-2 min-h-[50px]"><span className="text-sm font-bold text-slate-400">Rp</span><span className="flex-1 text-xl font-black text-slate-800 tabular-nums">{cashRaw === "" ? <span className="text-slate-300">0</span> : fmtNum(cashAmount)}</span></div>
-          <div className="grid grid-cols-4 gap-1.5">{[{ l: "Pas", v: cartTotal }, { l: "50K", v: 50000 }, { l: "100K", v: 100000 }, { l: "200K", v: 200000 }].map((p) => <button key={p.l} onClick={() => setCashRaw(String(p.v))} className="py-1.5 text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-transparent text-slate-500 rounded-lg">{p.l}</button>)}</div>
-          <Numpad raw={cashRaw} setRaw={setCashRaw} />
-          <div className={`rounded-xl px-3 py-2 text-center border ${isEnough ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}><p className="text-[9px] font-bold uppercase tracking-wider">{isEnough ? "Kembalian" : "Kurang"}</p><p className="text-sm font-black tabular-nums">{fmt(Math.abs(change))}</p></div>
-        </>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-3 px-6 py-8">{method === "MANUAL_QRIS" ? <QrCode size={80} className="text-slate-800" /> : <Landmark size={48} className="text-blue-600" />}<p className="font-bold text-slate-800">{method === "MANUAL_QRIS" ? "QRIS Manual" : "Transfer Manual"}</p><p className="text-sm text-slate-400 text-center">Konfirmasi setelah pembayaran manual diterima.</p></div>
-      )}
-      <button onClick={process} disabled={loading || !isEnough} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold shadow-lg shadow-blue-200" data-testid="button-confirm-payment">{loading ? "Memproses…" : "Bayar"}</button>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
+        {method === "CASH" ? (
+          <>
+            <div className="bg-slate-50 border-2 border-blue-500 rounded-2xl px-4 py-2.5 flex items-center gap-2 min-h-[50px]"><span className="text-sm font-bold text-slate-400">Rp</span><span className="flex-1 text-xl font-black text-slate-800 tabular-nums">{cashRaw === "" ? <span className="text-slate-300">0</span> : fmtNum(cashAmount)}</span></div>
+            <div className="grid grid-cols-4 gap-1.5">{[{ l: "Pas", v: cartTotal }, { l: "50K", v: 50000 }, { l: "100K", v: 100000 }, { l: "200K", v: 200000 }].map((p) => <button key={p.l} onClick={() => setCashRaw(String(p.v))} className="py-1.5 text-xs font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-transparent text-slate-500 rounded-lg">{p.l}</button>)}</div>
+            <Numpad raw={cashRaw} setRaw={setCashRaw} />
+            <div className={`rounded-xl px-3 py-2 text-center border ${isEnough ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}><p className="text-[9px] font-bold uppercase tracking-wider">{isEnough ? "Kembalian" : "Kurang"}</p><p className="text-sm font-black tabular-nums">{fmt(Math.abs(change))}</p></div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 px-6 py-8">{method === "MANUAL_QRIS" ? <QrCode size={80} className="text-slate-800" /> : <Landmark size={48} className="text-blue-600" />}<p className="font-bold text-slate-800">{method === "MANUAL_QRIS" ? "QRIS Manual" : "Transfer Manual"}</p><p className="text-sm text-slate-400 text-center">Konfirmasi setelah pembayaran manual diterima.</p></div>
+        )}
+      </div>
+      <div className="px-4 pb-4 pt-2 border-t border-slate-100 flex-shrink-0">
+        <button onClick={process} disabled={loading || !isEnough} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold shadow-lg shadow-blue-200" data-testid="button-confirm-payment">{loading ? "Memproses…" : "Bayar"}</button>
+      </div>
     </div>
   );
 
   const renderDownPayment = () => (
-    <div className="p-4 flex flex-col gap-3">
-      <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl px-4 py-2.5 flex items-center gap-2 min-h-[50px]"><span className="text-sm font-bold text-amber-400">Rp</span><span className="flex-1 text-xl font-black text-slate-800 tabular-nums">{partialRaw === "" ? <span className="text-slate-300">0</span> : fmtNum(partialAmount)}</span></div>
-      <div className="grid grid-cols-4 gap-1.5">{[{ l: "25%", v: Math.round(cartTotal * 0.25) }, { l: "50%", v: Math.round(cartTotal * 0.5) }, { l: "75%", v: Math.round(cartTotal * 0.75) }, { l: "Reset", v: 0 }].map((p) => <button key={p.l} onClick={() => setPartialRaw(p.v > 0 ? String(p.v) : "")} className="py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600">{p.l}</button>)}</div>
-      <Numpad raw={partialRaw} setRaw={setPartialRaw} />
-      <div className="rounded-xl px-3 py-2 text-center border bg-amber-50 border-amber-200"><p className="text-[9px] font-bold uppercase tracking-wider text-amber-500">Sisa Tagihan</p><p className="text-sm font-black tabular-nums text-amber-700">{fmt(isValidPartial ? cartTotal - partialAmount : cartTotal)}</p></div>
-      <button onClick={process} disabled={loading || !isValidPartial} className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold">{loading ? "Memproses…" : "Simpan DP"}</button>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
+        <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl px-4 py-2.5 flex items-center gap-2 min-h-[50px]"><span className="text-sm font-bold text-amber-400">Rp</span><span className="flex-1 text-xl font-black text-slate-800 tabular-nums">{partialRaw === "" ? <span className="text-slate-300">0</span> : fmtNum(partialAmount)}</span></div>
+        <div className="grid grid-cols-4 gap-1.5">{[{ l: "25%", v: Math.round(cartTotal * 0.25) }, { l: "50%", v: Math.round(cartTotal * 0.5) }, { l: "75%", v: Math.round(cartTotal * 0.75) }, { l: "Reset", v: 0 }].map((p) => <button key={p.l} onClick={() => setPartialRaw(p.v > 0 ? String(p.v) : "")} className="py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600">{p.l}</button>)}</div>
+        <Numpad raw={partialRaw} setRaw={setPartialRaw} />
+        <div className="rounded-xl px-3 py-2 text-center border bg-amber-50 border-amber-200"><p className="text-[9px] font-bold uppercase tracking-wider text-amber-500">Sisa Tagihan</p><p className="text-sm font-black tabular-nums text-amber-700">{fmt(isValidPartial ? cartTotal - partialAmount : cartTotal)}</p></div>
+      </div>
+      <div className="px-4 pb-4 pt-2 border-t border-slate-100 flex-shrink-0">
+        <button onClick={process} disabled={loading || !isValidPartial} className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold">{loading ? "Memproses…" : "Simpan DP"}</button>
+      </div>
     </div>
   );
 
   const renderMulti = () => (
-    <div className="p-4 flex flex-col gap-3">
-      <div className="rounded-xl px-3 py-2 bg-teal-50 border border-teal-200"><p className="text-sm font-black text-teal-800">Dimasukkan {fmt(multiPaid)} · Kurang {fmt(multiRemaining)}</p></div>
-      {multiEntries.map((entry) => <div key={entry.id} className="flex items-center gap-2 rounded-xl px-3 py-2 bg-slate-50 border border-slate-200"><span className="text-xs font-bold flex-1">{METHODS.find((m) => m.id === entry.method)?.label}</span><span className="text-sm font-black tabular-nums">{fmt(entry.amount)}</span><button onClick={() => setMultiEntries((prev) => prev.filter((m) => m.id !== entry.id))} className="text-red-400 hover:text-red-600 p-0.5"><Trash2 size={14} /></button></div>)}
-      {!multiComplete && <><div className="bg-slate-50 border-2 border-teal-400 rounded-2xl px-4 py-2 flex items-center gap-2"><span className="text-xs font-bold text-slate-400">Rp</span><span className="flex-1 text-lg font-black text-slate-800 tabular-nums">{multiRaw === "" ? <span className="text-slate-300">0</span> : fmtNum(multiInputAmount)}</span><button onClick={() => setMultiRaw(String(multiRemaining))} className="text-[10px] font-bold text-teal-600 bg-teal-50 border border-teal-200 px-2 py-1 rounded-lg hover:bg-teal-100">Sisa</button></div><Numpad raw={multiRaw} setRaw={setMultiRaw} /><button onClick={() => { if (!multiCanAdd) return; setMultiEntries((prev) => [...prev, { id: Date.now(), method: multiMethod, amount: multiInputAmount }]); setMultiRaw(""); }} disabled={!multiCanAdd} className="w-full py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold flex items-center justify-center gap-1.5"><Plus size={14} />Tambah {METHODS.find((m) => m.id === multiMethod)?.label}</button></>}
-      {multiComplete && <><div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" /><p className="text-xs font-bold text-green-700">Siap dikonfirmasi — klik untuk menyimpan pembayaran</p></div><button onClick={process} disabled={loading} className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 text-white font-bold rounded-xl" data-testid="button-confirm-payment">{loading ? "Memproses…" : "Selesaikan Pembayaran"}</button></>}
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
+        <div className="rounded-xl px-3 py-2 bg-teal-50 border border-teal-200"><p className="text-sm font-black text-teal-800">Dimasukkan {fmt(multiPaid)} · Kurang {fmt(multiRemaining)}</p></div>
+        {multiEntries.map((entry) => <div key={entry.id} className="flex items-center gap-2 rounded-xl px-3 py-2 bg-slate-50 border border-slate-200"><span className="text-xs font-bold flex-1">{METHODS.find((m) => m.id === entry.method)?.label}</span><span className="text-sm font-black tabular-nums">{fmt(entry.amount)}</span><button onClick={() => setMultiEntries((prev) => prev.filter((m) => m.id !== entry.id))} className="text-red-400 hover:text-red-600 p-0.5"><Trash2 size={14} /></button></div>)}
+        {!multiComplete && <><div className="bg-slate-50 border-2 border-teal-400 rounded-2xl px-4 py-2 flex items-center gap-2"><span className="text-xs font-bold text-slate-400">Rp</span><span className="flex-1 text-lg font-black text-slate-800 tabular-nums">{multiRaw === "" ? <span className="text-slate-300">0</span> : fmtNum(multiInputAmount)}</span><button onClick={() => setMultiRaw(String(multiRemaining))} className="text-[10px] font-bold text-teal-600 bg-teal-50 border border-teal-200 px-2 py-1 rounded-lg hover:bg-teal-100">Sisa</button></div><Numpad raw={multiRaw} setRaw={setMultiRaw} /></>}
+        {multiComplete && <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2"><CheckCircle2 size={14} className="text-green-500 shrink-0" /><p className="text-xs font-bold text-green-700">Siap dikonfirmasi — klik untuk menyimpan pembayaran</p></div>}
+      </div>
+      <div className="px-4 pb-4 pt-2 border-t border-slate-100 flex-shrink-0">
+        {!multiComplete
+          ? <button onClick={() => { if (!multiCanAdd) return; setMultiEntries((prev) => [...prev, { id: Date.now(), method: multiMethod, amount: multiInputAmount }]); setMultiRaw(""); }} disabled={!multiCanAdd} className="w-full py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold flex items-center justify-center gap-1.5"><Plus size={14} />Tambah {METHODS.find((m) => m.id === multiMethod)?.label}</button>
+          : <button onClick={process} disabled={loading} className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 text-white font-bold rounded-xl" data-testid="button-confirm-payment">{loading ? "Memproses…" : "Selesaikan Pembayaran"}</button>}
+      </div>
     </div>
   );
 
